@@ -1,0 +1,7 @@
+fields,     types,    optional
+type,       string,0
+num,        double,0
+support,    cell,0
+scaf,       string,0
+pos1,int32,0
+var1,       string,0
