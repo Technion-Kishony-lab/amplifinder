@@ -1,0 +1,16 @@
+breseq2mat 
+MUT.mat -> JC
+
+curate_candidate_amplicons
+    assign_potential_ISs -> ISJC.mat
+    
+    ISJC2.mat + xls
+
+junction2fasta -> jc.fasta
+6 junctions
+
+bowtie + samtools ->
+alignment folder
+parsing -> bamreads.mat
+
+classified_amplifications.xlsx (final report to user)
