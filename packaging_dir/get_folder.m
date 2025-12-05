@@ -15,5 +15,7 @@ switch name
         folder = 'prms' ;
     case 'master_prms'
         folder = baseDir ;
+    case 'fields'
+        folder = fullfile(fileparts(baseDir), 'amplifinder', 'data', 'fields');
 end
 

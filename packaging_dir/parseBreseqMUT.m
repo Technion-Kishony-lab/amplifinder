@@ -13,7 +13,7 @@ tables = struct;
 index = struct;
 for i = 1:numel(table_names)
     nm = table_names{i};
-    tbl = readtable([get_folder('master_prms') filesep nm '_fields.csv']);
+    tbl = readtable([get_folder('fields') filesep nm '_fields.csv']);
     fields.(nm) = tbl;
     tables.(nm) = table('Size',[1e4,height(tbl)], ...
         'VariableTypes',tbl.types,'VariableNames',tbl.fields);
