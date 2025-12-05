@@ -13,6 +13,7 @@ amplifinder.egg-info/requires.txt
 amplifinder.egg-info/top_level.txt
 amplifinder/analysis/__init__.py
 amplifinder/core/__init__.py
+amplifinder/core/breseq.py
 amplifinder/data/__init__.py
 amplifinder/data/ISfinderDB/IS.fna
 amplifinder/data/ISfinderDB/IS.fna.ndb
@@ -23,5 +24,7 @@ amplifinder/data/ISfinderDB/IS.fna.nsq
 amplifinder/data/ISfinderDB/IS.fna.ntf
 amplifinder/data/ISfinderDB/IS.fna.nto
 amplifinder/external/__init__.py
-amplifinder/io/__init__.py
+amplifinder/external/breseq.py
 amplifinder/models/__init__.py
+amplifinder/models/genome.py
+amplifinder/models/junction.py
