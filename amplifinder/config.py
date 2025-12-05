@@ -16,9 +16,9 @@ DEFAULT_CONFIG = {
     "isdb_path": None,  # Use bundled ISfinderDB
     
     # IS detection parameters
-    "max_dist_to_is": 10,
+    "max_dist_to_IS": 10,
     "length_seq_into_is": 200,
-    "reference_is_out_span": 100,
+    "reference_IS_out_span": 100,
     
     # Junction filtering
     "min_jct_cov": 5,
@@ -77,7 +77,7 @@ class Config:
     
     # Reference options
     ncbi: bool = True
-    isfinder: bool = False
+    use_ISfinder: bool = False
     
     # External tools
     breseq_docker: bool = True
@@ -86,9 +86,9 @@ class Config:
     isdb_path: Optional[Path] = None
     
     # IS detection parameters
-    max_dist_to_is: int = 10
+    max_dist_to_IS: int = 10
     length_seq_into_is: int = 200
-    reference_is_out_span: int = 100
+    reference_IS_out_span: int = 100
     
     # Junction filtering
     min_jct_cov: int = 5
@@ -157,10 +157,10 @@ class Config:
             self.mismatch_penalty = tuple(self.mismatch_penalty)
         
         # Validate: ISfinder required for non-NCBI genomes
-        if not self.ncbi and not self.isfinder:
+        if not self.ncbi and not self.use_ISfinder:
             raise ValueError(
                 "ISfinder is required for local (non-NCBI) genomes. "
-                "Use --isfinder flag."
+                "Use --use-isfinder flag."
             )
         
         # Validate: genomesDB is reserved for NCBI references
