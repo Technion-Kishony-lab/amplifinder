@@ -8,7 +8,8 @@ import click
 
 from amplifinder import __version__
 from amplifinder.config import Config, load_config, merge_config
-from amplifinder.logger import setup_logger, info, warning
+from amplifinder.logger import setup_logger, info, warning, error
+from amplifinder.pipeline import run_pipeline
 
 
 @click.command()
@@ -72,7 +73,8 @@ from amplifinder.logger import setup_logger, info, warning
     help="Fetch reference from NCBI (default: True).",
 )
 @click.option(
-    "--isfinder/--no-isfinder",
+    "--use-isfinder/--no-use-isfinder",
+    "use_ISfinder",
     default=False,
     help="Use ISfinder database for IS detection (default: False).",
 )
@@ -101,18 +103,11 @@ def main(
     iso_breseq_path: Optional[Path],
     anc_breseq_path: Optional[Path],
     ncbi: bool,
-    isfinder: bool,
+    use_ISfinder: bool,
     config_file: Optional[Path],
     log_level: str,
 ) -> None:
-    """AmpliFinder: Detect IS-mediated gene amplifications from WGS data.
-    
-    \b
-    Examples:
-        amplifinder -i isolate.fastq -r U00096
-        amplifinder -i isolate/ -a ancestor/ -r U00096 --isfinder
-        amplifinder --config params.yaml
-    """
+    """AmpliFinder: Detect IS-mediated gene amplifications from WGS data."""
     # Load config file if provided
     file_config = None
     if config_file is not None:
@@ -130,13 +125,12 @@ def main(
         "iso_breseq_path": iso_breseq_path,
         "anc_breseq_path": anc_breseq_path,
         "ncbi": ncbi,
-        "isfinder": isfinder,
+        "use_ISfinder": use_ISfinder,
     }
     
-    # Merge configurations (CLI > config file > defaults)
+    # Merge configurations
     merged = merge_config(cli_args, file_config)
     
-    # Create Config object
     try:
         config = Config(**merged)
     except ValueError as e:
@@ -156,12 +150,14 @@ def main(
     else:
         warning("No ancestor assigned; using non-normalized coverage analysis")
     
-    # TODO: Run pipeline (implemented in later steps)
-    info("Pipeline execution not yet implemented")
+    try:
+        run_pipeline(config)
+    except Exception as e:
+        error(f"Pipeline failed: {e}")
+        raise click.ClickException(str(e))
     
     info("Done")
 
 
 if __name__ == "__main__":
     main()
-
