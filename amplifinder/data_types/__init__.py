@@ -3,6 +3,7 @@
 from amplifinder.data_types.schema import TypedSchema, BLAST_SCHEMA, IS_LOC_SCHEMA
 from amplifinder.data_types.tabularable import Tabularable
 from amplifinder.data_types.genome import Genome, GenomeRegistry, get_genome
+from amplifinder.data_types.junction import Junction
 
 __all__ = [
     "TypedSchema",
@@ -12,4 +13,5 @@ __all__ = [
     "Genome",
     "GenomeRegistry",
     "get_genome",
+    "Junction",
 ]
