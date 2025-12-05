@@ -1,0 +1,10 @@
+# AmpliFinder Project Rules
+
+# Python environment
+- Use conda Python: /zdata/user-data/rkishony/.conda/envs/amplifinder/bin/python
+- For pip: /zdata/user-data/rkishony/.conda/envs/amplifinder/bin/pip
+- Always prefix python commands with the full path above
+
+# Code style
+- Short answers with code, no verbose explanations
+

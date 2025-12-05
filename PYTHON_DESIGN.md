@@ -12,56 +12,45 @@ AmpliFinder is a bioinformatics pipeline for detecting **IS-mediated gene amplif
 amplifinder/
 ├── __init__.py
 ├── __main__.py              # CLI entry point
-├── cli.py                   # Argument parsing (argparse)
+├── cli.py                   # Argument parsing (click)
 ├── config.py                # Configuration management
 ├── logger.py                # Logging utilities
 │
-├── core/                    # Core pipeline logic
+├── steps/                   # Pipeline step classes
 │   ├── __init__.py
-│   ├── pipeline.py          # Main AmpliFinder orchestration
-│   ├── reference.py         # Reference genome handling
-│   ├── breseq.py            # breseq wrapper & parsing
-│   ├── alignment.py         # bowtie2/samtools wrappers
-│   └── coverage.py          # Coverage calculation
+│   ├── base.py              # Step base class (caching, I/O tracking)
+│   ├── initialize.py        # InitStep - directory setup
+│   ├── get_reference.py     # GetReferenceStep - fetch genome
+│   ├── isfinder.py          # ISfinderStep - BLAST vs ISfinder DB
+│   └── run_breseq.py        # RunBreseqStep - breseq execution
 │
-├── analysis/                # Analysis modules
+├── tools/                   # External tool runners + parsers
 │   ├── __init__.py
-│   ├── junctions.py         # Junction (JC) processing
-│   ├── is_elements.py       # IS element detection & assignment
-│   ├── isjc.py              # IS-Junction pairs (ISJC)
-│   ├── isjc2.py             # Junction pair combinations (ISJC2)
-│   ├── classification.py    # Event classification
-│   └── amplicons.py         # Amplicon candidate curation
+│   ├── blast.py             # run_blastn + parse_blast_csv
+│   └── breseq.py            # run_breseq (Docker) + output parsing
 │
-├── io/                      # Input/Output
+├── utils/                   # General utilities
 │   ├── __init__.py
-│   ├── fastq.py             # FASTQ handling
-│   ├── fasta.py             # FASTA read/write
-│   ├── bam.py               # BAM parsing
-│   ├── genbank.py           # GenBank parsing
-│   └── export.py            # Excel/CSV export
+│   └── fasta.py             # FASTA utilities (read_fasta_lengths)
 │
-├── models/                  # Data structures
+├── data_types/              # Data structures
 │   ├── __init__.py
-│   ├── isolate.py           # Isolate dataclass
-│   ├── junction.py          # JC dataclass
-│   ├── is_element.py        # IS element classes
-│   └── reference.py         # Reference genome properties
-│
-├── external/                # External tool wrappers
-│   ├── __init__.py
-│   ├── breseq.py            # breseq runner (Docker)
-│   ├── bowtie2.py           # bowtie2 runner
-│   ├── samtools.py          # samtools runner
-│   └── blast.py             # BLAST runner
+│   ├── genome.py            # Genome dataclass
+│   ├── junction.py          # Junction dataclass
+│   ├── schema.py            # DataFrame schemas
+│   └── tabularable.py       # Tabularable mixin
 │
 ├── data/                    # Bundled data
+│   ├── __init__.py          # Data loaders
+│   ├── fields/              # breseq field definitions
+│   │   ├── JC_fields.csv
+│   │   ├── SNP_fields.csv
+│   │   └── ...
 │   └── ISfinderDB/
 │       └── IS.fna
 │
 └── tests/                   # Test suite
     ├── __init__.py
-    ├── test_pipeline.py
     └── fixtures/
 ```
 
@@ -69,30 +58,60 @@ amplifinder/
 
 ## Key Modules
 
-### 1. `core/pipeline.py` — Main Orchestrator
+### 1. `steps/base.py` — Step Base Class
 ```python
-class AmpliFinder:
-    """Main pipeline controller"""
-    def __init__(self, iso_path, anc_path, ref_name, **kwargs): ...
-    def run(self) -> pd.DataFrame: ...
+class Step(ABC):
+    """Base class for pipeline steps with input/output file tracking.
+    
+    Handles:
+    - Skip if all outputs exist (unless force=True)
+    - Clean partial outputs before re-run
+    - Global and step-specific force control
+    """
+    global_force: bool = False
+    
+    def __init__(self, inputs=None, outputs=None, force=None): ...
+    def run(self) -> bool: ...  # Returns True if ran, False if skipped
+    @abstractmethod
+    def _run(self) -> None: ...  # Override in subclass
 ```
 
-### 2. `models/isolate.py` — Isolate Data
+### 2. `data_types/genome.py` — Genome Data
 ```python
 @dataclass
-class Isolate:
+class Genome:
     name: str
-    fastq_path: Path
-    breseq_path: Path
-    output_path: Path
-    ref_name: str
-    ref_path: Path
-    isfinder: bool = False
-    read_length: int = None
-    ancestor: Optional["Isolate"] = None
+    fasta_path: Optional[Path]
+    genbank_path: Optional[Path]
+    length: int
+    scaffolds: List[str]
 ```
 
-### 3. `models/is_element.py` — IS Element Classes
+### 3. `data_types/junction.py` — Junction Data (from breseq)
+```python
+@dataclass
+class Junction(Tabularable):
+    """breseq junction record"""
+    num: int
+    side_1_seq_id: str
+    side_1_position: int
+    side_1_strand: int
+    side_2_seq_id: str
+    side_2_position: int
+    side_2_strand: int
+    ...
+```
+
+### 4. `data_types/schema.py` — DataFrame Schemas
+```python
+class Schema:
+    """DataFrame schema with column names and dtypes."""
+    columns: Dict[str, type]
+    def empty(self) -> pd.DataFrame: ...
+    def validate(self, df: pd.DataFrame) -> bool: ...
+```
+
+### 5. IS Element Classes (TBD)
 ```python
 @dataclass
 class ISElement:
@@ -104,47 +123,21 @@ class ISElement:
     def name(self) -> str:
         postfix = {-1: "R", 0: "u", 1: "F"}
         return f"{self.id}{postfix[self.orientation]}"
-
-class DirectedIS(ISElement):
-    """IS with direction (Forward/Reverse/Unknown)"""
-    POSTFIX = {-1: "R", 0: "u", 1: "F"}
-
-class ISSide(ISElement):
-    """IS side (Left/Both/Right)"""
-    POSTFIX = {-1: "L", 0: "B", 1: "R"}
 ```
 
-### 4. `models/junction.py` — Junction Data
-```python
-@dataclass
-class Junction:
-    """breseq junction record"""
-    num: int
-    jscaf1: int
-    pos1: int
-    dir1: int  # -1 or 1
-    jscaf2: int
-    pos2: int
-    dir2: int
-    flanking_left: int
-    flanking_right: int
-    reject: Optional[str] = None
-    # ... other breseq fields
-```
-
-### 5. `analysis/isjc2.py` — Junction Pairs
+### 6. Junction Pairs (TBD) — `ISJC2`
 ```python
 @dataclass
 class ISJC2:
     """Pair of IS-associated junctions (candidate amplification)"""
     jc_num: Tuple[int, int]
     pos_chr: Tuple[int, int]
-    pos_is: Tuple[int, int]
+    pos_IS: Tuple[int, int]
     dir_chr: Tuple[int, int]
-    dir_is: Tuple[int, int]
+    dir_IS: Tuple[int, int]
     ref_is: Tuple[int, int]
     scaf_chr: int
-    is_elements: List[DirectedIS]
+    IS_elements: List[DirectedIS]
     span_origin: bool
     amplicon_length: int
     amplicon_coverage: float
@@ -158,23 +151,19 @@ class ISJC2:
 
 ### Pipeline Flow
 
-| Step | MATLAB Function | Python Function |
-|------|-----------------|-----------------|
-| 1. Parse args | `parse_AmpliFinder_arguments` | `cli.parse_args()` |
-| 2. Analyze FASTQ | `analyze_fastq_files` | `io.fastq.analyze()` |
-| 3. Get reference | `curate_reference` | `core.reference.curate()` |
-| 4. Run breseq | `run_breseq` | `external.breseq.run()` |
-| 5. Parse breseq | `breseq2mat` | `core.breseq.parse_output()` |
-| 6. Find IS in ref | `findISinRef` | `analysis.is_elements.find_in_ref()` |
-| 7. Assign ISs | `assign_potential_ISs` | `analysis.is_elements.assign_to_junctions()` |
-| 8. Combine pairs | `combine_ISJC_pairs` | `analysis.isjc2.combine_pairs()` |
-| 9. Calc coverage | `calc_coverage_ISJC2` | `core.coverage.calculate()` |
-| 10. Classify | `classify_ISJC2` | `analysis.classification.classify_isjc2()` |
-| 11. Write FASTA | `junction2fasta` | `io.fasta.write_junctions()` |
-| 12. Align | `bowtie2_alignment` | `external.bowtie2.align()` |
-| 13. BAM analysis | `bamAnalysis` | `io.bam.analyze()` |
-| 14. Final classify | `classify_candidates` | `analysis.classification.classify_candidates()` |
-| 15. Export | `export_ISJC2` | `io.export.to_excel()` |
+| Step | MATLAB Function | Python Module |
+|------|-----------------|---------------|
+| 1. Parse args | `parse_AmpliFinder_arguments` | `cli.main()` |
+| 2. Init dirs | - | `steps.InitStep` |
+| 3. Get reference | `curate_reference` | `steps.GetReferenceStep` |
+| 4. Find IS in ref | `findISinRef` | `steps.ISfinderStep` |
+| 5. Run breseq | `run_breseq` | `steps.RunBreseqStep` → `tools.breseq.run_breseq()` |
+| 6. Parse breseq | `breseq2mat` | `tools.breseq.parse_breseq_output()` |
+| 7. Assign ISs | `assign_potential_ISs` | TBD |
+| 8. Combine pairs | `combine_ISJC_pairs` | TBD |
+| 9. Calc coverage | `calc_coverage_ISJC2` | `tools.breseq.parse_coverage()` |
+| 10. Classify | `classify_ISJC2` | TBD |
+| 11. Export | `export_ISJC2` | TBD |
 
 ---
 
@@ -191,7 +180,7 @@ class ISJC2:
 | iso_outpath    | Path   | Output directory               |
 | ref            | str    | Reference genome name(s)       |
 | ref_path       | Path   | Path to reference files        |
-| isfinder       | bool   | Use ISfinder DB                |
+| use_ISfinder   | bool   | Use ISfinder DB                |
 | read_length    | int    | Mean read length               |
 ```
 
@@ -399,10 +388,10 @@ about:
 amplifinder -i /path/to/isolate.fastq -a /path/to/ancestor.fastq -r U00096
 
 # With ISfinder
-amplifinder -i isolate/ -a ancestor/ -r U00096 --isfinder
+amplifinder -i isolate/ -a ancestor/ -r U00096 --use-isfinder
 
 # Local reference (non-NCBI)
-amplifinder -i isolate/ -r mygenome --ref-path /genomes/ --ncbi false --isfinder
+amplifinder -i isolate/ -r mygenome --ref-path /genomes/ --ncbi false --use-isfinder
 
 # Using config file (recommended for reproducibility)
 amplifinder --config params.yaml
@@ -426,13 +415,13 @@ ref_name: U00096
 
 # Reference options
 ncbi: true
-isfinder: false
+use_ISfinder: false
 ref_path: genomesDB/
 
 # IS detection parameters
-max_dist_to_is: 10
+max_dist_to_IS: 10
 length_seq_into_is: 200
-reference_is_out_span: 100
+reference_IS_out_span: 100
 
 # Junction filtering
 min_jct_cov: 5
@@ -463,7 +452,7 @@ req_overlap: 12
   "output_dir": "./results/",
   "ref_name": "U00096",
   "ncbi": true,
-  "isfinder": false,
+  "use_ISfinder": false,
   "copy_number_threshold": 1.5,
   "del_copy_number_threshold": 0.3,
   "min_amplicon_length": 30
