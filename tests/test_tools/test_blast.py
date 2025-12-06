@@ -11,10 +11,10 @@ skip_no_blast = pytest.mark.skipif(not RUN_BLAST_TESTS, reason="BLAST tests disa
 
 
 @pytest.fixture
-def blast_db(tiny_is_db, tmp_path):
+def blast_db(tiny_tn_db, tmp_path):
     """Create BLAST database and return path."""
     db_path = tmp_path / "test_db"
-    make_blast_db(fasta=tiny_is_db, db_path=db_path)
+    make_blast_db(fasta=tiny_tn_db, db_path=db_path)
     return db_path
 
 
@@ -52,7 +52,7 @@ def test_parse_blast_csv(blast_output):
 @skip_no_blast
 def test_blast_no_hits(blast_db, tmp_path):
     """Should return empty DataFrame with correct schema when no hits."""
-    # Create query with random sequence that won't match IS database
+    # Create query with random sequence that won't match TN database
     from tests.conftest import make_random_seq, write_fasta
     query = tmp_path / "no_match.fasta"
     write_fasta(query, "no_match", make_random_seq(200, seed=999))

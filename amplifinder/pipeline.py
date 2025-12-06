@@ -5,8 +5,8 @@ from amplifinder.logger import info
 from amplifinder.steps import (
     InitializingStep,
     GetReferenceStep,
-    LocateISsUsingISfinder,
-    LocateISsUsingGenbank,
+    LocateTNsUsingISfinder,
+    LocateTNsUsingGenbank,
     BreseqStep,
 )
 from amplifinder.data import get_builtin_isfinder_db_path
@@ -27,28 +27,28 @@ def run_pipeline(config: Config) -> None:
     genome = get_reference_step.run_and_read_outputs()
     info(f"Reference: {genome.name} ({genome.length:,} bp)")
 
-    # Step 2a: Locate IS elements using GenBank annotations
-    locIS_genbank_step = LocateISsUsingGenbank(
+    # Step 2a: Locate TN elements using GenBank annotations
+    locTN_genbank_step = LocateTNsUsingGenbank(
         genbank_path=genome.genbank_path,
         ref_name=genome.name,
         ref_path=config.ref_path,
     )
-    IS_loc_genbank = locIS_genbank_step.run_and_read_outputs()
-    info(f"GenBank: found {len(IS_loc_genbank)} IS elements")
+    TN_loc_genbank = locTN_genbank_step.run_and_read_outputs()
+    info(f"GenBank: found {len(TN_loc_genbank)} TN elements")
 
-    # Step 2b: Locate IS elements using ISfinder database
+    # Step 2b: Locate TN elements using ISfinder database
     isdb_path = config.isdb_path or get_builtin_isfinder_db_path()
-    locIS_isfinder_step = LocateISsUsingISfinder(
+    locTN_isfinder_step = LocateTNsUsingISfinder(
         ref_fasta=genome.fasta_path,
         ref_name=genome.name,
         ref_path=config.ref_path,
         isdb_path=isdb_path,
     )
-    IS_loc_isfinder = locIS_isfinder_step.run_and_read_outputs()
-    info(f"ISfinder: found {len(IS_loc_isfinder)} IS elements")
+    TN_loc_isfinder = locTN_isfinder_step.run_and_read_outputs()
+    info(f"ISfinder: found {len(TN_loc_isfinder)} TN elements")
 
-    # Select which IS_loc to use based on config
-    _IS_loc = IS_loc_isfinder if config.use_ISfinder else IS_loc_genbank  # noqa: F841
+    # Select which TN_loc to use based on config
+    _TN_loc = TN_loc_isfinder if config.use_ISfinder else TN_loc_genbank  # noqa: F841
 
     # Step 3: Run breseq on isolate
     iso_breseq = config.iso_breseq_path or iso_output / "breseq"
@@ -60,6 +60,6 @@ def run_pipeline(config: Config) -> None:
     )
     breseq_step.run()
 
-    # TODO: Step 3 - IS detection (uses IS_loc)
-    # TODO: Step 4 - Junction pairs
-    # TODO: Step 5 - Classification + Export
+    # TODO: Step 4 - TN detection (uses TN_loc)
+    # TODO: Step 5 - Junction pairs
+    # TODO: Step 6 - Classification + Export
