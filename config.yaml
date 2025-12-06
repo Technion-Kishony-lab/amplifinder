@@ -1,0 +1,14 @@
+# AmpliFinder global configuration
+# Server-specific paths and settings
+
+# External tool paths (null = use system PATH)
+blast_path: /opt/anaconda3/envs/shared_env/bin
+samtools_path: null
+bowtie2_path: null
+
+# breseq settings  
+breseq_docker: true
+
+# ISfinder database (null = use bundled)
+isdb_path: null
+

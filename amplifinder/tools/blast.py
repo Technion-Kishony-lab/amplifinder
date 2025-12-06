@@ -8,6 +8,14 @@ import pandas as pd
 
 from amplifinder.logger import info
 from amplifinder.data_types.schema import BLAST_SCHEMA
+from amplifinder.env import BLAST_PATH
+
+
+def _get_blast_cmd(cmd_name: str) -> str:
+    """Get full path to BLAST command."""
+    if BLAST_PATH:
+        return str(BLAST_PATH / cmd_name)
+    return cmd_name
 
 
 def make_blast_db(
@@ -17,7 +25,7 @@ def make_blast_db(
 ) -> None:
     """Create a BLAST database from a FASTA file."""
     cmd = [
-        "makeblastdb",
+        _get_blast_cmd("makeblastdb"),
         "-in", str(fasta),
         "-dbtype", dbtype,
         "-out", str(db_path),
@@ -47,7 +55,7 @@ def run_blastn(
         extra_args: Additional blastn arguments
     """
     cmd = [
-        "blastn",
+        _get_blast_cmd("blastn"),
         "-db", str(db),
         "-query", str(query),
         "-evalue", str(evalue),
