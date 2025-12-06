@@ -237,7 +237,7 @@ class TypedSchema:
         """Convert DataFrame to list of dataclass instances.
 
         Requires schema to be created from a dataclass (from_dataclass).
-        Unknown columns are stored in the 'extra' field if present.
+        Unknown columns are stored in the 'extra' field if ALLOW_EXTRA is True.
         """
         if self.dataclass_type is None:
             raise ValueError("df_to_instances requires schema created with from_dataclass()")
@@ -247,6 +247,7 @@ class TypedSchema:
 
         known_cols = set(self.names)
         has_extra = any(f.name == "extra" for f in dataclass_fields(self.dataclass_type))
+        allow_extra = getattr(self.dataclass_type, "ALLOW_EXTRA", True)
         instances = []
 
         for _, row in df.iterrows():
@@ -260,10 +261,10 @@ class TypedSchema:
 
                 if col in known_cols:
                     kwargs[col] = val
-                elif has_extra:
+                elif allow_extra and has_extra:
                     extra[col] = val
                 else:
-                    raise ValueError(f"Unknown column: {col}")
+                    raise ValueError(f"Unknown column '{col}' in {self.dataclass_type.__name__}")
 
             if has_extra:
                 kwargs["extra"] = extra

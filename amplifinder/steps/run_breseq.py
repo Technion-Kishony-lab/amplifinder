@@ -17,8 +17,8 @@ class BreseqStep(Step):
         fastq_path: Path,
         ref_file: Path,
         output_path: Path,
-        docker: bool = True,
-        threads: int = 4,
+        docker: bool,
+        threads: int,
         force: Optional[bool] = None,
     ):
         self.fastq_path = Path(fastq_path)

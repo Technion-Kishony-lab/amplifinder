@@ -15,10 +15,16 @@ DEFAULT_CONFIG = {
     "samtools_path": None,  # Auto-detect from PATH
     "isdb_path": None,  # Use bundled ISfinderDB
 
-    # IS detection parameters
+    # IS/TN detection parameters
     "max_dist_to_IS": 10,
+    "trim_jc_flanking": 5,
     "length_seq_into_is": 200,
     "reference_IS_out_span": 100,
+    "isfinder_evalue": 1e-4,
+    "isfinder_critical_coverage": 0.9,
+
+    # breseq parameters
+    "breseq_threads": 4,
 
     # Junction filtering
     "min_jct_cov": 5,
@@ -85,10 +91,16 @@ class Config:
     samtools_path: Optional[Path] = None
     isdb_path: Optional[Path] = None
 
-    # IS detection parameters
+    # IS/TN detection parameters
     max_dist_to_IS: int = 10
+    trim_jc_flanking: int = 5
     length_seq_into_is: int = 200
     reference_IS_out_span: int = 100
+    isfinder_evalue: float = 1e-4
+    isfinder_critical_coverage: float = 0.9
+
+    # breseq parameters
+    breseq_threads: int = 4
 
     # Junction filtering
     min_jct_cov: int = 5

@@ -30,6 +30,8 @@ def step_factory(request, tmp_output, tiny_ref_gbk, tiny_ref_fasta, tiny_tn_db):
                 ref_name="tiny",
                 ref_path=tmp_output,
                 isdb_path=tiny_tn_db,
+                evalue=1e-4,
+                critical_coverage=0.9,
                 force=force,
             )
     return make_step

@@ -21,8 +21,8 @@ class LocateTNsUsingISfinder(Step[pd.DataFrame]):
         ref_name: str,
         ref_path: Path,
         isdb_path: Path,
-        evalue: float = 1e-4,
-        critical_coverage: float = 0.9,
+        evalue: float,
+        critical_coverage: float,
         force: Optional[bool] = None,
     ):
         self.ref_fasta = Path(ref_fasta)
