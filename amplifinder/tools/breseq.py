@@ -11,7 +11,6 @@ import numpy as np
 import pandas as pd
 
 from amplifinder.logger import info, warning
-from amplifinder.data_types.junction import Junction
 from amplifinder.data_types.schema import TypedSchema
 from amplifinder.data import load_all_field_defs
 
@@ -390,28 +389,6 @@ def get_breseq_summary(breseq_path: Path) -> Dict[str, Any]:
         summary["total_mapped_bases"] = sum(mapped_bases)
 
     return summary
-
-
-def get_junctions(breseq_path: Path) -> List[Junction]:
-    """Parse and return Junction objects from breseq output.
-
-    Args:
-        breseq_path: Path to breseq output directory
-
-    Returns:
-        List of Junction objects
-    """
-    results = parse_breseq_output(breseq_path)
-    jc_df = results.get("JC", pd.DataFrame())
-
-    if jc_df.empty:
-        return []
-
-    junctions = []
-    for _, row in jc_df.iterrows():
-        junctions.append(Junction.from_dict(row.to_dict()))
-
-    return junctions
 
 
 def count_output_lines(breseq_path: Path) -> int:
