@@ -43,14 +43,15 @@ def run_pipeline(config: Config) -> None:
     ).run_and_read_outputs()
     if tn_loc_genbank is not None:
         info(f"GenBank: found {len(tn_loc_genbank)} TN elements")
+    else:
+        info("No GenBank file provided - skipping GenBank TN annotation")
 
     # Step 2b: Locate TN elements using ISfinder database
-    isdb_path = config.isdb_path or get_builtin_isfinder_db_path()
     tn_loc_isfinder = LocateTNsUsingISfinder(
         ref_fasta=genome.fasta_path,
         ref_name=genome.name,
         ref_path=config.ref_path,
-        isdb_path=isdb_path,
+        isdb_path=config.isdb_path or get_builtin_isfinder_db_path(),
     ).run_and_read_outputs()
     info(f"ISfinder: found {len(tn_loc_isfinder)} TN elements")
 

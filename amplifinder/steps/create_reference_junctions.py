@@ -57,68 +57,28 @@ class CreateReferenceJunctionsStep(Step[pd.DataFrame]):
 
         for idx, tn_row in self.tn_loc.iterrows():
             tn_length = tn_row["LocRight"] - tn_row["LocLeft"] + 1
+            scaf = tn_row["TN_scaf"]
 
             # Left junction: TN left boundary -> chromosome
-            jc_records.append(self._make_jc_record(
-                tn_row=tn_row,
-                ref_tn_idx=idx,
-                tn_side="left",
-                pos1=tn_row["LocLeft"],
-                dir1=1,
-                pos2=tn_row["LocLeft"] - 1,
-                dir2=-1,
-                flanking_tn=tn_length,
+            jc_records.append(RefTnJunction(
+                num=0,
+                scaf1=scaf, pos1=int(tn_row["LocLeft"]), dir1=1,
+                scaf2=scaf, pos2=int(tn_row["LocLeft"]) - 1, dir2=-1,
+                flanking_left=tn_length, flanking_right=self.REFERENCE_TN_OUT_SPAN,
+                refTN=int(idx), tn_side="left",
             ))
 
             # Right junction: TN right boundary -> chromosome
-            jc_records.append(self._make_jc_record(
-                tn_row=tn_row,
-                ref_tn_idx=idx,
-                tn_side="right",
-                pos1=tn_row["LocRight"],
-                dir1=-1,
-                pos2=tn_row["LocRight"] + 1,
-                dir2=1,
-                flanking_tn=tn_length,
+            jc_records.append(RefTnJunction(
+                num=0,
+                scaf1=scaf, pos1=int(tn_row["LocRight"]), dir1=-1,
+                scaf2=scaf, pos2=int(tn_row["LocRight"]) + 1, dir2=1,
+                flanking_left=self.REFERENCE_TN_OUT_SPAN, flanking_right=tn_length,
+                refTN=int(idx), tn_side="right",
             ))
 
-        jc_reftn = pd.DataFrame(jc_records)
-        jc_reftn.to_csv(self.output_file, index=False)
-        info(f"Created {len(jc_reftn)} reference TN junctions")
-
-    def _make_jc_record(
-        self,
-        tn_row: pd.Series,
-        ref_tn_idx: int,
-        tn_side: str,
-        pos1: int,
-        dir1: int,
-        pos2: int,
-        dir2: int,
-        flanking_tn: int,
-    ) -> dict:
-        """Create a single JC record for a TN boundary.
-
-        Following the structure from create_JC_of_reference_IS.m:
-        - Side 1 (scaf1, pos1, dir1) = TN side
-        - Side 2 (scaf2, pos2, dir2) = chromosome side
-        """
-        return {
-            "num": 0,  # 0 indicates reference junction
-            "scaf1": tn_row["TN_scaf"],
-            "pos1": int(pos1),
-            "dir1": int(dir1),
-            "scaf2": tn_row["TN_scaf"],
-            "pos2": int(pos2),
-            "dir2": int(dir2),
-            "refTN": int(ref_tn_idx),  # Link back to TN_loc index
-            "tn_side": tn_side,
-            "flanking_left": flanking_tn if tn_side == "left" else self.REFERENCE_TN_OUT_SPAN,
-            "flanking_right": flanking_tn if tn_side == "right" else self.REFERENCE_TN_OUT_SPAN,
-            "reject": None,
-            "new_junction_read_count": 0,
-            "new_junction_coverage": 0.0,
-        }
+        REF_TN_JC_SCHEMA.to_csv(jc_records, self.output_file)
+        info(f"Created {len(jc_records)} reference TN junctions")
 
     def read_outputs(self) -> pd.DataFrame:
         """Load reference TN junctions from output file."""
