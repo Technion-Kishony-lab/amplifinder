@@ -1,15 +1,15 @@
 fields,    types,   optional
-type,      string,0
-num,       double,0
-support,   cell,0
-scaf,      string,0
-pos1,int32,0
-IS,        string,0
-num1,      double,0
-num2,      double,0
-del_end,string,1
-ins_end,string,1
-del_start,string,1
-ins_start,string,1
-before,string,1
-after,string,1
+type,      string,  0
+num,       double,  0
+support,   cell,    0
+scaf,      string,  0
+pos1,      int32,   0
+IS,        string,  0
+num1,      double,  0
+num2,      double,  0
+del_end,   string,  1
+ins_end,   string,  1
+del_start, string,  1
+ins_start, string,  1
+before,    string,  1
+after,     string,  1

@@ -1,13 +1,13 @@
 fields,             types,    optional
-type,               string,0
-num,                double,0
-support,            cell,0
-scaf,               string,0
-pos1,int32,0
-length,             double,0
-repeat_length,      double,1
-repeat_new_copies,  double,1
-repeat_ref_copies,  double,1
-repeat_seq,         string,1
-mediated,           string,1
-between,            string,1
+type,               string,   0
+num,                double,   0
+support,            cell,     0
+scaf,               string,   0
+pos1,               int32,    0
+length,             double,   0
+repeat_length,      double,   1
+repeat_new_copies,  double,   1
+repeat_ref_copies,  double,   1
+repeat_seq,         string,   1
+mediated,           string,   1
+between,            string,   1
