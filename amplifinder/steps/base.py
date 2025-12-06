@@ -2,13 +2,15 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import List, Optional
+from typing import Generic, List, Optional, TypeVar
 import shutil
 
 from amplifinder.logger import info, warning
 
+T = TypeVar("T")
 
-class Step(ABC):
+
+class Step(ABC, Generic[T]):
     """Base class for pipeline steps with input/output file tracking.
 
     Handles:
@@ -54,11 +56,11 @@ class Step(ABC):
         """Execute the step logic. Override in subclass."""
         pass
 
-    def read_outputs(self):
+    def read_outputs(self) -> T:
         """Load outputs from files. Override in subclass to return typed data."""
-        return None
+        raise NotImplementedError
 
-    def run_and_read_outputs(self):
+    def run_and_read_outputs(self) -> T:
         """Run step and return typed outputs."""
         self.run()
         return self.read_outputs()

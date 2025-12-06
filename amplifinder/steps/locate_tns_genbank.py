@@ -11,7 +11,7 @@ from amplifinder.data_types import TN_LOC_SCHEMA
 from amplifinder.utils.genbank import find_tn_elements
 
 
-class LocateTNsUsingGenbank(Step):
+class LocateTNsUsingGenbank(Step[Optional[pd.DataFrame]]):
     """Extract TN elements from GenBank file annotations using BioPython.
 
     Parses GenBank file for 'insertion sequence' features (based on findISinRef.m).
@@ -56,7 +56,3 @@ class LocateTNsUsingGenbank(Step):
         if self.genbank_path is None:
             return None
         return TN_LOC_SCHEMA.read_csv(self.tn_loc_output)
-
-    def run_and_read_outputs(self) -> Optional[pd.DataFrame]:
-        """Run step and return TN locations, or None if no GenBank."""
-        return super().run_and_read_outputs()

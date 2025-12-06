@@ -9,9 +9,10 @@ from Bio.Seq import Seq
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
+from amplifinder.data_types.records import TNJC_SCHEMA, TnMatch
 
 
-class CreateTNJCStep(Step):
+class CreateTNJCStep(Step[pd.DataFrame]):
     """Match junctions to TN elements by sequence comparison.
 
     For each junction, extracts flanking sequences and compares them to
@@ -256,8 +257,4 @@ class CreateTNJCStep(Step):
 
     def read_outputs(self) -> pd.DataFrame:
         """Load TNJC from output file."""
-        return pd.read_csv(self.output_file)
-
-    def run_and_read_outputs(self) -> pd.DataFrame:
-        """Run step and return TN-associated junctions."""
-        return super().run_and_read_outputs()
+        return TNJC_SCHEMA.read_csv(self.output_file)
