@@ -223,9 +223,11 @@ class TypedSchema:
             df = pd.read_csv(path, header=None, names=self.names)
             return df.astype(self.dtypes)
 
-    def to_csv(self, df: pd.DataFrame, path: Path, headers: bool = True) -> None:
-        """Save DataFrame to CSV."""
-        df.to_csv(path, index=False, header=headers)
+    def to_csv(self, data: Union[pd.DataFrame, List[T]], path: Path, headers: bool = True) -> None:
+        """Save DataFrame or list of dataclass instances to CSV."""
+        if isinstance(data, list):
+            data = self.instances_to_df(data)
+        data.to_csv(path, index=False, header=headers)
 
     def assert_matches(self, df: pd.DataFrame) -> None:
         """Assert DataFrame matches schema columns and dtypes exactly."""
