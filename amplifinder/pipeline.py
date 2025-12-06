@@ -9,7 +9,7 @@ from amplifinder.steps import (
     LocateISsUsingGenbank,
     BreseqStep,
 )
-from amplifinder.data import get_isfinder_db_path
+from amplifinder.data import get_builtin_isfinder_db_path
 
 
 def run_pipeline(config: Config) -> None:
@@ -37,7 +37,7 @@ def run_pipeline(config: Config) -> None:
     info(f"GenBank: found {len(IS_loc_genbank)} IS elements")
     
     # Step 2b: Locate IS elements using ISfinder database
-    isdb_path = config.isdb_path or get_isfinder_db_path()
+    isdb_path = config.isdb_path or get_builtin_isfinder_db_path()
     locIS_isfinder_step = LocateISsUsingISfinder(
         ref_fasta=genome.fasta_path,
         ref_name=genome.name,
