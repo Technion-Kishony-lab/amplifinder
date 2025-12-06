@@ -35,11 +35,11 @@ class LocateTNsUsingISfinder(Step):
         # Output paths
         self.isfinder_dir = self.ref_path / "ISfinder"
         self.blast_output = self.isfinder_dir / f"{ref_name}_blast.txt"
-        self.TN_loc_output = self.isfinder_dir / f"{ref_name}_TN_loc.csv"
+        self.tn_loc_output = self.isfinder_dir / f"{ref_name}_tn_loc.csv"
 
         super().__init__(
             inputs=[self.ref_fasta, self.isdb_path],
-            outputs=[self.TN_loc_output],
+            outputs=[self.tn_loc_output],
             force=force,
         )
 
@@ -60,9 +60,9 @@ class LocateTNsUsingISfinder(Step):
         )
 
         # Parse BLAST results and save
-        TN_loc = self._parse_blast()
-        TN_LOC_SCHEMA.to_csv(TN_loc, self.TN_loc_output)
-        info(f"Found {len(TN_loc)} TN elements via ISfinder")
+        tn_loc = self._parse_blast()
+        TN_LOC_SCHEMA.to_csv(tn_loc, self.tn_loc_output)
+        info(f"Found {len(tn_loc)} TN elements via ISfinder")
 
     def _parse_blast(self) -> pd.DataFrame:
         """Parse BLAST output and filter to TN locations."""
@@ -71,12 +71,12 @@ class LocateTNsUsingISfinder(Step):
             return TN_LOC_SCHEMA.empty()
 
         # Load ISfinder DB to get TN lengths
-        TN_lengths = read_fasta_lengths(self.isdb_path)
+        tn_lengths = read_fasta_lengths(self.isdb_path)
 
         # Convert to TN locations
-        return self._blast_to_TN_loc(df, TN_lengths)
+        return self._blast_to_tn_loc(df, tn_lengths)
 
-    def _blast_to_TN_loc(self, blast_df: pd.DataFrame, tn_lengths: dict) -> pd.DataFrame:
+    def _blast_to_tn_loc(self, blast_df: pd.DataFrame, tn_lengths: dict) -> pd.DataFrame:
         """Convert BLAST results to TN location table (matlab blast2ISloc logic)."""
         df = blast_df.copy()
 
@@ -93,7 +93,7 @@ class LocateTNsUsingISfinder(Step):
         df["coverage"] = abs(df["sstart"] - df["send"]) / df["subject_length"]
         df = df[df["coverage"] > self.critical_coverage]
 
-        # Build TN_loc table
+        # Build tn_loc table
         # Detect strand: sstart > send means reverse complement
         is_complement = (df["sstart"] > df["send"]).values
 
@@ -113,7 +113,7 @@ class LocateTNsUsingISfinder(Step):
 
     def read_outputs(self) -> pd.DataFrame:
         """Load TN locations from output file."""
-        return TN_LOC_SCHEMA.read_csv(self.TN_loc_output)
+        return TN_LOC_SCHEMA.read_csv(self.tn_loc_output)
 
     def run_and_read_outputs(self) -> pd.DataFrame:
         """Run step and return TN locations."""
