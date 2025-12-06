@@ -52,6 +52,8 @@ def run_pipeline(config: Config) -> None:
         ref_name=genome.name,
         ref_path=config.ref_path,
         isdb_path=config.isdb_path or get_builtin_isfinder_db_path(),
+        evalue=config.isfinder_evalue,
+        critical_coverage=config.isfinder_critical_coverage,
     ).run_and_read_outputs()
     info(f"ISfinder: found {len(tn_loc_isfinder)} TN elements")
 
@@ -70,6 +72,7 @@ def run_pipeline(config: Config) -> None:
         tn_loc=tn_loc,
         ref_name=genome.name,
         output_dir=iso_output,
+        reference_tn_out_span=config.reference_IS_out_span,
     ).run_and_read_outputs()
 
     """Run breseq on isolate to get junctions."""
@@ -80,6 +83,7 @@ def run_pipeline(config: Config) -> None:
         ref_file=genome.genbank_path or genome.fasta_path,
         output_path=config.iso_breseq_path or iso_output / "breseq",
         docker=config.breseq_docker,
+        threads=config.breseq_threads,
     ).run_and_read_outputs()
     breseq_jc = breseq_output["JC"]
     info(f"breseq: {len(breseq_jc)} junctions")
@@ -93,6 +97,8 @@ def run_pipeline(config: Config) -> None:
         tn_loc=tn_loc,
         ref_fasta=genome.fasta_path,
         output_dir=iso_output,
+        max_dist_to_tn=config.max_dist_to_IS,
+        trim_jc_flanking=config.trim_jc_flanking,
     ).run_and_read_outputs()
     info(f"TNJC: {len(tnjc)} TN-associated junctions")
 

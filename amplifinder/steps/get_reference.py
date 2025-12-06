@@ -14,7 +14,7 @@ class GetReferenceStep(Step[Genome]):
         self,
         ref_name: str,
         ref_path: Path,
-        ncbi: bool = True,
+        ncbi: bool,
         force: Optional[bool] = None,
     ):
         self.ref_name = ref_name

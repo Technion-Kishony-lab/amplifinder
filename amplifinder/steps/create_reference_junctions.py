@@ -20,13 +20,12 @@ class CreateReferenceJunctionsStep(Step[pd.DataFrame]):
     Based on create_JC_of_reference_IS.m
     """
 
-    REFERENCE_TN_OUT_SPAN = 100  # bp outside TN for unique chromosome seq
-
     def __init__(
         self,
         tn_loc: pd.DataFrame,
         ref_name: str,
         output_dir: Path,
+        reference_tn_out_span: int,
         force: Optional[bool] = None,
     ):
         """Initialize step.
@@ -35,11 +34,13 @@ class CreateReferenceJunctionsStep(Step[pd.DataFrame]):
             tn_loc: DataFrame with TN locations (ID, TN_Name, TN_scaf, etc.)
             ref_name: Reference genome name
             output_dir: Directory to write output
+            reference_tn_out_span: bp outside TN for unique chromosome seq
             force: Force re-run even if output exists
         """
         self.tn_loc = tn_loc
         self.ref_name = ref_name
         self.output_dir = Path(output_dir)
+        self.reference_tn_out_span = reference_tn_out_span
 
         self.output_file = self.output_dir / "ref_tn_jc.csv"
 
@@ -64,7 +65,7 @@ class CreateReferenceJunctionsStep(Step[pd.DataFrame]):
                 num=0,
                 scaf1=scaf, pos1=int(tn_row["LocLeft"]), dir1=1,
                 scaf2=scaf, pos2=int(tn_row["LocLeft"]) - 1, dir2=-1,
-                flanking_left=tn_length, flanking_right=self.REFERENCE_TN_OUT_SPAN,
+                flanking_left=tn_length, flanking_right=self.reference_tn_out_span,
                 refTN=int(idx), tn_side="left",
             ))
 
@@ -73,7 +74,7 @@ class CreateReferenceJunctionsStep(Step[pd.DataFrame]):
                 num=0,
                 scaf1=scaf, pos1=int(tn_row["LocRight"]), dir1=-1,
                 scaf2=scaf, pos2=int(tn_row["LocRight"]) + 1, dir2=1,
-                flanking_left=self.REFERENCE_TN_OUT_SPAN, flanking_right=tn_length,
+                flanking_left=self.reference_tn_out_span, flanking_right=tn_length,
                 refTN=int(idx), tn_side="right",
             ))
 

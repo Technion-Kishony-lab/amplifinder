@@ -23,16 +23,14 @@ class CreateTNJCStep(Step[pd.DataFrame]):
     Based on assign_potential_ISs.m
     """
 
-    MAX_DIST_TO_TN = 20  # Max distance from junction to TN boundary
-    TRIM_JC_FLANKING = 5  # Trim junction edges to avoid misalignment
-
     def __init__(
         self,
         jc_df: pd.DataFrame,
         tn_loc: pd.DataFrame,
         ref_fasta: Path,
         output_dir: Path,
-        max_dist_to_tn: int = 20,
+        max_dist_to_tn: int,
+        trim_jc_flanking: int,
         force: Optional[bool] = None,
     ):
         """Initialize step.
@@ -43,6 +41,7 @@ class CreateTNJCStep(Step[pd.DataFrame]):
             ref_fasta: Path to reference FASTA file
             output_dir: Directory to write output
             max_dist_to_tn: Maximum distance from junction to TN boundary
+            trim_jc_flanking: Trim junction edges to avoid misalignment
             force: Force re-run
         """
         self.jc_df = jc_df.copy()
@@ -50,6 +49,7 @@ class CreateTNJCStep(Step[pd.DataFrame]):
         self.ref_fasta = Path(ref_fasta)
         self.output_dir = Path(output_dir)
         self.max_dist_to_tn = max_dist_to_tn
+        self.trim_jc_flanking = trim_jc_flanking
 
         self.output_file = self.output_dir / "TNJC.csv"
 
@@ -174,7 +174,7 @@ class CreateTNJCStep(Step[pd.DataFrame]):
 
         ref_seq = self.ref_seqs[scaf]
         pos = pos - 1  # 0-based
-        flank_len = flank_len - self.TRIM_JC_FLANKING - 1
+        flank_len = flank_len - self.trim_jc_flanking - 1
 
         if flank_len <= 0:
             flank_len = 20
