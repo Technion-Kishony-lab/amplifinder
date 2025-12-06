@@ -44,7 +44,7 @@ def test_run_blastn(blast_output):
 def test_parse_blast_csv(blast_output):
     """Should parse BLAST CSV output correctly."""
     df = parse_blast_csv(blast_output)
-    
+
     assert len(df) > 0
     BLAST_SCHEMA.assert_matches(df)
 
@@ -56,10 +56,10 @@ def test_blast_no_hits(blast_db, tmp_path):
     from tests.conftest import make_random_seq, write_fasta
     query = tmp_path / "no_match.fasta"
     write_fasta(query, "no_match", make_random_seq(200, seed=999))
-    
+
     output = tmp_path / "blast_out.txt"
     run_blastn(query=query, db=blast_db, output=output)
     df = parse_blast_csv(output)
-    
+
     assert len(df) == 0
     BLAST_SCHEMA.assert_matches(df)
