@@ -7,7 +7,7 @@ from typing import List, Optional
 import pandas as pd
 
 from amplifinder.logger import info
-from amplifinder.data_types.schema import BLAST_SCHEMA
+from amplifinder.data.schemas import BLAST_SCHEMA
 from amplifinder.env import BLAST_PATH
 
 
