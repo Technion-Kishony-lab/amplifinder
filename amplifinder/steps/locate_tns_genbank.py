@@ -1,4 +1,4 @@
-"""Step: Find IS elements from GenBank annotations."""
+"""Step: Find TN elements from GenBank annotations."""
 
 from pathlib import Path
 from typing import Optional
@@ -7,12 +7,12 @@ import pandas as pd
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data.schemas import IS_LOC_SCHEMA
-from amplifinder.utils.genbank import find_IS_elements
+from amplifinder.data.schemas import TN_LOC_SCHEMA
+from amplifinder.utils.genbank import find_TN_elements
 
 
-class LocateISsUsingGenbank(Step):
-    """Extract IS elements from GenBank file annotations using BioPython.
+class LocateTNsUsingGenbank(Step):
+    """Extract TN elements from GenBank file annotations using BioPython.
 
     Parses GenBank file for 'insertion sequence' features (based on findISinRef.m).
     """
@@ -30,29 +30,29 @@ class LocateISsUsingGenbank(Step):
 
         # Output paths
         self.genbank_dir = self.ref_path / "genbank"
-        self.IS_loc_output = self.genbank_dir / f"{ref_name}_IS_loc.csv"
+        self.TN_loc_output = self.genbank_dir / f"{ref_name}_TN_loc.csv"
 
         super().__init__(
             inputs=[self.genbank_path],
-            outputs=[self.IS_loc_output],
+            outputs=[self.TN_loc_output],
             force=force,
         )
 
     def _run(self) -> None:
-        """Parse GenBank file and extract IS locations."""
+        """Parse GenBank file and extract TN locations."""
         self.genbank_dir.mkdir(parents=True, exist_ok=True)
 
         # Use BioPython to parse features
-        records = find_IS_elements(self.genbank_path, self.ref_name)
+        records = find_TN_elements(self.genbank_path, self.ref_name)
 
-        IS_loc = IS_LOC_SCHEMA.from_records(records)
-        IS_LOC_SCHEMA.to_csv(IS_loc, self.IS_loc_output)
-        info(f"Found {len(IS_loc)} IS elements in GenBank annotations")
+        TN_loc = TN_LOC_SCHEMA.from_records(records)
+        TN_LOC_SCHEMA.to_csv(TN_loc, self.TN_loc_output)
+        info(f"Found {len(TN_loc)} TN elements in GenBank annotations")
 
     def read_outputs(self) -> pd.DataFrame:
-        """Load IS locations from output file."""
-        return IS_LOC_SCHEMA.read_csv(self.IS_loc_output)
+        """Load TN locations from output file."""
+        return TN_LOC_SCHEMA.read_csv(self.TN_loc_output)
 
     def run_and_read_outputs(self) -> pd.DataFrame:
-        """Run step and return IS locations."""
+        """Run step and return TN locations."""
         return super().run_and_read_outputs()

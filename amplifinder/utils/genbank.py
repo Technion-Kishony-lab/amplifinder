@@ -8,8 +8,8 @@ from Bio import SeqIO
 from Bio.SeqFeature import SeqFeature
 
 
-def find_IS_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
-    """Find IS elements from GenBank annotations.
+def find_TN_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
+    """Find TN elements from GenBank annotations.
 
     Looks for mobile_element features with 'insertion sequence' in the type.
 
@@ -18,7 +18,7 @@ def find_IS_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
         ref_name: Reference/scaffold name for output
 
     Returns:
-        List of IS element dicts with keys: ID, IS_Name, IS_scaf, LocLeft, LocRight, Complement, Join
+        List of TN element dicts with keys: ID, TN_Name, TN_scaf, LocLeft, LocRight, Complement, Join
     """
     record = SeqIO.read(genbank_path, "genbank")
 
@@ -26,8 +26,8 @@ def find_IS_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
     id_counter = 0
 
     for feature in record.features:
-        IS_name = _extract_IS_name_from_feature(feature)
-        if IS_name is None:
+        TN_name = _extract_TN_name_from_feature(feature)
+        if TN_name is None:
             continue
 
         # Get location info
@@ -42,8 +42,8 @@ def find_IS_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
         id_counter += 1
         records.append({
             "ID": id_counter,
-            "IS_Name": IS_name,
-            "IS_scaf": ref_name,
+            "TN_Name": TN_name,
+            "TN_scaf": ref_name,
             "LocLeft": pos_left,
             "LocRight": pos_right,
             "Complement": is_complement,
@@ -53,10 +53,10 @@ def find_IS_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
     return records
 
 
-def _extract_IS_name_from_feature(feature: SeqFeature) -> Optional[str]:
-    """Extract IS name from a GenBank feature if it's an insertion sequence.
+def _extract_TN_name_from_feature(feature: SeqFeature) -> Optional[str]:
+    """Extract TN name from a GenBank feature if it's an insertion sequence.
 
-    Returns IS name if feature is an IS element, None otherwise.
+    Returns TN name if feature is a TN element, None otherwise.
     """
     # Get text to search based on feature type
     qualifiers = feature.qualifiers

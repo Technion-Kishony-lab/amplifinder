@@ -1,10 +1,10 @@
 """Utilities."""
 
 from amplifinder.utils.fasta import read_fasta_lengths, read_fastq_lengths
-from amplifinder.utils.genbank import find_IS_elements
+from amplifinder.utils.genbank import find_TN_elements
 
 __all__ = [
     "read_fasta_lengths",
     "read_fastq_lengths",
-    "find_IS_elements",
+    "find_TN_elements",
 ]
