@@ -17,7 +17,7 @@ def run_pipeline(config: Config) -> None:
     # Step 0: Initialize output directories
     initializing_step = InitializingStep(output_dir=config.output_dir, iso_name=config.iso_name)
     iso_output = initializing_step.run_and_read_outputs()
-    
+
     # Step 1: Get reference genome
     get_reference_step = GetReferenceStep(
         ref_name=config.ref_name,
@@ -26,7 +26,7 @@ def run_pipeline(config: Config) -> None:
     )
     genome = get_reference_step.run_and_read_outputs()
     info(f"Reference: {genome.name} ({genome.length:,} bp)")
-    
+
     # Step 2a: Locate IS elements using GenBank annotations
     locIS_genbank_step = LocateISsUsingGenbank(
         genbank_path=genome.genbank_path,
@@ -35,7 +35,7 @@ def run_pipeline(config: Config) -> None:
     )
     IS_loc_genbank = locIS_genbank_step.run_and_read_outputs()
     info(f"GenBank: found {len(IS_loc_genbank)} IS elements")
-    
+
     # Step 2b: Locate IS elements using ISfinder database
     isdb_path = config.isdb_path or get_builtin_isfinder_db_path()
     locIS_isfinder_step = LocateISsUsingISfinder(
@@ -46,10 +46,10 @@ def run_pipeline(config: Config) -> None:
     )
     IS_loc_isfinder = locIS_isfinder_step.run_and_read_outputs()
     info(f"ISfinder: found {len(IS_loc_isfinder)} IS elements")
-    
+
     # Select which IS_loc to use based on config
-    IS_loc = IS_loc_isfinder if config.use_ISfinder else IS_loc_genbank
-    
+    _IS_loc = IS_loc_isfinder if config.use_ISfinder else IS_loc_genbank  # noqa: F841
+
     # Step 3: Run breseq on isolate
     iso_breseq = config.iso_breseq_path or iso_output / "breseq"
     breseq_step = BreseqStep(
@@ -59,7 +59,7 @@ def run_pipeline(config: Config) -> None:
         docker=config.breseq_docker,
     )
     breseq_step.run()
-    
+
     # TODO: Step 3 - IS detection (uses IS_loc)
     # TODO: Step 4 - Junction pairs
     # TODO: Step 5 - Classification + Export

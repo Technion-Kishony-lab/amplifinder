@@ -44,7 +44,7 @@ def locate_iss_step(step_factory):
 def test_extracts_is_elements(locate_iss_step):
     """Should extract IS elements correctly."""
     is_loc = locate_iss_step.run_and_read_outputs()
-    
+
     expected = pd.DataFrame({
         "ID": [1, 2],
         "IS_Name": ["IS_test1", "IS_test2"],
@@ -67,4 +67,3 @@ def test_force_reruns(step_factory):
     """Force=True should re-run even if output exists."""
     step_factory().run()
     assert step_factory(force=True).run() is True
-

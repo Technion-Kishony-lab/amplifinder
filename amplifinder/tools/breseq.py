@@ -37,52 +37,52 @@ def run_breseq(
     threads: int = 4,
 ) -> Path:
     """Run breseq alignment pipeline.
-    
+
     Args:
         ref_paths: List of paths to reference files (.gb or .fasta)
         fastq_path: Path to directory containing FASTQ files
         output_path: Path to output directory
         docker: Use Docker to run breseq (default: True)
         threads: Number of threads for breseq (default: 4)
-        
+
     Returns:
         Path to breseq output directory
-        
+
     Raises:
         RuntimeError: If breseq fails
     """
     output_path = Path(output_path)
     fastq_path = Path(fastq_path)
-    
+
     # Check if already completed
     output_gd = output_path / "output" / "output.gd"
     if output_gd.exists():
         info(f"breseq output already exists: {output_gd}")
         return output_path
-    
+
     # Find FASTQ files
     fastq_files = list(fastq_path.glob("*.fastq*"))
     if not fastq_files:
         raise FileNotFoundError(f"No FASTQ files found in {fastq_path}")
-    
+
     info(f"Found {len(fastq_files)} FASTQ file(s)")
-    
+
     # Clean output directory if partial run exists
     if output_path.exists():
         warning(f"Cleaning incomplete breseq output: {output_path}")
         subprocess.run(["rm", "-rf", str(output_path)], check=True)
-    
+
     output_path.mkdir(parents=True, exist_ok=True)
-    
+
     if docker:
         _run_breseq_docker(ref_paths, fastq_path, fastq_files, output_path, threads)
     else:
         _run_breseq_local(ref_paths, fastq_files, output_path, threads)
-    
+
     # Verify output
     if not output_gd.exists():
         raise RuntimeError(f"breseq failed: {output_gd} not created")
-    
+
     info("breseq completed successfully")
     return output_path
 
@@ -99,7 +99,7 @@ def _run_breseq_docker(
     ref_dir = ref_paths[0].parent.resolve()
     fastq_dir = fastq_path.resolve()
     out_dir = output_path.resolve()
-    
+
     # Build Docker command
     # Mount reference directory
     mounts = [
@@ -107,15 +107,15 @@ def _run_breseq_docker(
         "-v", f"{fastq_dir}:/fastq:ro",
         "-v", f"{out_dir}:/out",
     ]
-    
+
     # Build reference arguments
     ref_args = []
     for ref_path in ref_paths:
         ref_args.extend(["-r", f"/ref/{ref_path.name}"])
-    
+
     # Build FASTQ arguments
     fastq_args = [f"/fastq/{f.name}" for f in fastq_files]
-    
+
     cmd = [
         "docker", "run", "--rm", "-u", "root", "-i",
         *mounts,
@@ -126,15 +126,15 @@ def _run_breseq_docker(
         *ref_args,
         *fastq_args,
     ]
-    
+
     info(f"Running breseq (Docker): {' '.join(cmd[:10])}...")
-    
+
     result = subprocess.run(
         cmd,
         capture_output=True,
         text=True,
     )
-    
+
     if result.returncode != 0:
         warning(f"breseq stderr: {result.stderr}")
         raise RuntimeError(f"breseq failed with exit code {result.returncode}")
@@ -151,10 +151,10 @@ def _run_breseq_local(
     ref_args = []
     for ref_path in ref_paths:
         ref_args.extend(["-r", str(ref_path.resolve())])
-    
+
     # Build FASTQ arguments
     fastq_args = [str(f.resolve()) for f in fastq_files]
-    
+
     cmd = [
         "breseq",
         "-j", str(threads),
@@ -162,15 +162,15 @@ def _run_breseq_local(
         *ref_args,
         *fastq_args,
     ]
-    
+
     info(f"Running breseq (local): {' '.join(cmd[:8])}...")
-    
+
     result = subprocess.run(
         cmd,
         capture_output=True,
         text=True,
     )
-    
+
     if result.returncode != 0:
         warning(f"breseq stderr: {result.stderr}")
         raise RuntimeError(f"breseq failed with exit code {result.returncode}")
@@ -178,12 +178,12 @@ def _run_breseq_local(
 
 def get_ref_file(genome: "Genome", use_annotations: bool = True) -> Path:
     """Get reference file for breseq.
-    
+
     Args:
         genome: Genome object
         use_annotations: If True, prefer GenBank (has annotations);
                         If False, prefer FASTA (for ISfinder mode)
-    
+
     Returns:
         Path to reference file (.gb or .fasta)
     """
@@ -199,22 +199,22 @@ def get_ref_file(genome: "Genome", use_annotations: bool = True) -> Path:
 
 def get_breseq_version(breseq_path: Path) -> Optional[str]:
     """Extract breseq version from output directory.
-    
+
     Args:
         breseq_path: Path to breseq output directory
-        
+
     Returns:
         Version string or None if not found
     """
     log_file = breseq_path / "output" / "log.txt"
     if not log_file.exists():
         return None
-    
+
     with open(log_file) as f:
         for line in f:
             if "breseq" in line.lower() and "version" in line.lower():
                 return line.strip()
-    
+
     return None
 
 
@@ -224,41 +224,41 @@ def get_breseq_version(breseq_path: Path) -> Optional[str]:
 
 def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
     """Parse breseq output.gd file into DataFrames.
-    
+
     Args:
         breseq_path: Path to breseq output directory
-        
+
     Returns:
         Dictionary with keys: JC, SNP, MOB, DEL, UN
         Each value is a DataFrame with parsed records
     """
     output_gd = Path(breseq_path) / "output" / "output.gd"
-    
+
     if not output_gd.exists():
         raise FileNotFoundError(f"breseq output not found: {output_gd}")
-    
+
     # Initialize empty record lists
     records: Dict[str, List[Dict[str, Any]]] = {
         name: [] for name in RECORD_TYPES.keys()
     }
-    
+
     info(f"Parsing breseq output: {output_gd}")
-    
+
     with open(output_gd) as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            
+
             parts = line.split("\t")
             record_type = parts[0]
-            
+
             if record_type not in RECORD_TYPES:
                 continue
-            
+
             record = _parse_record(parts, RECORD_TYPES[record_type])
             records[record_type].append(record)
-    
+
     # Convert to DataFrames
     results = {}
     for name, recs in records.items():
@@ -266,28 +266,28 @@ def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
         results[name] = df
         if not df.empty:
             info(f"  {name}: {len(df)} records")
-    
+
     return results
 
 
 def _parse_record(parts: List[str], schema: TypedSchema) -> Dict[str, Any]:
     """Parse a single breseq record line.
-    
+
     Args:
         parts: Tab-separated parts of the line
         schema: TypedSchema with column definitions
-        
+
     Returns:
         Dictionary with parsed fields
     """
     record: Dict[str, Any] = {}
-    
+
     # Parse positional (required) fields
     required_names = schema.required_names
     for i, name in enumerate(required_names):
         if i < len(parts):
             record[name] = _convert_value(parts[i], schema.dtypes[name])
-    
+
     # Parse optional key=value fields
     n_required = len(required_names)
     for part in parts[n_required:]:
@@ -297,21 +297,21 @@ def _parse_record(parts: List[str], schema: TypedSchema) -> Dict[str, Any]:
                 record[key] = _convert_value(value, schema.dtypes[key])
             else:
                 record[key] = value
-    
+
     return record
 
 
 def _convert_value(value: str, dtype: type, none_values: Tuple[str, ...] = ("NA", "")) -> Any:
     """Convert string value to appropriate type.
-    
+
     Args:
         value: String value from breseq output
         dtype: Target type (str, int, float)
         none_values: Values to treat as None
-        
+
     Returns:
         Converted value, or None for none_values
-        
+
     Raises:
         ValueError: If conversion fails
     """
@@ -322,28 +322,28 @@ def _convert_value(value: str, dtype: type, none_values: Tuple[str, ...] = ("NA"
 
 def parse_coverage(breseq_path: Path, ref_names: List[str]) -> Dict[str, np.ndarray]:
     """Parse coverage files from breseq output.
-    
+
     Args:
         breseq_path: Path to breseq output directory
         ref_names: List of reference scaffold names
-        
+
     Returns:
         Dictionary mapping scaffold name to coverage array
     """
     breseq_path = Path(breseq_path)
     coverage_dir = breseq_path / "08_mutation_identification"
-    
+
     coverage = {}
-    
+
     for ref_name in ref_names:
         cov_file = coverage_dir / f"{ref_name}.coverage.tab"
-        
+
         if not cov_file.exists():
             warning(f"Coverage file not found: {cov_file}")
             continue
-        
+
         info(f"Parsing coverage for {ref_name}")
-        
+
         # Read coverage table
         df = pd.read_csv(
             cov_file,
@@ -353,34 +353,34 @@ def parse_coverage(breseq_path: Path, ref_names: List[str]) -> Dict[str, np.ndar
             names=["top", "bot"],
             dtype={"top": np.int32, "bot": np.int32},
         )
-        
+
         # Total coverage is sum of top and bottom strand
         coverage[ref_name] = df["top"].values + df["bot"].values
-    
+
     return coverage
 
 
 def get_breseq_summary(breseq_path: Path) -> Dict[str, Any]:
     """Extract summary statistics from breseq output.
-    
+
     Args:
         breseq_path: Path to breseq output directory
-        
+
     Returns:
         Dictionary with summary statistics including mapped_bases
     """
     summary_file = Path(breseq_path) / "05_alignment_correction" / "summary.json"
-    
+
     if not summary_file.exists():
         warning(f"Summary file not found: {summary_file}")
         return {}
-    
+
     with open(summary_file) as f:
         data = json.load(f)
-    
+
     # Extract mapped bases from summary
     summary = {}
-    
+
     if "references" in data:
         mapped_bases = []
         for ref in data["references"].values():
@@ -388,46 +388,45 @@ def get_breseq_summary(breseq_path: Path) -> Dict[str, Any]:
                 mapped_bases.append(ref["bases_mapped_to_reference"])
         summary["mapped_bases"] = mapped_bases
         summary["total_mapped_bases"] = sum(mapped_bases)
-    
+
     return summary
 
 
 def get_junctions(breseq_path: Path) -> List[Junction]:
     """Parse and return Junction objects from breseq output.
-    
+
     Args:
         breseq_path: Path to breseq output directory
-        
+
     Returns:
         List of Junction objects
     """
     results = parse_breseq_output(breseq_path)
     jc_df = results.get("JC", pd.DataFrame())
-    
+
     if jc_df.empty:
         return []
-    
+
     junctions = []
     for _, row in jc_df.iterrows():
         junctions.append(Junction.from_dict(row.to_dict()))
-    
+
     return junctions
 
 
 def count_output_lines(breseq_path: Path) -> int:
     """Count lines in breseq output.gd file.
-    
+
     Args:
         breseq_path: Path to breseq output directory
-        
+
     Returns:
         Number of lines in output.gd
     """
     output_gd = Path(breseq_path) / "output" / "output.gd"
-    
+
     if not output_gd.exists():
         return 0
-    
+
     with open(output_gd) as f:
         return sum(1 for _ in f)
-

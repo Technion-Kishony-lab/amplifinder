@@ -112,7 +112,7 @@ def main(
     file_config = None
     if config_file is not None:
         file_config = load_config(config_file)
-    
+
     # Collect CLI arguments
     cli_args = {
         "iso_path": iso_path,
@@ -127,35 +127,35 @@ def main(
         "ncbi": ncbi,
         "use_ISfinder": use_ISfinder,
     }
-    
+
     # Merge configurations
     merged = merge_config(cli_args, file_config)
-    
+
     try:
         config = Config(**merged)
     except ValueError as e:
         raise click.ClickException(str(e))
-    
+
     # Setup logger
     log_path = config.output_dir / config.log_path
     log_path.parent.mkdir(parents=True, exist_ok=True)
     setup_logger(log_path=log_path, level=getattr(logging, log_level.upper()))
-    
+
     info(f"AmpliFinder v{__version__}")
     info(f"Isolate: {config.iso_path}")
     info(f"Reference: {config.ref_name}")
-    
+
     if config.anc_path:
         info(f"Ancestor: {config.anc_path}")
     else:
         warning("No ancestor assigned; using non-normalized coverage analysis")
-    
+
     try:
         run_pipeline(config)
     except Exception as e:
         error(f"Pipeline failed: {e}")
         raise click.ClickException(str(e))
-    
+
     info("Done")
 
 

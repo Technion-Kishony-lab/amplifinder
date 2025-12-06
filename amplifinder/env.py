@@ -29,7 +29,7 @@ def _load_config() -> dict:
     config_path = _find_config()
     if config_path is None:
         return {}
-    
+
     with open(config_path) as f:
         return yaml.safe_load(f) or {}
 

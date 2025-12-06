@@ -2,7 +2,6 @@
 
 import random
 import pytest
-import pandas as pd
 from pathlib import Path
 
 from Bio import SeqIO
@@ -10,20 +9,14 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
-from amplifinder.data_types.schema import TypedSchema
-
-
 # =============================================================================
 # Assertion helpers
 # =============================================================================
 
 
-
 # =============================================================================
 # Test configuration
 # =============================================================================
-
-from tests.env import RUN_BLAST_TESTS
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 
@@ -48,7 +41,7 @@ def make_is_sequences() -> dict:
 
 def make_reference_with_is(is_seqs: dict) -> tuple[Seq, dict]:
     """Build reference genome with embedded IS elements.
-    
+
     Returns:
         (sequence, is_locations) where is_locations maps IS name to (start, end, complement)
     """
@@ -56,18 +49,18 @@ def make_reference_with_is(is_seqs: dict) -> tuple[Seq, dict]:
     flank1 = make_random_seq(500, seed=1)
     flank2 = make_random_seq(400, seed=2)
     flank3 = make_random_seq(500, seed=3)
-    
+
     is1 = is_seqs["IS_test1"]  # forward strand
     is2_rc = is_seqs["IS_test2"].reverse_complement()
-    
+
     # Build sequence and track positions (1-based)
     seq = flank1 + is1 + flank2 + is2_rc + flank3
-    
+
     is_locations = {
         "IS_test1": (501, 500 + len(is1), False),           # forward
         "IS_test2": (501 + len(is1) + 400, 500 + len(is1) + 400 + len(is2_rc), True),  # complement
     }
-    
+
     return seq, is_locations
 
 
@@ -96,14 +89,14 @@ def write_genbank(path: Path, name: str, seq: Seq, is_locations: dict) -> None:
             "data_file_division": "SYN",
         },
     )
-    
+
     # Add source feature
     record.features.append(SeqFeature(
         FeatureLocation(0, len(seq)),
         type="source",
         qualifiers={"organism": ["synthetic construct"], "mol_type": ["genomic DNA"]},
     ))
-    
+
     # Add IS features
     for is_name, (start, end, complement) in is_locations.items():
         strand = -1 if complement else 1
@@ -115,7 +108,7 @@ def write_genbank(path: Path, name: str, seq: Seq, is_locations: dict) -> None:
                 "note": ["Test IS element"],
             },
         ))
-    
+
     SeqIO.write(record, path, "genbank")
 
 
@@ -132,26 +125,26 @@ def is_sequences():
 @pytest.fixture
 def test_data(tmp_path, is_sequences):
     """Generate synthetic test data in tmp_path.
-    
+
     Creates:
         - tiny_ref.fasta: Reference with embedded IS elements
         - tiny_ref.gbk: GenBank with IS annotations
         - tiny_is.fna: IS database
-    
+
     Returns:
         Path to test_data directory
     """
     data_dir = tmp_path / "test_data"
     data_dir.mkdir()
-    
+
     # Build reference with IS elements
     seq, is_locs = make_reference_with_is(is_sequences)
-    
+
     # Write files (use "tiny" as sequence ID to match ref_name in tests)
     write_fasta(data_dir / "tiny_ref.fasta", "tiny", seq)
     write_genbank(data_dir / "tiny_ref.gbk", "tiny", seq, is_locs)
     write_IS_database(data_dir / "tiny_is.fna", is_sequences)
-    
+
     return data_dir
 
 

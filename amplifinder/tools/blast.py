@@ -44,7 +44,7 @@ def run_blastn(
     extra_args: Optional[List[str]] = None,
 ) -> None:
     """Run blastn against a database.
-    
+
     Args:
         query: Query FASTA file
         db: BLAST database path
@@ -65,17 +65,17 @@ def run_blastn(
     ]
     if extra_args:
         cmd.extend(extra_args)
-    
+
     info(f"Running BLAST: {' '.join(cmd)}")
     subprocess.run(cmd, check=True)
 
 
 def parse_blast_csv(path: Path) -> pd.DataFrame:
     """Parse BLAST CSV output (format 10).
-    
+
     Args:
         path: Path to BLAST output file
-    
+
     Returns:
         DataFrame with BLAST results, empty with correct schema if file missing/empty
     """

@@ -11,7 +11,7 @@ from amplifinder.tools.breseq import run_breseq, parse_breseq_output
 
 class BreseqStep(Step):
     """Run breseq alignment pipeline."""
-    
+
     def __init__(
         self,
         fastq_path: Path,
@@ -26,13 +26,13 @@ class BreseqStep(Step):
         self.output_path = Path(output_path)
         self.docker = docker
         self.threads = threads
-        
+
         super().__init__(
             inputs=[fastq_path, ref_file],
             outputs=[output_path / "output" / "output.gd"],
             force=force,
         )
-    
+
     def _run(self) -> None:
         """Run breseq."""
         run_breseq(
@@ -42,12 +42,11 @@ class BreseqStep(Step):
             docker=self.docker,
             threads=self.threads,
         )
-    
+
     def read_outputs(self) -> Dict[str, pd.DataFrame]:
         """Parse breseq output into DataFrames.
-        
+
         Returns:
             Dict with keys: JC, SNP, MOB, DEL, UN
         """
         return parse_breseq_output(self.output_path)
-

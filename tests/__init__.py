@@ -1,2 +1,1 @@
 """AmpliFinder test suite."""
-
