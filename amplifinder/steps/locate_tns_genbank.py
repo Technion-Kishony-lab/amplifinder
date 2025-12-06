@@ -7,7 +7,7 @@ import pandas as pd
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data.schemas import TN_LOC_SCHEMA
+from amplifinder.data_types import TN_LOC_SCHEMA
 from amplifinder.utils.genbank import find_tn_elements
 
 
