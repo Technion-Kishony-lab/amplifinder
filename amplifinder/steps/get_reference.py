@@ -7,7 +7,7 @@ from amplifinder.steps.base import Step
 from amplifinder.data_types.genome import Genome, get_genome
 
 
-class GetReferenceStep(Step):
+class GetReferenceStep(Step[Genome]):
     """Fetch/load reference genome from NCBI or local cache."""
 
     def __init__(
@@ -43,7 +43,3 @@ class GetReferenceStep(Step):
     def read_outputs(self) -> Genome:
         """Load genome from cached files."""
         return get_genome(self.ref_name, self.ref_path, ncbi=False)
-
-    def run_and_read_outputs(self) -> Genome:
-        """Run step and return genome."""
-        return super().run_and_read_outputs()

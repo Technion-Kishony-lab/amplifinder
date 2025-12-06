@@ -7,9 +7,10 @@ import pandas as pd
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
+from amplifinder.data_types.records import RefTnJunction, REF_TN_JC_SCHEMA
 
 
-class CreateReferenceJunctionsStep(Step):
+class CreateReferenceJunctionsStep(Step[pd.DataFrame]):
     """Create synthetic junction records (ref_tn_jc) from reference TN locations.
 
     For each TN element, creates two junction records representing the
@@ -121,8 +122,4 @@ class CreateReferenceJunctionsStep(Step):
 
     def read_outputs(self) -> pd.DataFrame:
         """Load reference TN junctions from output file."""
-        return pd.read_csv(self.output_file)
-
-    def run_and_read_outputs(self) -> pd.DataFrame:
-        """Run step and return reference TN junctions."""
-        return super().run_and_read_outputs()
+        return REF_TN_JC_SCHEMA.read_csv(self.output_file)

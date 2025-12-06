@@ -12,7 +12,7 @@ from amplifinder.logger import info
 from amplifinder.data_types import TN_LOC_SCHEMA
 
 
-class LocateTNsUsingISfinder(Step):
+class LocateTNsUsingISfinder(Step[pd.DataFrame]):
     """BLAST reference genome against ISfinder database to find TN elements."""
 
     def __init__(
@@ -114,7 +114,3 @@ class LocateTNsUsingISfinder(Step):
     def read_outputs(self) -> pd.DataFrame:
         """Load TN locations from output file."""
         return TN_LOC_SCHEMA.read_csv(self.tn_loc_output)
-
-    def run_and_read_outputs(self) -> pd.DataFrame:
-        """Run step and return TN locations."""
-        return super().run_and_read_outputs()
