@@ -1,0 +1,13 @@
+fields,             types,      optional
+query,              string,     0
+subject,            string,     0
+percent_identical,  double,     0
+length,             int32,      0
+mismatch,           int32,      0
+gapopen,            int32,      0
+qstart,             int32,      0
+qend,               int32,      0
+sstart,             int32,      0
+send,               int32,      0
+evalue,             double,     0
+bitscore,           double,     0

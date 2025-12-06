@@ -1,0 +1,8 @@
+fields,         types,      optional
+ID,             int32,      0
+IS_Name,        string,     0
+IS_scaf,        string,     0
+LocLeft,        int32,      0
+LocRight,       int32,      0
+Complement,     bool,       0
+Join,           bool,       0
