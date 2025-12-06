@@ -12,6 +12,7 @@ import pandas as pd
 
 from amplifinder.logger import info, warning
 from amplifinder.data_types.junction import Junction
+from amplifinder.data_types.schema import TypedSchema
 from amplifinder.data import load_all_field_defs
 
 if TYPE_CHECKING:
@@ -269,64 +270,54 @@ def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
     return results
 
 
-def _parse_record(parts: List[str], field_defs: pd.DataFrame) -> Dict[str, Any]:
+def _parse_record(parts: List[str], schema: TypedSchema) -> Dict[str, Any]:
     """Parse a single breseq record line.
     
     Args:
         parts: Tab-separated parts of the line
-        field_defs: DataFrame with columns: fields, types, optional
+        schema: TypedSchema with column definitions
         
     Returns:
         Dictionary with parsed fields
     """
     record: Dict[str, Any] = {}
     
-    # Get ordered non-optional fields
-    non_optional = field_defs[~field_defs["optional"]]
-    
-    # Parse positional (non-optional) fields
-    for i, (_, row) in enumerate(non_optional.iterrows()):
+    # Parse positional (required) fields
+    required_names = schema.required_names
+    for i, name in enumerate(required_names):
         if i < len(parts):
-            record[row["fields"]] = _convert_value(parts[i], row["types"])
+            record[name] = _convert_value(parts[i], schema.dtypes[name])
     
     # Parse optional key=value fields
-    n_non_optional = len(non_optional)
-    type_lookup = field_defs.set_index("fields")["types"]
-    for part in parts[n_non_optional:]:
+    n_required = len(required_names)
+    for part in parts[n_required:]:
         if "=" in part:
             key, value = part.split("=", 1)
-            if key in type_lookup.index:
-                record[key] = _convert_value(value, type_lookup[key])
+            if key in schema.dtypes:
+                record[key] = _convert_value(value, schema.dtypes[key])
             else:
                 record[key] = value
     
     return record
 
 
-def _convert_value(value: str, dtype: str) -> Any:
+def _convert_value(value: str, dtype: type, none_values: Tuple[str, ...] = ("NA", "")) -> Any:
     """Convert string value to appropriate type.
     
     Args:
         value: String value from breseq output
-        dtype: Target type (string, int, float)
+        dtype: Target type (str, int, float)
+        none_values: Values to treat as None
         
     Returns:
-        Converted value
+        Converted value, or None for none_values
+        
+    Raises:
+        ValueError: If conversion fails
     """
-    if value == "NA" or value == "":
+    if value in none_values:
         return None
-    
-    try:
-        if dtype == "string":
-            return value
-        elif dtype == "int":
-            return int(float(value))  # Handle "1.0" -> 1
-        elif dtype == "float":
-            return float(value)
-    except (ValueError, TypeError):
-        return value
-    
-    return value
+    return int(float(value)) if dtype is int else dtype(value)
 
 
 def parse_coverage(breseq_path: Path, ref_names: List[str]) -> Dict[str, np.ndarray]:
@@ -399,42 +390,6 @@ def get_breseq_summary(breseq_path: Path) -> Dict[str, Any]:
         summary["total_mapped_bases"] = sum(mapped_bases)
     
     return summary
-
-
-def get_read_length(breseq_path: Path, n_reads: int = 10) -> List[int]:
-    """Extract read lengths from FASTQ files in breseq data directory.
-    
-    Args:
-        breseq_path: Path to breseq output directory
-        n_reads: Number of reads to sample (default: 10)
-        
-    Returns:
-        List of read lengths
-    """
-    data_dir = Path(breseq_path) / "data"
-    
-    if not data_dir.exists():
-        warning(f"Data directory not found: {data_dir}")
-        return []
-    
-    fastq_files = list(data_dir.glob("*.fastq"))
-    if not fastq_files:
-        fastq_files = list(data_dir.glob("*.fq"))
-    
-    if not fastq_files:
-        warning(f"No FASTQ files found in {data_dir}")
-        return []
-    
-    # Read first few sequences from first file
-    read_lengths = []
-    with open(fastq_files[0]) as f:
-        for i, line in enumerate(f):
-            if i % 4 == 1:  # Sequence line
-                read_lengths.append(len(line.strip()))
-                if len(read_lengths) >= n_reads:
-                    break
-    
-    return read_lengths
 
 
 def get_junctions(breseq_path: Path) -> List[Junction]:
