@@ -8,7 +8,7 @@ from Bio import SeqIO
 from Bio.SeqFeature import SeqFeature
 
 
-def find_TN_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
+def find_tn_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
     """Find TN elements from GenBank annotations.
 
     Looks for mobile_element features with 'insertion sequence' in the type.
@@ -26,8 +26,8 @@ def find_TN_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
     id_counter = 0
 
     for feature in record.features:
-        TN_name = _extract_TN_name_from_feature(feature)
-        if TN_name is None:
+        tn_name = _extract_tn_name_from_feature(feature)
+        if tn_name is None:
             continue
 
         # Get location info
@@ -42,7 +42,7 @@ def find_TN_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
         id_counter += 1
         records.append({
             "ID": id_counter,
-            "TN_Name": TN_name,
+            "TN_Name": tn_name,
             "TN_scaf": ref_name,
             "LocLeft": pos_left,
             "LocRight": pos_right,
@@ -53,7 +53,7 @@ def find_TN_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
     return records
 
 
-def _extract_TN_name_from_feature(feature: SeqFeature) -> Optional[str]:
+def _extract_tn_name_from_feature(feature: SeqFeature) -> Optional[str]:
     """Extract TN name from a GenBank feature if it's an insertion sequence.
 
     Returns TN name if feature is a TN element, None otherwise.
