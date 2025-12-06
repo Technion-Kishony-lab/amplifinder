@@ -269,12 +269,12 @@ def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
     return results
 
 
-def _parse_record(parts: List[str], field_defs: Dict[str, Tuple[str, bool]]) -> Dict[str, Any]:
+def _parse_record(parts: List[str], field_defs: pd.DataFrame) -> Dict[str, Any]:
     """Parse a single breseq record line.
     
     Args:
         parts: Tab-separated parts of the line
-        field_defs: Field definitions (name -> (type, optional))
+        field_defs: DataFrame with columns: fields, types, optional
         
     Returns:
         Dictionary with parsed fields
@@ -282,21 +282,21 @@ def _parse_record(parts: List[str], field_defs: Dict[str, Tuple[str, bool]]) -> 
     record: Dict[str, Any] = {}
     
     # Get ordered non-optional fields
-    non_optional = [(name, dtype) for name, (dtype, opt) in field_defs.items() if not opt]
+    non_optional = field_defs[~field_defs["optional"]]
     
     # Parse positional (non-optional) fields
-    for i, (name, dtype) in enumerate(non_optional):
+    for i, (_, row) in enumerate(non_optional.iterrows()):
         if i < len(parts):
-            record[name] = _convert_value(parts[i], dtype)
+            record[row["fields"]] = _convert_value(parts[i], row["types"])
     
     # Parse optional key=value fields
     n_non_optional = len(non_optional)
+    type_lookup = field_defs.set_index("fields")["types"]
     for part in parts[n_non_optional:]:
         if "=" in part:
             key, value = part.split("=", 1)
-            if key in field_defs:
-                dtype, _ = field_defs[key]
-                record[key] = _convert_value(value, dtype)
+            if key in type_lookup.index:
+                record[key] = _convert_value(value, type_lookup[key])
             else:
                 record[key] = value
     
