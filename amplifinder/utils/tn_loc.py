@@ -13,7 +13,7 @@ def compare_tn_locations(
     """Compare TN locations from two sources, report differences as warnings."""
     if tn1.empty and tn2.empty:
         return
-    
+
     def find_match(row, other_df):
         """Find matching TN in other_df within tolerance."""
         return other_df[
@@ -21,19 +21,19 @@ def compare_tn_locations(
             (abs(other_df["LocLeft"] - row["LocLeft"]) <= tolerance) &
             (abs(other_df["LocRight"] - row["LocRight"]) <= tolerance)
         ]
-    
+
     # Check tn1 against tn2 (full check: not found, multiple, name mismatch, non-matching ends)
     for _, row in tn1.iterrows():
         matches = find_match(row, tn2)
         loc = f"{row['TN_scaf']}:{row['LocLeft']}-{row['LocRight']}"
-        
+
         if matches.empty:
             warning(f"{name1} TN '{row['TN_Name']}' at {loc} not found in {name2}")
             continue
-        
+
         if len(matches) > 1:
             warning(f"Multiple {name2} matches ({len(matches)}) for {name1} TN '{row['TN_Name']}' at {loc}")
-        
+
         # Prefer match with same name, otherwise take first
         name_matches = matches[matches["TN_Name"] == row["TN_Name"]]
         if name_matches.empty:
@@ -42,7 +42,7 @@ def compare_tn_locations(
             match = matches.iloc[0]
         else:
             match = name_matches.iloc[0]
-        
+
         # Check for non-matching ends
         left_diff = row["LocLeft"] - match["LocLeft"]
         right_diff = row["LocRight"] - match["LocRight"]
@@ -51,7 +51,7 @@ def compare_tn_locations(
                     f"{name1}={row['LocLeft']}-{row['LocRight']}, "
                     f"{name2}={match['LocLeft']}-{match['LocRight']} "
                     f"(Δleft={left_diff:+d}, Δright={right_diff:+d})")
-    
+
     # Check tn2 against tn1 (only "not found")
     for _, row in tn2.iterrows():
         matches = find_match(row, tn1)

@@ -3,7 +3,7 @@
 import pytest
 
 from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
-from amplifinder.data.schemas import BLAST_SCHEMA
+from amplifinder.data_types import BLAST_SCHEMA
 from tests.env import RUN_BLAST_TESTS
 
 

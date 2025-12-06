@@ -1,10 +1,9 @@
 """Tests for TN location comparison utilities."""
 
-import pytest
 import pandas as pd
 
 from amplifinder.utils.tn_loc import compare_tn_locations
-from amplifinder.data.schemas import TN_LOC_SCHEMA
+from amplifinder.data_types import TN_LOC_SCHEMA
 
 
 def make_tn_loc(records: list[dict]) -> pd.DataFrame:
@@ -47,8 +46,14 @@ class TestCompareTnLocations:
 
     def test_exact_match_with_different_order(self, caplog):
         """No warnings all TNs match yet are listed in different order."""
-        tn1 = make_tn_loc([{"TN_Name": "IS1", "LocLeft": 100, "LocRight": 500}, {"TN_Name": "IS2", "LocLeft": 200, "LocRight": 600}])
-        tn2 = make_tn_loc([{"TN_Name": "IS2", "LocLeft": 200, "LocRight": 600}, {"TN_Name": "IS1", "LocLeft": 100, "LocRight": 500}])
+        tn1 = make_tn_loc([
+            {"TN_Name": "IS1", "LocLeft": 100, "LocRight": 500},
+            {"TN_Name": "IS2", "LocLeft": 200, "LocRight": 600},
+        ])
+        tn2 = make_tn_loc([
+            {"TN_Name": "IS2", "LocLeft": 200, "LocRight": 600},
+            {"TN_Name": "IS1", "LocLeft": 100, "LocRight": 500},
+        ])
         compare_tn_locations(tn1, tn2)
         assert len(caplog.records) == 0
 
@@ -135,4 +140,3 @@ class TestCompareTnLocations:
         assert len(caplog.records) == 2
         assert "name mismatch" in caplog.records[0].message
         assert "Non-matching ends" in caplog.records[1].message
-

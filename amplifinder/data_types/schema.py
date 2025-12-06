@@ -1,8 +1,8 @@
 """DataFrame schema definitions with types and I/O."""
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields as dataclass_fields, field
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints, get_origin, get_args
 
 import numpy as np
 import pandas as pd
@@ -17,12 +17,18 @@ _TYPE_MAP = {
     "cell": str,  # MATLAB cell arrays → strings
 }
 
+T = TypeVar("T")
 
-@dataclass(frozen=True)
+
+@dataclass
 class TypedSchema:
-    """Schema with column names, dtypes, and CSV I/O."""
+    """Schema with column names, dtypes, and CSV I/O.
+
+    Can be created from CSV file (from_csv) or from a dataclass (from_dataclass).
+    """
 
     columns: Tuple[Tuple[str, Any, bool], ...]  # (name, dtype, optional) tuples
+    dataclass_type: Optional[Type] = field(default=None, repr=False)
 
     @classmethod
     def from_csv(cls, path: Path) -> "TypedSchema":
@@ -36,6 +42,38 @@ class TypedSchema:
             for _, row in df.iterrows()
         )
         return cls(columns)
+
+    @classmethod
+    def from_dataclass(cls, dc: Type[T]) -> "TypedSchema":
+        """Create schema from a dataclass.
+
+        - Field metadata {"optional": True} marks column as optional (may not exist)
+        - Optional[T] type hint means value can be None (column still required)
+        - Field named 'extra' (Dict[str, Any]) is skipped (catch-all for unknown columns)
+        """
+        hints = get_type_hints(dc)
+        columns = []
+
+        for f in dataclass_fields(dc):
+            if f.name == "extra":
+                continue  # skip the catch-all field
+
+            hint = hints.get(f.name, str)
+            origin = get_origin(hint)
+
+            # Extract actual type from Optional[T] if present
+            if origin is Union and type(None) in get_args(hint):
+                inner_types = [t for t in get_args(hint) if t is not type(None)]
+                dtype = inner_types[0] if inner_types else str
+            else:
+                dtype = hint
+
+            # Column optional = field metadata, NOT type hint
+            is_optional = f.metadata.get("optional", False) if f.metadata else False
+
+            columns.append((f.name, dtype, is_optional))
+
+        return cls(columns=tuple(columns), dataclass_type=dc)
 
     @property
     def names(self) -> Tuple[str, ...]:
@@ -127,3 +165,64 @@ class TypedSchema:
     def assert_matches(self, df: pd.DataFrame) -> None:
         """Assert DataFrame matches schema columns and dtypes exactly."""
         self._validate(df, strict=True, cast=False)
+
+    def df_to_instances(self, df: pd.DataFrame) -> List[T]:
+        """Convert DataFrame to list of dataclass instances.
+
+        Requires schema to be created from a dataclass (from_dataclass).
+        Unknown columns are stored in the 'extra' field if present.
+        """
+        if self.dataclass_type is None:
+            raise ValueError("df_to_instances requires schema created with from_dataclass()")
+
+        if df.empty:
+            return []
+
+        known_cols = set(self.names)
+        has_extra = any(f.name == "extra" for f in dataclass_fields(self.dataclass_type))
+        instances = []
+
+        for _, row in df.iterrows():
+            kwargs = {}
+            extra = {}
+
+            for col, val in row.items():
+                # Handle NaN → None
+                if pd.isna(val):
+                    val = None
+
+                if col in known_cols:
+                    kwargs[col] = val
+                elif has_extra:
+                    extra[col] = val
+                else:
+                    raise ValueError(f"Unknown column: {col}")
+
+            if has_extra:
+                kwargs["extra"] = extra
+
+            instances.append(self.dataclass_type(**kwargs))
+
+        return instances
+
+    def instances_to_df(self, instances: List[T]) -> pd.DataFrame:
+        """Convert list of dataclass instances to DataFrame.
+
+        Merges 'extra' field contents into the DataFrame columns.
+        """
+        if not instances:
+            return self.empty()
+
+        records = []
+        for inst in instances:
+            d = {}
+            for f in dataclass_fields(inst):
+                if f.name == "extra":
+                    extra = getattr(inst, "extra", None)
+                    if extra:
+                        d.update(extra)
+                else:
+                    d[f.name] = getattr(inst, f.name)
+            records.append(d)
+
+        return pd.DataFrame(records)
