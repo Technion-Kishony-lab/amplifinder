@@ -48,7 +48,7 @@ def run_pipeline(config: Config) -> None:
     info(f"ISfinder: found {len(TN_loc_isfinder)} TN elements")
 
     # Select which TN_loc to use based on config
-    _TN_loc = TN_loc_isfinder if config.use_ISfinder else TN_loc_genbank  # noqa: F841
+    _TN_loc = TN_loc_isfinder if config.use_isfinder else TN_loc_genbank  # noqa: F841
 
     # Step 3: Run breseq on isolate
     iso_breseq = config.iso_breseq_path or iso_output / "breseq"

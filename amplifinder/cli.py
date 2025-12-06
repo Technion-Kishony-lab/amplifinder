@@ -74,7 +74,7 @@ from amplifinder.pipeline import run_pipeline
 )
 @click.option(
     "--use-isfinder/--no-use-isfinder",
-    "use_ISfinder",
+    "use_isfinder",
     default=False,
     help="Use ISfinder database for IS detection (default: False).",
 )
@@ -103,7 +103,7 @@ def main(
     iso_breseq_path: Optional[Path],
     anc_breseq_path: Optional[Path],
     ncbi: bool,
-    use_ISfinder: bool,
+    use_isfinder: bool,
     config_file: Optional[Path],
     log_level: str,
 ) -> None:
@@ -125,7 +125,7 @@ def main(
         "iso_breseq_path": iso_breseq_path,
         "anc_breseq_path": anc_breseq_path,
         "ncbi": ncbi,
-        "use_ISfinder": use_ISfinder,
+        "use_isfinder": use_isfinder,
     }
 
     # Merge configurations
