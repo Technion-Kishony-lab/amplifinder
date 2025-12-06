@@ -1,5 +1,6 @@
 """DataFrame schema definitions with types and I/O."""
 
+import ast
 from dataclasses import dataclass, fields as dataclass_fields, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union, get_type_hints, get_origin, get_args
@@ -16,6 +17,52 @@ _TYPE_MAP = {
     "bool": bool,
     "cell": str,  # MATLAB cell arrays → strings
 }
+
+# Map generic origin to expected Python type
+_ORIGIN_TO_TYPE = {
+    list: list,
+    dict: dict,
+    tuple: tuple,
+}
+
+
+def _parse_compound(value: Any, expected_type: Type) -> Any:
+    """Parse compound type from string and validate."""
+    if pd.isna(value):
+        return value
+
+    # Parse string representation
+    if isinstance(value, str):
+        value = ast.literal_eval(value)
+
+    # Check container type
+    origin = get_origin(expected_type)
+    expected_container = _ORIGIN_TO_TYPE.get(origin)
+    if expected_container and not isinstance(value, expected_container):
+        raise TypeError(f"Expected {expected_container.__name__}, got {type(value).__name__}")
+
+    # Check inner types
+    args = get_args(expected_type)
+    if args and value:
+        if origin is list:
+            inner_type = args[0]
+            for i, item in enumerate(value):
+                if not isinstance(item, inner_type):
+                    raise TypeError(f"List item {i}: expected {inner_type.__name__}, got {type(item).__name__}")
+        elif origin is tuple:
+            # Tuple[int, int] means fixed types per position
+            for i, (item, inner_type) in enumerate(zip(value, args)):
+                if not isinstance(item, inner_type):
+                    raise TypeError(f"Tuple item {i}: expected {inner_type.__name__}, got {type(item).__name__}")
+        elif origin is dict:
+            key_type, val_type = args[0], args[1]
+            for k, v in value.items():
+                if not isinstance(k, key_type):
+                    raise TypeError(f"Dict key {k!r}: expected {key_type.__name__}, got {type(k).__name__}")
+                if not isinstance(v, val_type):
+                    raise TypeError(f"Dict value for {k!r}: expected {val_type.__name__}, got {type(v).__name__}")
+
+    return value
 
 T = TypeVar("T")
 
@@ -94,7 +141,12 @@ class TypedSchema:
     def empty(self) -> pd.DataFrame:
         """Empty DataFrame with correct columns and types."""
         df = pd.DataFrame(columns=self.names)
-        return df.astype(self.dtypes)
+        # Only cast scalar types; compound types (list, dict, tuple) stay as object
+        compound_origins = (list, dict, tuple)
+        scalar_dtypes = {c: t for c, t in self.dtypes.items() if get_origin(t) not in compound_origins}
+        if scalar_dtypes:
+            df = df.astype(scalar_dtypes)
+        return df
 
     def create(self, data: Dict[str, Any]) -> pd.DataFrame:
         """Create DataFrame from column dict with schema validation and types."""
@@ -128,8 +180,21 @@ class TypedSchema:
 
         schema_cols = [c for c in self.names if c in df.columns]
         if cast:
-            dtypes_to_apply = {c: self.dtypes[c] for c in schema_cols}
-            df = df.astype(dtypes_to_apply)
+            # Separate compound types (list, dict, tuple) from scalar columns
+            compound_origins = (list, dict, tuple)
+            compound_cols = {c for c in schema_cols if get_origin(self.dtypes[c]) in compound_origins}
+            scalar_cols = {c: self.dtypes[c] for c in schema_cols if c not in compound_cols}
+
+            # Parse compound columns from string representation
+            for col in compound_cols:
+                expected_type = self.dtypes[col]
+                df[col] = df[col].apply(
+                    lambda x, et=expected_type: _parse_compound(x, et)
+                )
+
+            # Cast scalar columns
+            if scalar_cols:
+                df = df.astype(scalar_cols)
         else:
             # Assert types match
             for col in schema_cols:
