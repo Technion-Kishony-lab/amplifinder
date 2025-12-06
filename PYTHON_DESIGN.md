@@ -180,7 +180,7 @@ class ISJC2:
 | iso_outpath    | Path   | Output directory               |
 | ref            | str    | Reference genome name(s)       |
 | ref_path       | Path   | Path to reference files        |
-| use_ISfinder   | bool   | Use ISfinder DB                |
+| use_isfinder   | bool   | Use ISfinder DB                |
 | read_length    | int    | Mean read length               |
 ```
 
@@ -415,7 +415,7 @@ ref_name: U00096
 
 # Reference options
 ncbi: true
-use_ISfinder: false
+use_isfinder: false
 ref_path: genomesDB/
 
 # IS detection parameters
@@ -452,7 +452,7 @@ req_overlap: 12
   "output_dir": "./results/",
   "ref_name": "U00096",
   "ncbi": true,
-  "use_ISfinder": false,
+  "use_isfinder": false,
   "copy_number_threshold": 1.5,
   "del_copy_number_threshold": 0.3,
   "min_amplicon_length": 30

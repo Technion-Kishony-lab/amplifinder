@@ -77,7 +77,7 @@ class Config:
 
     # Reference options
     ncbi: bool = True
-    use_ISfinder: bool = False
+    use_isfinder: bool = False
 
     # External tools
     breseq_docker: bool = True
@@ -157,7 +157,7 @@ class Config:
             self.mismatch_penalty = tuple(self.mismatch_penalty)
 
         # Validate: ISfinder required for non-NCBI genomes
-        if not self.ncbi and not self.use_ISfinder:
+        if not self.ncbi and not self.use_isfinder:
             raise ValueError(
                 "ISfinder is required for local (non-NCBI) genomes. "
                 "Use --use-isfinder flag."
