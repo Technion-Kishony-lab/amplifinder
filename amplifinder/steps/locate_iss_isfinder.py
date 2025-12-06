@@ -9,7 +9,7 @@ from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
 from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types.schema import IS_LOC_SCHEMA
+from amplifinder.data.schemas import IS_LOC_SCHEMA
 
 
 class LocateISsUsingISfinder(Step):
