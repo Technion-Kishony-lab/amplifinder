@@ -7,7 +7,7 @@ import pandas as pd
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types.schema import IS_LOC_SCHEMA
+from amplifinder.data.schemas import IS_LOC_SCHEMA
 from amplifinder.utils.genbank import find_IS_elements
 
 
