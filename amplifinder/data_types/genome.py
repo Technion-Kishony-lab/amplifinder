@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from Bio import Entrez, SeqIO
 from Bio.Seq import Seq
@@ -108,6 +108,20 @@ class Genome:
         if self.genbank_record:
             return self.genbank_record.annotations
         return {}
+
+    @property
+    def records(self) -> List[SeqRecord]:
+        """Load all records from genome file."""
+        if self.genbank_path:
+            return list(SeqIO.parse(self.genbank_path, "genbank"))
+        if self.fasta_path:
+            return list(SeqIO.parse(self.fasta_path, "fasta"))
+        return []
+
+    @property
+    def sequences(self) -> Dict[str, str]:
+        """Get all sequences as {scaffold_id: sequence} dict."""
+        return {rec.id: str(rec.seq) for rec in self.records}
 
 
 class GenomeRegistry:
