@@ -1,5 +1,6 @@
 """Step: Create TN-associated junction candidates (TNJC)."""
 
+from dataclasses import replace
 from pathlib import Path
 from typing import Optional, List, Tuple
 
@@ -9,7 +10,7 @@ from Bio.Seq import Seq
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types.records import TNJC_SCHEMA, TnMatch
+from amplifinder.data_types.records import TNJC_SCHEMA, JUNCTION_SCHEMA, TnMatch, Tnjc, Junction
 
 
 class CreateTNJCStep(Step[pd.DataFrame]):
@@ -68,15 +69,10 @@ class CreateTNJCStep(Step[pd.DataFrame]):
         # Get TN end sequences (with margins)
         tn_seqs = self._get_tn_end_sequences()
 
-        # Add columns for TN assignment
-        self.jc_df["TN_ids"] = None
-        self.jc_df["TN_sides"] = None
-        self.jc_df["TN_distances"] = None
-        self.jc_df["switched"] = False
-
         tnjc_records = []
+        junctions = JUNCTION_SCHEMA.df_to_instances(self.jc_df)
 
-        for idx, jc in self.jc_df.iterrows():
+        for jc in junctions:
             # Get junction flanking sequences
             seq1 = self._get_junction_seq(jc, side=1)
             seq2 = self._get_junction_seq(jc, side=2)
@@ -101,24 +97,17 @@ class CreateTNJCStep(Step[pd.DataFrame]):
                 matches = matches1
 
             # Create TNJC record
-            tn_ids = [m[0] for m in matches]
-            tn_sides = [m[1] for m in matches]
-            tn_dists = [m[2] for m in matches]
+            tnjc_records.append(Tnjc.from_instance(jc, matches=matches, switched=switched))
 
-            record = jc.to_dict()
-            record["TN_ids"] = tn_ids
-            record["TN_sides"] = tn_sides
-            record["TN_distances"] = tn_dists
-            record["switched"] = switched
-            tnjc_records.append(record)
+        if tnjc_records:
+            tnjc = TNJC_SCHEMA.instances_to_df(tnjc_records)
+            # Sort by chromosome position
+            if "scaf2" in tnjc.columns and "pos2" in tnjc.columns:
+                tnjc = tnjc.sort_values(["scaf2", "pos2"])
+        else:
+            tnjc = TNJC_SCHEMA.empty()
 
-        tnjc = pd.DataFrame(tnjc_records)
-
-        # Sort by chromosome position
-        if not tnjc.empty and "scaf2" in tnjc.columns and "pos2" in tnjc.columns:
-            tnjc = tnjc.sort_values(["scaf2", "pos2"])
-
-        tnjc.to_csv(self.output_file, index=False)
+        TNJC_SCHEMA.to_csv(tnjc, self.output_file)
         info(f"Found {len(tnjc)} TN-associated junctions (TNJC)")
 
     def _load_reference_seqs(self) -> dict:
@@ -165,7 +154,7 @@ class CreateTNJCStep(Step[pd.DataFrame]):
 
         return tn_seqs
 
-    def _get_junction_seq(self, jc: pd.Series, side: int) -> str:
+    def _get_junction_seq(self, jc: Junction, side: int) -> str:
         """Extract sequence at junction side.
 
         Args:
@@ -175,19 +164,17 @@ class CreateTNJCStep(Step[pd.DataFrame]):
         Returns:
             Sequence string at junction
         """
-        scaf_col = f"scaf{side}"
-        pos_col = f"pos{side}"
-        dir_col = f"dir{side}"
-        flank_col = "flanking_left" if side == 1 else "flanking_right"
+        scaf = jc.scaf1 if side == 1 else jc.scaf2
+        pos = jc.pos1 if side == 1 else jc.pos2
+        direction = jc.dir1 if side == 1 else jc.dir2
+        flank_len = jc.flanking_left if side == 1 else jc.flanking_right
 
-        scaf = jc.get(scaf_col, "")
         if scaf not in self.ref_seqs:
             return ""
 
         ref_seq = self.ref_seqs[scaf]
-        pos = int(jc.get(pos_col, 0)) - 1  # 0-based
-        direction = int(jc.get(dir_col, 1))
-        flank_len = int(jc.get(flank_col, 50)) - self.TRIM_JC_FLANKING - 1
+        pos = pos - 1  # 0-based
+        flank_len = flank_len - self.TRIM_JC_FLANKING - 1
 
         if flank_len <= 0:
             flank_len = 20
@@ -206,7 +193,7 @@ class CreateTNJCStep(Step[pd.DataFrame]):
 
     def _find_tn_matches(
         self, jc_seq: str, tn_seqs: List[Tuple]
-    ) -> List[Tuple[int, str, int]]:
+    ) -> List[TnMatch]:
         """Find TN elements matching a junction sequence.
 
         Args:
@@ -214,7 +201,7 @@ class CreateTNJCStep(Step[pd.DataFrame]):
             tn_seqs: List of TN end sequences
 
         Returns:
-            List of (tn_id, tn_side, distance) for matches
+            List of TnMatch(tn_id, side, distance) for matches
         """
         if not jc_seq:
             return []
@@ -227,33 +214,30 @@ class CreateTNJCStep(Step[pd.DataFrame]):
             pos_fwd = tn_seq_fwd.find(jc_seq)
             if pos_fwd >= 0 and pos_fwd < threshold:
                 dist = pos_fwd - self.max_dist_to_tn
-                matches.append((tn_id, tn_side, dist))
+                matches.append(TnMatch(tn_id, tn_side, dist))
                 continue
 
             # Check reverse complement
             pos_rc = tn_seq_rc.find(jc_seq)
             if pos_rc >= 0 and pos_rc < threshold:
                 dist = pos_rc - self.max_dist_to_tn
-                matches.append((tn_id, tn_side, dist))
+                matches.append(TnMatch(tn_id, tn_side, dist))
 
         return matches
 
-    def _switch_jc_sides(self, jc: pd.Series) -> pd.Series:
+    def _switch_jc_sides(self, jc: Junction) -> Junction:
         """Swap side 1 and side 2 fields in junction record."""
-        jc = jc.copy()
-
-        swap_pairs = [
-            ("scaf1", "scaf2"),
-            ("pos1", "pos2"),
-            ("dir1", "dir2"),
-            ("flanking_left", "flanking_right"),
-        ]
-
-        for a, b in swap_pairs:
-            if a in jc and b in jc:
-                jc[a], jc[b] = jc[b], jc[a]
-
-        return jc
+        return replace(
+            jc,
+            scaf1=jc.scaf2,
+            scaf2=jc.scaf1,
+            pos1=jc.pos2,
+            pos2=jc.pos1,
+            dir1=jc.dir2,
+            dir2=jc.dir1,
+            flanking_left=jc.flanking_right,
+            flanking_right=jc.flanking_left,
+        )
 
     def read_outputs(self) -> pd.DataFrame:
         """Load TNJC from output file."""
