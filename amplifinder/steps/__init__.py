@@ -8,6 +8,7 @@ from amplifinder.steps.locate_tns_isfinder import LocateTNsUsingISfinderStep
 from amplifinder.steps.run_breseq import BreseqStep
 from amplifinder.steps.create_reference_junctions import CreateReferenceTnJunctionsStep, CreateRefTnEndSeqsStep
 from amplifinder.steps.create_tnjc import CreateTNJCStep
+from amplifinder.steps.create_tnjc2 import CreateTNJC2Step
 
 # Backward compatibility alias
 ISfinderStep = LocateTNsUsingISfinderStep
@@ -23,4 +24,5 @@ __all__ = [
     "CreateReferenceTnJunctionsStep",
     "CreateRefTnEndSeqsStep",
     "CreateTNJCStep",
+    "CreateTNJC2Step",
 ]
