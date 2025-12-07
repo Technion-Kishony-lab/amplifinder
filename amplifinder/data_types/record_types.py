@@ -1,7 +1,7 @@
 """Record type definitions for AmpliFinder."""
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from enum import Enum
 from typing import List, NamedTuple, Optional, TypeVar
 
@@ -38,7 +38,6 @@ class TnMatch(NamedTuple):
     distance: int
 
 
-@dataclass(kw_only=True)
 class TnLoc(Record):
     """TN element location record."""
     ID: int
@@ -50,7 +49,6 @@ class TnLoc(Record):
     Join: bool
 
 
-@dataclass(kw_only=True)
 class TnEndSeq(Record):
     """TN element end sequence for matching."""
     tn_id: int
@@ -59,7 +57,6 @@ class TnEndSeq(Record):
     seq_rc: str     # reverse complement
 
 
-@dataclass(kw_only=True)
 class BlastHit(Record):
     """BLAST alignment hit record."""
     query: str
@@ -79,7 +76,6 @@ class BlastHit(Record):
 JunctionT = TypeVar("JunctionT", bound="Junction")
 
 
-@dataclass(kw_only=True)
 class Junction(Record):
     """Base junction record with shared positional fields."""
     num: int
@@ -94,30 +90,26 @@ class Junction(Record):
 
     def switch_sides(self: JunctionT) -> JunctionT:
         """Return new junction with side 1 and side 2 swapped."""
-        return replace(
-            self,
-            scaf1=self.scaf2, scaf2=self.scaf1,
-            pos1=self.pos2, pos2=self.pos1,
-            dir1=self.dir2, dir2=self.dir1,
-            flanking_left=self.flanking_right, flanking_right=self.flanking_left,
-        )
+        return self.model_copy(update={
+            "scaf1": self.scaf2, "scaf2": self.scaf1,
+            "pos1": self.pos2, "pos2": self.pos1,
+            "dir1": self.dir2, "dir2": self.dir1,
+            "flanking_left": self.flanking_right, "flanking_right": self.flanking_left,
+        })
 
 
-@dataclass(kw_only=True)
 class RefTnJunction(Junction):
     """Synthetic junction for reference TN element."""
     refTN: int
     tn_side: Side
 
 
-@dataclass(kw_only=True)
 class TnJunction(Junction):
     """Junction matched to TN element(s)."""
     matches: List[TnMatch]  # TN matches: [(tn_id, side, distance), ...]
     switched: bool          # True if sides were swapped to normalize
 
 
-@dataclass(kw_only=True)
 class TnJunctionPair(Record):
     """Paired TN junctions (candidate amplicon).
 

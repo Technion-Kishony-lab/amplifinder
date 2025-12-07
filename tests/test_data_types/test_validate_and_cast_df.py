@@ -42,11 +42,12 @@ def test_parse_compound_na_raises_for_non_optional():
 
 
 @pytest.mark.parametrize("value,expected_type,match", [
-    ({'a': 1}, List[int], "Expected list"),
-    (['not_int'], List[int], r"List\[0\]"),
+    ({'a': 1}, List[int], r"Input should be a valid list"),
+    (['not_int'], List[int], r"Input should be a valid integer"),
 ])
 def test_parse_compound_type_mismatch(value, expected_type, match):
-    with pytest.raises(TypeError, match=match):
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError, match=match):
         parse_compound(value, expected_type)
 
 

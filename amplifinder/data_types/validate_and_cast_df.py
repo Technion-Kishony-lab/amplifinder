@@ -1,26 +1,24 @@
+"""Validate and cast DataFrame columns using Pydantic TypeAdapter."""
+import ast
 import pandas as pd
 import numpy as np
 from enum import Enum
 from typing import Any, Type, Union, get_origin, get_args
-import ast
+
+from pydantic import TypeAdapter
 
 from amplifinder.data_types.records import Schema
 
 
-def _is_enum(t: Type) -> bool:
-    """Check if type is an Enum subclass."""
-    try:
-        return isinstance(t, type) and issubclass(t, Enum)
-    except TypeError:
-        return False
+# Cache TypeAdapters for performance
+_adapter_cache: dict[Type, TypeAdapter] = {}
 
 
-def _is_namedtuple(t: Type) -> bool:
-    """Check if type is a NamedTuple."""
-    try:
-        return isinstance(t, type) and issubclass(t, tuple) and hasattr(t, '_fields')
-    except TypeError:
-        return False
+def _get_adapter(dtype: Type) -> TypeAdapter:
+    """Get or create a TypeAdapter for a type."""
+    if dtype not in _adapter_cache:
+        _adapter_cache[dtype] = TypeAdapter(dtype)
+    return _adapter_cache[dtype]
 
 
 def _is_optional(t: Type) -> bool:
@@ -34,11 +32,25 @@ def _unwrap_optional(t: Type) -> Type:
     return t
 
 
+def _is_compound(t: Type) -> bool:
+    """Check if type is a compound type (list, dict, tuple)."""
+    origin = get_origin(_unwrap_optional(t))
+    return origin in (list, dict, tuple)
+
+
+def _is_enum(t: Type) -> bool:
+    """Check if type is an Enum subclass."""
+    try:
+        return isinstance(t, type) and issubclass(t, Enum)
+    except TypeError:
+        return False
+
+
 def parse_compound(value: Any, expected_type: Type) -> Any:
-    """Parse compound type (list/dict/tuple) from string or validate if already parsed."""
-    # Skip NaN check for compound types (pd.isna fails on lists)
+    """Parse compound type using Pydantic TypeAdapter."""
+    # Handle NaN
     if isinstance(value, (list, dict, tuple)):
-        pass  # Already parsed, will validate below
+        pass  # Already parsed
     elif pd.isna(value):
         if not _is_optional(expected_type):
             raise TypeError(f"NaN value for type {expected_type} which is not optional")
@@ -46,39 +58,9 @@ def parse_compound(value: Any, expected_type: Type) -> Any:
     elif isinstance(value, str):
         value = ast.literal_eval(value)
 
-    inner_type = _unwrap_optional(expected_type)
-    origin = get_origin(inner_type)
-    args = get_args(inner_type)
-
-    if origin in (list, tuple, dict) and not isinstance(value, origin):
-        expected_name = origin.__name__
-        raise TypeError(f"Expected {expected_name}, got {type(value).__name__}")
-
-    # Validate and cast list/tuple elements
-    if args and value:
-        if origin is list:
-            inner = args[0]
-            if _is_namedtuple(inner):
-                # Cast tuples to NamedTuple
-                value = [inner(*item) if isinstance(item, tuple) else item for item in value]
-            else:
-                # Validate element types
-                for i, item in enumerate(value):
-                    if not isinstance(item, inner):
-                        raise TypeError(f"List[{i}]: expected {inner.__name__}, got {type(item).__name__}")
-        elif origin is tuple:
-            for i, (item, inner) in enumerate(zip(value, args)):
-                if not isinstance(item, inner):
-                    raise TypeError(f"Tuple[{i}]: expected {inner.__name__}, got {type(item).__name__}")
-        elif origin is dict:
-            ktype, vtype = args
-            for k, v in value.items():
-                if not isinstance(k, ktype):
-                    raise TypeError(f"Dict key {k!r}: expected {ktype.__name__}")
-                if not isinstance(v, vtype):
-                    raise TypeError(f"Dict[{k!r}]: expected {vtype.__name__}")
-
-    return value
+    # Validate/coerce with Pydantic
+    adapter = _get_adapter(expected_type)
+    return adapter.validate_python(value)
 
 
 def validate_and_cast_df(
@@ -88,7 +70,7 @@ def validate_and_cast_df(
     check_extra: bool = False,
     cast: bool = True,
 ) -> pd.DataFrame:
-    """Validate and cast DataFrame against schema."""
+    """Validate and cast DataFrame against schema using Pydantic."""
 
     if check_missing:
         missing = set(columns.required_columns) - set(df.columns)
@@ -101,7 +83,6 @@ def validate_and_cast_df(
             raise ValueError(f"Extra columns: {extra}")
 
     dtypes = columns.dtypes
-    compound_origins = (list, dict, tuple)
     scalar_cols = {}
 
     for col_name in df.columns:
@@ -111,13 +92,17 @@ def validate_and_cast_df(
         base_type = _dtype.base_dtype  # Unwraps Optional[T] → T
 
         if cast:
-            if get_origin(base_type) in compound_origins:
+            if _is_compound(base_type) or _is_compound(_dtype.dtype):
+                # Compound types: parse with Pydantic
                 df = df.copy()
-                df[col_name] = df[col_name].apply(lambda x, et=base_type: parse_compound(x, et))
+                df[col_name] = df[col_name].apply(lambda x, et=_dtype.dtype: parse_compound(x, et))
             elif _is_enum(base_type):
-                # Enum: convert values via Enum(value)
+                # Enum: convert values via Pydantic
                 df = df.copy()
-                df[col_name] = df[col_name].apply(lambda x, et=base_type: et(x) if pd.notna(x) else x)
+                adapter = _get_adapter(base_type)
+                df[col_name] = df[col_name].apply(
+                    lambda x, a=adapter: a.validate_python(x) if pd.notna(x) else x
+                )
             else:
                 scalar_cols[col_name] = base_type
         else:

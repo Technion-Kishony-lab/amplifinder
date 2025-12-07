@@ -1,9 +1,11 @@
-"""Typed DataFrame - schema from dataclass or explicit column definitions."""
+"""Typed DataFrame - schema from Pydantic model or explicit column definitions."""
 from __future__ import annotations
 
 import pandas as pd
 
+from enum import Enum
 from pathlib import Path
+from pydantic import TypeAdapter
 from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Type, TypeVar
 
 from amplifinder.data_types.records import Record, Schema
@@ -25,11 +27,10 @@ def _clean_nan(v: Any) -> Any:
 
 def _serialize_for_csv(v: Any) -> Any:
     """Convert enums to values for CSV serialization (handles nested in lists/tuples)."""
-    from enum import Enum
     if isinstance(v, Enum):
         return v.value
     if isinstance(v, tuple):
-        return tuple(_serialize_for_csv(x) for x in v)
+        return list(_serialize_for_csv(x) for x in v)  # tuples as lists for CSV
     if isinstance(v, list):
         return [_serialize_for_csv(x) for x in v]
     return v
@@ -123,11 +124,8 @@ class RecordTypedDF(TypedDF, Generic[T]):
         schema = record_type.schema()
         if not records:
             return cls(pd.DataFrame(columns=schema.column_names), record_type)
-        data = []
-        for record in records:
-            d = {col.name: getattr(record, col.name) for col in schema}
-            d.update(record.extra)
-            data.append(d)
+        # Use Pydantic's model_dump for serialization
+        data = [r.model_dump() for r in records]
         return cls(pd.DataFrame(data), record_type)
 
     @classmethod
@@ -142,4 +140,4 @@ class RecordTypedDF(TypedDF, Generic[T]):
 
     def __iter__(self) -> Iterator[T]:
         for row in super().__iter__():
-            yield self._record_type.from_dict(row)
+            yield self._record_type.model_validate(row)
