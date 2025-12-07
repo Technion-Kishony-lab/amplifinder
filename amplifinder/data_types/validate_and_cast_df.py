@@ -15,6 +15,14 @@ def _is_enum(t: Type) -> bool:
         return False
 
 
+def _is_namedtuple(t: Type) -> bool:
+    """Check if type is a NamedTuple."""
+    try:
+        return isinstance(t, type) and issubclass(t, tuple) and hasattr(t, '_fields')
+    except TypeError:
+        return False
+
+
 def _is_optional(t: Type) -> bool:
     return get_origin(t) is Union and type(None) in get_args(t)
 
@@ -27,31 +35,37 @@ def _unwrap_optional(t: Type) -> Type:
 
 
 def parse_compound(value: Any, expected_type: Type) -> Any:
-    """Parse compound type (list/dict/tuple) from string."""
-    if pd.isna(value):
+    """Parse compound type (list/dict/tuple) from string or validate if already parsed."""
+    # Skip NaN check for compound types (pd.isna fails on lists)
+    if isinstance(value, (list, dict, tuple)):
+        pass  # Already parsed, will validate below
+    elif pd.isna(value):
         if not _is_optional(expected_type):
             raise TypeError(f"NaN value for type {expected_type} which is not optional")
         return value
-    if isinstance(value, str):
+    elif isinstance(value, str):
         value = ast.literal_eval(value)
     
     inner_type = _unwrap_optional(expected_type)
     origin = get_origin(inner_type)
     args = get_args(inner_type)
     
-    if origin is list and not isinstance(value, list):
-        raise TypeError(f"Expected list, got {type(value).__name__}")
-    elif origin is dict and not isinstance(value, dict):
-        raise TypeError(f"Expected dict, got {type(value).__name__}")
-    elif origin is tuple and not isinstance(value, tuple):
-        raise TypeError(f"Expected tuple, got {type(value).__name__}")
+    if origin in (list, tuple, dict) and not isinstance(value, origin):
+        expected_name = origin.__name__
+        raise TypeError(f"Expected {expected_name}, got {type(value).__name__}")
     
+    # Validate and cast list/tuple elements
     if args and value:
         if origin is list:
             inner = args[0]
-            for i, item in enumerate(value):
-                if not isinstance(item, inner):
-                    raise TypeError(f"List[{i}]: expected {inner.__name__}, got {type(item).__name__}")
+            if _is_namedtuple(inner):
+                # Cast tuples to NamedTuple
+                value = [inner(*item) if isinstance(item, tuple) else item for item in value]
+            else:
+                # Validate element types
+                for i, item in enumerate(value):
+                    if not isinstance(item, inner):
+                        raise TypeError(f"List[{i}]: expected {inner.__name__}, got {type(item).__name__}")
         elif origin is tuple:
             for i, (item, inner) in enumerate(zip(value, args)):
                 if not isinstance(item, inner):

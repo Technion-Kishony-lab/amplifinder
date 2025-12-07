@@ -23,6 +23,18 @@ def _clean_nan(v: Any) -> Any:
         return v
 
 
+def _serialize_for_csv(v: Any) -> Any:
+    """Convert enums to values for CSV serialization (handles nested in lists/tuples)."""
+    from enum import Enum
+    if isinstance(v, Enum):
+        return v.value
+    if isinstance(v, tuple):
+        return tuple(_serialize_for_csv(x) for x in v)
+    if isinstance(v, list):
+        return [_serialize_for_csv(x) for x in v]
+    return v
+
+
 class TypedDF:
     """Base class for typed DataFrames."""
     
@@ -50,7 +62,11 @@ class TypedDF:
         self.df = validate_and_cast_df(df, self.schema, check_missing=True, check_extra=True, cast=True)
     
     def to_csv(self, path: Path) -> None:
-        self.df.to_csv(path, index=False, header=self.headers)
+        df = self.df.copy()
+        for col in df.columns:
+            if df[col].dtype == object:
+                df[col] = df[col].apply(_serialize_for_csv)
+        df.to_csv(path, index=False, header=self.headers)
     
     @staticmethod
     def _read_csv_df(path: Path, schema: Schema, headers: bool) -> pd.DataFrame:
