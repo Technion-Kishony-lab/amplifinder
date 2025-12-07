@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Tuple
 
 from amplifinder.config import Config
-from amplifinder.data_types import Genome, RecordTypedDF, TnLoc, RefTnJunction, TnEndSeq, Junction, TnJunction
+from amplifinder.data_types import Genome, RecordTypedDF, TnLoc, RefTnJunction, TnEndSeq, Junction, TnJunction, TnJunctionPair
 from amplifinder.logger import info
 from amplifinder.steps import (
     InitializingStep,
@@ -17,6 +17,7 @@ from amplifinder.steps import (
     CreateReferenceTnJunctionsStep,
     CreateRefTnEndSeqsStep,
     CreateTNJCStep,
+    CreateTNJC2Step,
 )
 from amplifinder.data import get_builtin_isfinder_db_path
 from amplifinder.utils.tn_loc import compare_tn_locations
@@ -28,15 +29,16 @@ class Pipeline:
     
     config: Config
 
-    def run(self) -> RecordTypedDF[TnJunction]:
-        """Run full pipeline, return TNJC results."""
+    def run(self) -> RecordTypedDF[TnJunctionPair]:
+        """Run full pipeline, return TNJC2 results."""
         iso_output = self._initialize()
         genome = self._load_reference()
         tn_loc = self._locate_tns_in_reference(genome)
         ref_tn_jc, ref_tn_end_seqs = self._create_reference_tn_junctions(tn_loc, genome, iso_output)
         breseq_jc = self._run_breseq(genome, iso_output)
         tnjc = self._create_tnjc(breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output)
-        return tnjc
+        tnjc2 = self._create_tnjc2(tnjc, genome, iso_output)
+        return tnjc2
 
     def _initialize(self) -> Path:
         """Step 0: Initialize output directories."""
@@ -158,10 +160,24 @@ class Pipeline:
         info(f"TNJC: {len(tnjc)} TN-associated junctions")
         return tnjc
 
-    # TODO: Step 6 - Combine junction pairs (TNJC2)
+    def _create_tnjc2(
+        self,
+        tnjc: RecordTypedDF[TnJunction],
+        genome: Genome,
+        iso_output: Path,
+    ) -> RecordTypedDF[TnJunctionPair]:
+        """Step 6: Combine junction pairs (TNJC2)."""
+        tnjc2 = CreateTNJC2Step(
+            tnjc=tnjc,
+            genome=genome,
+            output_dir=iso_output,
+        ).run_and_read_outputs()
+        info(f"TNJC2: {len(tnjc2)} junction pairs")
+        return tnjc2
+
     # TODO: Step 7 - Classification + Export
 
 
-def run_pipeline(config: Config) -> RecordTypedDF[TnJunction]:
+def run_pipeline(config: Config) -> RecordTypedDF[TnJunctionPair]:
     """Run the AmpliFinder pipeline."""
     return Pipeline(config).run()

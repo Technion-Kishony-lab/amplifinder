@@ -12,7 +12,11 @@ from amplifinder.steps import (
     LocateTNsUsingISfinderStep,
     BreseqStep,
     CreateReferenceTnJunctionsStep,
+    CreateRefTnEndSeqsStep,
+    CreateTNJCStep,
+    CreateTNJC2Step,
 )
+from amplifinder.data_types import RecordTypedDF, TnJunctionPair, Junction
 
 pytestmark = pytest.mark.integration
 
@@ -187,4 +191,86 @@ class TestFullPipeline:
         # For now, just verify MATLAB output is accessible
         assert matlab_jc_count > 0
         print(f"MATLAB found {matlab_jc_count} TN junctions")
+
+    def test_tnjc2_step_produces_output(self, tmp_path, isolate_srr25242877):
+        """Test TNJC2 step produces valid output structure."""
+        breseq_path = isolate_srr25242877["breseq_path"]
+        
+        if not breseq_path.exists():
+            pytest.skip(f"Breseq output not found: {breseq_path}")
+        
+        ref_path = tmp_path / "genomesDB"
+        ref_path.mkdir()
+        output_dir = tmp_path / "output"
+        output_dir.mkdir()
+        
+        # Step 1: Get reference
+        genome = GetReferenceStep(
+            ref_name="U00096",
+            ref_path=ref_path,
+            ncbi=True,
+        ).run_and_read_outputs()
+        
+        # Step 2: Locate TNs
+        tn_loc = LocateTNsUsingGenbankStep(
+            genbank_path=genome.genbank_path,
+            ref_name=genome.name,
+            ref_path=ref_path,
+        ).run_and_read_outputs()
+        
+        assert tn_loc is not None and len(tn_loc) > 0
+        
+        # Step 3: Create reference TN junctions
+        ref_tn_jc = CreateReferenceTnJunctionsStep(
+            tn_loc=tn_loc,
+            ref_name=genome.name,
+            output_dir=output_dir,
+            reference_tn_out_span=50,
+        ).run_and_read_outputs()
+        
+        ref_tn_end_seqs = CreateRefTnEndSeqsStep(
+            ref_tn_jc=ref_tn_jc,
+            genome=genome,
+            ref_path=ref_path,
+            max_dist_to_tn=200,
+        ).run_and_read_outputs()
+        
+        # Step 4: Parse breseq output
+        from amplifinder.tools.breseq import parse_breseq_output
+        breseq_output = parse_breseq_output(breseq_path)
+        breseq_jc = breseq_output["JC"]
+        
+        # Step 5: Create TNJC
+        all_jc_df = pd.concat([breseq_jc, ref_tn_jc.df], ignore_index=True)
+        all_jc = RecordTypedDF(all_jc_df, Junction)
+        
+        tnjc = CreateTNJCStep(
+            jc_df=all_jc,
+            ref_tn_end_seqs=ref_tn_end_seqs,
+            genome=genome,
+            output_dir=output_dir,
+            max_dist_to_tn=200,
+            trim_jc_flanking=5,
+        ).run_and_read_outputs()
+        
+        # Step 6: Create TNJC2
+        tnjc2 = CreateTNJC2Step(
+            tnjc=tnjc,
+            genome=genome,
+            output_dir=output_dir,
+        ).run_and_read_outputs()
+        
+        # Verify output structure
+        assert isinstance(tnjc2, RecordTypedDF)
+        assert (output_dir / "TNJC2.csv").exists()
+        
+        # Check expected columns
+        expected_cols = {
+            "jc_num_L", "jc_num_R", "scaf_chr",
+            "amplicon_length", "complementary_length",
+            "tn_orientation", "span_origin",
+        }
+        assert expected_cols.issubset(set(tnjc2.df.columns))
+        
+        print(f"TNJC2: found {len(tnjc2)} junction pairs")
 
