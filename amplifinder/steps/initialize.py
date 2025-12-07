@@ -13,7 +13,7 @@ class InitializingStep(Step):
         self.output_dir = Path(output_dir)
         self.iso_name = iso_name
         self.iso_output = self.output_dir / iso_name
-        super().__init__(outputs=[self.iso_output], force=force)
+        super().__init__(output_files=[self.iso_output], force=force)
 
     def _run(self) -> None:
         self.output_dir.mkdir(parents=True, exist_ok=True)

@@ -24,7 +24,7 @@ class GetReferenceStep(Step[Genome]):
         # Output: mapping file
         self.mapping_file = self.ref_path / f"{ref_name}.json"
 
-        super().__init__(inputs=[], outputs=[self.mapping_file], force=force)
+        super().__init__(input_files=[], output_files=[self.mapping_file], force=force)
 
     def has_output(self) -> bool:
         """Check if output exists."""

@@ -38,8 +38,8 @@ class LocateTNsUsingISfinderStep(Step[RecordTypedDF[TnLoc]]):
         self.tn_loc_output = self.isfinder_dir / f"{ref_name}_tn_loc.csv"
 
         super().__init__(
-            inputs=[self.ref_fasta, self.isdb_path],
-            outputs=[self.tn_loc_output],
+            input_files=[self.ref_fasta, self.isdb_path],
+            output_files=[self.tn_loc_output],
             force=force,
         )
 

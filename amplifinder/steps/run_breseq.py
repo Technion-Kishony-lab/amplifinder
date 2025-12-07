@@ -28,8 +28,8 @@ class BreseqStep(Step):
         self.threads = threads
 
         super().__init__(
-            inputs=[fastq_path, ref_file],
-            outputs=[output_path / "output" / "output.gd"],
+            input_files=[fastq_path, ref_file],
+            output_files=[output_path / "output" / "output.gd"],
             force=force,
         )
 

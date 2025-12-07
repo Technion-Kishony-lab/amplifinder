@@ -41,8 +41,8 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         self.output_file = self.output_dir / "TNJC2.csv"
 
         super().__init__(
-            inputs=[],
-            outputs=[self.output_file],
+            input_files=[],
+            output_files=[self.output_file],
             force=force,
         )
 
