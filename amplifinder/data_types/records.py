@@ -147,6 +147,16 @@ class Record:
         return Schema(columns=tuple(columns), allow_extra=cls.ALLOW_EXTRA)
 
     @classmethod
+    def from_dict(cls: type[T], data: Dict[str, Any]) -> T:
+        """Create instance from dict, separating schema fields from extras."""
+        schema_cols = {col.name for col in cls.schema()}
+        schema_fields = {k: v for k, v in data.items() if k in schema_cols}
+        extra_fields = {k: v for k, v in data.items() if k not in schema_cols}
+        if extra_fields and cls.ALLOW_EXTRA:
+            schema_fields["extra"] = extra_fields
+        return cls(**schema_fields)
+
+    @classmethod
     def from_other(cls: type[T], obj: Record, **kwargs) -> T:
         """Create instance from another record, copying shared fields."""
         shared = {f.name for f in dataclass_fields(cls)} & {f.name for f in dataclass_fields(obj)}

@@ -125,4 +125,4 @@ class RecordTypedDF(TypedDF, Generic[T]):
 
     def __iter__(self) -> Iterator[T]:
         for row in super().__iter__():
-            yield self._record_type(**row)
+            yield self._record_type.from_dict(row)
