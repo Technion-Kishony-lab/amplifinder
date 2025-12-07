@@ -1,15 +1,25 @@
 """Data types and structures."""
 
-from amplifinder.data_types.schema import TypedSchema
+from amplifinder.data_types.typed_df import RecordTypedDF, TypedDF
 from amplifinder.data_types.genome import Genome, GenomeRegistry, get_genome
-from amplifinder.data_types.records import TnLoc, BlastHit, TN_LOC_SCHEMA, BLAST_SCHEMA
+from amplifinder.data_types.records import Column, Schema, Record
+from amplifinder.data_types.record_types import (
+    TnLoc, TnEndSeq, BlastHit, Junction, RefTnJunction, TnJunction, TnMatch,
+)
 
 __all__ = [
-    "TypedSchema",
+    "Column",
+    "Schema",
+    "RecordTypedDF",
+    "TypedDF",
+    "Record",
     "TnLoc",
+    "TnEndSeq",
     "BlastHit",
-    "TN_LOC_SCHEMA",
-    "BLAST_SCHEMA",
+    "Junction",
+    "RefTnJunction",
+    "TnJunction",
+    "TnMatch",
     "Genome",
     "GenomeRegistry",
     "get_genome",

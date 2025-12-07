@@ -3,14 +3,14 @@
 import pandas as pd
 
 from amplifinder.utils.tn_loc import compare_tn_locations
-from amplifinder.data_types import TN_LOC_SCHEMA
+from amplifinder.data_types import RecordTypedDF, TnLoc
 
 
-def make_tn_loc(records: list[dict]) -> pd.DataFrame:
-    """Helper to create TN location DataFrame."""
+def make_tn_loc(records: list[dict]) -> RecordTypedDF[TnLoc]:
+    """Helper to create TN location RecordDF."""
     if not records:
-        return TN_LOC_SCHEMA.empty()
-    return TN_LOC_SCHEMA.create({
+        return RecordTypedDF.empty(TnLoc)
+    return RecordTypedDF(pd.DataFrame({
         "ID": [r.get("ID", i + 1) for i, r in enumerate(records)],
         "TN_Name": [r["TN_Name"] for r in records],
         "TN_scaf": [r.get("TN_scaf", "chr1") for r in records],
@@ -18,7 +18,7 @@ def make_tn_loc(records: list[dict]) -> pd.DataFrame:
         "LocRight": [r["LocRight"] for r in records],
         "Complement": [r.get("Complement", False) for r in records],
         "Join": [r.get("Join", False) for r in records],
-    })
+    }), TnLoc)
 
 
 def get_single_record(caplog):

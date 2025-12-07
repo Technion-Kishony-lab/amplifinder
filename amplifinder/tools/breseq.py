@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from amplifinder.logger import info, warning
-from amplifinder.data_types.schema import TypedSchema
+from amplifinder.data_types.typed_df import Schema
 from amplifinder.data import load_all_field_defs
 
 if TYPE_CHECKING:
@@ -269,31 +269,34 @@ def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
     return results
 
 
-def _parse_record(parts: List[str], schema: TypedSchema) -> Dict[str, Any]:
+def _parse_record(parts: List[str], schema: Schema) -> Dict[str, Any]:
     """Parse a single breseq record line.
 
     Args:
         parts: Tab-separated parts of the line
-        schema: TypedSchema with column definitions
+        schema: Schema tuple with (name, dtype, optional) definitions
 
     Returns:
         Dictionary with parsed fields
     """
     record: Dict[str, Any] = {}
+    
+    # Build schema helpers
+    dtypes = {c.name: c.dtype for c in schema}
+    required_names = [c.name for c in schema if not c.optional]
 
     # Parse positional (required) fields
-    required_names = schema.required_names
     for i, name in enumerate(required_names):
         if i < len(parts):
-            record[name] = _convert_value(parts[i], schema.dtypes[name])
+            record[name] = _convert_value(parts[i], dtypes[name])
 
     # Parse optional key=value fields
     n_required = len(required_names)
     for part in parts[n_required:]:
         if "=" in part:
             key, value = part.split("=", 1)
-            if key in schema.dtypes:
-                record[key] = _convert_value(value, schema.dtypes[key])
+            if key in dtypes:
+                record[key] = _convert_value(value, dtypes[key])
             else:
                 record[key] = value
 

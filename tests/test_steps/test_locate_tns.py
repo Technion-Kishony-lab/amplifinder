@@ -3,7 +3,8 @@
 import pandas as pd
 import pytest
 
-from amplifinder.steps import LocateTNsUsingGenbank, LocateTNsUsingISfinder
+from amplifinder.steps import LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep
+from amplifinder.data_types import RecordTypedDF, TnLoc
 from tests.env import RUN_BLAST_TESTS
 
 
@@ -18,14 +19,14 @@ def step_factory(request, tmp_output, tiny_ref_gbk, tiny_ref_fasta, tiny_tn_db):
     """Factory to create TN location steps - parametrized for both backends."""
     def make_step(force=False):
         if request.param == "genbank":
-            return LocateTNsUsingGenbank(
+            return LocateTNsUsingGenbankStep(
                 genbank_path=tiny_ref_gbk,
                 ref_name="tiny",
                 ref_path=tmp_output,
                 force=force,
             )
         else:
-            return LocateTNsUsingISfinder(
+            return LocateTNsUsingISfinderStep(
                 ref_fasta=tiny_ref_fasta,
                 ref_name="tiny",
                 ref_path=tmp_output,
@@ -47,6 +48,8 @@ def test_extracts_tn_elements(locate_tns_step):
     """Should extract TN elements correctly."""
     tn_loc = locate_tns_step.run_and_read_outputs()
 
+    assert isinstance(tn_loc, RecordTypedDF)
+
     expected = pd.DataFrame({
         "ID": [1, 2],
         "TN_Name": ["IS_test1", "IS_test2"],
@@ -56,7 +59,7 @@ def test_extracts_tn_elements(locate_tns_step):
         "Complement": [False, True],
         "Join": [False, False],
     })
-    pd.testing.assert_frame_equal(tn_loc, expected)
+    pd.testing.assert_frame_equal(tn_loc.df, expected)
 
 
 def test_skips_if_output_exists(locate_tns_step):

@@ -3,7 +3,7 @@
 import pytest
 
 from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
-from amplifinder.data_types import BLAST_SCHEMA
+from amplifinder.data_types import RecordTypedDF, BlastHit
 from tests.env import RUN_BLAST_TESTS
 
 
@@ -43,15 +43,16 @@ def test_run_blastn(blast_output):
 @skip_no_blast
 def test_parse_blast_csv(blast_output):
     """Should parse BLAST CSV output correctly."""
-    df = parse_blast_csv(blast_output)
+    result = parse_blast_csv(blast_output)
 
-    assert len(df) > 0
-    BLAST_SCHEMA.assert_matches(df)
+    assert len(result) > 0
+    assert isinstance(result, RecordTypedDF)
+    result.assert_matches()
 
 
 @skip_no_blast
 def test_blast_no_hits(blast_db, tmp_path):
-    """Should return empty DataFrame with correct schema when no hits."""
+    """Should return empty RecordDF with correct schema when no hits."""
     # Create query with random sequence that won't match TN database
     from tests.conftest import make_random_seq, write_fasta
     query = tmp_path / "no_match.fasta"
@@ -59,7 +60,7 @@ def test_blast_no_hits(blast_db, tmp_path):
 
     output = tmp_path / "blast_out.txt"
     run_blastn(query=query, db=blast_db, output=output)
-    df = parse_blast_csv(output)
+    result = parse_blast_csv(output)
 
-    assert len(df) == 0
-    BLAST_SCHEMA.assert_matches(df)
+    assert len(result) == 0
+    assert isinstance(result, RecordTypedDF)
