@@ -4,7 +4,7 @@ from amplifinder.data_types.typed_df import RecordTypedDF, TypedDF
 from amplifinder.data_types.genome import Genome, GenomeRegistry, get_genome
 from amplifinder.data_types.records import Column, Schema, Record
 from amplifinder.data_types.record_types import (
-    TnLoc, TnEndSeq, BlastHit, Junction, RefTnJunction, TnJunction, TnMatch,
+    TnLoc, TnEndSeq, BlastHit, Junction, RefTnJunction, TnJunction, TnJunctionPair, TnMatch,
 )
 
 __all__ = [
@@ -19,6 +19,7 @@ __all__ = [
     "Junction",
     "RefTnJunction",
     "TnJunction",
+    "TnJunctionPair",
     "TnMatch",
     "Genome",
     "GenomeRegistry",
