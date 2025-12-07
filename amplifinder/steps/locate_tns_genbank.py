@@ -32,8 +32,8 @@ class LocateTNsUsingGenbankStep(Step[Optional[RecordTypedDF[TnLoc]]]):
         self.tn_loc_output = self.genbank_dir / f"{ref_name}_tn_loc.csv"
 
         super().__init__(
-            inputs=[self.genbank_path] if self.genbank_path else [],
-            outputs=[self.tn_loc_output],
+            input_files=[self.genbank_path] if self.genbank_path else [],
+            output_files=[self.tn_loc_output],
             force=force,
         )
 

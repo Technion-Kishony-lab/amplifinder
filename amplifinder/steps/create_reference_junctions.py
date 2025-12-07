@@ -46,8 +46,8 @@ class CreateReferenceTnJunctionsStep(Step[RecordTypedDF[RefTnJunction]]):
         self.output_file = self.output_dir / "ref_tn_jc.csv"
 
         super().__init__(
-            inputs=[],  # tn_loc passed in memory
-            outputs=[self.output_file],
+            input_files=[],  # tn_loc passed in memory
+            output_files=[self.output_file],
             force=force,
         )
 
@@ -120,8 +120,8 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDF[TnEndSeq]]):
         self.output_file = self.ref_path / f"{genome.name}_TN_end_seqs.csv"
 
         super().__init__(
-            inputs=[],
-            outputs=[self.output_file],
+            input_files=[],
+            output_files=[self.output_file],
             force=force,
         )
 

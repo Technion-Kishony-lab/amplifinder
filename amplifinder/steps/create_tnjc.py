@@ -52,8 +52,8 @@ class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
         self.output_file = self.output_dir / "TNJC.csv"
 
         super().__init__(
-            inputs=[p for p in [genome.genbank_path, genome.fasta_path] if p],
-            outputs=[self.output_file],
+            input_files=[p for p in [genome.genbank_path, genome.fasta_path] if p],
+            output_files=[self.output_file],
             force=force,
         )
 
