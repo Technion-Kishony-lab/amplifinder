@@ -27,12 +27,12 @@ def compare_tn_junctions(
     tolerance: int = 5,
 ) -> dict:
     """Compare Python and MATLAB TN junction outputs.
-    
+
     Args:
         python_df: Python pipeline output
         matlab_df: MATLAB reference output
         tolerance: Position tolerance in bp
-    
+
     Returns:
         Dict with comparison stats
     """
@@ -43,10 +43,10 @@ def compare_tn_junctions(
         "python_only": 0,
         "matlab_only": 0,
     }
-    
+
     # TODO: Implement detailed junction matching
     # For now, just return counts
-    
+
     return stats
 
 
@@ -56,19 +56,18 @@ def assert_junctions_match(
     min_match_ratio: float = 0.9,
 ):
     """Assert that Python and MATLAB junctions match within tolerance.
-    
+
     Raises:
         AssertionError: If match ratio below threshold
     """
     stats = compare_tn_junctions(python_df, matlab_df)
-    
+
     if stats["matlab_count"] == 0:
         return  # No MATLAB reference to compare
-    
+
     # For now, just check counts are similar
     ratio = stats["python_count"] / stats["matlab_count"]
     assert 0.8 <= ratio <= 1.2, (
         f"Junction count mismatch: Python={stats['python_count']}, "
         f"MATLAB={stats['matlab_count']}"
     )
-

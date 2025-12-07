@@ -2,21 +2,17 @@
 
 import pandas as pd
 import pytest
-from pathlib import Path
 
-from amplifinder.config import Config
-from amplifinder.data_types import Genome
 from amplifinder.steps import (
     GetReferenceStep,
     LocateTNsUsingGenbankStep,
     LocateTNsUsingISfinderStep,
-    BreseqStep,
     CreateReferenceTnJunctionsStep,
     CreateRefTnEndSeqsStep,
     CreateTNJCStep,
     CreateTNJC2Step,
 )
-from amplifinder.data_types import RecordTypedDF, TnJunctionPair, Junction
+from amplifinder.data_types import RecordTypedDF, Junction
 
 pytestmark = pytest.mark.integration
 
@@ -32,14 +28,14 @@ class TestGetReference:
         """Load E. coli U00096 reference from NCBI."""
         ref_path = tmp_path / "genomesDB"
         ref_path.mkdir()
-        
+
         step = GetReferenceStep(
             ref_name="U00096",
             ref_path=ref_path,
             ncbi=True,
         )
         genome = step.run_and_read_outputs()
-        
+
         assert genome.name == "U00096"
         assert genome.genbank_path.exists()
         assert genome.fasta_path.exists()
@@ -58,7 +54,7 @@ class TestLocateTNs:
         """Load U00096 reference (cached)."""
         ref_path = tmp_path / "genomesDB"
         ref_path.mkdir()
-        
+
         step = GetReferenceStep(
             ref_name="U00096",
             ref_path=ref_path,
@@ -74,11 +70,11 @@ class TestLocateTNs:
             ref_path=tmp_path,
         )
         tn_loc = step.run_and_read_outputs()
-        
+
         # MATLAB found IS elements in U00096
         assert tn_loc is not None
         assert len(tn_loc) > 0
-        
+
         # Check expected columns
         assert "TN_Name" in tn_loc.df.columns
         assert "LocLeft" in tn_loc.df.columns
@@ -87,7 +83,7 @@ class TestLocateTNs:
     def test_locate_tns_isfinder(self, tmp_path, u00096_genome):
         """Locate TN elements using ISfinder database."""
         from amplifinder.data import get_builtin_isfinder_db_path
-        
+
         step = LocateTNsUsingISfinderStep(
             ref_fasta=u00096_genome.fasta_path,
             ref_name=u00096_genome.name,
@@ -97,7 +93,7 @@ class TestLocateTNs:
             critical_coverage=0.9,
         )
         tn_loc = step.run_and_read_outputs()
-        
+
         assert len(tn_loc) > 0
 
 
@@ -111,20 +107,20 @@ class TestBreseq:
     def test_parse_existing_breseq_output(self, tmp_path, isolate_srr25242877):
         """Parse pre-computed breseq output for SRR25242877."""
         breseq_path = isolate_srr25242877["breseq_path"]
-        
+
         if not breseq_path.exists():
             pytest.skip(f"Breseq output not found: {breseq_path}")
-        
+
         # Parse the output.gd file directly
         from amplifinder.tools.breseq import parse_breseq_output
-        
+
         output_gd = breseq_path / "output" / "output.gd"
         if not output_gd.exists():
             pytest.skip(f"output.gd not found: {output_gd}")
-        
+
         # parse_breseq_output expects the breseq output directory, not the .gd file
         result = parse_breseq_output(breseq_path)
-        
+
         # Check JC (junction) output
         assert "JC" in result
         jc_df = result["JC"]
@@ -142,12 +138,12 @@ class TestCompareWithMATLAB:
         """Verify we can load and parse MATLAB ISJC2.xlsx output."""
         matlab_path = isolate_srr25242877["matlab_output"]
         isjc2_xlsx = matlab_path / "ISJC2.xlsx"
-        
+
         if not isjc2_xlsx.exists():
             pytest.skip(f"MATLAB output not found: {isjc2_xlsx}")
-        
+
         df = pd.read_excel(isjc2_xlsx)
-        
+
         # Expected columns from MATLAB output
         expected_cols = [
             "iso", "Reference", "IS_element", "IS_direction",
@@ -160,10 +156,10 @@ class TestCompareWithMATLAB:
         """Verify MATLAB classified_amplifications output."""
         matlab_path = isolate_srr25242877["matlab_output"]
         xlsx = matlab_path / "classified_amplifications.xlsx"
-        
+
         if not xlsx.exists():
             pytest.skip(f"MATLAB output not found: {xlsx}")
-        
+
         df = pd.read_excel(xlsx)
         assert len(df) >= 1  # At least one amplification found
 
@@ -180,13 +176,13 @@ class TestFullPipeline:
         """Run pipeline and compare TN junction count with MATLAB."""
         matlab_path = isolate_srr25242877["matlab_output"]
         isjc2_xlsx = matlab_path / "ISJC2.xlsx"
-        
+
         if not isjc2_xlsx.exists():
             pytest.skip("MATLAB reference output not available")
-        
+
         matlab_df = pd.read_excel(isjc2_xlsx)
         matlab_jc_count = len(matlab_df)
-        
+
         # TODO: Run full pipeline and compare
         # For now, just verify MATLAB output is accessible
         assert matlab_jc_count > 0
@@ -195,31 +191,31 @@ class TestFullPipeline:
     def test_tnjc2_step_produces_output(self, tmp_path, isolate_srr25242877):
         """Test TNJC2 step produces valid output structure."""
         breseq_path = isolate_srr25242877["breseq_path"]
-        
+
         if not breseq_path.exists():
             pytest.skip(f"Breseq output not found: {breseq_path}")
-        
+
         ref_path = tmp_path / "genomesDB"
         ref_path.mkdir()
         output_dir = tmp_path / "output"
         output_dir.mkdir()
-        
+
         # Step 1: Get reference
         genome = GetReferenceStep(
             ref_name="U00096",
             ref_path=ref_path,
             ncbi=True,
         ).run_and_read_outputs()
-        
+
         # Step 2: Locate TNs
         tn_loc = LocateTNsUsingGenbankStep(
             genbank_path=genome.genbank_path,
             ref_name=genome.name,
             ref_path=ref_path,
         ).run_and_read_outputs()
-        
+
         assert tn_loc is not None and len(tn_loc) > 0
-        
+
         # Step 3: Create reference TN junctions
         ref_tn_jc = CreateReferenceTnJunctionsStep(
             tn_loc=tn_loc,
@@ -227,23 +223,23 @@ class TestFullPipeline:
             output_dir=output_dir,
             reference_tn_out_span=50,
         ).run_and_read_outputs()
-        
+
         ref_tn_end_seqs = CreateRefTnEndSeqsStep(
             ref_tn_jc=ref_tn_jc,
             genome=genome,
             ref_path=ref_path,
             max_dist_to_tn=200,
         ).run_and_read_outputs()
-        
+
         # Step 4: Parse breseq output
         from amplifinder.tools.breseq import parse_breseq_output
         breseq_output = parse_breseq_output(breseq_path)
         breseq_jc = breseq_output["JC"]
-        
+
         # Step 5: Create TNJC
         all_jc_df = pd.concat([breseq_jc, ref_tn_jc.df], ignore_index=True)
         all_jc = RecordTypedDF(all_jc_df, Junction)
-        
+
         tnjc = CreateTNJCStep(
             jc_df=all_jc,
             ref_tn_end_seqs=ref_tn_end_seqs,
@@ -252,18 +248,18 @@ class TestFullPipeline:
             max_dist_to_tn=200,
             trim_jc_flanking=5,
         ).run_and_read_outputs()
-        
+
         # Step 6: Create TNJC2
         tnjc2 = CreateTNJC2Step(
             tnjc=tnjc,
             genome=genome,
             output_dir=output_dir,
         ).run_and_read_outputs()
-        
+
         # Verify output structure
         assert isinstance(tnjc2, RecordTypedDF)
         assert (output_dir / "TNJC2.csv").exists()
-        
+
         # Check expected columns
         expected_cols = {
             "jc_num_L", "jc_num_R", "scaf_chr",
@@ -271,6 +267,5 @@ class TestFullPipeline:
             "tn_orientation", "span_origin",
         }
         assert expected_cols.issubset(set(tnjc2.df.columns))
-        
-        print(f"TNJC2: found {len(tnjc2)} junction pairs")
 
+        print(f"TNJC2: found {len(tnjc2)} junction pairs")

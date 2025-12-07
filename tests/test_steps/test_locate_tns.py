@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from amplifinder.steps import LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep
-from amplifinder.data_types import RecordTypedDF, TnLoc
+from amplifinder.data_types import RecordTypedDF
 from tests.env import RUN_BLAST_TESTS
 
 
