@@ -2,15 +2,34 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from enum import Enum
 from typing import List, NamedTuple, Optional, TypeVar
 
 from amplifinder.data_types.records import Record
 
 
+class Side(str, Enum):
+    """Side of a TN element (left or right)."""
+    LEFT = "left"
+    RIGHT = "right"
+
+    def opposite(self) -> "Side":
+        return Side.RIGHT if self == Side.LEFT else Side.LEFT
+
+
+class Orientation(int, Enum):
+    """Orientation relative to reference (forward or reverse)."""
+    FORWARD = 1
+    REVERSE = -1
+
+    def opposite(self) -> "Orientation":
+        return Orientation.REVERSE if self == Orientation.FORWARD else Orientation.FORWARD
+
+
 class TnMatch(NamedTuple):
     """A single TN element match for a junction."""
     tn_id: int
-    side: str      # "left" or "right"
+    side: Side
     distance: int
 
 
@@ -30,7 +49,7 @@ class TnLoc(Record):
 class TnEndSeq(Record):
     """TN element end sequence for matching."""
     tn_id: int
-    tn_side: str    # "left" or "right"
+    tn_side: Side
     seq_fwd: str    # forward sequence
     seq_rc: str     # reverse complement
 
@@ -83,7 +102,7 @@ class Junction(Record):
 class RefTnJunction(Junction):
     """Synthetic junction for reference TN element."""
     refTN: int
-    tn_side: str  # "left" or "right"
+    tn_side: Side
 
 
 @dataclass(kw_only=True)
