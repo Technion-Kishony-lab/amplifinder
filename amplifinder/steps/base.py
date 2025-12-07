@@ -70,7 +70,7 @@ class Step(ABC, Generic[T]):
 
     def _save_output(self, output: T) -> None:
         """Save output to files. Override in subclass to save to files."""
-        raise NotImplementedError
+        pass
 
     def _save_output_and_verify(self, output: T) -> None:
         """Save output to files and verify that it was created."""
@@ -78,7 +78,7 @@ class Step(ABC, Generic[T]):
         if missing_out := self.missing_output_files():
             raise FileNotFoundError(f"{self.name}: expected outputs not created: {missing_out}")
 
-    def read_outputs(self) -> T:
+    def load_outputs(self) -> T:
         """Load outputs from files. Override in subclass to return typed data."""
         raise NotImplementedError
 
@@ -106,7 +106,7 @@ class Step(ABC, Generic[T]):
         # Check if can skip (only if saving to files)
         if not self.force and self.has_output_files():
             info(f"{self.name}: skipped (outputs exist)")
-            return self.read_outputs()
+            return self.load_outputs()
 
         # Clean partial outputs
         self._clean_outputs()

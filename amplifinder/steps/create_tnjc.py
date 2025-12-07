@@ -57,7 +57,7 @@ class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
             force=force,
         )
 
-    def _run(self) -> None:
+    def _calculate_output(self) -> RecordTypedDF[TnJunction]:
         """Match junctions to TN elements."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -93,8 +93,11 @@ class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
         tnjc = RecordTypedDF.from_records(tnjc_records, TnJunction)
         tnjc = tnjc.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
 
-        tnjc.to_csv(self.output_file)
         info(f"Found {len(tnjc)} TN-associated junctions (TNJC)")
+        return tnjc
+
+    def _save_output(self, output: RecordTypedDF[TnJunction]) -> None:
+        output.to_csv(self.output_file)
 
     def _get_junction_seq(self, jc: Junction, side: int) -> str:
         """Extract sequence at junction side."""
