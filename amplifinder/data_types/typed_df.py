@@ -5,7 +5,6 @@ import pandas as pd
 
 from enum import Enum
 from pathlib import Path
-from pydantic import TypeAdapter
 from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Type, TypeVar
 
 from amplifinder.data_types.records import Record, Schema

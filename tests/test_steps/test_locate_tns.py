@@ -46,7 +46,7 @@ def locate_tns_step(step_factory):
 
 def test_extracts_tn_elements(locate_tns_step):
     """Should extract TN elements correctly."""
-    tn_loc = locate_tns_step.run_and_read_outputs()
+    tn_loc = locate_tns_step.run()
 
     assert isinstance(tn_loc, RecordTypedDF)
 
@@ -64,11 +64,15 @@ def test_extracts_tn_elements(locate_tns_step):
 
 def test_skips_if_output_exists(locate_tns_step):
     """Should skip execution if output already exists."""
-    assert locate_tns_step.run() is True   # first run
-    assert locate_tns_step.run() is False  # second run skips
+    locate_tns_step.run()
+    assert locate_tns_step.run_count == 1  # first run
+    locate_tns_step.run()
+    assert locate_tns_step.run_count == 1  # second run skips
 
 
 def test_force_reruns(step_factory):
     """Force=True should re-run even if output exists."""
     step_factory().run()
-    assert step_factory(force=True).run() is True
+    step = step_factory(force=True)
+    step.run()
+    assert step.run_count == 1

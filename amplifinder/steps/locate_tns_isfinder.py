@@ -38,12 +38,12 @@ class LocateTNsUsingISfinderStep(Step[RecordTypedDF[TnLoc]]):
         self.tn_loc_output = self.isfinder_dir / f"{ref_name}_tn_loc.csv"
 
         super().__init__(
-            inputs=[self.ref_fasta, self.isdb_path],
-            outputs=[self.tn_loc_output],
+            input_files=[self.ref_fasta, self.isdb_path],
+            output_files=[self.tn_loc_output],
             force=force,
         )
 
-    def _run(self) -> None:
+    def _calculate_output(self) -> RecordTypedDF[TnLoc]:
         """Run BLAST and parse results."""
         self.isfinder_dir.mkdir(parents=True, exist_ok=True)
 
@@ -59,10 +59,13 @@ class LocateTNsUsingISfinderStep(Step[RecordTypedDF[TnLoc]]):
             evalue=self.evalue,
         )
 
-        # Parse BLAST results and save
+        # Parse BLAST results
         tn_loc = self._parse_blast()
-        tn_loc.to_csv(self.tn_loc_output)
         info(f"Found {len(tn_loc)} TN elements via ISfinder")
+        return tn_loc
+
+    def _save_output(self, output: RecordTypedDF[TnLoc]) -> None:
+        output.to_csv(self.tn_loc_output)
 
     def _parse_blast(self) -> RecordTypedDF[TnLoc]:
         """Parse BLAST output and convert to TN locations."""
@@ -105,6 +108,6 @@ class LocateTNsUsingISfinderStep(Step[RecordTypedDF[TnLoc]]):
             "Join": False,
         }), TnLoc)
 
-    def read_outputs(self) -> RecordTypedDF[TnLoc]:
+    def load_outputs(self) -> RecordTypedDF[TnLoc]:
         """Load TN locations from output file."""
         return RecordTypedDF.from_csv(self.tn_loc_output, TnLoc)

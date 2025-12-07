@@ -46,12 +46,12 @@ class CreateReferenceTnJunctionsStep(Step[RecordTypedDF[RefTnJunction]]):
         self.output_file = self.output_dir / "ref_tn_jc.csv"
 
         super().__init__(
-            inputs=[],  # tn_loc passed in memory
-            outputs=[self.output_file],
+            input_files=[],  # tn_loc passed in memory
+            output_files=[self.output_file],
             force=force,
         )
 
-    def _run(self) -> None:
+    def _calculate_output(self) -> RecordTypedDF[RefTnJunction]:
         """Create synthetic junction records from TN locations."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -78,10 +78,14 @@ class CreateReferenceTnJunctionsStep(Step[RecordTypedDF[RefTnJunction]]):
                 refTN=tn.ID, tn_side=Side.RIGHT,
             ))
 
-        RecordTypedDF.from_records(jc_records, RefTnJunction).to_csv(self.output_file)
+        result = RecordTypedDF.from_records(jc_records, RefTnJunction)
         info(f"Created {len(jc_records)} reference TN junctions")
+        return result
 
-    def read_outputs(self) -> RecordTypedDF[RefTnJunction]:
+    def _save_output(self, output: RecordTypedDF[RefTnJunction]) -> None:
+        output.to_csv(self.output_file)
+
+    def load_outputs(self) -> RecordTypedDF[RefTnJunction]:
         """Load reference TN junctions from output file."""
         return RecordTypedDF.from_csv(self.output_file, RefTnJunction)
 
@@ -120,12 +124,12 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDF[TnEndSeq]]):
         self.output_file = self.ref_path / f"{genome.name}_TN_end_seqs.csv"
 
         super().__init__(
-            inputs=[],
-            outputs=[self.output_file],
+            input_files=[],
+            output_files=[self.output_file],
             force=force,
         )
 
-    def _run(self) -> None:
+    def _calculate_output(self) -> RecordTypedDF[TnEndSeq]:
         """Extract TN end sequences."""
         self.ref_path.mkdir(parents=True, exist_ok=True)
 
@@ -150,9 +154,13 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDF[TnEndSeq]]):
                 seq_rc=str(Seq(seq_fwd).reverse_complement()),
             ))
 
-        RecordTypedDF.from_records(records, TnEndSeq).to_csv(self.output_file)
+        result = RecordTypedDF.from_records(records, TnEndSeq)
         info(f"Created {len(records)} TN end sequences")
+        return result
 
-    def read_outputs(self) -> RecordTypedDF[TnEndSeq]:
+    def _save_output(self, output: RecordTypedDF[TnEndSeq]) -> None:
+        output.to_csv(self.output_file)
+
+    def load_outputs(self) -> RecordTypedDF[TnEndSeq]:
         """Load TN end sequences from output file."""
         return RecordTypedDF.from_csv(self.output_file, TnEndSeq)
