@@ -3,7 +3,7 @@
 import pytest
 
 from amplifinder.steps import CreateReferenceTnJunctionsStep, CreateRefTnEndSeqsStep
-from amplifinder.data_types import RecordTypedDF
+from amplifinder.data_types import RecordTypedDF, Side
 
 
 @pytest.fixture
@@ -24,7 +24,7 @@ def test_creates_junction_records(ref_jc_step):
     
     assert isinstance(ref_jc, RecordTypedDF)
     assert len(ref_jc.df) == 4  # 2 TNs * 2 sides
-    assert set(ref_jc.df["tn_side"]) == {"left", "right"}
+    assert set(ref_jc.df["tn_side"]) == {Side.LEFT, Side.RIGHT}
 
 
 def test_junction_positions_correct(ref_jc_step, locate_tns_step):
@@ -33,8 +33,8 @@ def test_junction_positions_correct(ref_jc_step, locate_tns_step):
     tn_loc = locate_tns_step.read_outputs()
     
     tn1 = tn_loc.df.iloc[0]
-    left_jc = ref_jc.df[(ref_jc.df["refTN"] == tn1["ID"]) & (ref_jc.df["tn_side"] == "left")].iloc[0]
-    right_jc = ref_jc.df[(ref_jc.df["refTN"] == tn1["ID"]) & (ref_jc.df["tn_side"] == "right")].iloc[0]
+    left_jc = ref_jc.df[(ref_jc.df["refTN"] == tn1["ID"]) & (ref_jc.df["tn_side"] == Side.LEFT)].iloc[0]
+    right_jc = ref_jc.df[(ref_jc.df["refTN"] == tn1["ID"]) & (ref_jc.df["tn_side"] == Side.RIGHT)].iloc[0]
     
     assert left_jc["pos1"] == tn1["LocLeft"]
     assert right_jc["pos1"] == tn1["LocRight"]

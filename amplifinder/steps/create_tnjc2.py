@@ -5,7 +5,7 @@ from typing import Optional, List, Tuple
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, TnJunction, TnJunctionPair, TnMatch
+from amplifinder.data_types import RecordTypedDF, TnJunction, TnJunctionPair, TnMatch, Side
 from amplifinder.data_types.genome import Genome
 
 
@@ -119,7 +119,7 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
                 # Orientation based on which side connects to which junction
                 # If left side of TN connects to left junction -> same orientation (1)
                 # If right side of TN connects to left junction -> inverted (-1)
-                orientation = 1 if mi.side == "left" else -1
+                orientation = 1 if mi.side == Side.LEFT else -1
 
                 result.append((mi.tn_id, orientation))
 
