@@ -1,7 +1,6 @@
 """Test RecordTypedDF save/load with various field types."""
 
 import pytest
-from dataclasses import dataclass
 from enum import Enum
 from typing import List, NamedTuple, Tuple
 
@@ -26,8 +25,8 @@ class Match(NamedTuple):
     value: int
 
 
-@dataclass(kw_only=True)
 class SampleRecord(Record):
+    """Sample record with various field types."""
     name: str
     count: int
     color: Color
@@ -36,7 +35,6 @@ class SampleRecord(Record):
     pair: Tuple[int, int]
 
 
-@dataclass(kw_only=True)
 class RecordWithMatches(Record):
     """Record with List of NamedTuples containing enums."""
     name: str
@@ -113,7 +111,8 @@ def test_save_load_namedtuple_with_enum(tmp_path):
 def test_list_int_type_validation(tmp_path):
     """Test that List[int] validates element types on load."""
     from amplifinder.data_types.validate_and_cast_df import parse_compound
+    from pydantic import ValidationError
 
-    # This should raise TypeError - list contains string, not int
-    with pytest.raises(TypeError, match=r"List\[0\]"):
+    # This should raise ValidationError - list contains string, not int
+    with pytest.raises(ValidationError, match=r"Input should be a valid integer"):
         parse_compound(["not_an_int"], List[int])

@@ -1,11 +1,12 @@
-"""Base Record class and schema types."""
+"""Base Record class using Pydantic."""
 from __future__ import annotations
 
 import pandas as pd
 
-from dataclasses import dataclass, field, fields as dataclass_fields
+from dataclasses import fields as dataclass_fields
 from pathlib import Path
-from typing import Any, ClassVar, Dict, NamedTuple, Tuple, Type, TypeVar, Union, get_type_hints, get_origin, get_args
+from pydantic import BaseModel, ConfigDict
+from typing import Any, ClassVar, Dict, NamedTuple, Tuple, Type, TypeVar, get_type_hints, get_origin, get_args, Union
 
 T = TypeVar("T", bound="Record")
 
@@ -33,7 +34,6 @@ class Column(NamedTuple):
 
     @property
     def base_dtype(self) -> Type:
-
         """Inner type for casting (unwraps Optional[T] → T)."""
         if self.is_nullable:
             inner = [t for t in get_args(self.dtype) if t is not type(None)]
@@ -41,10 +41,8 @@ class Column(NamedTuple):
         return self.dtype
 
 
-@dataclass(frozen=True)
-class Schema:
+class Schema(NamedTuple):
     """Schema: Column definitions with allow_extra flag."""
-
     columns: Tuple[Column, ...]
     allow_extra: bool = True
 
@@ -89,22 +87,19 @@ class Schema:
         )
 
 
-@dataclass(kw_only=True)
-class Record:
-    """Base class for record dataclasses with schema support.
+class Record(BaseModel):
+    """Base class for record models with schema support.
 
     Features:
-        schema(): Returns Column definitions derived from dataclass fields.
-        from_instance(): Create new record copying shared fields from another.
-        extra: Dict for unknown columns (when ALLOW_EXTRA=True).
-        ALLOW_EXTRA: ClassVar controlling whether unknown columns are allowed.
+        schema(): Returns Column definitions derived from model fields.
+        from_other(): Create new record copying shared fields from another.
+        extra: Dict for unknown fields (when model_config extra='allow').
 
     Optional columns:
         If a field's type is Optional[T], the column is marked as optional
         (may not exist in DataFrame) and nullable (can be None).
 
     Usage:
-        @dataclass(kw_only=True)
         class MyRecord(Record):
             name: str
             value: int
@@ -114,27 +109,20 @@ class Record:
         # → (Column('name', str, False),
         #    Column('value', int, False),
         #    Column('notes', Optional[str], True))
-
-        # Column properties:
-        # col.dtype       → Optional[str]  (full type)
-        # col.base_dtype  → str            (for casting)
-        # col.is_nullable → True           (can be None)
     """
 
+    model_config = ConfigDict(extra='allow')
+
+    # Class variable to track if extra fields allowed (for schema generation)
     ALLOW_EXTRA: ClassVar[bool] = True
-    extra: Dict[str, Any] = field(default_factory=dict)
 
     @classmethod
     def schema(cls) -> Schema:
-        """Extract schema (Column definitions) from this dataclass."""
-        hints = get_type_hints(cls)
+        """Extract schema (Column definitions) from this model."""
         columns = []
 
-        for f in dataclass_fields(cls):
-            if f.name == "extra":
-                continue
-
-            dtype = hints.get(f.name, str)
+        for name, field_info in cls.model_fields.items():
+            dtype = field_info.annotation
             # Check if type is Optional (Union with None)
             is_optional = (
                 get_origin(dtype) is Union and
@@ -142,28 +130,27 @@ class Record:
             )
 
             columns.append(Column(
-                name=f.name,
+                name=name,
                 dtype=dtype,
                 optional=is_optional,
-                )
-            )
+            ))
 
         return Schema(columns=tuple(columns), allow_extra=cls.ALLOW_EXTRA)
 
     @classmethod
     def from_dict(cls: type[T], data: Dict[str, Any]) -> T:
-        """Create instance from dict, separating schema fields from extras."""
-        schema_cols = {col.name for col in cls.schema()}
-        schema_fields = {k: v for k, v in data.items() if k in schema_cols}
-        extra_fields = {k: v for k, v in data.items() if k not in schema_cols}
-        if extra_fields and cls.ALLOW_EXTRA:
-            schema_fields["extra"] = extra_fields
-        return cls(**schema_fields)
+        """Create instance from dict (alias for model_validate)."""
+        return cls.model_validate(data)
 
     @classmethod
-    def from_other(cls: type[T], obj: Record, **kwargs) -> T:
+    def from_other(cls: type[T], obj: "Record", **kwargs) -> T:
         """Create instance from another record, copying shared fields."""
-        shared = {f.name for f in dataclass_fields(cls)} & {f.name for f in dataclass_fields(obj)}
-        data = {name: getattr(obj, name) for name in shared if name != "extra"}
+        shared = set(cls.model_fields.keys()) & set(type(obj).model_fields.keys())
+        data = {name: getattr(obj, name) for name in shared}
         data.update(kwargs)
-        return cls(**data)
+        return cls.model_validate(data)
+
+    @property
+    def extra(self) -> Dict[str, Any]:
+        """Return extra fields not in schema."""
+        return self.__pydantic_extra__ or {}
