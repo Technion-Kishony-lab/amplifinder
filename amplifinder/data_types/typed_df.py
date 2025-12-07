@@ -4,7 +4,7 @@ from __future__ import annotations
 import pandas as pd
 
 from pathlib import Path
-from typing import Any, Callable, Dict, Generic, Iterator, List, Mapping, Optional, Type, TypeVar
+from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Type, TypeVar
 
 from amplifinder.data_types.records import Record, Schema
 from amplifinder.data_types.validate_and_cast_df import validate_and_cast_df
@@ -37,21 +37,21 @@ def _serialize_for_csv(v: Any) -> Any:
 
 class TypedDF:
     """Base class for typed DataFrames."""
-    
+
     __slots__ = ("df", "schema", "headers")
-    
+
     def __init__(self, df: pd.DataFrame, schema: Schema, headers: bool = True):
         self.df = df
         self.schema = schema
         self.headers = headers
-    
+
     def __len__(self) -> int:
         return len(self.df)
-    
+
     @property
     def is_empty(self) -> bool:
         return len(self.df) == 0
-    
+
     def assert_matches(self, df: Optional[pd.DataFrame] = None, check_missing=True, check_extra=True) -> None:
         """Assert DataFrame matches schema exactly."""
         df = df if df is not None else self.df
@@ -60,14 +60,14 @@ class TypedDF:
     def replace_df(self, df: pd.DataFrame) -> None:
         """Validate and cast the DataFrame to the schema."""
         self.df = validate_and_cast_df(df, self.schema, check_missing=True, check_extra=True, cast=True)
-    
+
     def to_csv(self, path: Path) -> None:
         df = self.df.copy()
         for col in df.columns:
             if df[col].dtype == object:
                 df[col] = df[col].apply(_serialize_for_csv)
         df.to_csv(path, index=False, header=self.headers)
-    
+
     @staticmethod
     def _read_csv_df(path: Path, schema: Schema, headers: bool) -> pd.DataFrame:
         """Read CSV and validate against schema."""
@@ -98,26 +98,26 @@ class TypedDF:
             self.df = new_df
             return self
         return self._construct(new_df)
-    
+
     def __iter__(self) -> Iterator[Dict[str, Any]]:
         """Iterate rows as dicts with NaN → None."""
         for _, row in self.df.iterrows():
             yield {k: _clean_nan(v) for k, v in row.items()}
-        
+
 
 class RecordTypedDF(TypedDF, Generic[T]):
     """DataFrame with Record schema. Iteration yields typed instances."""
-    
+
     __slots__ = ("_record_type",)
-    
+
     def __init__(self, df: pd.DataFrame, record_type: Type[T], headers: bool = True):
         self._record_type = record_type
         schema = record_type.schema()
         super().__init__(df, schema, headers)
-    
+
     def _construct(self: SelfRecordTypedDF, df: pd.DataFrame) -> SelfRecordTypedDF:
         return type(self)(df, self._record_type, self.headers)
-    
+
     @classmethod
     def from_records(cls: Type[SelfRecordTypedDF], records: List[T], record_type: Type[T]) -> SelfRecordTypedDF:
         schema = record_type.schema()
@@ -129,9 +129,10 @@ class RecordTypedDF(TypedDF, Generic[T]):
             d.update(record.extra)
             data.append(d)
         return cls(pd.DataFrame(data), record_type)
-    
+
     @classmethod
-    def from_csv(cls: Type[SelfRecordTypedDF], path: Path, record_type: Type[T], headers: bool = True) -> SelfRecordTypedDF:
+    def from_csv(cls: Type[SelfRecordTypedDF], path: Path, record_type: Type[T],
+                 headers: bool = True) -> SelfRecordTypedDF:
         df = cls._read_csv_df(path, record_type.schema(), headers)
         return cls(df, record_type, headers)
 

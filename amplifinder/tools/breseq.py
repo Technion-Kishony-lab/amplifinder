@@ -280,7 +280,7 @@ def _parse_record(parts: List[str], schema: Schema) -> Dict[str, Any]:
         Dictionary with parsed fields
     """
     record: Dict[str, Any] = {}
-    
+
     # Build schema helpers
     dtypes = {c.name: c.dtype for c in schema}
     required_names = [c.name for c in schema if not c.optional]

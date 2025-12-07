@@ -3,7 +3,6 @@
 import pytest
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
 from typing import List, NamedTuple, Tuple
 
 from amplifinder.data_types import RecordTypedDF
@@ -55,18 +54,18 @@ def sample_records():
 def test_save_load_csv(sample_records, tmp_path):
     """Test round-trip save/load to CSV."""
     csv_path = tmp_path / "test.csv"
-    
+
     # Save
     df = RecordTypedDF.from_records(sample_records, SampleRecord)
     df.to_csv(csv_path)
-    
+
     # Load
     df2 = RecordTypedDF.from_csv(csv_path, SampleRecord)
-    
+
     # Check
     assert len(df2) == 2
     records = list(df2)
-    
+
     r0 = records[0]
     assert r0.name == "a"
     assert r0.count == 1
@@ -74,7 +73,7 @@ def test_save_load_csv(sample_records, tmp_path):
     assert r0.direction == Direction.UP
     assert r0.tags == [1, 2]
     assert r0.pair == (10, 20)
-    
+
     r1 = records[1]
     assert r1.name == "b"
     assert r1.count == 2
@@ -87,23 +86,23 @@ def test_save_load_csv(sample_records, tmp_path):
 def test_save_load_namedtuple_with_enum(tmp_path):
     """Test round-trip for List[NamedTuple] where NamedTuple contains Enum."""
     csv_path = tmp_path / "matches.csv"
-    
+
     records = [
         RecordWithMatches(name="x", matches=[Match(1, Color.RED, 10), Match(2, Color.BLUE, 20)]),
         RecordWithMatches(name="y", matches=[Match(3, Color.RED, 30)]),
     ]
-    
+
     # Save
     df = RecordTypedDF.from_records(records, RecordWithMatches)
     df.to_csv(csv_path)
-    
+
     # Load
     df2 = RecordTypedDF.from_csv(csv_path, RecordWithMatches)
-    
+
     # Check
     assert len(df2) == 2
     loaded = list(df2)
-    
+
     r0 = loaded[0]
     assert r0.name == "x"
     assert len(r0.matches) == 2
@@ -114,7 +113,7 @@ def test_save_load_namedtuple_with_enum(tmp_path):
 def test_list_int_type_validation(tmp_path):
     """Test that List[int] validates element types on load."""
     from amplifinder.data_types.validate_and_cast_df import parse_compound
-    
+
     # This should raise TypeError - list contains string, not int
     with pytest.raises(TypeError, match=r"List\[0\]"):
         parse_compound(["not_an_int"], List[int])
