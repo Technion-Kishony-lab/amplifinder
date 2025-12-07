@@ -53,7 +53,7 @@ class LocateTNsUsingGenbankStep(Step[Optional[RecordTypedDF[TnLoc]]]):
         if output is not None:
             output.to_csv(self.tn_loc_output)
 
-    def read_outputs(self) -> Optional[RecordTypedDF[TnLoc]]:
+    def load_outputs(self) -> Optional[RecordTypedDF[TnLoc]]:
         """Load TN locations from output file, or None if no GenBank."""
         if self.genbank_path is None:
             return None

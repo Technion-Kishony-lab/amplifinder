@@ -152,6 +152,6 @@ class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
 
         return matches
 
-    def read_outputs(self) -> RecordTypedDF[TnJunction]:
+    def load_outputs(self) -> RecordTypedDF[TnJunction]:
         """Load TNJC from output file."""
         return RecordTypedDF.from_csv(self.output_file, TnJunction)

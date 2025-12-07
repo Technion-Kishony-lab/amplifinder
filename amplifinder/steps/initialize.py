@@ -21,5 +21,5 @@ class InitializingStep(Step[Path]):
         info(f"Created output directory: {self.iso_output}")
         return self.iso_output
 
-    def read_outputs(self) -> Path:
+    def load_outputs(self) -> Path:
         return self.iso_output

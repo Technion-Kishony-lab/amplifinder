@@ -50,6 +50,7 @@ class Step(ABC, Generic[T]):
         self.input_files: List[Path] = [Path(p) for p in input_files] if input_files else []
         self.output_files: Optional[List[Path]] = [Path(p) for p in output_files] if output_files else None
         self._force = force
+        self.run_count = 0
 
     @property
     def name(self) -> str:
@@ -113,6 +114,7 @@ class Step(ABC, Generic[T]):
 
         # Run
         info(f"{self.name}: running...")
+        self.run_count += 1
         output = self._calculate_output()
 
         # Save output (only if output_files defined)
