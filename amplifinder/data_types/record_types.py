@@ -18,12 +18,17 @@ class Side(str, Enum):
 
 
 class Orientation(int, Enum):
-    """Orientation relative to reference (forward or reverse)."""
+    """Orientation relative to reference (forward, reverse, or both/mixed)."""
     FORWARD = 1
     REVERSE = -1
+    BOTH = 0
 
     def opposite(self) -> "Orientation":
-        return Orientation.REVERSE if self == Orientation.FORWARD else Orientation.FORWARD
+        if self == Orientation.FORWARD:
+            return Orientation.REVERSE
+        elif self == Orientation.REVERSE:
+            return Orientation.FORWARD
+        return Orientation.BOTH  # BOTH stays BOTH
 
 
 class TnMatch(NamedTuple):
@@ -80,10 +85,10 @@ class Junction(Record):
     num: int
     scaf1: str
     pos1: int
-    dir1: int
+    dir1: Orientation
     scaf2: str
     pos2: int
-    dir2: int
+    dir2: Orientation
     flanking_left: int
     flanking_right: int
 
@@ -138,16 +143,16 @@ class TnJunctionPair(Record):
     pos_tn_R: int
     
     # Chromosome directions
-    dir_chr_L: int
-    dir_chr_R: int
+    dir_chr_L: Orientation
+    dir_chr_R: Orientation
     
     # TN directions
-    dir_tn_L: int
-    dir_tn_R: int
+    dir_tn_L: Orientation
+    dir_tn_R: Orientation
     
     # TN info
     tn_ids: List[int]        # matching TN element IDs
-    tn_orientation: int      # 1=same as ref, -1=inverted, 0=both
+    tn_orientation: Orientation
     span_origin: bool        # True if amplicon spans circular origin
     
     # Computed fields

@@ -7,7 +7,7 @@ from Bio.Seq import Seq
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, TnLoc, TnEndSeq, RefTnJunction, Side
+from amplifinder.data_types import RecordTypedDF, TnLoc, TnEndSeq, RefTnJunction, Side, Orientation
 from amplifinder.data_types.genome import Genome
 
 
@@ -63,8 +63,8 @@ class CreateReferenceTnJunctionsStep(Step[RecordTypedDF[RefTnJunction]]):
             # Left junction: TN left boundary -> chromosome
             jc_records.append(RefTnJunction(
                 num=0,
-                scaf1=tn.TN_scaf, pos1=tn.LocLeft, dir1=1,
-                scaf2=tn.TN_scaf, pos2=tn.LocLeft - 1, dir2=-1,
+                scaf1=tn.TN_scaf, pos1=tn.LocLeft, dir1=Orientation.FORWARD,
+                scaf2=tn.TN_scaf, pos2=tn.LocLeft - 1, dir2=Orientation.REVERSE,
                 flanking_left=tn_length, flanking_right=self.reference_tn_out_span,
                 refTN=tn.ID, tn_side=Side.LEFT,
             ))
@@ -72,8 +72,8 @@ class CreateReferenceTnJunctionsStep(Step[RecordTypedDF[RefTnJunction]]):
             # Right junction: TN right boundary -> chromosome
             jc_records.append(RefTnJunction(
                 num=0,
-                scaf1=tn.TN_scaf, pos1=tn.LocRight, dir1=-1,
-                scaf2=tn.TN_scaf, pos2=tn.LocRight + 1, dir2=1,
+                scaf1=tn.TN_scaf, pos1=tn.LocRight, dir1=Orientation.REVERSE,
+                scaf2=tn.TN_scaf, pos2=tn.LocRight + 1, dir2=Orientation.FORWARD,
                 flanking_left=self.reference_tn_out_span, flanking_right=tn_length,
                 refTN=tn.ID, tn_side=Side.RIGHT,
             ))

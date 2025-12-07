@@ -5,7 +5,7 @@ from typing import Optional, List, Tuple
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, TnJunction, TnJunctionPair, TnMatch, Side
+from amplifinder.data_types import RecordTypedDF, TnJunction, TnJunctionPair, TnMatch, Side, Orientation
 from amplifinder.data_types.genome import Genome
 
 
@@ -98,11 +98,10 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         self,
         matches_i: List[TnMatch],
         matches_j: List[TnMatch],
-    ) -> List[Tuple[int, int]]:
+    ) -> List[Tuple[int, Orientation]]:
         """Find TN elements that match both junctions on different sides.
 
         Returns list of (tn_id, orientation) tuples.
-        Orientation: 1 = same as reference, -1 = inverted, 0 = both
         """
         result = []
 
@@ -117,9 +116,9 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
                     continue
 
                 # Orientation based on which side connects to which junction
-                # If left side of TN connects to left junction -> same orientation (1)
-                # If right side of TN connects to left junction -> inverted (-1)
-                orientation = 1 if mi.side == Side.LEFT else -1
+                # If left side of TN connects to left junction -> same orientation (FORWARD)
+                # If right side of TN connects to left junction -> inverted (REVERSE)
+                orientation = Orientation.FORWARD if mi.side == Side.LEFT else Orientation.REVERSE
 
                 result.append((mi.tn_id, orientation))
 
@@ -129,7 +128,7 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         self,
         jc_i: TnJunction,
         jc_j: TnJunction,
-        matching: List[Tuple[int, int]],
+        matching: List[Tuple[int, Orientation]],
     ) -> TnJunctionPair:
         """Create a junction pair record.
 
@@ -145,21 +144,21 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         tn_ids = [m[0] for m in matching]
         orientations = [m[1] for m in matching]
 
-        # Orientation: if all same -> that value, if mixed -> 0
-        if all(o == 1 for o in orientations):
-            tn_orientation = 1
-        elif all(o == -1 for o in orientations):
-            tn_orientation = -1
+        # Orientation: if all same -> that value, if mixed -> BOTH
+        if all(o == Orientation.FORWARD for o in orientations):
+            tn_orientation = Orientation.FORWARD
+        elif all(o == Orientation.REVERSE for o in orientations):
+            tn_orientation = Orientation.REVERSE
         else:
-            tn_orientation = 0
+            tn_orientation = Orientation.BOTH
 
-        # Span origin: if left junction points left (-1), amplicon spans origin
+        # Span origin: if left junction points left (REVERSE), amplicon spans origin
         # (for circular genomes)
-        span_origin = jc_L.dir2 == -1
+        span_origin = jc_L.dir2 == Orientation.REVERSE
 
         # Adjust orientation for span_origin (MATLAB: orientation * ISJC.dir2(i))
         if span_origin:
-            tn_orientation = -tn_orientation
+            tn_orientation = tn_orientation.opposite()
 
         # Calculate amplicon length
         amplicon_length, complementary_length = self._calculate_amplicon_length(
