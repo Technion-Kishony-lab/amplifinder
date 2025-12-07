@@ -3,10 +3,9 @@ from __future__ import annotations
 
 import pandas as pd
 
-from dataclasses import fields as dataclass_fields
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
-from typing import Any, ClassVar, Dict, NamedTuple, Tuple, Type, TypeVar, get_type_hints, get_origin, get_args, Union
+from typing import Any, ClassVar, Dict, NamedTuple, Tuple, Type, TypeVar, get_origin, get_args, Union
 
 T = TypeVar("T", bound="Record")
 

@@ -1,7 +1,6 @@
 """Record type definitions for AmpliFinder."""
 from __future__ import annotations
 
-from dataclasses import replace
 from enum import Enum
 from typing import List, NamedTuple, Optional, TypeVar
 

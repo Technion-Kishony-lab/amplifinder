@@ -42,7 +42,7 @@ class Step(ABC, Generic[T]):
         Args:
             input_files: Required input files/dirs (must exist)
                     None - no file inputs.
-            
+
             output_files: Output files/dirs (produced by this step)
                      None - no file outputs (only calculate result in memory)
             force: Step-specific force flag (None = use global)
