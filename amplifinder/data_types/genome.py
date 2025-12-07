@@ -120,8 +120,11 @@ class Genome:
 
     @property
     def sequences(self) -> Dict[str, str]:
-        """Get all sequences as {scaffold_id: sequence} dict."""
-        return {rec.id: str(rec.seq) for rec in self.records}
+        """Get all sequences as {scaffold_name: sequence} dict.
+        
+        Uses record.name (locus name) as key to match TN scaffold names.
+        """
+        return {rec.name: str(rec.seq) for rec in self.records}
 
 
 class GenomeRegistry:
