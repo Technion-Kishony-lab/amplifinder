@@ -4,10 +4,8 @@ import subprocess
 from pathlib import Path
 from typing import List, Optional
 
-import pandas as pd
-
 from amplifinder.logger import info
-from amplifinder.data_types import BLAST_SCHEMA
+from amplifinder.data_types import RecordTypedDF, BlastHit
 from amplifinder.env import BLAST_PATH
 
 
@@ -70,13 +68,13 @@ def run_blastn(
     subprocess.run(cmd, check=True)
 
 
-def parse_blast_csv(path: Path) -> pd.DataFrame:
+def parse_blast_csv(path: Path) -> RecordTypedDF[BlastHit]:
     """Parse BLAST CSV output (format 10).
 
     Args:
         path: Path to BLAST output file
 
     Returns:
-        DataFrame with BLAST results, empty with correct schema if file missing/empty
+        RecordDF with BLAST results, empty with correct schema if file missing/empty
     """
-    return BLAST_SCHEMA.read_csv(path, headers=False)
+    return RecordTypedDF.from_csv(path, BlastHit, headers=False)

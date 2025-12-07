@@ -3,15 +3,13 @@
 from pathlib import Path
 from typing import Optional
 
-import pandas as pd
-
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types import TN_LOC_SCHEMA
+from amplifinder.data_types import RecordTypedDF, TnLoc
 from amplifinder.utils.genbank import find_tn_elements
 
 
-class LocateTNsUsingGenbank(Step[Optional[pd.DataFrame]]):
+class LocateTNsUsingGenbankStep(Step[Optional[RecordTypedDF[TnLoc]]]):
     """Extract TN elements from GenBank file annotations using BioPython.
 
     Parses GenBank file for 'insertion sequence' features (based on findISinRef.m).
@@ -47,12 +45,12 @@ class LocateTNsUsingGenbank(Step[Optional[pd.DataFrame]]):
 
         self.genbank_dir.mkdir(parents=True, exist_ok=True)
         records = find_tn_elements(self.genbank_path, self.ref_name)
-        tn_loc = TN_LOC_SCHEMA.from_records(records)
-        TN_LOC_SCHEMA.to_csv(tn_loc, self.tn_loc_output)
+        tn_loc = RecordTypedDF.from_records(records, TnLoc)
+        tn_loc.to_csv(self.tn_loc_output)
         info(f"Found {len(tn_loc)} TN elements in GenBank annotations")
 
-    def read_outputs(self) -> Optional[pd.DataFrame]:
+    def read_outputs(self) -> Optional[RecordTypedDF[TnLoc]]:
         """Load TN locations from output file, or None if no GenBank."""
         if self.genbank_path is None:
             return None
-        return TN_LOC_SCHEMA.read_csv(self.tn_loc_output)
+        return RecordTypedDF.from_csv(self.tn_loc_output, TnLoc)

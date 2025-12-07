@@ -2,23 +2,18 @@
 
 import re
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Optional
 
 from Bio import SeqIO
 from Bio.SeqFeature import SeqFeature
 
+from amplifinder.data_types.record_types import TnLoc
 
-def find_tn_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
+
+def find_tn_elements(genbank_path: Path, ref_name: str) -> List[TnLoc]:
     """Find TN elements from GenBank annotations.
 
     Looks for mobile_element features with 'insertion sequence' in the type.
-
-    Args:
-        genbank_path: Path to GenBank file
-        ref_name: Reference/scaffold name for output
-
-    Returns:
-        List of TN element dicts with keys: ID, TN_Name, TN_scaf, LocLeft, LocRight, Complement, Join
     """
     record = SeqIO.read(genbank_path, "genbank")
 
@@ -28,27 +23,20 @@ def find_tn_elements(genbank_path: Path, ref_name: str) -> List[Dict[str, Any]]:
     for feature in record.features:
         tn_name = _extract_tn_name_from_feature(feature)
         if tn_name is None:
+            # Not a TN element
             continue
 
-        # Get location info
         location = feature.location
-        pos_left = int(location.start) + 1  # BioPython is 0-based
-        pos_right = int(location.end)
-        is_complement = location.strand == -1
-
-        # Check for join (compound location)
-        is_join = hasattr(location, 'parts') and len(location.parts) > 1
-
         id_counter += 1
-        records.append({
-            "ID": id_counter,
-            "TN_Name": tn_name,
-            "TN_scaf": ref_name,
-            "LocLeft": pos_left,
-            "LocRight": pos_right,
-            "Complement": is_complement,
-            "Join": is_join,
-        })
+        records.append(TnLoc(
+            ID=id_counter,
+            TN_Name=tn_name,
+            TN_scaf=ref_name,
+            LocLeft=int(location.start) + 1,  # BioPython is 0-based
+            LocRight=int(location.end),
+            Complement=location.strand == -1,
+            Join=hasattr(location, 'parts') and len(location.parts) > 1,
+        ))
 
     return records
 

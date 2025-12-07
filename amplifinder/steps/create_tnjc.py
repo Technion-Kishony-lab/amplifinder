@@ -1,23 +1,21 @@
-"""Step: Create TN-associated junction candidates (TNJC)."""
+"""Step: Match junctions to TN elements (TNJC)."""
 
-from dataclasses import replace
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import Optional, List
 
-import pandas as pd
-from Bio import SeqIO
 from Bio.Seq import Seq
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types.records import TNJC_SCHEMA, JUNCTION_SCHEMA, TnMatch, Tnjc, Junction
+from amplifinder.data_types import RecordTypedDF, Junction, TnEndSeq, TnMatch, TnJunction
+from amplifinder.data_types.genome import Genome
 
 
-class CreateTNJCStep(Step[pd.DataFrame]):
+class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
     """Match junctions to TN elements by sequence comparison.
 
     For each junction, extracts flanking sequences and compares them to
-    TN element end sequences. Junctions matching a TN end are marked
+    precomputed TN end sequences. Junctions matching a TN end are marked
     as TN-associated (TNJC).
 
     Based on assign_potential_ISs.m
@@ -25,9 +23,9 @@ class CreateTNJCStep(Step[pd.DataFrame]):
 
     def __init__(
         self,
-        jc_df: pd.DataFrame,
-        tn_loc: pd.DataFrame,
-        ref_fasta: Path,
+        jc_df: RecordTypedDF[Junction],
+        ref_tn_end_seqs: RecordTypedDF[TnEndSeq],
+        genome: Genome,
         output_dir: Path,
         max_dist_to_tn: int,
         trim_jc_flanking: int,
@@ -37,16 +35,16 @@ class CreateTNJCStep(Step[pd.DataFrame]):
 
         Args:
             jc_df: All junctions (breseq + reference TN junctions combined)
-            tn_loc: TN locations DataFrame
-            ref_fasta: Path to reference FASTA file
+            ref_tn_end_seqs: Precomputed TN end sequences (from CreateRefTnEndSeqsStep)
+            genome: Reference genome (for junction sequence extraction)
             output_dir: Directory to write output
             max_dist_to_tn: Maximum distance from junction to TN boundary
             trim_jc_flanking: Trim junction edges to avoid misalignment
             force: Force re-run
         """
-        self.jc_df = jc_df.copy()
-        self.tn_loc = tn_loc
-        self.ref_fasta = Path(ref_fasta)
+        self.jc_df = jc_df
+        self.ref_tn_end_seqs = ref_tn_end_seqs
+        self.genome = genome
         self.output_dir = Path(output_dir)
         self.max_dist_to_tn = max_dist_to_tn
         self.trim_jc_flanking = trim_jc_flanking
@@ -54,7 +52,7 @@ class CreateTNJCStep(Step[pd.DataFrame]):
         self.output_file = self.output_dir / "TNJC.csv"
 
         super().__init__(
-            inputs=[self.ref_fasta],
+            inputs=[p for p in [genome.genbank_path, genome.fasta_path] if p],
             outputs=[self.output_file],
             force=force,
         )
@@ -63,23 +61,17 @@ class CreateTNJCStep(Step[pd.DataFrame]):
         """Match junctions to TN elements."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Load reference sequences
-        self.ref_seqs = self._load_reference_seqs()
-
-        # Get TN end sequences (with margins)
-        tn_seqs = self._get_tn_end_sequences()
-
+        self.ref_seqs = self.genome.sequences
         tnjc_records = []
-        junctions = JUNCTION_SCHEMA.df_to_instances(self.jc_df)
 
-        for jc in junctions:
+        for jc in self.jc_df:
             # Get junction flanking sequences
             seq1 = self._get_junction_seq(jc, side=1)
             seq2 = self._get_junction_seq(jc, side=2)
 
             # Match against TN sequences
-            matches1 = self._find_tn_matches(seq1, tn_seqs)
-            matches2 = self._find_tn_matches(seq2, tn_seqs)
+            matches1 = self._find_tn_matches(seq1)
+            matches2 = self._find_tn_matches(seq2)
 
             is_side1_tn = len(matches1) > 0
             is_side2_tn = len(matches2) > 0
@@ -92,78 +84,20 @@ class CreateTNJCStep(Step[pd.DataFrame]):
             switched = not is_side1_tn and is_side2_tn
             if switched:
                 matches = matches2
-                jc = self._switch_jc_sides(jc)
+                jc = jc.switch_sides()
             else:
                 matches = matches1
 
-            # Create TNJC record
-            tnjc_records.append(Tnjc.from_instance(jc, matches=matches, switched=switched))
+            tnjc_records.append(TnJunction.from_other(jc, matches=matches, switched=switched))
 
-        if tnjc_records:
-            tnjc = TNJC_SCHEMA.instances_to_df(tnjc_records)
-            # Sort by chromosome position
-            if "scaf2" in tnjc.columns and "pos2" in tnjc.columns:
-                tnjc = tnjc.sort_values(["scaf2", "pos2"])
-        else:
-            tnjc = TNJC_SCHEMA.empty()
+        tnjc = RecordTypedDF.from_records(tnjc_records, TnJunction)
+        tnjc = tnjc.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
 
-        TNJC_SCHEMA.to_csv(tnjc, self.output_file)
+        tnjc.to_csv(self.output_file)
         info(f"Found {len(tnjc)} TN-associated junctions (TNJC)")
 
-    def _load_reference_seqs(self) -> dict:
-        """Load reference sequences from FASTA."""
-        seqs = {}
-        for record in SeqIO.parse(self.ref_fasta, "fasta"):
-            seqs[record.id] = str(record.seq)
-        return seqs
-
-    def _get_tn_end_sequences(self) -> List[Tuple[int, str, str, str]]:
-        """Get sequences at TN element ends with margins.
-
-        Returns:
-            List of (tn_id, tn_side, left_seq, right_seq) tuples
-        """
-        tn_seqs = []
-        margin = self.max_dist_to_tn
-
-        for idx, tn_row in self.tn_loc.iterrows():
-            scaf = tn_row["TN_scaf"]
-            if scaf not in self.ref_seqs:
-                continue
-
-            ref_seq = self.ref_seqs[scaf]
-            left = tn_row["LocLeft"] - 1  # 0-based
-            right = tn_row["LocRight"]  # 0-based exclusive
-
-            # Left end sequence (including margin outside TN)
-            left_start = max(0, left - margin)
-            left_end = min(len(ref_seq), left + margin)
-            left_seq = ref_seq[left_start:left_end]
-
-            # Right end sequence (including margin outside TN)
-            right_start = max(0, right - margin)
-            right_end = min(len(ref_seq), right + margin)
-            right_seq = ref_seq[right_start:right_end]
-
-            # Also add reverse complements
-            left_seq_rc = str(Seq(left_seq).reverse_complement())
-            right_seq_rc = str(Seq(right_seq).reverse_complement())
-
-            tn_seqs.append((idx, "left", left_seq, left_seq_rc))
-            tn_seqs.append((idx, "right", right_seq, right_seq_rc))
-
-        return tn_seqs
-
     def _get_junction_seq(self, jc: Junction, side: int) -> str:
-        """Extract sequence at junction side.
-
-        Args:
-            jc: Junction record
-            side: 1 or 2
-
-        Returns:
-            Sequence string at junction
-        """
+        """Extract sequence at junction side."""
         scaf = jc.scaf1 if side == 1 else jc.scaf2
         pos = jc.pos1 if side == 1 else jc.pos2
         direction = jc.dir1 if side == 1 else jc.dir2
@@ -191,54 +125,30 @@ class CreateTNJCStep(Step[pd.DataFrame]):
 
         return seq
 
-    def _find_tn_matches(
-        self, jc_seq: str, tn_seqs: List[Tuple]
-    ) -> List[TnMatch]:
-        """Find TN elements matching a junction sequence.
-
-        Args:
-            jc_seq: Junction sequence
-            tn_seqs: List of TN end sequences
-
-        Returns:
-            List of TnMatch(tn_id, side, distance) for matches
-        """
+    def _find_tn_matches(self, jc_seq: str) -> List[TnMatch]:
+        """Find TN elements matching a junction sequence."""
         if not jc_seq:
             return []
 
         matches = []
         threshold = self.max_dist_to_tn * 2
 
-        for tn_id, tn_side, tn_seq_fwd, tn_seq_rc in tn_seqs:
+        for tn in self.ref_tn_end_seqs:
             # Check forward
-            pos_fwd = tn_seq_fwd.find(jc_seq)
+            pos_fwd = tn.seq_fwd.find(jc_seq)
             if pos_fwd >= 0 and pos_fwd < threshold:
                 dist = pos_fwd - self.max_dist_to_tn
-                matches.append(TnMatch(tn_id, tn_side, dist))
+                matches.append(TnMatch(tn.tn_id, tn.tn_side, dist))
                 continue
 
             # Check reverse complement
-            pos_rc = tn_seq_rc.find(jc_seq)
+            pos_rc = tn.seq_rc.find(jc_seq)
             if pos_rc >= 0 and pos_rc < threshold:
                 dist = pos_rc - self.max_dist_to_tn
-                matches.append(TnMatch(tn_id, tn_side, dist))
+                matches.append(TnMatch(tn.tn_id, tn.tn_side, dist))
 
         return matches
 
-    def _switch_jc_sides(self, jc: Junction) -> Junction:
-        """Swap side 1 and side 2 fields in junction record."""
-        return replace(
-            jc,
-            scaf1=jc.scaf2,
-            scaf2=jc.scaf1,
-            pos1=jc.pos2,
-            pos2=jc.pos1,
-            dir1=jc.dir2,
-            dir2=jc.dir1,
-            flanking_left=jc.flanking_right,
-            flanking_right=jc.flanking_left,
-        )
-
-    def read_outputs(self) -> pd.DataFrame:
+    def read_outputs(self) -> RecordTypedDF[TnJunction]:
         """Load TNJC from output file."""
-        return TNJC_SCHEMA.read_csv(self.output_file)
+        return RecordTypedDF.from_csv(self.output_file, TnJunction)
