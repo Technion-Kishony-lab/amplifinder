@@ -222,10 +222,10 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
                 amplicon_length = raw_length
                 complementary_length = float("inf")
 
-        return int(amplicon_length) if amplicon_length != float("inf") else -1, \
-               int(complementary_length) if complementary_length != float("inf") else -1
+        amp = int(amplicon_length) if amplicon_length != float("inf") else -1
+        comp = int(complementary_length) if complementary_length != float("inf") else -1
+        return amp, comp
 
     def read_outputs(self) -> RecordTypedDF[TnJunctionPair]:
         """Load TNJC2 from output file."""
         return RecordTypedDF.from_csv(self.output_file, TnJunctionPair)
-

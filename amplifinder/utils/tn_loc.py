@@ -16,13 +16,13 @@ def compare_tn_locations(
     tolerance: int = 50,
 ) -> None:
     """Compare TN locations from two sources, report differences as warnings.
-    
+
     Accepts either pd.DataFrame or RecordDF (uses .df property if needed).
     """
     # Support RecordDF by accessing underlying df
     df1 = tn1.df if hasattr(tn1, 'df') else tn1
     df2 = tn2.df if hasattr(tn2, 'df') else tn2
-    
+
     if df1.empty and df2.empty:
         return
 

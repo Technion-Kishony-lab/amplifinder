@@ -120,46 +120,45 @@ class TnJunction(Junction):
 @dataclass(kw_only=True)
 class TnJunctionPair(Record):
     """Paired TN junctions (candidate amplicon).
-    
+
     Represents two junctions that:
     - Are on the same scaffold facing opposite directions
     - Match the same TN element on different sides (left/right)
-    
+
     Based on MATLAB combine_ISJC_pairs.m
     """
     # Junction IDs
     jc_num_L: int
     jc_num_R: int
-    
+
     # Scaffold
     scaf_chr: str
-    
+
     # Chromosome positions (left/right junction)
     pos_chr_L: int
     pos_chr_R: int
-    
+
     # TN positions
     pos_tn_L: int
     pos_tn_R: int
-    
+
     # Chromosome directions
     dir_chr_L: Orientation
     dir_chr_R: Orientation
-    
+
     # TN directions
     dir_tn_L: Orientation
     dir_tn_R: Orientation
-    
+
     # TN info
     tn_ids: List[int]        # matching TN element IDs
     tn_orientation: Orientation
     span_origin: bool        # True if amplicon spans circular origin
-    
+
     # Computed fields
     amplicon_length: int
     complementary_length: int
-    
+
     # Coverage (optional, computed later)
     amplicon_coverage: Optional[float] = None
     copy_number_mode: Optional[float] = None
-

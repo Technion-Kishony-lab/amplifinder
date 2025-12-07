@@ -189,4 +189,3 @@ def test_handles_span_origin(tiny_genome, tmp_output):
 
     pair = list(tnjc2)[0]
     assert pair.span_origin is True
-
