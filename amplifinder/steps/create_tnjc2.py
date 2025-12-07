@@ -46,7 +46,7 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
             force=force,
         )
 
-    def _run(self) -> None:
+    def _calculate_output(self) -> RecordTypedDF[TnJunctionPair]:
         """Combine junction pairs."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -59,8 +59,11 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         else:
             tnjc2 = RecordTypedDF.empty(TnJunctionPair)
 
-        tnjc2.to_csv(self.output_file)
         info(f"Found {len(tnjc2)} junction pairs (TNJC2)")
+        return tnjc2
+
+    def _save_output(self, output: RecordTypedDF[TnJunctionPair]) -> None:
+        output.to_csv(self.output_file)
 
     def _pair_junctions(self, junctions: List[TnJunction]) -> List[TnJunctionPair]:
         """Find all valid junction pairs.
