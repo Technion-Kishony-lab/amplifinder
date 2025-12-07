@@ -41,12 +41,12 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         self.output_file = self.output_dir / "TNJC2.csv"
 
         super().__init__(
-            inputs=[],
-            outputs=[self.output_file],
+            input_files=[],
+            output_files=[self.output_file],
             force=force,
         )
 
-    def _run(self) -> None:
+    def _calculate_output(self) -> RecordTypedDF[TnJunctionPair]:
         """Combine junction pairs."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -59,8 +59,11 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         else:
             tnjc2 = RecordTypedDF.empty(TnJunctionPair)
 
-        tnjc2.to_csv(self.output_file)
         info(f"Found {len(tnjc2)} junction pairs (TNJC2)")
+        return tnjc2
+
+    def _save_output(self, output: RecordTypedDF[TnJunctionPair]) -> None:
+        output.to_csv(self.output_file)
 
     def _pair_junctions(self, junctions: List[TnJunction]) -> List[TnJunctionPair]:
         """Find all valid junction pairs.
@@ -226,6 +229,6 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         comp = int(complementary_length) if complementary_length != float("inf") else -1
         return amp, comp
 
-    def read_outputs(self) -> RecordTypedDF[TnJunctionPair]:
+    def load_outputs(self) -> RecordTypedDF[TnJunctionPair]:
         """Load TNJC2 from output file."""
         return RecordTypedDF.from_csv(self.output_file, TnJunctionPair)

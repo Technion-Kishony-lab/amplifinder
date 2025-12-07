@@ -24,11 +24,11 @@ class GetReferenceStep(Step[Genome]):
         # Output: mapping file
         self.mapping_file = self.ref_path / f"{ref_name}.json"
 
-        super().__init__(inputs=[], outputs=[self.mapping_file], force=force)
+        super().__init__(input_files=[], output_files=[self.mapping_file], force=force)
 
-    def has_output(self) -> bool:
-        """Check if output exists."""
-        if not super().has_output():
+    def has_output_files(self) -> bool:
+        """Check if output exists and is valid."""
+        if not super().has_output_files():
             return False
         try:
             self.read_outputs()
@@ -36,10 +36,10 @@ class GetReferenceStep(Step[Genome]):
         except FileNotFoundError:
             return False
 
-    def _run(self) -> None:
+    def _calculate_output(self) -> Genome:
         """Fetch genome from NCBI or load from cache."""
-        get_genome(self.ref_name, self.ref_path, self.ncbi)
+        return get_genome(self.ref_name, self.ref_path, self.ncbi)
 
-    def read_outputs(self) -> Genome:
+    def load_outputs(self) -> Genome:
         """Load genome from cached files."""
         return get_genome(self.ref_name, self.ref_path, ncbi=False)

@@ -5,9 +5,18 @@ from pathlib import Path
 from typing import Generic, List, Optional, TypeVar
 import shutil
 
-from amplifinder.logger import info, warning
+from amplifinder.logger import info
 
 T = TypeVar("T")
+
+
+def _delete_file_or_dir_if_exists(p: Path) -> None:
+    """Delete file or directory if it exists."""
+    if p.exists():
+        if p.is_dir():
+            shutil.rmtree(p)
+        else:
+            p.unlink()
 
 
 class Step(ABC, Generic[T]):
@@ -24,20 +33,24 @@ class Step(ABC, Generic[T]):
 
     def __init__(
         self,
-        inputs: Optional[List[Path]] = None,
-        outputs: Optional[List[Path]] = None,
+        input_files: Optional[List[Path]] = None,
+        output_files: Optional[List[Path]] = None,
         force: Optional[bool] = None,
     ):
         """Initialize step.
 
         Args:
-            inputs: Required input files/dirs (must exist)
-            outputs: Output files/dirs (produced by this step)
+            input_files: Required input files/dirs (must exist)
+                    None - no file inputs.
+
+            output_files: Output files/dirs (produced by this step)
+                     None - no file outputs (only calculate result in memory)
             force: Step-specific force flag (None = use global)
         """
-        self.inputs = [Path(p) for p in (inputs or [])]
-        self.outputs = [Path(p) for p in (outputs or [])]
+        self.input_files: List[Path] = [Path(p) for p in input_files] if input_files else []
+        self.output_files: Optional[List[Path]] = [Path(p) for p in output_files] if output_files else None
         self._force = force
+        self.run_count = 0
 
     @property
     def name(self) -> str:
@@ -52,65 +65,70 @@ class Step(ABC, Generic[T]):
         return Step.global_force
 
     @abstractmethod
-    def _run(self) -> None:
+    def _calculate_output(self) -> T:
         """Execute the step logic. Override in subclass."""
         pass
 
-    def read_outputs(self) -> T:
+    def _save_output(self, output: T) -> None:
+        """Save output to files. Override in subclass to save to files."""
+        pass
+
+    def _save_output_and_verify(self, output: T) -> None:
+        """Save output to files and verify that it was created."""
+        self._save_output(output)
+        if missing_out := self.missing_output_files():
+            raise FileNotFoundError(f"{self.name}: expected outputs not created: {missing_out}")
+
+    def load_outputs(self) -> T:
         """Load outputs from files. Override in subclass to return typed data."""
         raise NotImplementedError
 
-    def run_and_read_outputs(self) -> T:
-        """Run step and return typed outputs."""
-        self.run()
-        return self.read_outputs()
-
-    def has_input(self) -> bool:
+    def missing_input_files(self) -> list[Path]:
         """Check if all inputs exist."""
-        return all(p.exists() for p in self.inputs)
+        return [p for p in self.input_files if not p.exists()]
 
-    def has_output(self) -> bool:
-        """Check if all outputs exist."""
-        return all(p.exists() for p in self.outputs)
+    def missing_output_files(self) -> Optional[list[Path]]:
+        """Check if all output files exist. None if no output files."""
+        if self.output_files is None:
+            return None
+        return [p for p in self.output_files if not p.exists()]
 
-    def run(self) -> bool:
-        """Execute step with caching logic.
+    def has_output_files(self) -> bool:
+        """True if output_files defined and all exist."""
+        missing = self.missing_output_files()
+        return missing is not None and len(missing) == 0
 
-        Returns:
-            True if step ran, False if skipped
-        """
+    def run(self) -> T:
+        """Execute step with caching logic."""
         # Check inputs exist
-        if not self.has_input():
-            missing = [p for p in self.inputs if not p.exists()]
-            raise FileNotFoundError(f"{self.name}: missing inputs: {missing}")
+        if missing_input := self.missing_input_files():
+            raise FileNotFoundError(f"{self.name}: missing inputs: {missing_input}")
 
-        # Check if can skip
-        if not self.force and self.has_output():
+        # Check if can skip (only if saving to files)
+        if not self.force and self.has_output_files():
             info(f"{self.name}: skipped (outputs exist)")
-            return False
+            return self.load_outputs()
 
         # Clean partial outputs
         self._clean_outputs()
 
         # Run
         info(f"{self.name}: running...")
-        self._run()
+        self.run_count += 1
+        output = self._calculate_output()
 
-        # Verify outputs created
-        missing_out = [p for p in self.outputs if not p.exists()]
-        if missing_out:
-            warning(f"{self.name}: expected outputs not created: {missing_out}")
+        # Save output (only if output_files defined)
+        if self.output_files is not None:
+            self._save_output_and_verify(output)
 
-        return True
+        return output
 
     def _clean_outputs(self) -> None:
         """Remove existing outputs before re-run."""
-        for p in self.outputs:
-            if p.exists():
-                if p.is_dir():
-                    shutil.rmtree(p)
-                else:
-                    p.unlink()
+        if self.output_files is None:
+            return
+        for p in self.output_files:
+            _delete_file_or_dir_if_exists(p)
 
     @classmethod
     def set_global_force(cls, force: bool) -> None:

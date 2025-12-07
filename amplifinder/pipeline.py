@@ -47,7 +47,7 @@ class Pipeline:
         return InitializingStep(
             output_dir=self.config.output_dir,
             iso_name=self.config.iso_name,
-        ).run_and_read_outputs()
+        ).run()
 
     def _load_reference(self) -> Genome:
         """Step 1: Get reference genome."""
@@ -55,7 +55,7 @@ class Pipeline:
             ref_name=self.config.ref_name,
             ref_path=self.config.ref_path,
             ncbi=self.config.ncbi,
-        ).run_and_read_outputs()
+        ).run()
         info(f"Reference: {genome.name} ({genome.length:,} bp)")
         return genome
 
@@ -68,7 +68,7 @@ class Pipeline:
             genbank_path=genome.genbank_path,
             ref_name=genome.name,
             ref_path=cfg.ref_path,
-        ).run_and_read_outputs()
+        ).run()
 
         if tn_loc_genbank is not None:
             info(f"GenBank: found {len(tn_loc_genbank)} TN elements")
@@ -83,7 +83,7 @@ class Pipeline:
             isdb_path=cfg.isdb_path or get_builtin_isfinder_db_path(),
             evalue=cfg.isfinder_evalue,
             critical_coverage=cfg.isfinder_critical_coverage,
-        ).run_and_read_outputs()
+        ).run()
 
         info(f"ISfinder: found {len(tn_loc_isfinder)} TN elements")
 
@@ -109,14 +109,14 @@ class Pipeline:
             ref_name=genome.name,
             output_dir=iso_output,
             reference_tn_out_span=cfg.reference_IS_out_span,
-        ).run_and_read_outputs()
+        ).run()
 
         ref_tn_end_seqs = CreateRefTnEndSeqsStep(
             ref_tn_jc=ref_tn_jc,
             genome=genome,
             ref_path=cfg.ref_path,
             max_dist_to_tn=cfg.max_dist_to_IS,
-        ).run_and_read_outputs()
+        ).run()
 
         return ref_tn_jc, ref_tn_end_seqs
 
@@ -130,7 +130,7 @@ class Pipeline:
             output_path=cfg.iso_breseq_path or iso_output / "breseq",
             docker=cfg.breseq_docker,
             threads=cfg.breseq_threads,
-        ).run_and_read_outputs()
+        ).run()
 
         breseq_jc = breseq_output["JC"]
         info(f"breseq: {len(breseq_jc)} junctions")
@@ -158,7 +158,7 @@ class Pipeline:
             output_dir=iso_output,
             max_dist_to_tn=cfg.max_dist_to_IS,
             trim_jc_flanking=cfg.trim_jc_flanking,
-        ).run_and_read_outputs()
+        ).run()
         info(f"TNJC: {len(tnjc)} TN-associated junctions")
         return tnjc
 
@@ -173,7 +173,7 @@ class Pipeline:
             tnjc=tnjc,
             genome=genome,
             output_dir=iso_output,
-        ).run_and_read_outputs()
+        ).run()
         info(f"TNJC2: {len(tnjc2)} junction pairs")
         return tnjc2
 

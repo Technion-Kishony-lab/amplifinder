@@ -34,7 +34,7 @@ class TestGetReference:
             ref_path=ref_path,
             ncbi=True,
         )
-        genome = step.run_and_read_outputs()
+        genome = step.run()
 
         assert genome.name == "U00096"
         assert genome.genbank_path.exists()
@@ -60,7 +60,7 @@ class TestLocateTNs:
             ref_path=ref_path,
             ncbi=True,
         )
-        return step.run_and_read_outputs()
+        return step.run()
 
     def test_locate_tns_genbank(self, tmp_path, u00096_genome, isolate_srr25242877):
         """Locate TN elements from GenBank annotations."""
@@ -69,7 +69,7 @@ class TestLocateTNs:
             ref_name=u00096_genome.name,
             ref_path=tmp_path,
         )
-        tn_loc = step.run_and_read_outputs()
+        tn_loc = step.run()
 
         # MATLAB found IS elements in U00096
         assert tn_loc is not None
@@ -92,7 +92,7 @@ class TestLocateTNs:
             evalue=1e-4,
             critical_coverage=0.9,
         )
-        tn_loc = step.run_and_read_outputs()
+        tn_loc = step.run()
 
         assert len(tn_loc) > 0
 
@@ -205,14 +205,14 @@ class TestFullPipeline:
             ref_name="U00096",
             ref_path=ref_path,
             ncbi=True,
-        ).run_and_read_outputs()
+        ).run()
 
         # Step 2: Locate TNs
         tn_loc = LocateTNsUsingGenbankStep(
             genbank_path=genome.genbank_path,
             ref_name=genome.name,
             ref_path=ref_path,
-        ).run_and_read_outputs()
+        ).run()
 
         assert tn_loc is not None and len(tn_loc) > 0
 
@@ -222,14 +222,14 @@ class TestFullPipeline:
             ref_name=genome.name,
             output_dir=output_dir,
             reference_tn_out_span=50,
-        ).run_and_read_outputs()
+        ).run()
 
         ref_tn_end_seqs = CreateRefTnEndSeqsStep(
             ref_tn_jc=ref_tn_jc,
             genome=genome,
             ref_path=ref_path,
             max_dist_to_tn=200,
-        ).run_and_read_outputs()
+        ).run()
 
         # Step 4: Parse breseq output
         from amplifinder.tools.breseq import parse_breseq_output
@@ -247,14 +247,14 @@ class TestFullPipeline:
             output_dir=output_dir,
             max_dist_to_tn=200,
             trim_jc_flanking=5,
-        ).run_and_read_outputs()
+        ).run()
 
         # Step 6: Create TNJC2
         tnjc2 = CreateTNJC2Step(
             tnjc=tnjc,
             genome=genome,
             output_dir=output_dir,
-        ).run_and_read_outputs()
+        ).run()
 
         # Verify output structure
         assert isinstance(tnjc2, RecordTypedDF)

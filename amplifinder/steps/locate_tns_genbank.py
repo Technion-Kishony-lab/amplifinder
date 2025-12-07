@@ -32,24 +32,28 @@ class LocateTNsUsingGenbankStep(Step[Optional[RecordTypedDF[TnLoc]]]):
         self.tn_loc_output = self.genbank_dir / f"{ref_name}_tn_loc.csv"
 
         super().__init__(
-            inputs=[self.genbank_path] if self.genbank_path else [],
-            outputs=[self.tn_loc_output],
+            input_files=[self.genbank_path] if self.genbank_path else [],
+            output_files=[self.tn_loc_output],
             force=force,
         )
 
-    def _run(self) -> None:
+    def _calculate_output(self) -> Optional[RecordTypedDF[TnLoc]]:
         """Parse GenBank file and extract TN locations."""
         if self.genbank_path is None:
             info("No GenBank file provided - skipping GenBank TN annotation")
-            return
+            return None
 
         self.genbank_dir.mkdir(parents=True, exist_ok=True)
         records = find_tn_elements(self.genbank_path, self.ref_name)
         tn_loc = RecordTypedDF.from_records(records, TnLoc)
-        tn_loc.to_csv(self.tn_loc_output)
         info(f"Found {len(tn_loc)} TN elements in GenBank annotations")
+        return tn_loc
 
-    def read_outputs(self) -> Optional[RecordTypedDF[TnLoc]]:
+    def _save_output(self, output: Optional[RecordTypedDF[TnLoc]]) -> None:
+        if output is not None:
+            output.to_csv(self.tn_loc_output)
+
+    def load_outputs(self) -> Optional[RecordTypedDF[TnLoc]]:
         """Load TN locations from output file, or None if no GenBank."""
         if self.genbank_path is None:
             return None

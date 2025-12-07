@@ -42,27 +42,27 @@ def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTyped
         tnjc=tnjc,
         genome=genome,
         output_dir=output_dir,
-    ).run_and_read_outputs()
+    ).run()
 
 
 @pytest.fixture
 def tnjc(locate_tns_step, tiny_genome, tmp_output):
     """Create TNJC (TN-associated junctions) from test data."""
-    tn_loc = locate_tns_step.run_and_read_outputs()
+    tn_loc = locate_tns_step.run()
 
     ref_jc = CreateReferenceTnJunctionsStep(
         tn_loc=tn_loc,
         ref_name="tiny",
         output_dir=tmp_output,
         reference_tn_out_span=50,
-    ).run_and_read_outputs()
+    ).run()
 
     ref_tn_end_seqs = CreateRefTnEndSeqsStep(
         ref_tn_jc=ref_jc,
         genome=tiny_genome,
         ref_path=tmp_output,
         max_dist_to_tn=20,
-    ).run_and_read_outputs()
+    ).run()
 
     # Convert to base Junction type
     junctions = [
@@ -82,7 +82,7 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
         output_dir=tmp_output,
         max_dist_to_tn=20,
         trim_jc_flanking=5,
-    ).run_and_read_outputs()
+    ).run()
 
 
 @pytest.fixture
@@ -97,7 +97,7 @@ def tnjc2_step(tnjc, tiny_genome, tmp_output):
 
 def test_runs_without_error(tnjc2_step):
     """Should run and produce output file."""
-    tnjc2 = tnjc2_step.run_and_read_outputs()
+    tnjc2 = tnjc2_step.run()
 
     assert isinstance(tnjc2, RecordTypedDF)
     assert tnjc2_step.output_file.exists()
@@ -105,7 +105,7 @@ def test_runs_without_error(tnjc2_step):
 
 def test_output_has_correct_columns(tnjc2_step):
     """TNJC2 output should have expected columns."""
-    tnjc2 = tnjc2_step.run_and_read_outputs()
+    tnjc2 = tnjc2_step.run()
 
     expected_cols = {
         "jc_num_L", "jc_num_R", "scaf_chr",
@@ -119,8 +119,10 @@ def test_output_has_correct_columns(tnjc2_step):
 
 def test_skips_if_exists(tnjc2_step):
     """Should skip if output exists."""
-    assert tnjc2_step.run() is True
-    assert tnjc2_step.run() is False
+    tnjc2_step.run()
+    assert tnjc2_step.run_count == 1
+    tnjc2_step.run()
+    assert tnjc2_step.run_count == 1  # didn't run again
 
 
 def test_pairs_opposing_junctions(tiny_genome, tmp_output):

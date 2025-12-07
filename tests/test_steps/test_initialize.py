@@ -11,7 +11,7 @@ def init_step(tmp_path):
 
 def test_creates_directories(init_step, tmp_path):
     """Should create output and isolate directories."""
-    result = init_step.run_and_read_outputs()
+    result = init_step.run()
 
     assert (tmp_path / "output").exists()
     assert (tmp_path / "output" / "sample1").exists()
@@ -20,8 +20,10 @@ def test_creates_directories(init_step, tmp_path):
 
 def test_skips_if_exists(init_step):
     """Should skip if output already exists."""
-    assert init_step.run() is True
-    assert init_step.run() is False
+    init_step.run()
+    assert init_step.run_count == 1
+    init_step.run()
+    assert init_step.run_count == 1  # didn't run again
 
 
 def test_force_reruns(tmp_path):
@@ -30,4 +32,5 @@ def test_force_reruns(tmp_path):
     step.run()
 
     step_force = InitializingStep(output_dir=tmp_path / "output", iso_name="sample1", force=True)
-    assert step_force.run() is True
+    step_force.run()
+    assert step_force.run_count == 1

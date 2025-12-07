@@ -52,12 +52,12 @@ class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
         self.output_file = self.output_dir / "TNJC.csv"
 
         super().__init__(
-            inputs=[p for p in [genome.genbank_path, genome.fasta_path] if p],
-            outputs=[self.output_file],
+            input_files=[p for p in [genome.genbank_path, genome.fasta_path] if p],
+            output_files=[self.output_file],
             force=force,
         )
 
-    def _run(self) -> None:
+    def _calculate_output(self) -> RecordTypedDF[TnJunction]:
         """Match junctions to TN elements."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -93,8 +93,11 @@ class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
         tnjc = RecordTypedDF.from_records(tnjc_records, TnJunction)
         tnjc = tnjc.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
 
-        tnjc.to_csv(self.output_file)
         info(f"Found {len(tnjc)} TN-associated junctions (TNJC)")
+        return tnjc
+
+    def _save_output(self, output: RecordTypedDF[TnJunction]) -> None:
+        output.to_csv(self.output_file)
 
     def _get_junction_seq(self, jc: Junction, side: int) -> str:
         """Extract sequence at junction side."""
@@ -149,6 +152,6 @@ class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
 
         return matches
 
-    def read_outputs(self) -> RecordTypedDF[TnJunction]:
+    def load_outputs(self) -> RecordTypedDF[TnJunction]:
         """Load TNJC from output file."""
         return RecordTypedDF.from_csv(self.output_file, TnJunction)
