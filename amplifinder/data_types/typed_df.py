@@ -15,8 +15,12 @@ SelfRecordTypedDF = TypeVar("SelfRecordTypedDF", bound="RecordTypedDF")
 
 
 def _clean_nan(v: Any) -> Any:
-    """Convert NaN to None."""
-    return None if pd.isna(v) else v
+    """Convert NaN to None. Handles scalar values only; lists/arrays pass through."""
+    try:
+        return None if pd.isna(v) else v
+    except (ValueError, TypeError):
+        # pd.isna() fails on lists/arrays - just return as-is
+        return v
 
 
 class TypedDF:
