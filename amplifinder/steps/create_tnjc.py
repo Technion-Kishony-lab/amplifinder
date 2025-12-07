@@ -7,7 +7,7 @@ from Bio.Seq import Seq
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, Junction, TnEndSeq, TnMatch, TnJunction
+from amplifinder.data_types import RecordTypedDF, Junction, TnEndSeq, TnMatch, TnJunction, Orientation
 from amplifinder.data_types.genome import Genome
 
 
@@ -113,7 +113,7 @@ class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
         if flank_len <= 0:
             flank_len = 20
 
-        if direction == 1:
+        if direction == Orientation.FORWARD:
             start = pos
             end = min(len(ref_seq), pos + flank_len)
             seq = ref_seq[start:end]
