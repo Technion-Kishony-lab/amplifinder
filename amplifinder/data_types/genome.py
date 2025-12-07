@@ -113,9 +113,11 @@ class Genome:
     def records(self) -> List[SeqRecord]:
         """Load all records from genome file."""
         if self.genbank_path:
-            return list(SeqIO.parse(self.genbank_path, "genbank"))
+            with open(self.genbank_path) as f:
+                return list(SeqIO.parse(f, "genbank"))
         if self.fasta_path:
-            return list(SeqIO.parse(self.fasta_path, "fasta"))
+            with open(self.fasta_path) as f:
+                return list(SeqIO.parse(f, "fasta"))
         return []
 
     @property
