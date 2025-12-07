@@ -39,6 +39,10 @@ testpaths = ["tests"]
 python_files = "test_*.py"
 python_functions = "test_*"
 addopts = "-v --tb=short"
+markers = [
+    "integration: integration tests using real data",
+    "slow: slow tests (e.g., runs breseq)",
+]
 
 [project.scripts]
 amplifinder = "amplifinder.cli:main"
