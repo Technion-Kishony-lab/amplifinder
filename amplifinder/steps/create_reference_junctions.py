@@ -1,16 +1,17 @@
-"""Step: Create synthetic junctions from reference TN locations."""
+"""Steps: Create reference TN data (junctions and end sequences)."""
 
 from pathlib import Path
 from typing import Optional
 
-import pandas as pd
+from Bio.Seq import Seq
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types.records import RefTnJunction, REF_TN_JC_SCHEMA
+from amplifinder.data_types import RecordTypedDF, TnLoc, TnEndSeq, RefTnJunction
+from amplifinder.data_types.genome import Genome
 
 
-class CreateReferenceJunctionsStep(Step[pd.DataFrame]):
+class CreateReferenceTnJunctionsStep(Step[RecordTypedDF[RefTnJunction]]):
     """Create synthetic junction records (ref_tn_jc) from reference TN locations.
 
     For each TN element, creates two junction records representing the
@@ -22,7 +23,7 @@ class CreateReferenceJunctionsStep(Step[pd.DataFrame]):
 
     def __init__(
         self,
-        tn_loc: pd.DataFrame,
+        tn_loc: RecordTypedDF[TnLoc],
         ref_name: str,
         output_dir: Path,
         reference_tn_out_span: int,
@@ -31,7 +32,7 @@ class CreateReferenceJunctionsStep(Step[pd.DataFrame]):
         """Initialize step.
 
         Args:
-            tn_loc: DataFrame with TN locations (ID, TN_Name, TN_scaf, etc.)
+            tn_loc: RecordDF with TN locations
             ref_name: Reference genome name
             output_dir: Directory to write output
             reference_tn_out_span: bp outside TN for unique chromosome seq
@@ -56,31 +57,102 @@ class CreateReferenceJunctionsStep(Step[pd.DataFrame]):
 
         jc_records = []
 
-        for idx, tn_row in self.tn_loc.iterrows():
-            tn_length = tn_row["LocRight"] - tn_row["LocLeft"] + 1
-            scaf = tn_row["TN_scaf"]
+        for tn in self.tn_loc:
+            tn_length = tn.LocRight - tn.LocLeft + 1
 
             # Left junction: TN left boundary -> chromosome
             jc_records.append(RefTnJunction(
                 num=0,
-                scaf1=scaf, pos1=int(tn_row["LocLeft"]), dir1=1,
-                scaf2=scaf, pos2=int(tn_row["LocLeft"]) - 1, dir2=-1,
+                scaf1=tn.TN_scaf, pos1=tn.LocLeft, dir1=1,
+                scaf2=tn.TN_scaf, pos2=tn.LocLeft - 1, dir2=-1,
                 flanking_left=tn_length, flanking_right=self.reference_tn_out_span,
-                refTN=int(idx), tn_side="left",
+                refTN=tn.ID, tn_side="left",
             ))
 
             # Right junction: TN right boundary -> chromosome
             jc_records.append(RefTnJunction(
                 num=0,
-                scaf1=scaf, pos1=int(tn_row["LocRight"]), dir1=-1,
-                scaf2=scaf, pos2=int(tn_row["LocRight"]) + 1, dir2=1,
+                scaf1=tn.TN_scaf, pos1=tn.LocRight, dir1=-1,
+                scaf2=tn.TN_scaf, pos2=tn.LocRight + 1, dir2=1,
                 flanking_left=self.reference_tn_out_span, flanking_right=tn_length,
-                refTN=int(idx), tn_side="right",
+                refTN=tn.ID, tn_side="right",
             ))
 
-        REF_TN_JC_SCHEMA.to_csv(jc_records, self.output_file)
+        RecordTypedDF.from_records(jc_records, RefTnJunction).to_csv(self.output_file)
         info(f"Created {len(jc_records)} reference TN junctions")
 
-    def read_outputs(self) -> pd.DataFrame:
+    def read_outputs(self) -> RecordTypedDF[RefTnJunction]:
         """Load reference TN junctions from output file."""
-        return REF_TN_JC_SCHEMA.read_csv(self.output_file)
+        return RecordTypedDF.from_csv(self.output_file, RefTnJunction)
+
+
+class CreateRefTnEndSeqsStep(Step[RecordTypedDF[TnEndSeq]]):
+    """Extract TN end sequences for junction matching.
+
+    For each reference TN junction, extracts the sequence around the TN boundary
+    plus its reverse complement. Used by matching step.
+
+    Based on create_IS_end_seqs.m
+    """
+
+    def __init__(
+        self,
+        ref_tn_jc: RecordTypedDF[RefTnJunction],
+        genome: Genome,
+        ref_path: Path,
+        max_dist_to_tn: int,
+        force: Optional[bool] = None,
+    ):
+        """Initialize step.
+
+        Args:
+            ref_tn_jc: RecordDF with reference TN junctions
+            genome: Reference genome
+            ref_path: Path to reference directory (for output)
+            max_dist_to_tn: Margin around TN boundary
+            force: Force re-run
+        """
+        self.ref_tn_jc = ref_tn_jc
+        self.genome = genome
+        self.ref_path = Path(ref_path)
+        self.max_dist_to_tn = max_dist_to_tn
+
+        self.output_file = self.ref_path / f"{genome.name}_TN_end_seqs.csv"
+
+        super().__init__(
+            inputs=[],
+            outputs=[self.output_file],
+            force=force,
+        )
+
+    def _run(self) -> None:
+        """Extract TN end sequences."""
+        self.ref_path.mkdir(parents=True, exist_ok=True)
+
+        ref_seqs = self.genome.sequences
+        margin = self.max_dist_to_tn
+        records = []
+
+        for jc in self.ref_tn_jc:
+            if jc.scaf1 not in ref_seqs:
+                raise ValueError(f"TN scaffold {jc.scaf1} not in genome")
+
+            seq = ref_seqs[jc.scaf1]
+            pos = jc.pos1 - 1  # 0-based
+            start = max(0, pos - margin)
+            end = min(len(seq), pos + margin + 1)
+            seq_fwd = seq[start:end]
+
+            records.append(TnEndSeq(
+                tn_id=jc.refTN,
+                tn_side=jc.tn_side,
+                seq_fwd=seq_fwd,
+                seq_rc=str(Seq(seq_fwd).reverse_complement()),
+            ))
+
+        RecordTypedDF.from_records(records, TnEndSeq).to_csv(self.output_file)
+        info(f"Created {len(records)} TN end sequences")
+
+    def read_outputs(self) -> RecordTypedDF[TnEndSeq]:
+        """Load TN end sequences from output file."""
+        return RecordTypedDF.from_csv(self.output_file, TnEndSeq)

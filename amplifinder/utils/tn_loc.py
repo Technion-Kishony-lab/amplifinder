@@ -1,17 +1,29 @@
 """TN location utilities."""
 
+from typing import TYPE_CHECKING, Union
+
 import pandas as pd
 
 from amplifinder.logger import warning
 
+if TYPE_CHECKING:
+    from amplifinder.data_types import RecordTypedDF
+
 
 def compare_tn_locations(
-    tn1: pd.DataFrame, tn2: pd.DataFrame,
+    tn1: Union[pd.DataFrame, "RecordTypedDF"], tn2: Union[pd.DataFrame, "RecordTypedDF"],
     name1: str = "GenBank", name2: str = "ISfinder",
     tolerance: int = 50,
 ) -> None:
-    """Compare TN locations from two sources, report differences as warnings."""
-    if tn1.empty and tn2.empty:
+    """Compare TN locations from two sources, report differences as warnings.
+    
+    Accepts either pd.DataFrame or RecordDF (uses .df property if needed).
+    """
+    # Support RecordDF by accessing underlying df
+    df1 = tn1.df if hasattr(tn1, 'df') else tn1
+    df2 = tn2.df if hasattr(tn2, 'df') else tn2
+    
+    if df1.empty and df2.empty:
         return
 
     def find_match(row, other_df):
@@ -23,8 +35,8 @@ def compare_tn_locations(
         ]
 
     # Check tn1 against tn2 (full check: not found, multiple, name mismatch, non-matching ends)
-    for _, row in tn1.iterrows():
-        matches = find_match(row, tn2)
+    for _, row in df1.iterrows():
+        matches = find_match(row, df2)
         loc = f"{row['TN_scaf']}:{row['LocLeft']}-{row['LocRight']}"
 
         if matches.empty:
@@ -53,8 +65,8 @@ def compare_tn_locations(
                     f"(Δleft={left_diff:+d}, Δright={right_diff:+d})")
 
     # Check tn2 against tn1 (only "not found")
-    for _, row in tn2.iterrows():
-        matches = find_match(row, tn1)
+    for _, row in df2.iterrows():
+        matches = find_match(row, df1)
         if matches.empty:
             loc = f"{row['TN_scaf']}:{row['LocLeft']}-{row['LocRight']}"
             warning(f"{name2} TN '{row['TN_Name']}' at {loc} not found in {name1}")
