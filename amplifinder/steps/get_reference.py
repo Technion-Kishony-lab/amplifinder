@@ -40,6 +40,6 @@ class GetReferenceStep(Step[Genome]):
         """Fetch genome from NCBI or load from cache."""
         return get_genome(self.ref_name, self.ref_path, self.ncbi)
 
-    def read_outputs(self) -> Genome:
+    def load_outputs(self) -> Genome:
         """Load genome from cached files."""
         return get_genome(self.ref_name, self.ref_path, ncbi=False)

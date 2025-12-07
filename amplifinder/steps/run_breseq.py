@@ -42,9 +42,9 @@ class BreseqStep(Step[Dict[str, pd.DataFrame]]):
             docker=self.docker,
             threads=self.threads,
         )
-        return self.read_outputs()
+        return self.load_outputs()
 
-    def read_outputs(self) -> Dict[str, pd.DataFrame]:
+    def load_outputs(self) -> Dict[str, pd.DataFrame]:
         """Parse breseq output into DataFrames.
 
         Returns:

@@ -108,6 +108,6 @@ class LocateTNsUsingISfinderStep(Step[RecordTypedDF[TnLoc]]):
             "Join": False,
         }), TnLoc)
 
-    def read_outputs(self) -> RecordTypedDF[TnLoc]:
+    def load_outputs(self) -> RecordTypedDF[TnLoc]:
         """Load TN locations from output file."""
         return RecordTypedDF.from_csv(self.tn_loc_output, TnLoc)

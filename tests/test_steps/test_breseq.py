@@ -49,7 +49,8 @@ def test_breseq_step_skips_if_output_exists(breseq_step):
     (breseq_step.output_path / "output").mkdir(exist_ok=True)
     (breseq_step.output_path / "output" / "output.gd").touch()
 
-    assert breseq_step.run() is False
+    breseq_step.run()
+    assert breseq_step.run_count == 0  # skipped
 
 
 def test_breseq_step_read_outputs(tmp_path):
@@ -66,7 +67,7 @@ def test_breseq_step_read_outputs(tmp_path):
     (tmp_path / "dummy.fastq").touch()
     (tmp_path / "dummy.fasta").touch()
 
-    result = step.read_outputs()
+    result = step.load_outputs()
 
     assert isinstance(result, dict)
     assert "JC" in result
