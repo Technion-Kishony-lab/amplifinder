@@ -6,7 +6,9 @@ from pathlib import Path
 from typing import Tuple
 
 from amplifinder.config import Config
-from amplifinder.data_types import Genome, RecordTypedDF, TnLoc, RefTnJunction, TnEndSeq, Junction, TnJunction, TnJunctionPair
+from amplifinder.data_types import (
+    Genome, RecordTypedDF, TnLoc, RefTnJunction, TnEndSeq, Junction, TnJunction, TnJunctionPair,
+)
 from amplifinder.logger import info
 from amplifinder.steps import (
     InitializingStep,
@@ -26,7 +28,7 @@ from amplifinder.utils.tn_loc import compare_tn_locations
 @dataclass
 class Pipeline:
     """AmpliFinder pipeline with phased execution."""
-    
+
     config: Config
 
     def run(self) -> RecordTypedDF[TnJunctionPair]:
@@ -60,14 +62,14 @@ class Pipeline:
     def _locate_tns_in_reference(self, genome: Genome) -> RecordTypedDF[TnLoc]:
         """Step 2: Locate TN elements using GenBank and/or ISfinder."""
         cfg = self.config
-        
+
         # 2a: GenBank annotations
         tn_loc_genbank = LocateTNsUsingGenbankStep(
             genbank_path=genome.genbank_path,
             ref_name=genome.name,
             ref_path=cfg.ref_path,
         ).run_and_read_outputs()
-        
+
         if tn_loc_genbank is not None:
             info(f"GenBank: found {len(tn_loc_genbank)} TN elements")
         else:
@@ -101,7 +103,7 @@ class Pipeline:
     ) -> Tuple[RecordTypedDF[RefTnJunction], RecordTypedDF[TnEndSeq]]:
         """Step 3: Create reference junctions and TN end sequences."""
         cfg = self.config
-        
+
         ref_tn_jc = CreateReferenceTnJunctionsStep(
             tn_loc=tn_loc,
             ref_name=genome.name,
@@ -121,7 +123,7 @@ class Pipeline:
     def _run_breseq(self, genome: Genome, iso_output: Path) -> pd.DataFrame:
         """Step 4: Run breseq on isolate to get junctions."""
         cfg = self.config
-        
+
         breseq_output = BreseqStep(
             fastq_path=cfg.iso_path,
             ref_file=genome.genbank_path or genome.fasta_path,
@@ -129,7 +131,7 @@ class Pipeline:
             docker=cfg.breseq_docker,
             threads=cfg.breseq_threads,
         ).run_and_read_outputs()
-        
+
         breseq_jc = breseq_output["JC"]
         info(f"breseq: {len(breseq_jc)} junctions")
         return breseq_jc
@@ -144,11 +146,11 @@ class Pipeline:
     ) -> RecordTypedDF[TnJunction]:
         """Step 5: Match junctions to TN elements."""
         cfg = self.config
-        
+
         # Combine breseq junctions with reference TN junctions
         all_jc_df = pd.concat([breseq_jc, ref_tn_jc.df], ignore_index=True)
         all_jc = RecordTypedDF(all_jc_df, Junction)
-        
+
         tnjc = CreateTNJCStep(
             jc_df=all_jc,
             ref_tn_end_seqs=ref_tn_end_seqs,
