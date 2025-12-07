@@ -172,3 +172,25 @@ def tiny_ref_gbk(test_data):
 def tiny_tn_db(test_data):
     """Path to synthetic TN database."""
     return test_data / "tiny_tn.fna"
+
+
+# =============================================================================
+# Shared step fixtures
+# =============================================================================
+
+@pytest.fixture
+def tiny_genome(tiny_ref_gbk, tiny_ref_fasta):
+    """Create Genome object for tiny reference."""
+    from amplifinder.data_types.genome import Genome
+    return Genome(name="tiny", genbank_path=tiny_ref_gbk, fasta_path=tiny_ref_fasta)
+
+
+@pytest.fixture
+def locate_tns_step(tmp_output, tiny_ref_gbk):
+    """Create TN location step (genbank-based)."""
+    from amplifinder.steps import LocateTNsUsingGenbankStep
+    return LocateTNsUsingGenbankStep(
+        genbank_path=tiny_ref_gbk,
+        ref_name="tiny",
+        ref_path=tmp_output,
+    )

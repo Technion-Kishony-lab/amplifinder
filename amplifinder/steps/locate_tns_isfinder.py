@@ -9,10 +9,10 @@ from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
 from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types import TN_LOC_SCHEMA
+from amplifinder.data_types import RecordTypedDF, TnLoc
 
 
-class LocateTNsUsingISfinder(Step[pd.DataFrame]):
+class LocateTNsUsingISfinderStep(Step[RecordTypedDF[TnLoc]]):
     """BLAST reference genome against ISfinder database to find TN elements."""
 
     def __init__(
@@ -61,27 +61,21 @@ class LocateTNsUsingISfinder(Step[pd.DataFrame]):
 
         # Parse BLAST results and save
         tn_loc = self._parse_blast()
-        TN_LOC_SCHEMA.to_csv(tn_loc, self.tn_loc_output)
+        tn_loc.to_csv(self.tn_loc_output)
         info(f"Found {len(tn_loc)} TN elements via ISfinder")
 
-    def _parse_blast(self) -> pd.DataFrame:
-        """Parse BLAST output and filter to TN locations."""
-        df = parse_blast_csv(self.blast_output)
-        if df.empty:
-            return TN_LOC_SCHEMA.empty()
+    def _parse_blast(self) -> RecordTypedDF[TnLoc]:
+        """Parse BLAST output and convert to TN locations."""
+        blast_df = parse_blast_csv(self.blast_output)
 
-        # Load ISfinder DB to get TN lengths
         tn_lengths = read_fasta_lengths(self.isdb_path)
-
-        # Convert to TN locations
-        return self._blast_to_tn_loc(df, tn_lengths)
-
-    def _blast_to_tn_loc(self, blast_df: pd.DataFrame, tn_lengths: dict) -> pd.DataFrame:
-        """Convert BLAST results to TN location table (matlab blast2ISloc logic)."""
-        df = blast_df.copy()
+        df = blast_df.df.copy()
 
         # Remove duplicate alignments (keep first by qstart, qend)
         df = df.drop_duplicates(subset=["qstart", "qend"], keep="first")
+
+        if df.empty:
+            return RecordTypedDF.empty(TnLoc)
 
         # Add subject length
         df["subject_length"] = df["subject"].map(tn_lengths).fillna(0).astype(int)
@@ -93,7 +87,6 @@ class LocateTNsUsingISfinder(Step[pd.DataFrame]):
         df["coverage"] = abs(df["sstart"] - df["send"]) / df["subject_length"]
         df = df[df["coverage"] > self.critical_coverage]
 
-        # Build tn_loc table
         # Detect strand: sstart > send means reverse complement
         is_complement = (df["sstart"] > df["send"]).values
 
@@ -101,7 +94,8 @@ class LocateTNsUsingISfinder(Step[pd.DataFrame]):
         loc_left = df[["qstart", "qend"]].min(axis=1).values
         loc_right = df[["qstart", "qend"]].max(axis=1).values
 
-        return TN_LOC_SCHEMA.create({
+        # Build tn_loc table
+        return RecordTypedDF(pd.DataFrame({
             "ID": range(1, len(df) + 1),
             "TN_Name": df["subject"].values,
             "TN_scaf": df["query"].values,
@@ -109,8 +103,8 @@ class LocateTNsUsingISfinder(Step[pd.DataFrame]):
             "LocRight": loc_right,
             "Complement": is_complement,
             "Join": False,
-        })
+        }), TnLoc)
 
-    def read_outputs(self) -> pd.DataFrame:
+    def read_outputs(self) -> RecordTypedDF[TnLoc]:
         """Load TN locations from output file."""
-        return TN_LOC_SCHEMA.read_csv(self.tn_loc_output)
+        return RecordTypedDF.from_csv(self.tn_loc_output, TnLoc)

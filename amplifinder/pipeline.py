@@ -1,106 +1,167 @@
 """Pipeline orchestration for AmpliFinder."""
 
 import pandas as pd
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Tuple
 
 from amplifinder.config import Config
+from amplifinder.data_types import Genome, RecordTypedDF, TnLoc, RefTnJunction, TnEndSeq, Junction, TnJunction
 from amplifinder.logger import info
 from amplifinder.steps import (
     InitializingStep,
     GetReferenceStep,
-    LocateTNsUsingISfinder,
-    LocateTNsUsingGenbank,
+    LocateTNsUsingISfinderStep,
+    LocateTNsUsingGenbankStep,
     BreseqStep,
-    CreateReferenceJunctionsStep,
+    CreateReferenceTnJunctionsStep,
+    CreateRefTnEndSeqsStep,
     CreateTNJCStep,
 )
 from amplifinder.data import get_builtin_isfinder_db_path
 from amplifinder.utils.tn_loc import compare_tn_locations
 
 
-def run_pipeline(config: Config) -> None:
-    """Run the AmpliFinder pipeline."""
-    # Step 0: Initialize output directories
-    iso_output = InitializingStep(
-        output_dir=config.output_dir,
-        iso_name=config.iso_name,
-    ).run_and_read_outputs()
+@dataclass
+class Pipeline:
+    """AmpliFinder pipeline with phased execution."""
+    
+    config: Config
 
-    # Step 1: Get reference genome
-    genome = GetReferenceStep(
-        ref_name=config.ref_name,
-        ref_path=config.ref_path,
-        ncbi=config.ncbi,
-    ).run_and_read_outputs()
-    info(f"Reference: {genome.name} ({genome.length:,} bp)")
+    def run(self) -> RecordTypedDF[TnJunction]:
+        """Run full pipeline, return TNJC results."""
+        iso_output = self._initialize()
+        genome = self._load_reference()
+        tn_loc = self._locate_tns_in_reference(genome)
+        ref_tn_jc, ref_tn_end_seqs = self._create_reference_tn_junctions(tn_loc, genome, iso_output)
+        breseq_jc = self._run_breseq(genome, iso_output)
+        tnjc = self._create_tnjc(breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output)
+        return tnjc
 
-    """Locate TN elements using GenBank and/or ISfinder databases."""
+    def _initialize(self) -> Path:
+        """Step 0: Initialize output directories."""
+        return InitializingStep(
+            output_dir=self.config.output_dir,
+            iso_name=self.config.iso_name,
+        ).run_and_read_outputs()
 
-    # Step 2a: Locate TN elements using GenBank annotations
-    tn_loc_genbank = LocateTNsUsingGenbank(
-        genbank_path=genome.genbank_path,
-        ref_name=genome.name,
-        ref_path=config.ref_path,
-    ).run_and_read_outputs()
-    if tn_loc_genbank is not None:
-        info(f"GenBank: found {len(tn_loc_genbank)} TN elements")
-    else:
-        info("No GenBank file provided - skipping GenBank TN annotation")
+    def _load_reference(self) -> Genome:
+        """Step 1: Get reference genome."""
+        genome = GetReferenceStep(
+            ref_name=self.config.ref_name,
+            ref_path=self.config.ref_path,
+            ncbi=self.config.ncbi,
+        ).run_and_read_outputs()
+        info(f"Reference: {genome.name} ({genome.length:,} bp)")
+        return genome
 
-    # Step 2b: Locate TN elements using ISfinder database
-    tn_loc_isfinder = LocateTNsUsingISfinder(
-        ref_fasta=genome.fasta_path,
-        ref_name=genome.name,
-        ref_path=config.ref_path,
-        isdb_path=config.isdb_path or get_builtin_isfinder_db_path(),
-        evalue=config.isfinder_evalue,
-        critical_coverage=config.isfinder_critical_coverage,
-    ).run_and_read_outputs()
-    info(f"ISfinder: found {len(tn_loc_isfinder)} TN elements")
+    def _locate_tns_in_reference(self, genome: Genome) -> RecordTypedDF[TnLoc]:
+        """Step 2: Locate TN elements using GenBank and/or ISfinder."""
+        cfg = self.config
+        
+        # 2a: GenBank annotations
+        tn_loc_genbank = LocateTNsUsingGenbankStep(
+            genbank_path=genome.genbank_path,
+            ref_name=genome.name,
+            ref_path=cfg.ref_path,
+        ).run_and_read_outputs()
+        
+        if tn_loc_genbank is not None:
+            info(f"GenBank: found {len(tn_loc_genbank)} TN elements")
+        else:
+            info("No GenBank file provided - skipping GenBank TN annotation")
 
-    # Compare TN locations from both sources
-    if tn_loc_genbank is not None:
-        compare_tn_locations(tn_loc_genbank, tn_loc_isfinder)
+        # 2b: ISfinder database
+        tn_loc_isfinder = LocateTNsUsingISfinderStep(
+            ref_fasta=genome.fasta_path,
+            ref_name=genome.name,
+            ref_path=cfg.ref_path,
+            isdb_path=cfg.isdb_path or get_builtin_isfinder_db_path(),
+            evalue=cfg.isfinder_evalue,
+            critical_coverage=cfg.isfinder_critical_coverage,
+        ).run_and_read_outputs()
 
-    # Select which tn_loc to use based on config (fallback to isfinder if no genbank)
-    if tn_loc_genbank is None and not config.use_isfinder:
-        raise ValueError("No TN locations found - please provide a GenBank file or set --use-isfinder")
-    tn_loc = tn_loc_isfinder if config.use_isfinder else tn_loc_genbank
-    assert tn_loc is not None
+        info(f"ISfinder: found {len(tn_loc_isfinder)} TN elements")
 
-    # Step 3: Create reference TN junctions
-    ref_tn_jc = CreateReferenceJunctionsStep(
-        tn_loc=tn_loc,
-        ref_name=genome.name,
-        output_dir=iso_output,
-        reference_tn_out_span=config.reference_IS_out_span,
-    ).run_and_read_outputs()
+        # Compare sources
+        if tn_loc_genbank is not None:
+            compare_tn_locations(tn_loc_genbank, tn_loc_isfinder)
 
-    """Run breseq on isolate to get junctions."""
+        # Select source
+        if tn_loc_genbank is None and not cfg.use_isfinder:
+            raise ValueError("No TN locations - provide GenBank or set --use-isfinder")
+        tn_loc = tn_loc_isfinder if cfg.use_isfinder else tn_loc_genbank
+        assert tn_loc is not None
+        return tn_loc
 
-    # Step 4: Run breseq on isolate to get junctions
-    breseq_output = BreseqStep(
-        fastq_path=config.iso_path,
-        ref_file=genome.genbank_path or genome.fasta_path,
-        output_path=config.iso_breseq_path or iso_output / "breseq",
-        docker=config.breseq_docker,
-        threads=config.breseq_threads,
-    ).run_and_read_outputs()
-    breseq_jc = breseq_output["JC"]
-    info(f"breseq: {len(breseq_jc)} junctions")
+    def _create_reference_tn_junctions(
+        self, tn_loc: RecordTypedDF[TnLoc], genome: Genome, iso_output: Path
+    ) -> Tuple[RecordTypedDF[RefTnJunction], RecordTypedDF[TnEndSeq]]:
+        """Step 3: Create reference junctions and TN end sequences."""
+        cfg = self.config
+        
+        ref_tn_jc = CreateReferenceTnJunctionsStep(
+            tn_loc=tn_loc,
+            ref_name=genome.name,
+            output_dir=iso_output,
+            reference_tn_out_span=cfg.reference_IS_out_span,
+        ).run_and_read_outputs()
 
-    # Combine all junctions
-    all_jc = pd.concat([breseq_jc, ref_tn_jc], ignore_index=True)
+        ref_tn_end_seqs = CreateRefTnEndSeqsStep(
+            ref_tn_jc=ref_tn_jc,
+            genome=genome,
+            ref_path=cfg.ref_path,
+            max_dist_to_tn=cfg.max_dist_to_IS,
+        ).run_and_read_outputs()
 
-    # Step 5: Match junctions to TN elements → TNJC
-    tnjc = CreateTNJCStep(
-        jc_df=all_jc,
-        tn_loc=tn_loc,
-        ref_fasta=genome.fasta_path,
-        output_dir=iso_output,
-        max_dist_to_tn=config.max_dist_to_IS,
-        trim_jc_flanking=config.trim_jc_flanking,
-    ).run_and_read_outputs()
-    info(f"TNJC: {len(tnjc)} TN-associated junctions")
+        return ref_tn_jc, ref_tn_end_seqs
+
+    def _run_breseq(self, genome: Genome, iso_output: Path) -> pd.DataFrame:
+        """Step 4: Run breseq on isolate to get junctions."""
+        cfg = self.config
+        
+        breseq_output = BreseqStep(
+            fastq_path=cfg.iso_path,
+            ref_file=genome.genbank_path or genome.fasta_path,
+            output_path=cfg.iso_breseq_path or iso_output / "breseq",
+            docker=cfg.breseq_docker,
+            threads=cfg.breseq_threads,
+        ).run_and_read_outputs()
+        
+        breseq_jc = breseq_output["JC"]
+        info(f"breseq: {len(breseq_jc)} junctions")
+        return breseq_jc
+
+    def _create_tnjc(
+        self,
+        breseq_jc: pd.DataFrame,
+        ref_tn_jc: RecordTypedDF[RefTnJunction],
+        ref_tn_end_seqs: RecordTypedDF[TnEndSeq],
+        genome: Genome,
+        iso_output: Path,
+    ) -> RecordTypedDF[TnJunction]:
+        """Step 5: Match junctions to TN elements."""
+        cfg = self.config
+        
+        # Combine breseq junctions with reference TN junctions
+        all_jc_df = pd.concat([breseq_jc, ref_tn_jc.df], ignore_index=True)
+        all_jc = RecordTypedDF(all_jc_df, Junction)
+        
+        tnjc = CreateTNJCStep(
+            jc_df=all_jc,
+            ref_tn_end_seqs=ref_tn_end_seqs,
+            genome=genome,
+            output_dir=iso_output,
+            max_dist_to_tn=cfg.max_dist_to_IS,
+            trim_jc_flanking=cfg.trim_jc_flanking,
+        ).run_and_read_outputs()
+        info(f"TNJC: {len(tnjc)} TN-associated junctions")
+        return tnjc
 
     # TODO: Step 6 - Combine junction pairs (TNJC2)
     # TODO: Step 7 - Classification + Export
+
+
+def run_pipeline(config: Config) -> RecordTypedDF[TnJunction]:
+    """Run the AmpliFinder pipeline."""
+    return Pipeline(config).run()
