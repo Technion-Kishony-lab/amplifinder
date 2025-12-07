@@ -1,9 +1,18 @@
 import pandas as pd
 import numpy as np
+from enum import Enum
 from typing import Any, Type, Union, get_origin, get_args
 import ast
 
 from amplifinder.data_types.records import Schema
+
+
+def _is_enum(t: Type) -> bool:
+    """Check if type is an Enum subclass."""
+    try:
+        return isinstance(t, type) and issubclass(t, Enum)
+    except TypeError:
+        return False
 
 
 def _is_optional(t: Type) -> bool:
@@ -91,6 +100,10 @@ def validate_and_cast_df(
             if get_origin(base_type) in compound_origins:
                 df = df.copy()
                 df[col_name] = df[col_name].apply(lambda x, et=base_type: parse_compound(x, et))
+            elif _is_enum(base_type):
+                # Enum: convert values via Enum(value)
+                df = df.copy()
+                df[col_name] = df[col_name].apply(lambda x, et=base_type: et(x) if pd.notna(x) else x)
             else:
                 scalar_cols[col_name] = base_type
         else:
