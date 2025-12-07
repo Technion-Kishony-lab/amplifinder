@@ -26,7 +26,9 @@ def test_parsed_columns_match_schema(breseq_output):
         df = breseq_output[record_type]
         if df.empty:
             continue
-        for field in schema.required_names:
+        # Schema is tuple of Column(name, dtype, optional)
+        required_names = [c.name for c in schema if not c.optional]
+        for field in required_names:
             assert field in df.columns, f"{record_type} missing required field: {field}"
 
 
