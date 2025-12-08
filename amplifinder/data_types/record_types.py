@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, NamedTuple, Optional, TypeVar
+from typing import List, NamedTuple, TypeVar
 
 from amplifinder.data_types.records import Record
 

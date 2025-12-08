@@ -14,9 +14,8 @@ from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDF, TnLoc, Genome
 from amplifinder.steps.base import Step
 
-#########################################
-### Base class for TN location steps ####
-#########################################
+
+# Base class for TN location steps
 
 class LocateTNsStep(Step[Optional[RecordTypedDF[TnLoc]]]):
     """Base class for steps that locate TN elements."""
@@ -56,9 +55,7 @@ class LocateTNsStep(Step[Optional[RecordTypedDF[TnLoc]]]):
         pass
 
 
-############################################
-### Locate TNs using GenBank annotations ###
-############################################
+# Locate TNs using GenBank annotations
 
 class LocateTNsUsingGenbankStep(LocateTNsStep):
     """Extract TN elements from GenBank file annotations using BioPython.
@@ -93,9 +90,8 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
         info(f"Found {len(tn_loc)} TN elements in GenBank annotations")
         return tn_loc
 
-##########################################
-### Locate TNs using ISfinder database ###
-##########################################
+
+# Locate TNs using ISfinder database
 
 class LocateTNsUsingISfinderStep(LocateTNsStep):
     """BLAST reference genome against ISfinder database to find TN elements."""

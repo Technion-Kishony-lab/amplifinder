@@ -20,5 +20,3 @@ def default_filename(record_type: Type[Record]) -> str:
 
 def default_path(output_dir: Path, record_type: Type[Record]) -> Path:
     return output_dir / default_filename(record_type)
-
-
