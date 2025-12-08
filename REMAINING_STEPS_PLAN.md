@@ -259,11 +259,7 @@ Step 13: anc_path=None → limited classification
 # record_types.py
 
 class TnJc2(Record):       # Step 6 output (existing)
-    # ...existing fields...
-    # NOTE: Remove these optional fields from TnJc2:
-    #   amplicon_coverage: Optional[float] = None
-    #   copy_number_mode: Optional[float] = None
-    # They belong in CoveredTnJc2
+    # ...existing fields (no coverage - added in CoveredTnJc2)...
 
 class CoveredTnJc2(TnJc2):  # Step 7 output
     # This sample's coverage stats (normalized by genome median coverage)

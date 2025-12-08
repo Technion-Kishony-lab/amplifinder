@@ -265,7 +265,7 @@ class TestFullPipeline:
         expected_cols = {
             "jc_num_L", "jc_num_R", "scaf_chr",
             "amplicon_length", "complementary_length",
-            "tn_orientation", "span_origin",
+            "tn_orientations", "span_origin",
         }
         assert expected_cols.issubset(set(tnjc2.df.columns))
 
