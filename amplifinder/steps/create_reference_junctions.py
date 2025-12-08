@@ -11,7 +11,7 @@ from amplifinder.data_types import RecordTypedDF, TnLoc, TnEndSeq, RefTnJunction
 from amplifinder.data_types.genome import Genome
 
 
-class CreateReferenceTnJunctionsStep(Step[RecordTypedDF[RefTnJunction]]):
+class CreateRefTnJcsStep(Step[RecordTypedDF[RefTnJunction]]):
     """Create synthetic junction records (ref_tn_jc) from reference TN locations.
 
     For each TN element, creates two junction records representing the

@@ -1,8 +1,8 @@
-"""Tests for CreateReferenceTnJunctionsStep and CreateRefTnEndSeqsStep."""
+"""Tests for CreateRefTnJcsStep and CreateRefTnEndSeqsStep."""
 
 import pytest
 
-from amplifinder.steps import CreateReferenceTnJunctionsStep, CreateRefTnEndSeqsStep
+from amplifinder.steps import CreateRefTnJcsStep, CreateRefTnEndSeqsStep
 from amplifinder.data_types import RecordTypedDF, Side
 
 
@@ -10,7 +10,7 @@ from amplifinder.data_types import RecordTypedDF, Side
 def ref_jc_step(locate_tns_step, tmp_output):
     """Create reference junctions step."""
     tn_loc = locate_tns_step.run()
-    return CreateReferenceTnJunctionsStep(
+    return CreateRefTnJcsStep(
         tn_loc=tn_loc,
         ref_name="tiny",
         output_dir=tmp_output,

@@ -4,7 +4,7 @@ import pytest
 from typing import List
 
 from amplifinder.steps import (
-    CreateReferenceTnJunctionsStep,
+    CreateRefTnJcsStep,
     CreateRefTnEndSeqsStep,
     CreateTNJCStep,
     CreateTNJC2Step,
@@ -50,7 +50,7 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
     """Create TNJC (TN-associated junctions) from test data."""
     tn_loc = locate_tns_step.run()
 
-    ref_jc = CreateReferenceTnJunctionsStep(
+    ref_jc = CreateRefTnJcsStep(
         tn_loc=tn_loc,
         ref_name="tiny",
         output_dir=tmp_output,
