@@ -18,8 +18,8 @@ from amplifinder.steps import (
     BreseqStep,
     CreateRefTnJcsStep,
     CreateRefTnEndSeqsStep,
-    CreateTNJCStep,
-    CreateTNJC2Step,
+    CreateTnJcStep,
+    CreateTnJc2Step,
 )
 from amplifinder.data import get_builtin_isfinder_db_path
 from amplifinder.utils.tn_loc import compare_tn_locations
@@ -32,7 +32,7 @@ class Pipeline:
     config: Config
 
     def run(self) -> RecordTypedDF[TnJunctionPair]:
-        """Run full pipeline, return TNJC2 results."""
+        """Run full pipeline, return TnJc2 results."""
         iso_output = self._initialize()
         genome = self._load_reference()
         tn_loc = self._locate_tns_in_reference(genome)
@@ -151,7 +151,7 @@ class Pipeline:
         all_jc_df = pd.concat([breseq_jc, ref_tn_jc.df], ignore_index=True)
         all_jc = RecordTypedDF(all_jc_df, Junction)
 
-        tnjc = CreateTNJCStep(
+        tnjc = CreateTnJcStep(
             jc_df=all_jc,
             ref_tn_end_seqs=ref_tn_end_seqs,
             genome=genome,
@@ -159,7 +159,7 @@ class Pipeline:
             max_dist_to_tn=cfg.max_dist_to_IS,
             trim_jc_flanking=cfg.trim_jc_flanking,
         ).run()
-        info(f"TNJC: {len(tnjc)} TN-associated junctions")
+        info(f"TnJc: {len(tnjc)} TN-associated junctions")
         return tnjc
 
     def _create_tnjc2(
@@ -168,13 +168,13 @@ class Pipeline:
         genome: Genome,
         iso_output: Path,
     ) -> RecordTypedDF[TnJunctionPair]:
-        """Step 6: Combine junction pairs (TNJC2)."""
-        tnjc2 = CreateTNJC2Step(
+        """Step 6: Combine junction pairs (TnJc2)."""
+        tnjc2 = CreateTnJc2Step(
             tnjc=tnjc,
             genome=genome,
             output_dir=iso_output,
         ).run()
-        info(f"TNJC2: {len(tnjc2)} junction pairs")
+        info(f"TnJc2: {len(tnjc2)} junction pairs")
         return tnjc2
 
     # TODO: Step 7 - Classification + Export

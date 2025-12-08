@@ -9,8 +9,8 @@ from amplifinder.steps import (
     LocateTNsUsingISfinderStep,
     CreateRefTnJcsStep,
     CreateRefTnEndSeqsStep,
-    CreateTNJCStep,
-    CreateTNJC2Step,
+    CreateTnJcStep,
+    CreateTnJc2Step,
 )
 from amplifinder.data_types import RecordTypedDF, Junction
 
@@ -189,7 +189,7 @@ class TestFullPipeline:
         print(f"MATLAB found {matlab_jc_count} TN junctions")
 
     def test_tnjc2_step_produces_output(self, tmp_path, isolate_srr25242877):
-        """Test TNJC2 step produces valid output structure."""
+        """Test TnJc2 step produces valid output structure."""
         breseq_path = isolate_srr25242877["breseq_path"]
 
         if not breseq_path.exists():
@@ -236,11 +236,11 @@ class TestFullPipeline:
         breseq_output = parse_breseq_output(breseq_path)
         breseq_jc = breseq_output["JC"]
 
-        # Step 5: Create TNJC
+        # Step 5: Create TnJc
         all_jc_df = pd.concat([breseq_jc, ref_tn_jc.df], ignore_index=True)
         all_jc = RecordTypedDF(all_jc_df, Junction)
 
-        tnjc = CreateTNJCStep(
+        tnjc = CreateTnJcStep(
             jc_df=all_jc,
             ref_tn_end_seqs=ref_tn_end_seqs,
             genome=genome,
@@ -249,8 +249,8 @@ class TestFullPipeline:
             trim_jc_flanking=5,
         ).run()
 
-        # Step 6: Create TNJC2
-        tnjc2 = CreateTNJC2Step(
+        # Step 6: Create TnJc2
+        tnjc2 = CreateTnJc2Step(
             tnjc=tnjc,
             genome=genome,
             output_dir=output_dir,
@@ -258,7 +258,7 @@ class TestFullPipeline:
 
         # Verify output structure
         assert isinstance(tnjc2, RecordTypedDF)
-        assert (output_dir / "TNJC2.csv").exists()
+        assert (output_dir / "TnJc2.csv").exists()
 
         # Check expected columns
         expected_cols = {
@@ -268,4 +268,4 @@ class TestFullPipeline:
         }
         assert expected_cols.issubset(set(tnjc2.df.columns))
 
-        print(f"TNJC2: found {len(tnjc2)} junction pairs")
+        print(f"TnJc2: found {len(tnjc2)} junction pairs")

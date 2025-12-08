@@ -43,14 +43,14 @@ xxx[]  array
         └────────┴─────┬──────┘                    │
                        ▼                           │
              ┌───────────────────┐                 │
-             │ 5. CreateTNJCStep │                 │
+             │ 5. CreateTnJcStep │                 │
              └─────────┬─────────┘                 │
                        ▼                           │
                  TnJunction[]                      │
                        │                           │
                        ▼                           │
              ┌───────────────────┐                 │
-             │ 6. CreateTNJC2Step│                 │
+             │ 6. CreateTnJc2Step│                 │
              └─────────┬─────────┘                 │
                        ▼                           │
                 TnJunctionPair[]                   │
@@ -139,9 +139,9 @@ amplifinder/data/
     ├── breseq/                     # breseq output
     │   └── output/output.gd
     ├── ref_tn_jc.csv               # reference TN junctions
-    ├── TNJC.csv                    # TN-associated junctions
-    ├── TNJC2.csv                   # junction pairs (candidates)
-    └── TNJC2_*/                    # per-candidate analysis (future)
+    ├── TnJc.csv                    # TN-associated junctions
+    ├── TnJc2.csv                   # junction pairs (candidates)
+    └── TnJc2_*/                    # per-candidate analysis (future)
 ```
 
 
@@ -168,8 +168,8 @@ amplifinder/data/
 3. **CreateRefTnJcsStep** — synthetic junctions for ref TN (`create_JC_of_reference_IS.m`)
    **CreateRefTnEndSeqsStep** — TN boundary sequences for matching (`create_IS_end_seqs.m`)
 4. **BreseqStep** — runs breseq on FASTQ + reference (`run_breseq.m`)
-5. **CreateTNJCStep** — matches breseq JC to TN elements (`assign_potential_ISs.m`)
-6. **CreateTNJC2Step** — pairs junctions into candidates (`combine_ISJC_pairs.m`, `calculate_amplicon_length.m`)
+5. **CreateTnJcStep** — matches breseq JC to TN elements (`assign_potential_ISs.m`)
+6. **CreateTnJc2Step** — pairs junctions into candidates (`combine_ISJC_pairs.m`, `calculate_amplicon_length.m`)
 
 
 
@@ -276,7 +276,7 @@ class ClassifiedPair(CoveredPair):  # Step 8 output
     pos_of_paired_single_locus_junction: Tuple[int, int]
 
 class Candidate(ClassifiedPair):    # Step 9 output
-    analysis_directory: str         # "TNJC2_001"
+    analysis_directory: str         # "TnJc2_001"
 
 class JunctionType(int, Enum):
     """The 7 synthetic junction types from junction2fasta.m
@@ -560,9 +560,9 @@ breseq_path / "08_mutation_identification" / f"{ref_name}.coverage.tab"
 output_dir / "run_config.yaml"
 
 # synthetic junctions per candidate
-output_dir / f"TNJC2_{idx:03d}" / "junctions.fasta"
+output_dir / f"TnJc2_{idx:03d}" / "junctions.fasta"
 
 # alignment output per candidate
-output_dir / f"TNJC2_{idx:03d}" / "alignment.sorted.bam"
+output_dir / f"TnJc2_{idx:03d}" / "alignment.sorted.bam"
 ```
 

@@ -1,8 +1,8 @@
-"""Tests for CreateTNJCStep."""
+"""Tests for CreateTnJcStep."""
 
 import pytest
 
-from amplifinder.steps import CreateRefTnJcsStep, CreateRefTnEndSeqsStep, CreateTNJCStep
+from amplifinder.steps import CreateRefTnJcsStep, CreateRefTnEndSeqsStep, CreateTnJcStep
 from amplifinder.data_types import RecordTypedDF, Junction
 
 
@@ -52,8 +52,8 @@ def mock_junctions(locate_tns_step, tmp_output):
 
 @pytest.fixture
 def tnjc_step(mock_junctions, ref_tn_end_seqs, tiny_genome, tmp_output):
-    """Create TNJC step."""
-    return CreateTNJCStep(
+    """Create TnJc step."""
+    return CreateTnJcStep(
         jc_df=mock_junctions,
         ref_tn_end_seqs=ref_tn_end_seqs,
         genome=tiny_genome,
@@ -72,7 +72,7 @@ def test_runs_without_error(tnjc_step):
 
 
 def test_output_has_correct_columns(tnjc_step):
-    """TNJC output should have expected columns."""
+    """TnJc output should have expected columns."""
     tnjc = tnjc_step.run()
 
     expected_cols = {"num", "scaf1", "pos1", "dir1", "scaf2", "pos2", "dir2",

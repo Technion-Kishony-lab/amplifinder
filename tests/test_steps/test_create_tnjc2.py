@@ -1,4 +1,4 @@
-"""Tests for CreateTNJC2Step."""
+"""Tests for CreateTnJc2Step."""
 
 import pytest
 from typing import List
@@ -6,8 +6,8 @@ from typing import List
 from amplifinder.steps import (
     CreateRefTnJcsStep,
     CreateRefTnEndSeqsStep,
-    CreateTNJCStep,
-    CreateTNJC2Step,
+    CreateTnJcStep,
+    CreateTnJc2Step,
 )
 from amplifinder.data_types import RecordTypedDF, TnJunction, TnJunctionPair, Junction, TnMatch, Side, Orientation
 
@@ -36,9 +36,9 @@ def make_tnjc(
 
 
 def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTypedDF[TnJunctionPair]:
-    """Create TNJC2 from junction records."""
+    """Create TnJc2 from junction records."""
     tnjc = RecordTypedDF.from_records(tnjc_records, TnJunction)
-    return CreateTNJC2Step(
+    return CreateTnJc2Step(
         tnjc=tnjc,
         genome=genome,
         output_dir=output_dir,
@@ -47,7 +47,7 @@ def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTyped
 
 @pytest.fixture
 def tnjc(locate_tns_step, tiny_genome, tmp_output):
-    """Create TNJC (TN-associated junctions) from test data."""
+    """Create TnJc (TN-associated junctions) from test data."""
     tn_loc = locate_tns_step.run()
 
     ref_jc = CreateRefTnJcsStep(
@@ -75,7 +75,7 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
     ]
     mock_junctions = RecordTypedDF.from_records(junctions, Junction)
 
-    return CreateTNJCStep(
+    return CreateTnJcStep(
         jc_df=mock_junctions,
         ref_tn_end_seqs=ref_tn_end_seqs,
         genome=tiny_genome,
@@ -87,8 +87,8 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
 
 @pytest.fixture
 def tnjc2_step(tnjc, tiny_genome, tmp_output):
-    """Create TNJC2 step."""
-    return CreateTNJC2Step(
+    """Create TnJc2 step."""
+    return CreateTnJc2Step(
         tnjc=tnjc,
         genome=tiny_genome,
         output_dir=tmp_output,
@@ -104,7 +104,7 @@ def test_runs_without_error(tnjc2_step):
 
 
 def test_output_has_correct_columns(tnjc2_step):
-    """TNJC2 output should have expected columns."""
+    """TnJc2 output should have expected columns."""
     tnjc2 = tnjc2_step.run()
 
     expected_cols = {

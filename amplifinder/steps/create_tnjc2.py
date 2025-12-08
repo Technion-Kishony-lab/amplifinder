@@ -1,4 +1,4 @@
-"""Step: Combine TN junction pairs (TNJC2)."""
+"""Step: Combine TN junction pairs (TnJc2)."""
 
 from pathlib import Path
 from typing import Optional, List, Tuple
@@ -9,7 +9,7 @@ from amplifinder.data_types import RecordTypedDF, TnJunction, TnJunctionPair, Tn
 from amplifinder.data_types.genome import Genome
 
 
-class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
+class CreateTnJc2Step(Step[RecordTypedDF[TnJunctionPair]]):
     """Combine TN junctions into pairs (candidate amplicons).
 
     For each pair of junctions, checks:
@@ -29,7 +29,7 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         """Initialize step.
 
         Args:
-            tnjc: TN-associated junctions from CreateTNJCStep
+            tnjc: TN-associated junctions from CreateTnJcStep
             genome: Reference genome (for circularity and length)
             output_dir: Directory to write output
             force: Force re-run
@@ -38,7 +38,7 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         self.genome = genome
         self.output_dir = Path(output_dir)
 
-        self.output_file = self.output_dir / "TNJC2.csv"
+        self.output_file = self.output_dir / "TnJc2.csv"
 
         super().__init__(
             input_files=[],
@@ -59,7 +59,7 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         else:
             tnjc2 = RecordTypedDF.empty(TnJunctionPair)
 
-        info(f"Found {len(tnjc2)} junction pairs (TNJC2)")
+        info(f"Found {len(tnjc2)} junction pairs (TnJc2)")
         return tnjc2
 
     def _save_output(self, output: RecordTypedDF[TnJunctionPair]) -> None:
@@ -230,5 +230,5 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         return amp, comp
 
     def load_outputs(self) -> RecordTypedDF[TnJunctionPair]:
-        """Load TNJC2 from output file."""
+        """Load TnJc2 from output file."""
         return RecordTypedDF.from_csv(self.output_file, TnJunctionPair)
