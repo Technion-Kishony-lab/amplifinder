@@ -42,6 +42,11 @@ class Pipeline:
         tnjc2 = self._create_tnjc2(tnjc, genome, iso_output)
         return tnjc2
 
+    @property
+    def ref_tn_source(self) -> str:
+        """Get the source of the reference TN data."""
+        return self.config.use_isfinder and "isfinder" or "genbank"
+
     def _initialize(self) -> Path:
         """Step 0: Initialize output directories."""
         return InitializingStep(
@@ -63,11 +68,12 @@ class Pipeline:
         """Step 2: Locate TN elements using GenBank and/or ISfinder."""
         cfg = self.config
 
+        tn_loc_dir = cfg.ref_path / "tn_loc" / genome.name
+
         # 2a: GenBank annotations
         tn_loc_genbank = LocateTNsUsingGenbankStep(
-            genbank_path=genome.genbank_path,
-            ref_name=genome.name,
-            ref_path=cfg.ref_path,
+            genome=genome,
+            output_dir=tn_loc_dir,
         ).run()
 
         if tn_loc_genbank is not None:
@@ -77,9 +83,8 @@ class Pipeline:
 
         # 2b: ISfinder database
         tn_loc_isfinder = LocateTNsUsingISfinderStep(
-            ref_fasta=genome.fasta_path,
-            ref_name=genome.name,
-            ref_path=cfg.ref_path,
+            genome=genome,
+            output_dir=tn_loc_dir,
             isdb_path=cfg.isdb_path or get_builtin_isfinder_db_path(),
             evalue=cfg.isfinder_evalue,
             critical_coverage=cfg.isfinder_critical_coverage,
@@ -106,15 +111,17 @@ class Pipeline:
 
         ref_tn_jc = CreateRefTnJcStep(
             tn_loc=tn_loc,
-            ref_name=genome.name,
+            genome=genome,
             output_dir=iso_output,
+            source=self.ref_tn_source,
             reference_tn_out_span=cfg.reference_IS_out_span,
         ).run()
 
         ref_tn_end_seqs = CreateRefTnEndSeqsStep(
             ref_tn_jc=ref_tn_jc,
             genome=genome,
-            ref_path=cfg.ref_path,
+            output_dir=iso_output,
+            source=self.ref_tn_source,
             max_dist_to_tn=cfg.max_dist_to_IS,
         ).run()
 

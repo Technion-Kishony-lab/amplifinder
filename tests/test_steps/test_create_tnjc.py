@@ -13,28 +13,31 @@ def ref_tn_end_seqs(locate_tns_step, tiny_genome, tmp_output):
 
     ref_jc = CreateRefTnJcStep(
         tn_loc=tn_loc,
-        ref_name="tiny",
+        genome=tiny_genome,
         output_dir=tmp_output,
+        source="isfinder",
         reference_tn_out_span=50,
     ).run()
 
     return CreateRefTnEndSeqsStep(
         ref_tn_jc=ref_jc,
         genome=tiny_genome,
-        ref_path=tmp_output,
+        output_dir=tmp_output,
+        source="isfinder",
         max_dist_to_tn=20,
     ).run()
 
 
 @pytest.fixture
-def mock_junctions(locate_tns_step, tmp_output):
+def mock_junctions(locate_tns_step, tiny_genome, tmp_output):
     """Create mock junctions (using ref TN junctions as input)."""
     tn_loc = locate_tns_step.run()
 
     ref_jc = CreateRefTnJcStep(
         tn_loc=tn_loc,
-        ref_name="tiny",
+        genome=tiny_genome,
         output_dir=tmp_output,
+        source="isfinder",
         reference_tn_out_span=50,
     ).run()
 
