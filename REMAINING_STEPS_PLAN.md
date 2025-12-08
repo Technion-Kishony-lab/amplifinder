@@ -8,112 +8,113 @@ xxx[]  array
 - - -  optional
 (?)    optional
 
-                                 INPUTS
-                 ┌────────────────┬────────────────┐
-                 │                │                │
-            {ref_name}         {FASTQ}         {anc_path}
-                 │                │            (optional)
-                 │                │                │
-                 ▼                │                │
-       ┌───────────────────┐      │                │
-       │ 1. GetReference   │      │                │
-       └─────────┬─────────┘      │                │
-                 ▼                │                │
-              Genome              │                │
-          (FASTA + GBK)           │                │
-                 │                │                │
-        ┌────────┼────────┐       │                │
-        │        │        │       │                │
-        ▼        │        ▼       ▼                │
-┌─────────────┐  │  ┌───────────────────┐          │
-│ 2. LocateTNs│  │  │     4. Breseq     │          │
-└───────┬─────┘  │  └─────────┬─────────┘          │
-        ▼        │            ▼                    │
-     TnLoc[]     │       breseq JC                 │
-        │        │       coverage                  │
-        ▼        │            │                    │
- ┌────────────┐  │            │                    │
- │ 3. RefTnJC │  │            │                    │
- │ + EndSeqs  │  │            │                    │
- └──────┬─────┘  │            │                    │
-        ▼        │            │                    │
- RefTnJunction[] │            │                    │
- TnEndSeq[]      │            │                    │
-        │        │            │                    │
-        └────────┴─────┬──────┘                    │
-                       ▼                           │
-             ┌───────────────────┐                 │
-             │ 5. CreateTnJcStep │                 │
-             └─────────┬─────────┘                 │
-                       ▼                           │
-                 TnJunction[]                      │
-                       │                           │
-                       ▼                           │
-             ┌───────────────────┐                 │
-             │ 6. CreateTnJc2Step│                 │
-             └─────────┬─────────┘                 │
-                       ▼                           │
-                TnJunctionPair[]                   │
-                       │                           │
-                       ▼                           │
-        ┌─────────────────────────────┐            │
-        │ 7. CalcAmpliconCoverageStep │◄- - - - - -┤
-        └──────────────┬──────────────┘    anc     │  
-                       ▼                coverage   │
-                 CoveredPair[]                     │
-                       │                           │ 
-                       ▼                           │
-             ┌───────────────────┐                 │
-             │ 8. ClassifyStruct │                 │
-             └─────────┬─────────┘                 │
-                       ▼                           │
-                ClassifiedPair[] (with `RawEvent`) │
-                       │                           │
-                       ▼                           │
-            ┌─────────────────────┐                │
-            │ 9. FilterCandidates │                │
-            └──────────┬──────────┘                │
-                       ▼                           │
-                  Candidate[]                      │
-                       │                           │
-                       ▼                           │
-             ┌───────────────────┐                 │
-             │10. SyntheticJuncs │                 │
-             └─────────┬─────────┘                 │
-                       ▼                           │
-               junctions.fasta                     │
-        (7 `JunctionType` per candidate)           │
-                       │                           │
-                       ▼                           │
-             ┌───────────────────┐                 │
- {FASTQ} ───►│ 11. AlignReads    │◄- - - - - - - - ┘
-             └─────────┬─────────┘    {anc_FASTQ}
-                       ▼             
-                   iso.bam           
-                   anc.bam(?)          
-                       │             
-                       ▼             
-             ┌───────────────────┐   
-             │12. AnalyzeAligns  │
-             └─────────┬─────────┘
-                       ▼
-              AnalyzedCandidate[]
-                c_cov, anc_jc_cov(?)
-                       │
-                       ▼
-             ┌───────────────────┐
-             │13. ClassifyCands  │
-             └─────────┬─────────┘
-                       ▼
-              AnalyzedCandidate[] (with event: Tuple[RawEvent, List[EventModifier]])
-                       │
-                       ▼
-             ┌───────────────────┐
-             │ 14. Export        │
-             └─────────┬─────────┘
-                       ▼
-                  ISJC2.xlsx
-          candidate_amplifications.xlsx
+                                      INPUTS
+   ┌────────────────────────────────────┬────────────────────────────────────┐
+{FASTQ}                             {ref_name}                           {anc_path}
+   │                                    │                                (optional)
+   │                                    ▼                                    │
+   │                          ┌───────────────────┐                          │
+   │                          │ 1. GetRefGenome   │                          │
+   │                          └─────────┬─────────┘                          │
+   │                                    ▼                                    │
+   │           ┌──────────────────    Genome    ──────────────┐              │
+   │           │                  (FASTA + GBK)               │              │
+   │           │                        │                     │              │
+   │           │                        ▼                     │              │
+   │           │          ┌────────────────────────────┐      │              │
+   │           │          │ 2. LocateTNsUsingGenbank   │      │              │
+   │           │          │    LocateTNsUsingISfinder  │      │              │
+   │           │          └─────────────┬──────────────┘      │              │
+   │           │                        ▼                     │              │
+   │           │                     TnLoc[]                  │              │
+   │           │                        │                     │              │
+   │           │                        ▼                     │              │
+   │           │           ┌────────────────────────┐         │              │
+   │           │           │    3a.CreateRefTnJc    │         │              │
+   │           │           └────────────┬───────────┘         │              │
+   │           │                        ▼                     │              │
+   │           │             ┌── RefTnJunction[]              │              │
+   │           │             │          │                     │              │
+   │           ▼             ▼          ▼                     ▼              │
+   │     ┌───────────┐       │       ┌───────────────────────────┐           │        
+   │────►│ 4. Breseq │       │       │ 3b. CreateRefTnEndSeqs    │           │              
+   │     └─────┬─────┘       │       └──────────────┬────────────┘           │              
+   │           ▼             │                      ▼                        │
+   │        breseq JC        │                  TnEndSeq[]                   │
+   │      + coverage         │                      │                        │
+   │            └─────┬──────┘                      ▼                        │
+   │                  ▼            ┌───────────────────┐                     │
+   │               all Jc ────────►│  5. CreateTnJc    │                     │
+   │                               └─────────┬─────────┘                     │
+   │                                         ▼                               │
+   │                                    TnJunction[]                         │
+   │                                         │                               │
+   │                                         ▼                               │
+   │                               ┌───────────────────┐                     │
+   │                               │  6. CreateTnJc2   │                     │
+   │                               └─────────┬─────────┘                     │
+   │                                         ▼                               │
+   │                                 TnJunctionPair[]                        │
+   │                                         │                               │
+   │                                         ▼                               │
+   │                           ┌─────────────────────────┐                   │
+   │                           │ 7. CalcAmpliconCoverage │◄ - - - - - - - - -┤
+   │                           └────────────┬────────────┘  anc              │  
+   │                                        ▼               coverage         │
+   │                                   CoveredPair[]                         │
+   │                                        │                                │ 
+   │                                        ▼                                │
+   │                             ┌─────────────────────┐                     │
+   │                             │ 8. ClassifyStructure│                     │
+   │                             └──────────┬──────────┘                     │
+   │                                        ▼                                │
+   │                                 ClassifiedPair[] (`RawEvent`)           │
+   │                                        │                                │
+   │                                        ▼                                │
+   │                             ┌─────────────────────┐                     │
+   │                             │ 9. FilterCandidates │                     │
+   │                             └──────────┬──────────┘                     │
+   │                                        ▼                                │
+   │                                    Candidate[]                          │
+   │                                        │                                │
+   │                                        ▼                                │
+   │                         ┌──────────────────────────────┐                │
+   │                         │ 10. CreateSyntheticJunctions │                │
+   │                         └──────────────┬───────────────┘                │
+   │                                        ▼                                │
+   │                                 junctions.fasta                         │
+   │                          (7 `JunctionType` per candidate)               │
+   │                                        │                                │
+   │                                        ▼                                │
+   │                     ┌─────────────────────────────────────┐             │
+   └────────────────────►│ 11. AlignReadsToSyntheticJunctions  │◄- - - - - - ┘
+            {FASTQ}      └──────────────────┬──────────────────┘ {anc_FASTQ}
+                                            ▼             
+                                         iso.bam           
+                                         anc.bam(?)          
+                                            │             
+                                            ▼             
+                                ┌───────────────────────┐   
+                                │ 12. AnalyzeAlignment  │
+                                └────────────┬──────────┘
+                                             ▼
+                                  AnalyzedCandidate[] (left/right/spanning, `JunctionCoverage`)
+                                  c_cov, anc_jc_cov(?)
+                                             │
+                                             ▼
+                                ┌────────────────────────┐
+                                │ 13. ClassifyCandidates │
+                                └────────────┬───────────┘
+                                             ▼
+                                    AnalyzedCandidate[] (RawEvent + EventModifiers)
+                                             │
+                                             ▼
+                                   ┌───────────────────┐
+                                   │ 14. Export        │
+                                   └─────────┬─────────┘
+                                             ▼
+                                        ISJC2.xlsx
+                                        candidate_amplifications.xlsx
 ```
 
 ## Folder Structure
@@ -423,7 +424,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 - Tests: `test_tools/test_bowtie2.py` (skip if bowtie2 not found)
 - Commit: "Add bowtie2 wrapper"
 
-### 7. AlignReadsStep (Step 11)
+### 7. AlignReadsToSyntheticJunctionsStep (Step 11)
 - Module: `steps/align_reads.py`
 - MATLAB: `bowtie2_alignment.m`, `run_samtools_line.m`
 - Input: `Candidate` + FASTQ → Output: `Candidate`
@@ -432,7 +433,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
   - Align this sample's reads to synthetic junctions
   - If `anc_path` set: also align ancestor reads (from saved config)
 - Tests: `test_steps/test_align_reads.py`
-- Commit: "Implement AlignReadsStep"
+- Commit: "Implement AlignReadsToSyntheticJunctionsStep"
 
 ### 8. BAM Parser (utility)
 - Module: `utils/bam.py`
@@ -456,7 +457,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 - MATLAB: `bamAnalysis.m`, `count_reads.m`
 - Input: `Candidate` with BAM → Output: `AnalyzedCandidate`
 - File output: None (memory only)
-- Logic: Parse BAM, count green/left/right reads per junction (1-7)
+- Logic: Parse BAM, count spanning/left/right reads per junction (1-7)
 - Tests: `test_steps/test_analyze_alignments.py`
 - Commit: "Implement AnalyzeAlignmentsStep"
 
