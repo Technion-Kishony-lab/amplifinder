@@ -1,4 +1,4 @@
-"""Step: Match junctions to TN elements (TNJC)."""
+"""Step: Match junctions to TN elements (TnJc)."""
 
 from pathlib import Path
 from typing import Optional, List
@@ -11,12 +11,12 @@ from amplifinder.data_types import RecordTypedDF, Junction, TnEndSeq, TnMatch, T
 from amplifinder.data_types.genome import Genome
 
 
-class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
+class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
     """Match junctions to TN elements by sequence comparison.
 
     For each junction, extracts flanking sequences and compares them to
     precomputed TN end sequences. Junctions matching a TN end are marked
-    as TN-associated (TNJC).
+    as TN-associated (TnJc).
 
     Based on assign_potential_ISs.m
     """
@@ -49,7 +49,7 @@ class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
         self.max_dist_to_tn = max_dist_to_tn
         self.trim_jc_flanking = trim_jc_flanking
 
-        self.output_file = self.output_dir / "TNJC.csv"
+        self.output_file = self.output_dir / "TnJc.csv"
 
         super().__init__(
             input_files=[p for p in [genome.genbank_path, genome.fasta_path] if p],
@@ -93,7 +93,7 @@ class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
         tnjc = RecordTypedDF.from_records(tnjc_records, TnJunction)
         tnjc = tnjc.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
 
-        info(f"Found {len(tnjc)} TN-associated junctions (TNJC)")
+        info(f"Found {len(tnjc)} TN-associated junctions (TnJc)")
         return tnjc
 
     def _save_output(self, output: RecordTypedDF[TnJunction]) -> None:
@@ -153,5 +153,5 @@ class CreateTNJCStep(Step[RecordTypedDF[TnJunction]]):
         return matches
 
     def load_outputs(self) -> RecordTypedDF[TnJunction]:
-        """Load TNJC from output file."""
+        """Load TnJc from output file."""
         return RecordTypedDF.from_csv(self.output_file, TnJunction)
