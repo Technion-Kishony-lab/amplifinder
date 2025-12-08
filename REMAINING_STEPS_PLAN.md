@@ -54,28 +54,28 @@ xxx[]  array
    │                               │  6. CreateTnJc2   │                     │
    │                               └─────────┬─────────┘                     │
    │                                         ▼                               │
-   │                                 TnJc2[]                        │
+   │                                      TnJc2[]                            │
    │                                         │                               │
    │                                         ▼                               │
    │                           ┌─────────────────────────┐                   │
    │                           │ 7. CalcAmpliconCoverage │◄ - - - - - - - - -┤
    │                           └────────────┬────────────┘  anc              │  
    │                                        ▼               coverage         │
-   │                                   CoveredPair[]                         │
+   │                                   CoveredTnJc2[]                         │
    │                                        │                                │ 
    │                                        ▼                                │
    │                             ┌─────────────────────┐                     │
    │                             │ 8. ClassifyStructure│                     │
    │                             └──────────┬──────────┘                     │
    │                                        ▼                                │
-   │                                 ClassifiedPair[] (`RawEvent`)           │
+   │                                 ClassifiedTnJc2[] (`RawEvent`)           │
    │                                        │                                │
    │                                        ▼                                │
    │                             ┌─────────────────────┐                     │
    │                             │ 9. FilterCandidates │                     │
    │                             └──────────┬──────────┘                     │
    │                                        ▼                                │
-   │                                    Candidate[]                          │
+   │                                    CandidateTnJc2[]                          │
    │                                        │                                │
    │                                        ▼                                │
    │                         ┌──────────────────────────────┐                │
@@ -95,10 +95,10 @@ xxx[]  array
                                             │             
                                             ▼             
                                 ┌───────────────────────┐   
-                                │ 12. AnalyzeAlignment  │
+                                │ 12. AnalyzeAlignments │
                                 └────────────┬──────────┘
                                              ▼
-                                  AnalyzedCandidate[] (left/right/spanning, `JunctionCoverage`)
+                                  AnalyzedCandidateTnJc2[] (left/right/spanning, `JunctionCoverage`)
                                   c_cov, anc_jc_cov(?)
                                              │
                                              ▼
@@ -106,7 +106,7 @@ xxx[]  array
                                 │ 13. ClassifyCandidates │
                                 └────────────┬───────────┘
                                              ▼
-                                    AnalyzedCandidate[] (RawEvent + EventModifiers)
+                                    AnalyzedCandidateTnJc2[] (RawEvent + EventModifiers)
                                              │
                                              ▼
                                    ┌───────────────────┐
@@ -241,9 +241,9 @@ class TnJc2(Record):       # Step 6 output (existing)
     # NOTE: Remove these optional fields from TnJc2:
     #   amplicon_coverage: Optional[float] = None
     #   copy_number_mode: Optional[float] = None
-    # They belong in CoveredPair
+    # They belong in CoveredTnJc2
 
-class CoveredPair(TnJc2):  # Step 7 output
+class CoveredTnJc2(TnJc2):  # Step 7 output
     # This sample's coverage stats (normalized by genome median coverage)
     amplicon_coverage_median: float   # median coverage in amplicon region
     amplicon_coverage_mode: float     # mode coverage in amplicon region
@@ -270,14 +270,14 @@ class EventModifier(str, Enum):
     DE_NOVO = "de novo"
     LOW_COVERAGE = "low coverage near junction"
 
-class ClassifiedPair(CoveredPair):  # Step 8 output
+class ClassifiedTnJc2(CoveredTnJc2):  # Step 8 output
     raw_event: RawEvent
     shared_IS: List[int]
     chosen_IS: int
     pos_of_paired_single_locus_junction: Tuple[int, int]
 
-class Candidate(ClassifiedPair):    # Step 9 output
-    analysis_directory: str         # "TnJc2_001"
+class CandidateTnJc2(ClassifiedTnJc2):    # Step 9 output
+    analysis_directory: str          # "TnJc2_001"
 
 class JunctionType(int, Enum):
     """The 7 synthetic junction types from junction2fasta.m
@@ -298,7 +298,7 @@ class JunctionCoverage(NamedTuple):
     left: int      # reads ending at junction
     right: int     # reads starting at junction
 
-class AnalyzedCandidate(Candidate): # Step 12-13 output
+class AnalyzedCandidateTnJc2(CandidateTnJc2): # Step 12-13 output
     # Each list has 7 elements pf JunctionCoverage, one per JunctionType (1-7)
     jc_cov: List[JunctionCoverage]                    # THIS sample's coverage (always)
     anc_jc_cov: Optional[List[JunctionCoverage]]      # ancestor's coverage (only when iso run)
@@ -318,7 +318,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 - Module: `data_types/record_types.py`
 - Changes:
   - Remove `amplicon_coverage` and `copy_number_mode` from `TnJc2`
-  - Add: `CoveredPair`, `ClassifiedPair`, `Candidate`, `AnalyzedCandidate`
+  - Add: `CoveredTnJc2`, `ClassifiedTnJc2`, `CandidateTnJc2`, `AnalyzedCandidateTnJc2`
   - Add: `RawEvent`, `EventModifier`, `JunctionType`, `JunctionCoverage` enums
 - Module: `utils/run_config.py`
   - Add: `save_run_config()`, `load_run_config()`
@@ -360,7 +360,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 2. CalcAmpliconCoverageStep (Step 7)
 - Module: `steps/calc_coverage.py`
 - MATLAB: `calc_coverage_ISJC2.m`
-- Input: `TnJc2` → Output: `CoveredPair`
+- Input: `TnJc2` → Output: `CoveredTnJc2`
 - File output: None (memory only)
 - Logic:
   - Get coverage in amplicon region from breseq coverage files
@@ -372,7 +372,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 3. ClassifyStructureStep (Step 8)
 - Module: `steps/classify_structure.py`
 - MATLAB: `classify_ISJC2.m`, `directed_IS.m`
-- Input: `CoveredPair` → Output: `ClassifiedPair`
+- Input: `CoveredTnJc2` → Output: `ClassifiedTnJc2`
 - File output: None (memory only)
 - Logic: Classify as transposition/reference/unflanked/hemi-flanked/flanked
 - Tests: `test_steps/test_classify_structure.py`
@@ -381,7 +381,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 4. FilterCandidatesStep (Step 9)
 - Module: `steps/filter_candidates.py`
 - MATLAB: filtering logic in `curate_candidate_amplicons.m`
-- Input: `ClassifiedPair` → Output: `Candidate`
+- Input: `ClassifiedTnJc2` → Output: `CandidateTnJc2`
 - File output: None (memory only)
 - Logic: Filter by `MIN_AMPLICON_LENGTH < amplicon_length < MAX_AMPLICON_LENGTH`
 - Tests: `test_steps/test_filter_candidates.py`
@@ -390,8 +390,8 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 5. CreateSyntheticJunctionsStep (Step 10)
 - Module: `steps/synthetic_junctions.py`
 - MATLAB: `junction2fasta.m`
-- Input: `List[Candidate]`, genome sequences, TnLoc
-- Output: `List[Candidate]` (unchanged, side effect: creates files)
+- Input: `List[CandidateTnJc2]`, genome sequences, TnLoc
+- Output: `List[CandidateTnJc2]` (unchanged, side effect: creates files)
 - File output per candidate: `{analysis_dir}/junctions.fasta` (7 synthetic junctions)
 - Logic: Create junction sequences for all expected architectural variations
 - Tests: `test_steps/test_synthetic_junctions.py`
@@ -427,7 +427,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 7. AlignReadsToSyntheticJunctionsStep (Step 11)
 - Module: `steps/align_reads.py`
 - MATLAB: `bowtie2_alignment.m`, `run_samtools_line.m`
-- Input: `Candidate` + FASTQ → Output: `Candidate`
+- Input: `CandidateTnJc2` + FASTQ + optional anc_FASTQ → Output: `CandidateTnJc2`
 - File output: `{analysis_dir}/alignment/alignment.sorted.bam`
 - Logic:
   - Align this sample's reads to synthetic junctions
@@ -455,7 +455,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 9. AnalyzeAlignmentsStep (Step 12)
 - Module: `steps/analyze_alignments.py`
 - MATLAB: `bamAnalysis.m`, `count_reads.m`
-- Input: `Candidate` with BAM → Output: `AnalyzedCandidate`
+- Input: `CandidateTnJc2` with BAM → Output: `AnalyzedCandidateTnJc2`
 - File output: None (memory only)
 - Logic: Parse BAM, count spanning/left/right reads per junction (1-7)
 - Tests: `test_steps/test_analyze_alignments.py`
@@ -464,7 +464,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 10. ClassifyCandidatesStep (Step 13)
 - Module: `steps/classify_candidates.py`
 - MATLAB: `classify_candidates.m`
-- Input: `AnalyzedCandidate` → Output: `AnalyzedCandidate`
+- Input: `AnalyzedCandidateTnJc2` → Output: `AnalyzedCandidateTnJc2`
 - File output: None (memory only)
 - Logic: Match junction read patterns to expected architectures
 - Tests: `test_steps/test_classify_candidates.py`
@@ -473,7 +473,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 11. ExportStep (Step 14)
 - Module: `steps/export.py`
 - MATLAB: `export_ISJC2.m`
-- Input: `AnalyzedCandidate`
+- Input: `AnalyzedCandidateTnJc2`
 - File output: `ISJC2.xlsx`, `candidate_amplifications.xlsx`
 - Logic: Format and export, filter by copy number thresholds
 - Tests: `test_steps/test_export.py`
