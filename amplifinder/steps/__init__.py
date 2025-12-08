@@ -2,7 +2,7 @@
 
 from amplifinder.steps.base import Step
 from amplifinder.steps.initialize import InitializingStep
-from amplifinder.steps.get_reference import GetReferenceStep
+from amplifinder.steps.get_reference import GetRefGenomeStep
 from amplifinder.steps.locate_tns_genbank import LocateTNsUsingGenbankStep
 from amplifinder.steps.locate_tns_isfinder import LocateTNsUsingISfinderStep
 from amplifinder.steps.run_breseq import BreseqStep
@@ -16,7 +16,7 @@ ISfinderStep = LocateTNsUsingISfinderStep
 __all__ = [
     "Step",
     "InitializingStep",
-    "GetReferenceStep",
+    "GetRefGenomeStep",
     "LocateTNsUsingGenbankStep",
     "LocateTNsUsingISfinderStep",
     "ISfinderStep",  # deprecated alias

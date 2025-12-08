@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from amplifinder.steps import (
-    GetReferenceStep,
+    GetRefGenomeStep,
     LocateTNsUsingGenbankStep,
     LocateTNsUsingISfinderStep,
     CreateRefTnJcsStep,
@@ -29,7 +29,7 @@ class TestGetReference:
         ref_path = tmp_path / "genomesDB"
         ref_path.mkdir()
 
-        step = GetReferenceStep(
+        step = GetRefGenomeStep(
             ref_name="U00096",
             ref_path=ref_path,
             ncbi=True,
@@ -55,7 +55,7 @@ class TestLocateTNs:
         ref_path = tmp_path / "genomesDB"
         ref_path.mkdir()
 
-        step = GetReferenceStep(
+        step = GetRefGenomeStep(
             ref_name="U00096",
             ref_path=ref_path,
             ncbi=True,
@@ -201,7 +201,7 @@ class TestFullPipeline:
         output_dir.mkdir()
 
         # Step 1: Get reference
-        genome = GetReferenceStep(
+        genome = GetRefGenomeStep(
             ref_name="U00096",
             ref_path=ref_path,
             ncbi=True,
