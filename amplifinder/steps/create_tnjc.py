@@ -6,6 +6,7 @@ from typing import Optional, List
 from Bio.Seq import Seq
 
 from amplifinder.steps.base import Step
+from amplifinder.steps.io_naming import default_path
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDF, Junction, TnEndSeq, TnMatch, TnJunction, Orientation
 from amplifinder.data_types.genome import Genome
@@ -49,7 +50,7 @@ class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
         self.max_dist_to_tn = max_dist_to_tn
         self.trim_jc_flanking = trim_jc_flanking
 
-        self.output_file = self.output_dir / "TnJc.csv"
+        self.output_file = default_path(self.output_dir, TnJunction)
 
         super().__init__(
             input_files=[p for p in [genome.genbank_path, genome.fasta_path] if p],

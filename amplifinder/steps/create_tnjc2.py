@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 
 from amplifinder.steps.base import Step
+from amplifinder.steps.io_naming import default_path
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDF, TnJunction, TnJc2, TnMatch, Side, Orientation
 from amplifinder.data_types.genome import Genome
@@ -38,7 +39,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
         self.genome = genome
         self.output_dir = Path(output_dir)
 
-        self.output_file = self.output_dir / "TnJc2.csv"
+        self.output_file = default_path(self.output_dir, TnJc2)
 
         super().__init__(
             input_files=[],

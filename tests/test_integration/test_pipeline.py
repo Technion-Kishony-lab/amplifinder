@@ -259,7 +259,7 @@ class TestFullPipeline:
 
         # Verify output structure
         assert isinstance(tnjc2, RecordTypedDF)
-        assert (output_dir / "TnJc2.csv").exists()
+        assert (output_dir / "tn_jc2.csv").exists()
 
         # Check expected columns
         expected_cols = {
