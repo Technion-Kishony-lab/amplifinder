@@ -16,7 +16,7 @@ from amplifinder.steps import (
     LocateTNsUsingISfinderStep,
     LocateTNsUsingGenbankStep,
     BreseqStep,
-    CreateReferenceTnJunctionsStep,
+    CreateRefTnJcsStep,
     CreateRefTnEndSeqsStep,
     CreateTNJCStep,
     CreateTNJC2Step,
@@ -104,7 +104,7 @@ class Pipeline:
         """Step 3: Create reference junctions and TN end sequences."""
         cfg = self.config
 
-        ref_tn_jc = CreateReferenceTnJunctionsStep(
+        ref_tn_jc = CreateRefTnJcsStep(
             tn_loc=tn_loc,
             ref_name=genome.name,
             output_dir=iso_output,

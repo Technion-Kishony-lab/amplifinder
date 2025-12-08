@@ -7,7 +7,7 @@ from amplifinder.steps import (
     GetReferenceStep,
     LocateTNsUsingGenbankStep,
     LocateTNsUsingISfinderStep,
-    CreateReferenceTnJunctionsStep,
+    CreateRefTnJcsStep,
     CreateRefTnEndSeqsStep,
     CreateTNJCStep,
     CreateTNJC2Step,
@@ -217,7 +217,7 @@ class TestFullPipeline:
         assert tn_loc is not None and len(tn_loc) > 0
 
         # Step 3: Create reference TN junctions
-        ref_tn_jc = CreateReferenceTnJunctionsStep(
+        ref_tn_jc = CreateRefTnJcsStep(
             tn_loc=tn_loc,
             ref_name=genome.name,
             output_dir=output_dir,

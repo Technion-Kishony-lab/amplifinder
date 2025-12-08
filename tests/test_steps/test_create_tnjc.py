@@ -2,7 +2,7 @@
 
 import pytest
 
-from amplifinder.steps import CreateReferenceTnJunctionsStep, CreateRefTnEndSeqsStep, CreateTNJCStep
+from amplifinder.steps import CreateRefTnJcsStep, CreateRefTnEndSeqsStep, CreateTNJCStep
 from amplifinder.data_types import RecordTypedDF, Junction
 
 
@@ -11,7 +11,7 @@ def ref_tn_end_seqs(locate_tns_step, tiny_genome, tmp_output):
     """Create TN end sequences."""
     tn_loc = locate_tns_step.run()
 
-    ref_jc = CreateReferenceTnJunctionsStep(
+    ref_jc = CreateRefTnJcsStep(
         tn_loc=tn_loc,
         ref_name="tiny",
         output_dir=tmp_output,
@@ -31,7 +31,7 @@ def mock_junctions(locate_tns_step, tmp_output):
     """Create mock junctions (using ref TN junctions as input)."""
     tn_loc = locate_tns_step.run()
 
-    ref_jc = CreateReferenceTnJunctionsStep(
+    ref_jc = CreateRefTnJcsStep(
         tn_loc=tn_loc,
         ref_name="tiny",
         output_dir=tmp_output,
