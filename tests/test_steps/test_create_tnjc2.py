@@ -9,7 +9,7 @@ from amplifinder.steps import (
     CreateTnJcStep,
     CreateTnJc2Step,
 )
-from amplifinder.data_types import RecordTypedDF, TnJunction, TnJunctionPair, Junction, TnMatch, Side, Orientation
+from amplifinder.data_types import RecordTypedDF, TnJunction, TnJc2, Junction, TnMatch, Side, Orientation
 
 
 # =============================================================================
@@ -35,7 +35,7 @@ def make_tnjc(
     )
 
 
-def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTypedDF[TnJunctionPair]:
+def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTypedDF[TnJc2]:
     """Create TnJc2 from junction records."""
     tnjc = RecordTypedDF.from_records(tnjc_records, TnJunction)
     return CreateTnJc2Step(

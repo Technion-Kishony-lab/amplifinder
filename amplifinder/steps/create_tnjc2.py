@@ -5,11 +5,11 @@ from typing import Optional, List, Tuple
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, TnJunction, TnJunctionPair, TnMatch, Side, Orientation
+from amplifinder.data_types import RecordTypedDF, TnJunction, TnJc2, TnMatch, Side, Orientation
 from amplifinder.data_types.genome import Genome
 
 
-class CreateTnJc2Step(Step[RecordTypedDF[TnJunctionPair]]):
+class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
     """Combine TN junctions into pairs (candidate amplicons).
 
     For each pair of junctions, checks:
@@ -46,7 +46,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJunctionPair]]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDF[TnJunctionPair]:
+    def _calculate_output(self) -> RecordTypedDF[TnJc2]:
         """Combine junction pairs."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -55,17 +55,17 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJunctionPair]]):
         pairs = self._pair_junctions(junctions)
 
         if pairs:
-            tnjc2 = RecordTypedDF.from_records(pairs, TnJunctionPair)
+            tnjc2 = RecordTypedDF.from_records(pairs, TnJc2)
         else:
-            tnjc2 = RecordTypedDF.empty(TnJunctionPair)
+            tnjc2 = RecordTypedDF.empty(TnJc2)
 
         info(f"Found {len(tnjc2)} junction pairs (TnJc2)")
         return tnjc2
 
-    def _save_output(self, output: RecordTypedDF[TnJunctionPair]) -> None:
+    def _save_output(self, output: RecordTypedDF[TnJc2]) -> None:
         output.to_csv(self.output_file)
 
-    def _pair_junctions(self, junctions: List[TnJunction]) -> List[TnJunctionPair]:
+    def _pair_junctions(self, junctions: List[TnJunction]) -> List[TnJc2]:
         """Find all valid junction pairs.
 
         Based on MATLAB combine_ISJC_pairs.m
@@ -132,7 +132,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJunctionPair]]):
         jc_i: TnJunction,
         jc_j: TnJunction,
         matching: List[Tuple[int, Orientation]],
-    ) -> TnJunctionPair:
+    ) -> TnJc2:
         """Create a junction pair record.
 
         Normalizes so that L (left) junction has lower chromosome position.
@@ -168,7 +168,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJunctionPair]]):
             jc_L.pos2, jc_R.pos2, jc_L.scaf2, span_origin
         )
 
-        return TnJunctionPair(
+        return TnJc2(
             jc_num_L=jc_L.num,
             jc_num_R=jc_R.num,
             scaf_chr=jc_L.scaf2,
@@ -229,6 +229,6 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJunctionPair]]):
         comp = int(complementary_length) if complementary_length != float("inf") else -1
         return amp, comp
 
-    def load_outputs(self) -> RecordTypedDF[TnJunctionPair]:
+    def load_outputs(self) -> RecordTypedDF[TnJc2]:
         """Load TnJc2 from output file."""
-        return RecordTypedDF.from_csv(self.output_file, TnJunctionPair)
+        return RecordTypedDF.from_csv(self.output_file, TnJc2)
