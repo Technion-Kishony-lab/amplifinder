@@ -165,7 +165,7 @@ amplifinder/data/
 1. **GetRefGenomeStep** — downloads genome FASTA/GBK (`get_reference.m`, `efetch_genbank.m`)
 2. **LocateTNsUsingGenbankStep** — finds TN from GenBank annotations (`findISinRef.m`)
    **LocateTNsUsingISfinderStep** — finds TN via BLAST to ISfinder DB (`ISfinder.m`)
-3. **CreateRefTnJcsStep** — synthetic junctions for ref TN (`create_JC_of_reference_IS.m`)
+3. **CreateRefTnJcStep** — synthetic junctions for ref TN (`create_JC_of_reference_IS.m`)
    **CreateRefTnEndSeqsStep** — TN boundary sequences for matching (`create_IS_end_seqs.m`)
 4. **BreseqStep** — runs breseq on FASTQ + reference (`run_breseq.m`)
 5. **CreateTnJcStep** — matches breseq JC to TN elements (`assign_potential_ISs.m`)
