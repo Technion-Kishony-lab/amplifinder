@@ -162,7 +162,7 @@ amplifinder/data/
 ### Implemented Steps (0-6)
 
 0. **InitializingStep** — creates output directory (`makeDirs.m`)
-1. **GetReferenceStep** — downloads genome FASTA/GBK (`get_reference.m`, `efetch_genbank.m`)
+1. **GetRefGenomeStep** — downloads genome FASTA/GBK (`get_reference.m`, `efetch_genbank.m`)
 2. **LocateTNsUsingGenbankStep** — finds TN from GenBank annotations (`findISinRef.m`)
    **LocateTNsUsingISfinderStep** — finds TN via BLAST to ISfinder DB (`ISfinder.m`)
 3. **CreateRefTnJcsStep** — synthetic junctions for ref TN (`create_JC_of_reference_IS.m`)

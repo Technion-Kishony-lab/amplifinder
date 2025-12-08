@@ -20,7 +20,7 @@ amplifinder/
 │   ├── __init__.py
 │   ├── base.py              # Step base class (caching, I/O tracking)
 │   ├── initialize.py        # InitStep - directory setup
-│   ├── get_reference.py     # GetReferenceStep - fetch genome
+│   ├── get_reference.py     # GetRefGenomeStep - fetch genome
 │   ├── isfinder.py          # ISfinderStep - BLAST vs ISfinder DB
 │   └── run_breseq.py        # RunBreseqStep - breseq execution
 │
@@ -155,7 +155,7 @@ class ISJC2:
 |------|-----------------|---------------|
 | 1. Parse args | `parse_AmpliFinder_arguments` | `cli.main()` |
 | 2. Init dirs | - | `steps.InitStep` |
-| 3. Get reference | `curate_reference` | `steps.GetReferenceStep` |
+| 3. Get reference | `curate_reference` | `steps.GetRefGenomeStep` |
 | 4. Find IS in ref | `findISinRef` | `steps.ISfinderStep` |
 | 5. Run breseq | `run_breseq` | `steps.RunBreseqStep` → `tools.breseq.run_breseq()` |
 | 6. Parse breseq | `breseq2mat` | `tools.breseq.parse_breseq_output()` |

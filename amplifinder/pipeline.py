@@ -12,7 +12,7 @@ from amplifinder.data_types import (
 from amplifinder.logger import info
 from amplifinder.steps import (
     InitializingStep,
-    GetReferenceStep,
+    GetRefGenomeStep,
     LocateTNsUsingISfinderStep,
     LocateTNsUsingGenbankStep,
     BreseqStep,
@@ -51,7 +51,7 @@ class Pipeline:
 
     def _load_reference(self) -> Genome:
         """Step 1: Get reference genome."""
-        genome = GetReferenceStep(
+        genome = GetRefGenomeStep(
             ref_name=self.config.ref_name,
             ref_path=self.config.ref_path,
             ncbi=self.config.ncbi,
