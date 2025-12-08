@@ -64,10 +64,10 @@ class TestLocateTNs:
 
     def test_locate_tns_genbank(self, tmp_path, u00096_genome, isolate_srr25242877):
         """Locate TN elements from GenBank annotations."""
+        output_dir = tmp_path / "tn_loc" / u00096_genome.name
         step = LocateTNsUsingGenbankStep(
-            genbank_path=u00096_genome.genbank_path,
-            ref_name=u00096_genome.name,
-            ref_path=tmp_path,
+            genome=u00096_genome,
+            output_dir=output_dir,
         )
         tn_loc = step.run()
 
@@ -84,10 +84,10 @@ class TestLocateTNs:
         """Locate TN elements using ISfinder database."""
         from amplifinder.data import get_builtin_isfinder_db_path
 
+        output_dir = tmp_path / "tn_loc" / u00096_genome.name
         step = LocateTNsUsingISfinderStep(
-            ref_fasta=u00096_genome.fasta_path,
-            ref_name=u00096_genome.name,
-            ref_path=tmp_path,
+            genome=u00096_genome,
+            output_dir=output_dir,
             isdb_path=get_builtin_isfinder_db_path(),
             evalue=1e-4,
             critical_coverage=0.9,
@@ -209,9 +209,8 @@ class TestFullPipeline:
 
         # Step 2: Locate TNs
         tn_loc = LocateTNsUsingGenbankStep(
-            genbank_path=genome.genbank_path,
-            ref_name=genome.name,
-            ref_path=ref_path,
+            genome=genome,
+            output_dir=ref_path / "tn_loc" / genome.name,
         ).run()
 
         assert tn_loc is not None and len(tn_loc) > 0
@@ -219,15 +218,17 @@ class TestFullPipeline:
         # Step 3: Create reference TN junctions
         ref_tn_jc = CreateRefTnJcStep(
             tn_loc=tn_loc,
-            ref_name=genome.name,
+            genome=genome,
             output_dir=output_dir,
+            source="isfinder",
             reference_tn_out_span=50,
         ).run()
 
         ref_tn_end_seqs = CreateRefTnEndSeqsStep(
             ref_tn_jc=ref_tn_jc,
             genome=genome,
-            ref_path=ref_path,
+            output_dir=ref_path / "tn_loc" / genome.name,
+            source="isfinder",
             max_dist_to_tn=200,
         ).run()
 

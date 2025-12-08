@@ -125,16 +125,35 @@ amplifinder/data/
 ├── ISfinderDB/IS.fna               # ISfinder sequences
 └── breseq_fields/*.csv             # breseq output schemas
 
-# Reference cache (--ref-path, default: output/reference/)
+# Reference cache (--ref-path, default: genomesDB/)
+#
+# Naming convention:
+#   {accession} = user-provided NCBI accession (e.g., CP000000)
+#   {locus}     = actual genome locus name from NCBI GenBank file (e.g., NC_000000)
+#
+#   {accession}.json contains: {"accession": "CP000000", "name": "NC_000000"}
+#   This mapping allows lookup by accession to find locus-named files
+#
 {ref_path}/
-├── {ref_name}.fasta                # genome sequence
-├── {ref_name}.gbk                  # GenBank annotations
-├── {ref_name}.json                 # genome metadata
-├── {ref_name}_TN_end_seqs.csv      # TN boundary sequences
-├── genbank/{ref_name}_tn_loc.csv   # TN from GenBank
-└── isfinder/{ref_name}_tn_loc.csv  # TN from ISfinder
+│
+│ # NCBI downloads (GetRefGenomeStep)
+├── {accession}.json                # mapping: accession → locus name
+├── fasta/{locus}.fasta             # genome sequence
+├── genbank/{locus}.gb              # GenBank file
+│
+│ # TN location processing (LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep)
+│ # and TN end sequences (CreateRefTnJcStep, CreateRefTnEndSeqsStep)
+└── tn_loc/{locus}/
+    ├── genbank_tn_loc.csv        # TN parsed from GenBank annotations (always)
+    ├── isfinder_blast.txt        # BLAST output (always)
+    ├── isfinder_tn_loc.csv       # TN parsed from BLAST results (always)
+    ├── genbank_ref_tn_jc.csv     # reference TN junctions (selected source only)
+    ├── genbank_tn_end_seqs.csv   # TN boundary sequences (selected source only)
+    ├── isfinder_ref_tn_jc.csv    # reference TN junctions (selected source only)
+    └── isfinder_tn_end_seqs.csv  # TN boundary sequences (selected source only)
 
-# Run output (--output)
+
+# Run output (--output, default: output/)
 {output}/
 └── {iso_name}/
     ├── breseq/                     # breseq output

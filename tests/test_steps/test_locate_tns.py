@@ -15,21 +15,20 @@ skip_no_blast = pytest.mark.skipif(not RUN_BLAST_TESTS, reason="BLAST tests disa
     pytest.param("genbank", marks=[]),
     pytest.param("isfinder", marks=[skip_no_blast]),
 ])
-def step_factory(request, tmp_output, tiny_ref_gbk, tiny_ref_fasta, tiny_tn_db):
+def step_factory(request, tmp_output, tiny_genome, tiny_tn_db):
     """Factory to create TN location steps - parametrized for both backends."""
+    output_dir = tmp_output / "tn_loc" / tiny_genome.name
     def make_step(force=False):
         if request.param == "genbank":
             return LocateTNsUsingGenbankStep(
-                genbank_path=tiny_ref_gbk,
-                ref_name="tiny",
-                ref_path=tmp_output,
+                genome=tiny_genome,
+                output_dir=output_dir,
                 force=force,
             )
         else:
             return LocateTNsUsingISfinderStep(
-                ref_fasta=tiny_ref_fasta,
-                ref_name="tiny",
-                ref_path=tmp_output,
+                genome=tiny_genome,
+                output_dir=output_dir,
                 isdb_path=tiny_tn_db,
                 evalue=1e-4,
                 critical_coverage=0.9,

@@ -7,13 +7,14 @@ from amplifinder.data_types import RecordTypedDF, Side
 
 
 @pytest.fixture
-def ref_jc_step(locate_tns_step, tmp_output):
+def ref_jc_step(locate_tns_step, tiny_genome, tmp_output):
     """Create reference junctions step."""
     tn_loc = locate_tns_step.run()
     return CreateRefTnJcStep(
         tn_loc=tn_loc,
-        ref_name="tiny",
+        genome=tiny_genome,
         output_dir=tmp_output,
+        source="isfinder",
         reference_tn_out_span=50,
     )
 
@@ -57,7 +58,8 @@ def end_seqs_step(ref_jc_step, tiny_genome, tmp_output):
     return CreateRefTnEndSeqsStep(
         ref_tn_jc=ref_jc,
         genome=tiny_genome,
-        ref_path=tmp_output,
+        output_dir=tmp_output,
+        source="isfinder",
         max_dist_to_tn=20,
     )
 
