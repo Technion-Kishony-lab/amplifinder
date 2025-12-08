@@ -10,8 +10,8 @@ xxx[]  array
 
                                       INPUTS
    ┌────────────────────────────────────┬────────────────────────────────────┐
-{FASTQ}                             {ref_name}                           {anc_path}
-   │                                    │                                (optional)
+{FASTQ}                             {ref_name}                          {anc_path}
+   │                                    │                               (optional)
    │                                    ▼                                    │
    │                          ┌───────────────────┐                          │
    │                          │ 1. GetRefGenome   │                          │
@@ -22,8 +22,8 @@ xxx[]  array
    │           │                        │                     │              │
    │           │                        ▼                     │              │
    │           │          ┌────────────────────────────┐      │              │
-   │           │          │ 2. LocateTNsUsingGenbank   │      │              │
-   │           │          │    LocateTNsUsingISfinder  │      │              │
+   │           │          │ 2a. LocateTNsUsingGenbank  │      │              │
+   │           │          │ 2b. LocateTNsUsingISfinder │      │              │
    │           │          └─────────────┬──────────────┘      │              │
    │           │                        ▼                     │              │
    │           │                     TnLoc[]                  │              │
@@ -35,13 +35,13 @@ xxx[]  array
    │           │                        ▼                     │              │
    │           │             ┌── RefTnJunction[]              │              │
    │           │             │          │                     │              │
-   │           ▼             ▼          ▼                     ▼              │
-   │     ┌───────────┐       │       ┌───────────────────────────┐           │        
-   │────►│ 4. Breseq │       │       │ 3b. CreateRefTnEndSeqs    │           │              
-   │     └─────┬─────┘       │       └──────────────┬────────────┘           │              
+   │           ▼             │          ▼                     ▼              │
+   │     ┌───────────┐       │       ┌───────────────────────────┐           │
+   │────►│ 4. Breseq │       │       │ 3b. CreateRefTnEndSeqs    │           │
+   │     └─────┬─────┘       │       └──────────────┬────────────┘           │
    │           ▼             │                      ▼                        │
    │        breseq JC        │                  TnEndSeq[]                   │
-   │      + coverage         │                      │                        │
+   │      + coverage         ▼                      │                        │
    │            └─────┬──────┘                      ▼                        │
    │                  ▼            ┌───────────────────┐                     │
    │               all Jc ────────►│  5. CreateTnJc    │                     │
@@ -59,23 +59,23 @@ xxx[]  array
    │                                         ▼                               │
    │                           ┌─────────────────────────┐                   │
    │                           │ 7. CalcAmpliconCoverage │◄ - - - - - - - - -┤
-   │                           └────────────┬────────────┘  anc              │  
+   │                           └────────────┬────────────┘  anc              │ 
    │                                        ▼               coverage         │
-   │                                   CoveredTnJc2[]                         │
-   │                                        │                                │ 
+   │                                   CoveredTnJc2[]                        │
+   │                                        │                                │
    │                                        ▼                                │
    │                             ┌─────────────────────┐                     │
    │                             │ 8. ClassifyStructure│                     │
    │                             └──────────┬──────────┘                     │
    │                                        ▼                                │
-   │                                 ClassifiedTnJc2[] (`RawEvent`)           │
+   │                                 ClassifiedTnJc2[] (`RawEvent`)          │
    │                                        │                                │
    │                                        ▼                                │
    │                             ┌─────────────────────┐                     │
    │                             │ 9. FilterCandidates │                     │
    │                             └──────────┬──────────┘                     │
    │                                        ▼                                │
-   │                                    CandidateTnJc2[]                          │
+   │                                    CandidateTnJc2[]                     │
    │                                        │                                │
    │                                        ▼                                │
    │                         ┌──────────────────────────────┐                │
@@ -117,7 +117,7 @@ xxx[]  array
                                         candidate_amplifications.xlsx
 ```
 
-## Folder Structure
+## Folder Structure (partially implemented)
 
 ```
 # Bundled data
@@ -154,17 +154,23 @@ amplifinder/data/
 
 
 # Run output (--output, default: output/)
-# Naming convention: 
-#   iso = evolved isolate
-#   anc = ancestor
-{output}/                           # --output CLI argument (default: output/), saved as Config.output_dir in run_config.yaml
-└── {iso_name}/                     # Note: this could be an iso or anc (running ancestor as a prerequisite run)
-    ├── breseq/                     # breseq output
-    │   └── output/output.gd
-    ├── ref_tn_jc.csv               # reference TN junctions
-    ├── tn_jc.csv                   # TN-associated junctions
-    ├── tn_jc2.csv                  # junction pairs (candidates)
-    └── tn_jc2_*/                   # per-candidate analysis (future)
+# Organized by ancestor: all isolates sharing an ancestor live under that ancestor's folder
+{output}/                           # --output CLI argument (default: output/)
+└── {anc_name}/                     # ancestor defines the group
+    ├── _self/                      # ancestor's own standalone run (no anc comparison)
+    │   ├── breseq/
+    │   │   └── output/output.gd
+    │   ├── tn_jc.csv
+    │   ├── tn_jc2.csv
+    │   └── run_config.yaml
+    ├── {iso_name_1}/               # isolate 1 vs this ancestor
+    │   ├── breseq/
+    │   │   └── output/output.gd
+    │   ├── tn_jc.csv
+    │   ├── tn_jc2.csv
+    │   └── run_config.yaml
+    └── {iso_name_2}/               # isolate 2 vs this ancestor
+        └── ...
 ```
 
 
@@ -176,6 +182,7 @@ amplifinder/data/
 - Input/output file tracking
 - Caching: skip if outputs exist (unless `force=True`)
 - Methods: `_calculate_output() → T`, `_save_output()`, `load_outputs()`
+- To implement steps without file outputs (memory only), just set a class with `output_files=None`.
 
 **`Record`** (`data_types/records.py`): Pydantic model with:
 - Auto-generated `schema()` from fields
@@ -184,170 +191,89 @@ amplifinder/data/
 
 ### Implemented Steps (0-6)
 
-0. **InitializingStep** — creates output directory (`makeDirs.m`)
-1. **GetRefGenomeStep** — downloads genome FASTA/GBK (`get_reference.m`, `efetch_genbank.m`)
-2. **LocateTNsUsingGenbankStep** — finds TN from GenBank annotations (`findISinRef.m`)
-   **LocateTNsUsingISfinderStep** — finds TN via BLAST to ISfinder DB (`ISfinder.m`)
-3. **CreateRefTnJcStep** — synthetic junctions for ref TN (`create_JC_of_reference_IS.m`)
-   **CreateRefTnEndSeqsStep** — TN boundary sequences for matching (`create_IS_end_seqs.m`)
-4. **BreseqStep** — runs breseq on FASTQ + reference (`run_breseq.m`)
-5. **CreateTnJcStep** — matches breseq JC to TN elements (`assign_potential_ISs.m`)
-6. **CreateTnJc2Step** — pairs junctions into candidates (`combine_ISJC_pairs.m`, `calculate_amplicon_length.m`)
+| Step | Python Class | Description | MATLAB Source |
+|------|--------------|-------------|---------------|
+| 0 | `InitializingStep` | Creates output directory | `makeDirs.m` |
+| 1 | `GetRefGenomeStep` | Downloads genome FASTA/GBK | `get_reference.m`, `efetch_genbank.m` |
+| 2 | `LocateTNsUsingGenbankStep` | Finds TN from GenBank annotations | `findISinRef.m` |
+| 2 | `LocateTNsUsingISfinderStep` | Finds TN via BLAST to ISfinder DB | `ISfinder.m` |
+| 3 | `CreateRefTnJcStep` | Creates junctions for ref TN | `create_JC_of_reference_IS.m` |
+| 3 | `CreateRefTnEndSeqsStep` | TN flanking sequences for matching | `create_IS_end_seqs.m` |
+| 4 | `BreseqStep` | Runs breseq on FASTQ + reference | `run_breseq.m` |
+| 5 | `CreateTnJcStep` | Matches breseq JC to TN elements | `assign_potential_ISs.m` |
+| 6 | `CreateTnJc2Step` | Pairs junctions into TnJc2 | `combine_ISJC_pairs.m`, `calculate_amplicon_length.m` |
 
 
 
-## Isolate/Ancestor Pipeline Design
+## New plan (not yet implemened)
 
-### Core Pattern
-Run the **same pipeline** on both ancestor and isolate:
-- `anc_path: Optional[Path]` - path to completed ancestor run (None for ancestor run)
-- `anc_fastq_path` is derived from ancestor's saved config (not a separate CLI arg)
+### New Pattern - run the **same pipeline** on both ancestor and isolate:
+- Output organized by ancestor: `{output}/{anc_name}/{iso_name}/`
+- `iso_name` - sample name (required), the sample being analyzed
+- `anc_name` - ancestor name (`None` → no ancestor comparison)
 
 ```bash
-# Option A: Two separate runs (useful when sharing ancestor across isolates)
-# 1. Run ancestor first (standalone)
-amplifinder --sample ancestor.fastq --ref U00096 --output output/ancestor/
-# Saves config to output/ancestor/run_config.yaml including sample_path
+# Run ancestor standalone (no isolate comparison) - ancestor runs as an iso
+amplifinder --sample my_ancestor.fastq --ref U00096 --iso-name my_ancestor
+# Output: output/my_ancestor/_self   (no anc_name, so run as '_self')
 
-# 2. Run isolate with ancestor reference (only need --anc-path)
-amplifinder --sample isolate.fastq --ref U00096 --output output/isolate/ \
-            --anc-path output/ancestor/
-# Reads anc_fastq_path from output/ancestor/run_config.yaml
+# Run isolate with ancestor
+amplifinder --sample my_isolate.fastq --ref U00096 --iso-name my_isolate --anc-name my_ancestor
+# Output: output/my_ancestor/my_isolate/
+# Auto-runs ancestor to output/my_ancestor/_self if not already done
 
-# Option B: Single command for both (runs ancestor first, then isolate)
-amplifinder --sample isolate.fastq --anc-sample ancestor.fastq --ref U00096 \
-            --output output/isolate/
-# Automatically: 1) runs ancestor to output/isolate/ancestor/, 2) runs isolate with --anc-path
+# Run another isolate with same ancestor (reuses cached ancestor run)
+amplifinder --sample my_isolate_2.fastq --ref U00096 --iso-name my_isolate_2 --anc-name my_ancestor
+# Output: output/my_ancestor/my_isolate_2/
+# Skips ancestor run (already exists at output/my_ancestor/_self)
 ```
 
-### Config Saving
-`InitializingStep` saves config to `{output}/run_config.yaml`:
-
-```yaml
-sample_path: /path/to/sample.fastq
-ref_name: U00096
-breseq_path: /path/to/breseq/output
-# ... other params
-```
-
-```python
-# steps/initialize.py - add config param, call save_run_config()
-# utils/run_config.py - save_run_config(), load_run_config()
-```
-
-### Convergence Points
+### Convergence Points (anc_name=`None` vs anc_name=`{ancestor}`)
 
 ```
-Step 7:  anc_path=None → raw coverage only
-         anc_path=set  → load anc coverage, compute amplicon_coverage ratio
+Step 7:  anc_name=None → raw coverage only
+         anc_name=set  → load anc coverage, compute amplicon_coverage ratio
 
-Steps 10-11: anc_path=None → create junctions, align THIS sample only
-             anc_path=set  → create junctions, align BOTH iso reads AND anc reads (anc_fastq from saved config)
+Steps 10-11: anc_name=None → create junctions, align THIS sample only
+             anc_name=set  → create junctions, align BOTH iso reads AND anc reads
 
-Step 12: anc_path=None → parse own BAM → jc_cov_* fields  
-         anc_path=set  → parse BOTH BAMs → iso_jc_cov_* + anc_jc_cov_* fields
+Step 12: anc_name=None → parse own BAM → jc_cov_* fields  
+         anc_name=set  → parse BOTH BAMs → iso_jc_cov_* + anc_jc_cov_* fields
 
-Step 13: anc_path=None → limited classification
-         anc_path=set  → full iso vs anc pattern comparison
-```
-
----
-
-## Record Type Progression
-
-```python
-# record_types.py
-
-class TnJc2(Record):       # Step 6 output (existing)
-    # ...existing fields (no coverage - added in CoveredTnJc2)...
-
-class CoveredTnJc2(TnJc2):  # Step 7 output
-    # This sample's coverage stats (normalized by genome median coverage)
-    amplicon_coverage_median: float   # median coverage in amplicon region
-    amplicon_coverage_mode: float     # mode coverage in amplicon region
-    copy_number_median: float         # amplicon_median / genome_median
-    copy_number_mode: float           # amplicon_mode / genome_mode
-    # Ratio vs ancestor (only when iso run, None for anc run)
-    copy_number_ratio_median: Optional[float] = None  # iso_median / anc_median
-    copy_number_ratio_mode: Optional[float] = None    # iso_mode / anc_mode
-
-class RawEvent(str, Enum):
-    """Structure classification from classify_ISJC2.m"""
-    REFERENCE = "reference"
-    TRANSPOSITION = "transposition"
-    UNFLANKED = "unflanked"
-    HEMI_FLANKED_LEFT = "hemi-flanked left"
-    HEMI_FLANKED_RIGHT = "hemi-flanked right"
-    FLANKED = "flanked"
-    MULTIPLE_SINGLE_LOCUS = "multiple single locus"
-    UNRESOLVED = "unresolved"
-
-class EventModifier(str, Enum):
-    """Modifiers for final event classification."""
-    ANCESTRAL = "ancestral"
-    DE_NOVO = "de novo"
-    LOW_COVERAGE = "low coverage near junction"
-
-class ClassifiedTnJc2(CoveredTnJc2):  # Step 8 output
-    raw_event: RawEvent
-    shared_IS: List[int]
-    chosen_IS: int
-    pos_of_paired_single_locus_junction: Tuple[int, int]
-
-class CandidateTnJc2(ClassifiedTnJc2):    # Step 9 output
-    analysis_directory: str          # "TnJc2_001"
-
-class JunctionType(int, Enum):
-    """The 7 synthetic junction types from junction2fasta.m
-    
-    Amplicon structure: ~~~>>>======>>>======>>>~~~
-    """
-    LEFT_REF = 1        # ~~==  left reference (chromosome-cassette)
-    LEFT_IS_TRANS = 2   # ~~>>  left IS transposition (chromosome-IS)
-    LEFT_MID_IS = 3     # ==>>  left of mid IS (cassette-IS)
-    LOST_IS = 4         # ====  lost IS (cassette-cassette, no IS)
-    RIGHT_MID_IS = 5    # >>==  right of mid IS (IS-cassette)
-    RIGHT_IS_TRANS = 6  # >>~~  right IS transposition (IS-chromosome)
-    RIGHT_REF = 7       # ==~~  right reference (cassette-chromosome)
-
-class JunctionCoverage(NamedTuple):
-    """Read counts for a single junction type."""
-    spanning: int  # reads crossing junction (equiv to MATLAB 'green')
-    left: int      # reads ending at junction
-    right: int     # reads starting at junction
-
-class AnalyzedCandidateTnJc2(CandidateTnJc2): # Step 12-13 output
-    # Each list has 7 elements pf JunctionCoverage, one per JunctionType (1-7)
-    jc_cov: List[JunctionCoverage]                    # THIS sample's coverage (always)
-    anc_jc_cov: Optional[List[JunctionCoverage]]      # ancestor's coverage (only when iso run)
-    # Final classification: (base_event, modifiers)
-    event: Tuple[RawEvent, List[EventModifier]]
-    isolate_architecture: RawEvent
-    ancestor_architecture: Optional[RawEvent]
+Step 13: anc_name=None → limited classification
+         anc_name=set  → full iso vs anc pattern comparison
 ```
 
 ---
 
 ## Implementation Steps
 
-Each step: implement → write tests → run/debug → flake8 → git commit
+IMPORTANT: For each implementation step, follow this scheme:
+A. implement
+B. write unit tests - run/debug 
+C. write integration test with Matlab comparison (test_integration, AmpliFinder_test) - run/debug
+D. flake8 - run and fix
+E. git commit
 
-### 0. Record Types & Config Utils (prerequisite)
-- Module: `data_types/record_types.py`
-- Changes:
-  - Remove `amplicon_coverage` and `copy_number_mode` from `TnJc2`
-  - Add: `CoveredTnJc2`, `ClassifiedTnJc2`, `CandidateTnJc2`, `AnalyzedCandidateTnJc2`
-  - Add: `RawEvent`, `EventModifier`, `JunctionType`, `JunctionCoverage` enums
-- Module: `utils/run_config.py`
-  - Add: `save_run_config()`, `load_run_config()`
-- Module: `steps/initialize.py`
-  - Update: accept `config: Config`, call `save_run_config()` after creating dir
-- Tests: existing tests + `test_utils/test_run_config.py`
-- Commit: "Add remaining Record types and run config utils"
+### 0. Config Utils
+- Module: `config.py` (existing `Config` class already has `iso_name`, `anc_name`, `iso_path`, `ref_name`, `output_dir`)
+  - Add: `get_run_dir(config)` → path resolution
+  - Add: `save_config(config, run_dir)`, `load_config_from_run(run_dir)`
+- Module: `steps/initialize.py` - update to call `save_config()` after creating dir
+- Output: `{run_dir}/run_config.yaml`
+- Tests: `test_utils/test_run_config.py`
+- Commit: "Add config save/load utils"
 
 ### 1. Coverage Parser (utility)
 - Module: `utils/coverage.py`
 - MATLAB: `parseBreseqCOV.m`, `get_coverage_in_range.m`, `calc_average_coverage.m`
+- **Types to add:**
+  ```python
+  class Coverage(NamedTuple):
+      mean: float
+      median: float
+      mode: float
+  ```
 - Functions:
   ```python
   def load_breseq_coverage(breseq_path: Path, ref_name: str) -> np.ndarray:
@@ -363,22 +289,32 @@ Each step: implement → write tests → run/debug → flake8 → git commit
       """Get coverage values in range [start, end] (1-based, inclusive)."""
       return cov[start - 1 : end]
 
-  def calc_coverage_stats(cov: np.ndarray) -> Tuple[float, float]:
-      """Calculate median and mode of coverage array.
-      
-      Returns (median, mode).
-      """
+  def calc_coverage_stats(cov: np.ndarray) -> Coverage:
+      """Calculate mean, median and mode of coverage array."""
 
-  def calc_genome_median(cov: np.ndarray) -> float:
-      """Calculate genome-wide median coverage for normalization."""
+  def calc_genome_stats(cov: np.ndarray) -> Coverage:
+      """Calculate genome-wide coverage stats for normalization."""
   ```
 - Tests: `test_utils/test_coverage.py`
 - Commit: "Add breseq coverage parser"
 
 ### 2. CalcAmpliconCoverageStep (Step 7)
-- Module: `steps/calc_coverage.py`
+- Module: `steps/calc_amplicon_coverage.py`
 - MATLAB: `calc_coverage_ISJC2.m`
-- Input: `TnJc2` → Output: `CoveredTnJc2`
+- **Types:**
+  ```python
+  class CoveredTnJc2(TnJc2):  # Record
+      amplicon_coverage: Coverage
+      genome_coverage: Coverage
+      copy_number: Coverage             # amplicon / genome
+      copy_number_ratio: Optional[Coverage] = None  # iso / anc (only when iso-anc run)
+  ```
+- **input_files:**
+  - `breseq_path`: Path to breseq output (contains `08_mutation_identification/{ref_name}.coverage.tab`)
+  - `anc_breseq_path`: Optional[Path] - ancestor breseq output (when `anc_path` is set)
+- **data_inputs:**
+  - `tnjc2_list`: RecordTypedDF[TnJc2]
+- **Output:** RecordTypedDF[CoveredTnJc2]
 - File output: None (memory only)
 - Logic:
   - Get coverage in amplicon region from breseq coverage files
@@ -390,7 +326,29 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 3. ClassifyStructureStep (Step 8)
 - Module: `steps/classify_structure.py`
 - MATLAB: `classify_ISJC2.m`, `directed_IS.m`
-- Input: `CoveredTnJc2` → Output: `ClassifiedTnJc2`
+- **Record types:**
+  ```python
+  class RawEvent(str, Enum):
+      REFERENCE = "reference"
+      TRANSPOSITION = "transposition"
+      UNFLANKED = "unflanked"
+      HEMI_FLANKED_LEFT = "hemi-flanked left"
+      HEMI_FLANKED_RIGHT = "hemi-flanked right"
+      FLANKED = "flanked"
+      MULTIPLE_SINGLE_LOCUS = "multiple single locus"
+      UNRESOLVED = "unresolved"
+
+  class ClassifiedTnJc2(CoveredTnJc2):
+      raw_event: RawEvent
+      shared_IS: List[int]
+      chosen_IS: int
+      pos_of_paired_single_locus_junction: Tuple[int, int]
+  ```
+- **input_files:** None
+- **data_inputs:**
+  - `covered_tnjc2_list`: RecordTypedDF[CoveredTnJc2]
+  - `tn_locs`: RecordTypedDF[TnLoc] - for IS direction lookup
+- **Output:** RecordTypedDF[ClassifiedTnJc2]
 - File output: None (memory only)
 - Logic: Classify as transposition/reference/unflanked/hemi-flanked/flanked
 - Tests: `test_steps/test_classify_structure.py`
@@ -399,7 +357,15 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 4. FilterCandidatesStep (Step 9)
 - Module: `steps/filter_candidates.py`
 - MATLAB: filtering logic in `curate_candidate_amplicons.m`
-- Input: `ClassifiedTnJc2` → Output: `CandidateTnJc2`
+- **Record types:**
+  ```python
+  class CandidateTnJc2(ClassifiedTnJc2):
+      analysis_directory: str  # "tn_jc2_001"
+  ```
+- **input_files:** None
+- **data_inputs:**
+  - `classified_tnjc2_list`: RecordTypedDF[ClassifiedTnJc2]
+- **Output:** RecordTypedDF[CandidateTnJc2]
 - File output: None (memory only)
 - Logic: Filter by `MIN_AMPLICON_LENGTH < amplicon_length < MAX_AMPLICON_LENGTH`
 - Tests: `test_steps/test_filter_candidates.py`
@@ -408,8 +374,24 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 5. CreateSyntheticJunctionsStep (Step 10)
 - Module: `steps/synthetic_junctions.py`
 - MATLAB: `junction2fasta.m`
-- Input: `List[CandidateTnJc2]`, genome sequences, TnLoc
-- Output: `List[CandidateTnJc2]` (unchanged, side effect: creates files)
+- **Record types:**
+  ```python
+  class JunctionType(int, Enum):
+      """The 7 synthetic junction types. Amplicon: ~~~>>>======>>>======>>>~~~"""
+      LEFT_REF = '~~=='       # left reference (chromosome-cassette)
+      LEFT_IS_TRANS = '~~>>'  # left IS transposition (chromosome-IS)
+      LEFT_MID_IS = '==>>'    # left of mid IS (cassette-IS)
+      LOST_IS = '===='        # lost IS (cassette-cassette, no IS)
+      RIGHT_MID_IS = '>>=='   # right of mid IS (IS-cassette)
+      RIGHT_IS_TRANS = '>>~~' # right IS transposition (IS-chromosome)
+      RIGHT_REF = '==~~'      # right reference (cassette-chromosome)
+  ```
+- **input_files:**
+  - `genome_fasta`: Path - reference genome FASTA
+- **data_inputs:**
+  - `candidates`: RecordTypedDF[CandidateTnJc2]
+  - `tn_locs`: RecordTypedDF[TnLoc] - for IS sequences
+- **Output:** RecordTypedDF[CandidateTnJc2] (unchanged, side effect: creates files)
 - File output per candidate: `{analysis_dir}/junctions.fasta` (7 synthetic junctions)
 - Logic: Create junction sequences for all expected architectural variations
 - Tests: `test_steps/test_synthetic_junctions.py`
@@ -445,8 +427,14 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 7. AlignReadsToSyntheticJunctionsStep (Step 11)
 - Module: `steps/align_reads.py`
 - MATLAB: `bowtie2_alignment.m`, `run_samtools_line.m`
-- Input: `CandidateTnJc2` + FASTQ + optional anc_FASTQ → Output: `CandidateTnJc2`
-- File output: `{analysis_dir}/alignment/alignment.sorted.bam`
+- **input_files:**
+  - `fastq_path`: Path - this sample's FASTQ
+  - `anc_fastq_path`: Optional[Path] - ancestor FASTQ (from saved config when `anc_path` is set)
+  - `junctions_fasta`: Path - per-candidate `{analysis_dir}/junctions.fasta`
+- **data_inputs:**
+  - `candidates`: RecordTypedDF[CandidateTnJc2]
+- **Output:** RecordTypedDF[CandidateTnJc2] (unchanged, side effect: creates BAM files)
+- File output: `{analysis_dir}/iso.sorted.bam`, `{analysis_dir}/anc.sorted.bam` (optional)
 - Logic:
   - Align this sample's reads to synthetic junctions
   - If `anc_path` set: also align ancestor reads (from saved config)
@@ -473,7 +461,26 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 9. AnalyzeAlignmentsStep (Step 12)
 - Module: `steps/analyze_alignments.py`
 - MATLAB: `bamAnalysis.m`, `count_reads.m`
-- Input: `CandidateTnJc2` with BAM → Output: `AnalyzedCandidateTnJc2`
+- **Record types:**
+  ```python
+  class JunctionCoverage(NamedTuple):
+      spanning: int  # reads crossing junction
+      left: int      # reads ending at junction
+      right: int     # reads starting at junction
+
+  class AnalyzedCandidateTnJc2(CandidateTnJc2):
+      jc_cov: List[JunctionCoverage]                    # 7 elements, one per JunctionType
+      anc_jc_cov: Optional[List[JunctionCoverage]]      # ancestor's (only when iso run)
+      event: Tuple[RawEvent, List[EventModifier]]
+      isolate_architecture: RawEvent
+      ancestor_architecture: Optional[RawEvent]
+  ```
+- **input_files:**
+  - `iso_bam`: Path - `{analysis_dir}/iso.sorted.bam`
+  - `anc_bam`: Optional[Path] - `{analysis_dir}/anc.sorted.bam` (when `anc_path` is set)
+- **data_inputs:**
+  - `candidates`: RecordTypedDF[CandidateTnJc2]
+- **Output:** RecordTypedDF[AnalyzedCandidateTnJc2]
 - File output: None (memory only)
 - Logic: Parse BAM, count spanning/left/right reads per junction (1-7)
 - Tests: `test_steps/test_analyze_alignments.py`
@@ -482,7 +489,17 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 10. ClassifyCandidatesStep (Step 13)
 - Module: `steps/classify_candidates.py`
 - MATLAB: `classify_candidates.m`
-- Input: `AnalyzedCandidateTnJc2` → Output: `AnalyzedCandidateTnJc2`
+- **Record types:**
+  ```python
+  class EventModifier(str, Enum):
+      ANCESTRAL = "ancestral"
+      DE_NOVO = "de novo"
+      LOW_COVERAGE = "low coverage near junction"
+  ```
+- **input_files:** None
+- **data_inputs:**
+  - `analyzed_candidates`: RecordTypedDF[AnalyzedCandidateTnJc2]
+- **Output:** RecordTypedDF[AnalyzedCandidateTnJc2] (with `event`, `isolate_architecture`, `ancestor_architecture` populated)
 - File output: None (memory only)
 - Logic: Match junction read patterns to expected architectures
 - Tests: `test_steps/test_classify_candidates.py`
@@ -491,7 +508,10 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 11. ExportStep (Step 14)
 - Module: `steps/export.py`
 - MATLAB: `export_ISJC2.m`
-- Input: `AnalyzedCandidateTnJc2`
+- **input_files:** None
+- **data_inputs:**
+  - `analyzed_candidates`: RecordTypedDF[AnalyzedCandidateTnJc2]
+- **Output:** None (side effect: creates files)
 - File output: `ISJC2.xlsx`, `candidate_amplifications.xlsx`
 - Logic: Format and export, filter by copy number thresholds
 - Tests: `test_steps/test_export.py`
@@ -500,9 +520,16 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 12. Pipeline Integration
 - Module: `pipeline.py` + `cli.py`
 - MATLAB: `AmpliFinder.m` (main orchestration)
-- Add: `--anc-path`, `--anc-sample` CLI options
+- **CLI args:** `--sample`, `--ref`, `--output`, `--iso-name`, `--anc-name` → `Config`
+- **Logic:**
+  - If `anc_name` set:
+    - Check if ancestor run exists at `{output}/{anc_name}/_self/`
+    - If missing → recursively run full pipeline with `iso_name=anc_name, anc_name=None`
+    - Load ancestor config via `load_config_from_run()`
+  - Run full pipeline for isolate
+  - Pass ancestor results to convergence points (Steps 7, 10-12)
 - Tests: `test_integration/test_pipeline.py`
-- Commit: "Integrate remaining steps"
+- Commit: "Integrate remaining steps with ancestor support"
 
 ### 13. Full Integration Tests
 - Tests: `test_integration/test_full_run.py`
@@ -579,9 +606,9 @@ breseq_path / "08_mutation_identification" / f"{ref_name}.coverage.tab"
 output_dir / "run_config.yaml"
 
 # synthetic junctions per candidate
-output_dir / f"TnJc2_{idx:03d}" / "junctions.fasta"
+output_dir / f"tn_jc2_{idx:03d}" / "junctions.fasta"
 
 # alignment output per candidate
-output_dir / f"TnJc2_{idx:03d}" / "alignment.sorted.bam"
+output_dir / f"tn_jc2_{idx:03d}" / "alignment.sorted.bam"
 ```
 
