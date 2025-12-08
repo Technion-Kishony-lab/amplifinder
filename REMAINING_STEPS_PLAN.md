@@ -54,7 +54,7 @@ xxx[]  array
    │                               │  6. CreateTnJc2   │                     │
    │                               └─────────┬─────────┘                     │
    │                                         ▼                               │
-   │                                 TnJunctionPair[]                        │
+   │                                 TnJc2[]                        │
    │                                         │                               │
    │                                         ▼                               │
    │                           ┌─────────────────────────┐                   │
@@ -236,14 +236,14 @@ Step 13: anc_path=None → limited classification
 ```python
 # record_types.py
 
-class TnJunctionPair(Record):       # Step 6 output (existing)
+class TnJc2(Record):       # Step 6 output (existing)
     # ...existing fields...
-    # NOTE: Remove these optional fields from TnJunctionPair:
+    # NOTE: Remove these optional fields from TnJc2:
     #   amplicon_coverage: Optional[float] = None
     #   copy_number_mode: Optional[float] = None
     # They belong in CoveredPair
 
-class CoveredPair(TnJunctionPair):  # Step 7 output
+class CoveredPair(TnJc2):  # Step 7 output
     # This sample's coverage stats (normalized by genome median coverage)
     amplicon_coverage_median: float   # median coverage in amplicon region
     amplicon_coverage_mode: float     # mode coverage in amplicon region
@@ -317,7 +317,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 0. Record Types & Config Utils (prerequisite)
 - Module: `data_types/record_types.py`
 - Changes:
-  - Remove `amplicon_coverage` and `copy_number_mode` from `TnJunctionPair`
+  - Remove `amplicon_coverage` and `copy_number_mode` from `TnJc2`
   - Add: `CoveredPair`, `ClassifiedPair`, `Candidate`, `AnalyzedCandidate`
   - Add: `RawEvent`, `EventModifier`, `JunctionType`, `JunctionCoverage` enums
 - Module: `utils/run_config.py`
@@ -360,7 +360,7 @@ Each step: implement → write tests → run/debug → flake8 → git commit
 ### 2. CalcAmpliconCoverageStep (Step 7)
 - Module: `steps/calc_coverage.py`
 - MATLAB: `calc_coverage_ISJC2.m`
-- Input: `TnJunctionPair` → Output: `CoveredPair`
+- Input: `TnJc2` → Output: `CoveredPair`
 - File output: None (memory only)
 - Logic:
   - Get coverage in amplicon region from breseq coverage files

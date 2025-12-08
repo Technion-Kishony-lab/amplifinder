@@ -109,7 +109,7 @@ class TnJunction(Junction):
     switched: bool          # True if sides were swapped to normalize
 
 
-class TnJunctionPair(Record):
+class TnJc2(Record):
     """Paired TN junctions (candidate amplicon).
 
     Represents two junctions that:

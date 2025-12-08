@@ -7,7 +7,7 @@ from typing import Tuple
 
 from amplifinder.config import Config
 from amplifinder.data_types import (
-    Genome, RecordTypedDF, TnLoc, RefTnJunction, TnEndSeq, Junction, TnJunction, TnJunctionPair,
+    Genome, RecordTypedDF, TnLoc, RefTnJunction, TnEndSeq, Junction, TnJunction, TnJc2,
 )
 from amplifinder.logger import info
 from amplifinder.steps import (
@@ -31,7 +31,7 @@ class Pipeline:
 
     config: Config
 
-    def run(self) -> RecordTypedDF[TnJunctionPair]:
+    def run(self) -> RecordTypedDF[TnJc2]:
         """Run full pipeline, return TnJc2 results."""
         iso_output = self._initialize()
         genome = self._load_reference()
@@ -167,7 +167,7 @@ class Pipeline:
         tnjc: RecordTypedDF[TnJunction],
         genome: Genome,
         iso_output: Path,
-    ) -> RecordTypedDF[TnJunctionPair]:
+    ) -> RecordTypedDF[TnJc2]:
         """Step 6: Combine junction pairs (TnJc2)."""
         tnjc2 = CreateTnJc2Step(
             tnjc=tnjc,
@@ -180,6 +180,6 @@ class Pipeline:
     # TODO: Step 7 - Classification + Export
 
 
-def run_pipeline(config: Config) -> RecordTypedDF[TnJunctionPair]:
+def run_pipeline(config: Config) -> RecordTypedDF[TnJc2]:
     """Run the AmpliFinder pipeline."""
     return Pipeline(config).run()
