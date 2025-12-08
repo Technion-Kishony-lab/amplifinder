@@ -154,14 +154,17 @@ amplifinder/data/
 
 
 # Run output (--output, default: output/)
-{output}/
-└── {iso_name}/
+# Naming convention: 
+#   iso = evolved isolate
+#   anc = ancestor
+{output}/                           # --output CLI argument (default: output/), saved as Config.output_dir in run_config.yaml
+└── {iso_name}/                     # Note: this could be an iso or anc (running ancestor as a prerequisite run)
     ├── breseq/                     # breseq output
     │   └── output/output.gd
     ├── ref_tn_jc.csv               # reference TN junctions
-    ├── TnJc.csv                    # TN-associated junctions
-    ├── TnJc2.csv                   # junction pairs (candidates)
-    └── TnJc2_*/                    # per-candidate analysis (future)
+    ├── tn_jc.csv                   # TN-associated junctions
+    ├── tn_jc2.csv                  # junction pairs (candidates)
+    └── tn_jc2_*/                   # per-candidate analysis (future)
 ```
 
 
