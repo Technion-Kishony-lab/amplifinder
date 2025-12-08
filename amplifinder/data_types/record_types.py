@@ -7,13 +7,13 @@ from typing import List, NamedTuple, Optional, TypeVar
 from amplifinder.data_types.records import Record
 
 
-class Side(str, Enum):
-    """Side of a TN element (left or right)."""
-    LEFT = "left"
-    RIGHT = "right"
+class Side(int, Enum):
+    """Side of a TN element (left or right). Values match MATLAB convention."""
+    LEFT = -1
+    RIGHT = 1
 
     def opposite(self) -> "Side":
-        return Side.RIGHT if self == Side.LEFT else Side.LEFT
+        return Side(-self.value)
 
 
 class Orientation(int, Enum):
@@ -142,14 +142,10 @@ class TnJc2(Record):
     dir_tn_R: Orientation
 
     # TN info
-    tn_ids: List[int]        # matching TN element IDs
-    tn_orientation: Orientation
+    tn_ids: List[int]              # matching TN element IDs
+    tn_orientations: List[Orientation]  # one per tn_id
     span_origin: bool        # True if amplicon spans circular origin
 
     # Computed fields
     amplicon_length: int
     complementary_length: int
-
-    # Coverage (optional, computed later)
-    amplicon_coverage: Optional[float] = None
-    copy_number_mode: Optional[float] = None

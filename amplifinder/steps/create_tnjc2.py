@@ -102,10 +102,11 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
         self,
         matches_i: List[TnMatch],
         matches_j: List[TnMatch],
-    ) -> List[Tuple[int, Orientation]]:
+    ) -> List[Tuple[int, Side]]:
         """Find TN elements that match both junctions on different sides.
 
-        Returns list of (tn_id, orientation) tuples.
+        Returns list of (tn_id, side_i) tuples where side_i is the TN side
+        that junction i connects to.
         """
         result = []
 
@@ -119,12 +120,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
                 if mi.side == mj.side:
                     continue
 
-                # Orientation based on which side connects to which junction
-                # If left side of TN connects to left junction -> same orientation (FORWARD)
-                # If right side of TN connects to left junction -> inverted (REVERSE)
-                orientation = Orientation.FORWARD if mi.side == Side.LEFT else Orientation.REVERSE
-
-                result.append((mi.tn_id, orientation))
+                result.append((mi.tn_id, mi.side))
 
         return result
 
@@ -132,7 +128,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
         self,
         jc_i: TnJunction,
         jc_j: TnJunction,
-        matching: List[Tuple[int, Orientation]],
+        matching: List[Tuple[int, Side]],
     ) -> TnJc2:
         """Create a junction pair record.
 
@@ -144,25 +140,13 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
         else:
             jc_L, jc_R = jc_j, jc_i
 
-        # Extract TN IDs and compute combined orientation
+        # Extract TN IDs and compute orientations
+        # MATLAB: orientation = side_i * dir2(i)
         tn_ids = [m[0] for m in matching]
-        orientations = [m[1] for m in matching]
+        tn_orientations = [Orientation(side_i.value * jc_i.dir2.value) for _, side_i in matching]
 
-        # Orientation: if all same -> that value, if mixed -> BOTH
-        if all(o == Orientation.FORWARD for o in orientations):
-            tn_orientation = Orientation.FORWARD
-        elif all(o == Orientation.REVERSE for o in orientations):
-            tn_orientation = Orientation.REVERSE
-        else:
-            tn_orientation = Orientation.BOTH
-
-        # Span origin: if left junction points left (REVERSE), amplicon spans origin
-        # (for circular genomes)
-        span_origin = jc_L.dir2 == Orientation.REVERSE
-
-        # Adjust orientation for span_origin (MATLAB: orientation * ISJC.dir2(i))
-        if span_origin:
-            tn_orientation = tn_orientation.opposite()
+        # Span origin: if junction i points left (REVERSE), amplicon spans origin
+        span_origin = jc_i.dir2 == Orientation.REVERSE
 
         # Calculate amplicon length
         amplicon_length, complementary_length = self._calculate_amplicon_length(
@@ -182,7 +166,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
             dir_tn_L=jc_L.dir1,
             dir_tn_R=jc_R.dir1,
             tn_ids=tn_ids,
-            tn_orientation=tn_orientation,
+            tn_orientations=tn_orientations,
             span_origin=span_origin,
             amplicon_length=amplicon_length,
             complementary_length=complementary_length,
