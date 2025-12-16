@@ -10,6 +10,7 @@ from abc import abstractmethod
 from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
 from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.utils.genbank import find_tn_elements
+from amplifinder.utils.file_lock import locked_resource
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDF, TnLoc, Genome
 from amplifinder.steps.base import Step
@@ -125,9 +126,11 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         """Run BLAST and parse results."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create BLAST DB if needed
-        if not self.isdb_path.with_suffix(".nhr").exists():
-            make_blast_db(self.isdb_path, self.isdb_path)
+        # Create BLAST DB if needed (with lock to prevent parallel creation)
+        with locked_resource(self.isdb_path, "blast_db", timeout=300):
+            if not self.isdb_path.with_suffix(".nhr").exists():
+                info("Creating ISfinder BLAST database...")
+                make_blast_db(self.isdb_path, self.isdb_path)
 
         # Run BLAST
         run_blastn(

@@ -31,13 +31,20 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
 
         Args:
             tnjc: TN-associated junctions from CreateTnJcStep
-            genome: Reference genome (for circularity and length)
+            genome: Reference genome (for circularity and length per scaffold)
             output_dir: Directory to write output
             force: Force re-run
         """
         self.tnjc = tnjc
         self.genome = genome
         self.output_dir = Path(output_dir)
+
+        # Cache scaffold properties for multi-scaffold support
+        self._scaf_lengths = {rec.name: len(rec.seq) for rec in genome.records}
+        self._scaf_circular = {
+            rec.name: rec.annotations.get("topology", "linear").lower() == "circular"
+            for rec in genome.records
+        }
 
         self.output_file = default_path(self.output_dir, TnJc2)
 
@@ -187,9 +194,9 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
         # Basic length between positions
         raw_length = pos_R - pos_L + 1
 
-        # Get genome properties
-        is_circular = self.genome.circular
-        scaf_length = self.genome.length
+        # Get scaffold-specific properties (supports multi-scaffold genomes)
+        scaf_length = self._scaf_lengths[scaf]
+        is_circular = self._scaf_circular.get(scaf, False)
 
         if is_circular:
             if span_origin:
