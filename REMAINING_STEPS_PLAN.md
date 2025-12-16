@@ -115,6 +115,13 @@ xxx[]  array
                                              ▼
                                         ISJC2.xlsx
                                         candidate_amplifications.xlsx
+                                             │
+                                             ▼
+                                ┌──────────────────────────┐
+                                │ 15. VisualizeCandidates  │◄─── interactive
+                                └────────────┬─────────────┘
+                                             ▼
+                                   coverage plots (matplotlib)
 ```
 
 ## Folder Structure (partially implemented)
@@ -154,23 +161,75 @@ amplifinder/data/
 
 
 # Run output (--output, default: output/)
-# Organized by ancestor: all isolates sharing an ancestor live under that ancestor's folder
+# Organized by: reference → ancestor → isolate
+# Note: When no ancestor is provided, iso_name becomes its own anc_name
 {output}/                           # --output CLI argument (default: output/)
-└── {anc_name}/                     # ancestor defines the group
-    ├── _self/                      # ancestor's own standalone run (no anc comparison)
-    │   ├── breseq/
-    │   │   └── output/output.gd
-    │   ├── tn_jc.csv
-    │   ├── tn_jc2.csv
-    │   └── run_config.yaml
-    ├── {iso_name_1}/               # isolate 1 vs this ancestor
-    │   ├── breseq/
-    │   │   └── output/output.gd
-    │   ├── tn_jc.csv
-    │   ├── tn_jc2.csv
-    │   └── run_config.yaml
-    └── {iso_name_2}/               # isolate 2 vs this ancestor
-        └── ...
+└── {ref_name}/                     # reference genome (e.g., U00096)
+    └── {anc_name}/                 # ancestor defines the group
+        │
+        │ # Ancestor run (same structure as isolates, RAW coverage)
+        ├── {anc_name}/                 # ancestor run
+        │   ├── breseq/
+        │   │   └── output/output.gd
+        │   ├── tn_jc.csv
+        │   ├── tn_jc2.csv
+        │   ├── tn_jc2_*.csv            # Output of different Steps
+        │   ├── run_config.yaml
+        │   └── jc_{start}_{end}_{tn_id}_L{read_len}/  # CANONICAL SOURCE
+        │       ├── junctions.fasta     # created during ancestor run
+        │       └── iso.sorted.bam      # ancestor's own alignment
+        │
+        │ # Isolate runs (normalized coverage: iso/anc ratio)
+        ├── {iso_name_1}/               # isolate 1 vs this ancestor
+        │   ├── breseq/
+        │   │   └── output/output.gd
+        │   ├── tn_jc.csv
+        │   ├── tn_jc2.csv
+        │   ├── tn_jc2_*.csv            # Output of different Steps
+        │   ├── run_config.yaml
+        │   └── jc_{start}_{end}_{tn_id}_L{read_len}/  # per-candidate
+        │       ├── junctions.fasta     # copied from {anc_name}/{anc_name}/jc_.../
+        │       ├── iso.sorted.bam      # isolate-specific alignment
+        │       ├── anc.sorted.bam      # copied from {anc_name}/{anc_name}/jc_.../iso.sorted.bam
+        │       └── coverage_plot.png   # (if --save-plots)
+        │
+        └── {iso_name_2}/               # isolate 2 vs this ancestor
+            └── jc_{start}_{end}_{tn_id}_L{read_len}/
+                ├── junctions.fasta     # copied from ancestor run
+                ├── iso.sorted.bam      # isolate-specific
+                └── anc.sorted.bam      # copied from ancestor run
+
+# Per-candidate folder naming convention:
+#   jc_{start}_{end}_{tn_id}_L{read_len}
+#   - start, end: amplicon coordinates (genomic positions)
+#   - tn_id: TN index from TnLoc table (e.g., 001, 002)
+#   - read_len: read length (affects junction flank size)
+#   Example: jc_123456_234567_001_L150
+#
+# Caching logic:
+#   1. Ancestor run creates (in {anc_name}/{anc_name}/jc_.../):
+#      - junctions.fasta
+#      - iso.sorted.bam (ancestor reads aligned to junctions)
+#   2. Isolate runs copy from ancestor's jc_.../ folder:
+#      - junctions.fasta → junctions.fasta
+#      - iso.sorted.bam → anc.sorted.bam (renamed: ancestor's "iso" is isolate's "anc")
+#   3. Isolate creates its own iso.sorted.bam
+#
+# Coverage:
+#   - Ancestor run (anc_path=None): RAW coverage (no normalization)
+#   - Isolate run (anc_path=set): iso/anc RATIO
+
+# Isolate without ancestor (RAW coverage - not normalized)
+{output}/
+└── {ref_name}/
+    └── {iso_name}/                 # iso is its own "ancestor" for folder structure
+        └── {iso_name}/             # uses RAW coverage (anc_path=None)
+            ├── breseq/
+            ├── tn_jc.csv
+            ├── ...
+            └── jc_{...}/           # per-candidate (no anc.sorted.bam needed)
+                ├── junctions.fasta
+                └── iso.sorted.bam
 ```
 
 
@@ -208,52 +267,97 @@ amplifinder/data/
 ## New plan (not yet implemened)
 
 ### New Pattern - run the **same pipeline** on both ancestor and isolate:
-- Output organized by ancestor: `{output}/{anc_name}/{iso_name}/`
+- Output organized by: `{output}/{ref_name}/{anc_name}/{iso_name}/`
+- `ref_name` - reference genome (required), top-level grouping
 - `iso_name` - sample name (required), the sample being analyzed
-- `anc_name` - ancestor name (`None` → no ancestor comparison)
+- `anc_name` - ancestor name (defaults to `iso_name` when `anc_path` is None)
+- `anc_path` - determines coverage normalization (None → raw, set → normalized)
 
 ```bash
-# Run ancestor standalone (no isolate comparison) - ancestor runs as an iso
-amplifinder --sample my_ancestor.fastq --ref U00096 --iso-name my_ancestor
-# Output: output/my_ancestor/_self   (no anc_name, so run as '_self')
+# Run isolate without ancestor (raw coverage, no normalization)
+amplifinder -i my_isolate.fastq --ref U00096 --iso-name my_isolate
+# Output: output/U00096/my_isolate/my_isolate/   (anc_name defaults to iso_name)
+# Coverage: RAW (not normalized)
 
-# Run isolate with ancestor
-amplifinder --sample my_isolate.fastq --ref U00096 --iso-name my_isolate --anc-name my_ancestor
-# Output: output/my_ancestor/my_isolate/
-# Auto-runs ancestor to output/my_ancestor/_self if not already done
+# Run ancestor standalone (for later use by isolates)
+amplifinder -i my_ancestor.fastq --ref U00096 --iso-name my_ancestor
+# Output: output/U00096/my_ancestor/my_ancestor/
+# Coverage: RAW (same as isolate without ancestor)
 
-# Run another isolate with same ancestor (reuses cached ancestor run)
-amplifinder --sample my_isolate_2.fastq --ref U00096 --iso-name my_isolate_2 --anc-name my_ancestor
-# Output: output/my_ancestor/my_isolate_2/
-# Skips ancestor run (already exists at output/my_ancestor/_self)
+# Run isolate with ancestor (normalized coverage)
+amplifinder -i my_isolate.fastq --ref U00096 --iso-name my_isolate -a my_ancestor.fastq --anc-name my_ancestor
+# Output: output/U00096/my_ancestor/my_isolate/
+# Coverage: NORMALIZED (iso/anc ratio)
+# Auto-runs ancestor to output/U00096/my_ancestor/my_ancestor/ if not already done
+
+# Run another isolate with same ancestor (reuses cached ancestor run + anc.sorted.bam)
+amplifinder -i my_isolate_2.fastq --ref U00096 --iso-name my_isolate_2 -a my_ancestor.fastq --anc-name my_ancestor
+# Output: output/U00096/my_ancestor/my_isolate_2/
+# Skips ancestor run (already exists at output/U00096/my_ancestor/my_ancestor/)
+# For shared candidates: copies junctions.fasta + anc.sorted.bam from my_isolate_1
 ```
 
-### Convergence Points (anc_name=`None` vs anc_name=`{ancestor}`)
+### Convergence Points (anc_path=`None` vs anc_path=`{path}`)
 
 ```
-Step 7:  anc_name=None → raw coverage only
-         anc_name=set  → load anc coverage, compute amplicon_coverage ratio
+Step 7:  anc_path=None → raw coverage only
+         anc_path=set  → load anc coverage, compute amplicon_coverage ratio
 
-Steps 10-11: anc_name=None → create junctions, align THIS sample only
-             anc_name=set  → create junctions, align BOTH iso reads AND anc reads
+Steps 10-11: anc_path=None → create junctions, align THIS sample only
+             anc_path=set  → create junctions, align BOTH iso reads AND anc reads
 
-Step 12: anc_name=None → parse own BAM → jc_cov_* fields  
-         anc_name=set  → parse BOTH BAMs → iso_jc_cov_* + anc_jc_cov_* fields
+Step 12: anc_path=None → parse own BAM → jc_cov_* fields  
+         anc_path=set  → parse BOTH BAMs → iso_jc_cov_* + anc_jc_cov_* fields
 
-Step 13: anc_name=None → limited classification
-         anc_name=set  → full iso vs anc pattern comparison
+Step 13: anc_path=None → limited classification
+         anc_path=set  → full iso vs anc pattern comparison
 ```
 
 ---
 
-## Implementation Steps
+## Implementation Modules
 
-IMPORTANT: For each implementation step, follow this scheme:
-A. implement
-B. write unit tests - run/debug 
-C. write integration test with Matlab comparison (test_integration, AmpliFinder_test) - run/debug
-D. flake8 - run and fix
-E. git commit
+> **IMPORTANT: Column Naming Consistency**
+> 
+> The original MATLAB code has inconsistent column naming where the same data appears with different 
+> names in different output tables (e.g., `pos_Chr` vs `Positions_in_chromosome`, `amplicon_coverage` 
+> vs `median_copy_number`). 
+> 
+> **Best practice for Python implementation:**
+> 1. Use **record inheritance** (`TnJc2 → CoveredTnJc2 → ClassifiedTnJc2 → ...`) to ensure column 
+>    names are consistent across all downstream tables
+> 2. Define column names **once** in the base record and inherit them - never rename inherited fields
+> 3. Only add **new** fields in derived records, never duplicate existing fields with different names
+> 4. Apply renaming only at **export time** (Step 14) if user-friendly names are needed for Excel output
+
+> **IMPORTANT: Include Reference and Ancestor Context**
+> 
+> In the MATLAB code, `Reference` and `Ancestor` columns are only added at export time, making 
+> intermediate tables lack essential context. 
+> 
+> **Fix in Python implementation:**
+> 1. Add `ref_name: str` to `TnJc2` (base record) - all junctions are relative to a reference
+> 2. Add `iso_name: str` to `TnJc2` - identifies which sample the junctions came from
+> 3. Add `anc_name: Optional[str]` to `CoveredTnJc2` - present when ancestor comparison is performed
+> 
+> This ensures every output table is self-documenting and traceable to its source data.
+> 
+> **Action required:** Update existing `TnJc2` in `data_types/record_types.py` to include:
+> ```python
+> class TnJc2(Record):
+>     # Context fields (add these)
+>     ref_name: str      # reference genome name
+>     iso_name: str      # isolate/sample name
+>     
+>     # ... existing fields ...
+> ```
+> 
+> And update `CoveredTnJc2` definition (Step 7) to include:
+> ```python
+> class CoveredTnJc2(TnJc2):
+>     anc_name: Optional[str] = None  # ancestor name (None if standalone run)
+>     # ... existing coverage fields ...
+> ```
 
 ### 0. Config Utils
 - Module: `config.py` (existing `Config` class already has `iso_name`, `anc_name`, `iso_path`, `ref_name`, `output_dir`)
@@ -304,6 +408,10 @@ E. git commit
 - **Types:**
   ```python
   class CoveredTnJc2(TnJc2):  # Record
+      # Context (inherited: ref_name, iso_name from TnJc2)
+      anc_name: Optional[str] = None    # ancestor name (None if standalone run)
+      
+      # Coverage fields
       amplicon_coverage: Coverage
       genome_coverage: Coverage
       copy_number: Coverage             # amplicon / genome
@@ -354,13 +462,21 @@ E. git commit
 - Tests: `test_steps/test_classify_structure.py`
 - Commit: "Implement ClassifyStructureStep"
 
+> **NOTE: `raw_event` vs `isolate_architecture` (Step 13)**
+> 
+> Both fields use similar vocabulary ("flanked", "unflanked", etc.) but represent **different analyses**:
+> - `raw_event` (Step 8): **Structural prediction** based on junction pair relationships (which junctions share single-locus IS elements)
+> - `isolate_architecture` (Step 13): **Empirical verification** based on read alignment patterns to synthetic junctions
+> 
+> **Keep both fields** - comparing them can reveal discrepancies between predicted and observed architectures, which may indicate artifacts or complex rearrangements.
+
 ### 4. FilterCandidatesStep (Step 9)
 - Module: `steps/filter_candidates.py`
 - MATLAB: filtering logic in `curate_candidate_amplicons.m`
 - **Record types:**
   ```python
   class CandidateTnJc2(ClassifiedTnJc2):
-      analysis_directory: str  # "tn_jc2_001"
+      analysis_directory: str  # "jc_{start}_{end}_{tn_id}_L{read_len}"
   ```
 - **input_files:** None
 - **data_inputs:**
@@ -471,7 +587,7 @@ E. git commit
   class AnalyzedCandidateTnJc2(CandidateTnJc2):
       jc_cov: List[JunctionCoverage]                    # 7 elements, one per JunctionType
       anc_jc_cov: Optional[List[JunctionCoverage]]      # ancestor's (only when iso run)
-      event: Tuple[RawEvent, List[EventModifier]]
+      event: Tuple[RawEvent, List[EventModifierAndSide]]
       isolate_architecture: RawEvent
       ancestor_architecture: Optional[RawEvent]
   ```
@@ -491,10 +607,16 @@ E. git commit
 - MATLAB: `classify_candidates.m`
 - **Record types:**
   ```python
+
   class EventModifier(str, Enum):
       ANCESTRAL = "ancestral"
       DE_NOVO = "de novo"
       LOW_COVERAGE = "low coverage near junction"
+
+
+  class EventModifierAndSide(NamedTuple):
+      event_modifier: EventModifier
+      side: Side
   ```
 - **input_files:** None
 - **data_inputs:**
@@ -504,6 +626,11 @@ E. git commit
 - Logic: Match junction read patterns to expected architectures
 - Tests: `test_steps/test_classify_candidates.py`
 - Commit: "Implement ClassifyCandidatesStep"
+
+> **NOTE: See Step 8 note on `raw_event` vs `isolate_architecture`**
+> 
+> `isolate_architecture` is derived from read alignment evidence, while `raw_event` (inherited from Step 8) 
+> is derived from junction pairing logic. Both should be retained for comparison.
 
 ### 11. ExportStep (Step 14)
 - Module: `steps/export.py`
@@ -522,9 +649,9 @@ E. git commit
 - MATLAB: `AmpliFinder.m` (main orchestration)
 - **CLI args:** `--sample`, `--ref`, `--output`, `--iso-name`, `--anc-name` → `Config`
 - **Logic:**
-  - If `anc_name` set:
-    - Check if ancestor run exists at `{output}/{anc_name}/_self/`
-    - If missing → recursively run full pipeline with `iso_name=anc_name, anc_name=None`
+  - If `anc_path` set:
+    - Check if ancestor run exists at `{output}/{anc_name}/{anc_name}/`
+    - If missing → recursively run full pipeline with `iso_name=anc_name, anc_path=None`
     - Load ancestor config via `load_config_from_run()`
   - Run full pipeline for isolate
   - Pass ancestor results to convergence points (Steps 7, 10-12)
@@ -535,25 +662,55 @@ E. git commit
 - Tests: `test_integration/test_full_run.py`
 - Commit: "Add full integration tests"
 
+
+### 14. VisualizeCandidates (Step 15)
+This is not a `Step`. It is a module that allows displaying the results of the pipeline after the fact. 
+- Module: `visualization/visualize.py`
+- Library: `matplotlib` (v3.7+) [need to pip install in correct conda env]
+- **input_files:**
+  - path to run folder
+- **Output:** None (side effect: displays figures)
+- File output (optional): `{analysis_dir}/coverage_plot.png`
+- **User interaction modes:**
+  - `amplifinder --visualize run_folder`: Show all candidates sequentially (with buttons on the figure to go NEXT and BACK)
+  - `amplifinder --visualize run_folder`: Save plots to png files, instead of interactive display
+- **Plot specification:**
+      
+      Layout:
+      - Title: "{raw_event} | {amplicon_start}-{amplicon_end} | copy_number: {copy_number:.1f}x"
+      - X-axis: genomic position
+      - Y-axis: coverage depth
+      - Blue line: isolate coverage
+      - Gray line: ancestor coverage (if available)
+      - Vertical dashed red lines: amplicon start/end positions
+      - Shaded region: amplicon interior
+      
+      Plot range: [amplicon_start - flank, amplicon_end + flank]
+      where flank = amplicon_length * flank_fraction
+
+- Tests: `test_steps/test_visualize.py`
+- Commit: "Implement VisualizeCandidates"
+
+### "THE END"
+
+- Complete your work witht he interactive GUI running - to show off!
+
 ---
 
 ## Development Workflow
 
-```
-1. Implement module
-     ↓
-2. Write unit tests
-     ↓
-3. Run tests, debug until passing
-     ↓
-4. Run flake8, fix errors
-     ↓
-5. Git commit
-     ↓
-6. Continue to next step
-```
+For each implementation module, follow this scheme:
+A. implement module
+B. write unit tests - run/debug until passing
+C. write integration test with Matlab comparison (test_integration, AmpliFinder_test) - run/debug
+D. flake8 - run and fix
+E. git commit
+F. write a summary to the chat with: 
+    (a) where we are in the overall process
+    (b) what you did in this module
+    (c) number of new code lines for this module/commit.
+G. Continue to the next development module
 
----
 
 ## Test Patterns
 
@@ -562,10 +719,40 @@ Follow existing patterns in `tests/`:
 ```
 tests/
 ├── conftest.py              # Shared fixtures
-├── test_steps/              # Step tests
-├── test_tools/              # Tool tests (bowtie2)
-└── test_utils/              # Utility tests (coverage, bam)
+├── env.py                   # Environment flags (e.g., RUN_BOWTIE2_TESTS)
+├── fixtures/                # Test data files (breseq output, etc.)
+├── test_data_types/         # Record/DataFrame tests
+├── test_steps/              # Step unit tests
+├── test_tools/              # Tool tests (blast, breseq_parser)
+├── test_utils/              # Utility tests (tn_loc, coverage, bam)
+└── test_integration/        # MATLAB comparison tests
+    ├── conftest.py          # Integration test fixtures
+    ├── matlab_compare.py    # MATLAB comparison utilities
+    └── test_pipeline.py     # End-to-end pipeline tests
 ```
+
+### Integration Tests (MATLAB Comparison)
+
+Integration tests compare Python outputs against MATLAB reference outputs from `AmpliFinder_test/`:
+
+```python
+# tests/test_integration/test_tnjc2.py
+import scipy.io as sio
+
+def test_tnjc2_matches_matlab(tmp_path):
+    """Compare CreateTnJc2Step output to MATLAB reference."""
+    # Load MATLAB reference
+    matlab_data = sio.loadmat("AmpliFinder_test/ISJC2.mat")
+    
+    # Run Python pipeline up to this step
+    # ...
+    
+    # Compare key fields
+    assert python_df["amplicon_start"].tolist() == matlab_expected["amplicon_start"]
+    assert python_df["amplicon_end"].tolist() == matlab_expected["amplicon_end"]
+```
+
+Reference data location: `AmpliFinder_test/` (MATLAB outputs for known test cases)
 
 ### Skip Markers for External Tools
 
@@ -585,6 +772,9 @@ skip_no_bowtie = pytest.mark.skipif(not RUN_BOWTIE2_TESTS, reason="bowtie2 not f
 - **bowtie2** - use `shutil.which("bowtie2")` for discovery
 - **pysam** (v0.23.3) - replaces MATLAB BioMap + samtools
 - **PyYAML** - for run_config.yaml
+- **matplotlib** (v3.7+) - for coverage visualization [need to `pip install`, when needed]
+- **scipy** - for reading MATLAB files (`scipy.io.loadmat()`, `pip install` as needed)
+
 
 ### MATLAB → Python Mapping
 
@@ -599,16 +789,30 @@ skip_no_bowtie = pytest.mark.skipif(not RUN_BOWTIE2_TESTS, reason="bowtie2 not f
 ### Key File Paths
 
 ```python
+# Directory structure
+anc_group_dir = output_dir / ref_name / anc_name      # ancestor group level
+anc_run_dir = anc_group_dir / anc_name                # ancestor's own run
+iso_run_dir = anc_group_dir / iso_name                # isolate run
+
 # breseq coverage file
 breseq_path / "08_mutation_identification" / f"{ref_name}.coverage.tab"
 
 # run config
-output_dir / "run_config.yaml"
+iso_run_dir / "run_config.yaml"
 
-# synthetic junctions per candidate
-output_dir / f"tn_jc2_{idx:03d}" / "junctions.fasta"
+# per-candidate directory naming
+jc_name = f"jc_{start}_{end}_{tn_id:03d}_L{read_len}"
 
-# alignment output per candidate
-output_dir / f"tn_jc2_{idx:03d}" / "alignment.sorted.bam"
+# Ancestor run's candidate dir (CANONICAL SOURCE)
+anc_jc_dir = anc_run_dir / jc_name
+anc_jc_dir / "junctions.fasta"           # created during ancestor run
+anc_jc_dir / "iso.sorted.bam"            # ancestor's alignment (becomes isolate's anc.sorted.bam)
+
+# Isolate run's candidate dir
+iso_jc_dir = iso_run_dir / jc_name
+iso_jc_dir / "junctions.fasta"           # copied from anc_jc_dir
+iso_jc_dir / "anc.sorted.bam"            # copied from anc_jc_dir/iso.sorted.bam (renamed)
+iso_jc_dir / "iso.sorted.bam"            # isolate-specific alignment
+iso_jc_dir / "coverage_plot.png"         # (if --save-plots)
 ```
 
