@@ -9,14 +9,15 @@ import click
 from amplifinder import __version__
 from amplifinder.config import Config, load_config, merge_config
 from amplifinder.logger import setup_logger, info, warning, error
-from amplifinder.pipeline import run_pipeline
+from amplifinder.pipeline import Pipeline
 
 
 @click.command()
 @click.option(
     "-i", "--iso-path",
     type=click.Path(exists=True, path_type=Path),
-    required=True,
+    required=False,
+    default=None,
     help="Path to isolate FASTQ file(s) or directory.",
 )
 @click.option(
@@ -91,6 +92,18 @@ from amplifinder.pipeline import run_pipeline
     default="INFO",
     help="Logging level (default: INFO).",
 )
+@click.option(
+    "--fetch-only",
+    is_flag=True,
+    default=False,
+    help="Only fetch reference genome and create BLAST DB, then exit.",
+)
+@click.option(
+    "--breseq-only",
+    is_flag=True,
+    default=False,
+    help="Only run through breseq step, then exit.",
+)
 @click.version_option(version=__version__)
 def main(
     iso_path: Path,
@@ -106,52 +119,77 @@ def main(
     use_isfinder: bool,
     config_file: Optional[Path],
     log_level: str,
+    fetch_only: bool,
+    breseq_only: bool,
 ) -> None:
     """AmpliFinder: Detect IS-mediated gene amplifications from WGS data."""
-    # Load config file if provided
-    file_config = None
-    if config_file is not None:
-        file_config = load_config(config_file)
-
-    # Collect CLI arguments
-    cli_args = {
-        "iso_path": iso_path,
-        "ref_name": ref_name,
-        "anc_path": anc_path,
-        "iso_name": iso_name,
-        "anc_name": anc_name,
-        "ref_path": ref_path,
-        "output_dir": output_dir,
-        "iso_breseq_path": iso_breseq_path,
-        "anc_breseq_path": anc_breseq_path,
-        "ncbi": ncbi,
-        "use_isfinder": use_isfinder,
-    }
-
-    # Merge configurations
-    merged = merge_config(cli_args, file_config)
-
-    try:
-        config = Config(**merged)
-    except ValueError as e:
-        raise click.ClickException(str(e))
-
-    # Setup logger
-    log_path = config.output_dir / config.log_path
-    log_path.parent.mkdir(parents=True, exist_ok=True)
-    setup_logger(log_path=log_path, level=getattr(logging, log_level.upper()))
+    # Setup logger early (use output_dir directly for fetch-only)
+    log_dir = output_dir / ref_name
+    log_dir.mkdir(parents=True, exist_ok=True)
+    setup_logger(log_path=log_dir / "amplifinder.log", level=getattr(logging, log_level.upper()))
 
     info(f"AmpliFinder v{__version__}")
-    info(f"Isolate: {config.iso_path}")
-    info(f"Reference: {config.ref_name}")
-
-    if config.anc_path:
-        info(f"Ancestor: {config.anc_path}")
-    else:
-        warning("No ancestor assigned; using non-normalized coverage analysis")
+    info(f"Reference: {ref_name}")
 
     try:
-        run_pipeline(config)
+        # Fetch-only mode: only need ref_name and ref_path
+        if fetch_only:
+            info("Running fetch-only mode (reference + TN location)")
+            from amplifinder.pipeline import run_fetch_only
+            run_fetch_only(
+                ref_name=ref_name,
+                ref_path=ref_path,
+                ncbi=ncbi,
+                use_isfinder=use_isfinder,
+            )
+            info("Done")
+            return
+
+        # Full pipeline modes require iso_path
+        if iso_path is None:
+            raise click.ClickException("--iso-path is required (unless using --fetch-only)")
+
+        # Load config file if provided
+        file_config = None
+        if config_file is not None:
+            file_config = load_config(config_file)
+
+        # Collect CLI arguments
+        cli_args = {
+            "iso_path": iso_path,
+            "ref_name": ref_name,
+            "anc_path": anc_path,
+            "iso_name": iso_name,
+            "anc_name": anc_name,
+            "ref_path": ref_path,
+            "output_dir": output_dir,
+            "iso_breseq_path": iso_breseq_path,
+            "anc_breseq_path": anc_breseq_path,
+            "ncbi": ncbi,
+            "use_isfinder": use_isfinder,
+        }
+
+        # Merge configurations
+        merged = merge_config(cli_args, file_config)
+
+        try:
+            config = Config(**merged)
+        except ValueError as e:
+            raise click.ClickException(str(e))
+
+        info(f"Isolate: {config.iso_path}")
+        if config.anc_path:
+            info(f"Ancestor: {config.anc_path}")
+        else:
+            warning("No ancestor assigned; using raw (non-normalized) coverage analysis")
+
+        pipeline = Pipeline(config)
+        if breseq_only:
+            info("Running breseq-only mode")
+            pipeline.run_breseq_only()
+        else:
+            pipeline.run()
+
     except Exception as e:
         error(f"Pipeline failed: {e}")
         raise click.ClickException(str(e))
