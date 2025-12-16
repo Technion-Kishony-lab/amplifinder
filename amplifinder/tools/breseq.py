@@ -259,12 +259,15 @@ def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
             records[record_type].append(record)
 
     # Convert to DataFrames
+    output_dir = output_gd.parent
     results = {}
     for name, recs in records.items():
         df = pd.DataFrame(recs) if recs else pd.DataFrame()
         results[name] = df
-        if not df.empty:
-            info(f"  {name}: {len(df)} records")
+        info(f"  {name}: {len(df)} records")
+
+        csv_path = output_dir / f"{name.lower()}.csv"
+        df.to_csv(csv_path, index=False)
 
     return results
 
