@@ -2,9 +2,24 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, NamedTuple, TypeVar
+from typing import List, NamedTuple, Optional, TypeVar
 
 from amplifinder.data_types.records import Record
+
+
+# Coverage types
+class Coverage(NamedTuple):
+    """Coverage statistics for a genomic region."""
+    mean: float
+    median: float
+    mode: float
+
+
+class JunctionCoverage(NamedTuple):
+    """Read coverage at a synthetic junction."""
+    spanning: int  # reads crossing junction
+    left: int      # reads ending at junction
+    right: int     # reads starting at junction
 
 
 class Side(int, Enum):
@@ -149,3 +164,103 @@ class TnJc2(Record):
     # Computed fields
     amplicon_length: int
     complementary_length: int
+
+
+class CoveredTnJc2(TnJc2):
+    """TnJc2 with coverage information (Step 7 output).
+    
+    Coverage fields depend on run type:
+    - anc_path=None: raw coverage only, copy_number_ratio is None
+    - anc_path=set: normalized coverage, copy_number_ratio = iso/anc
+    """
+    # Context
+    ref_name: str
+    iso_name: str
+    anc_name: Optional[str] = None  # present when anc_path was set
+    
+    # Coverage fields (always present)
+    amplicon_coverage: float        # raw: iso_cov/genome_cov, normalized: iso_cov/anc_cov
+    genome_coverage: float          # median genome coverage for this sample
+    copy_number: float              # amplicon / genome (raw copy number)
+    amplicon_coverage_mode: float   # mode of copy number distribution
+    
+    # Ancestor comparison (only when anc_path is set)
+    copy_number_ratio: Optional[float] = None  # iso_copy / anc_copy
+
+
+class RawEvent(str, Enum):
+    """Structural classification based on junction pair relationships (Step 8)."""
+    REFERENCE = "reference"
+    TRANSPOSITION = "transposition"
+    UNFLANKED = "unflanked"
+    HEMI_FLANKED_LEFT = "hemi-flanked left"
+    HEMI_FLANKED_RIGHT = "hemi-flanked right"
+    FLANKED = "flanked"
+    MULTIPLE_SINGLE_LOCUS = "multiple single locus"
+    UNRESOLVED = "unresolved"
+
+
+class ClassifiedTnJc2(CoveredTnJc2):
+    """TnJc2 with structural classification (Step 8 output)."""
+    raw_event: RawEvent
+    shared_tn_ids: List[int]        # TN IDs shared by both junctions
+    chosen_tn_id: Optional[int]     # selected TN for analysis
+
+
+class CandidateTnJc2(ClassifiedTnJc2):
+    """Filtered candidate for detailed analysis (Step 9 output)."""
+    analysis_dir: str  # "tn_jc2_001", "tn_jc2_002", etc.
+
+
+class JunctionType(int, Enum):
+    """The 7 synthetic junction types.
+    
+    Amplicon structure: ~~~>>>======>>>======>>>~~~
+    (1) ~~==  left reference (chromosome-cassette)
+    (2) ~~>>  left IS transposition (chromosome-IS)
+    (3) ==>>  left of mid IS (cassette-IS)
+    (4) ====  lost IS (cassette-cassette, no IS)
+    (5) >>==  right of mid IS (IS-cassette)
+    (6) >>~~  right IS transposition (IS-chromosome)
+    (7) ==~~  right reference (cassette-chromosome)
+    """
+    LEFT_REF = 1
+    LEFT_IS_TRANS = 2
+    LEFT_MID_IS = 3
+    LOST_IS = 4
+    RIGHT_MID_IS = 5
+    RIGHT_IS_TRANS = 6
+    RIGHT_REF = 7
+
+
+class EventModifier(str, Enum):
+    """Modifiers for classified events (Step 13)."""
+    ANCESTRAL = "ancestral"
+    DE_NOVO = "de novo"
+    LOW_COVERAGE = "low coverage near junction"
+
+
+class AnalyzedTnJc2(CandidateTnJc2):
+    """Candidate with junction coverage analysis (Step 12 output).
+    
+    Junction coverage fields depend on run type:
+    - anc_path=None: jc_cov only, anc_jc_cov is None
+    - anc_path=set: both jc_cov and anc_jc_cov present
+    """
+    # Junction coverage (7 elements, one per JunctionType)
+    jc_cov_left: List[int]      # left-side read counts per junction
+    jc_cov_right: List[int]     # right-side read counts per junction
+    jc_cov_spanning: List[int]  # spanning read counts per junction
+    
+    # Ancestor junction coverage (only when anc_path is set)
+    anc_jc_cov_left: Optional[List[int]] = None
+    anc_jc_cov_right: Optional[List[int]] = None
+    anc_jc_cov_spanning: Optional[List[int]] = None
+    
+    # Architecture classification
+    isolate_architecture: RawEvent
+    ancestor_architecture: Optional[RawEvent] = None  # only when anc_path is set
+    
+    # Final event classification
+    event: str                              # full event description
+    event_modifiers: List[EventModifier]    # de novo, ancestral, etc.
