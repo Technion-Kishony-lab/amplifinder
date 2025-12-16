@@ -77,6 +77,10 @@ class Config:
     iso_breseq_path: Optional[Path] = None
     anc_breseq_path: Optional[Path] = None
 
+    # Read length (if None, calculated from FASTQ)
+    iso_read_length: Optional[int] = None
+    anc_read_length: Optional[int] = None
+
     # Names (derived from paths if not provided)
     iso_name: Optional[str] = None
     anc_name: Optional[str] = None
@@ -136,6 +140,11 @@ class Config:
     # Logging
     log_path: str = "amplifinder.log"
 
+    @property
+    def has_ancestor(self) -> bool:
+        """True if ancestor comparison should be performed."""
+        return self.anc_path is not None
+
     def __post_init__(self):
         """Convert paths and set derived values."""
         # Convert string paths to Path objects
@@ -159,8 +168,12 @@ class Config:
         # Derive names from paths if not provided
         if self.iso_name is None:
             self.iso_name = self.iso_path.stem or "isolate"
-        if self.anc_name is None and self.anc_path is not None:
-            self.anc_name = self.anc_path.stem or "ancestor"
+        if self.anc_name is None:
+            if self.anc_path is not None:
+                self.anc_name = self.anc_path.stem or "ancestor"
+            else:
+                # No ancestor: isolate is its own "ancestor" for folder structure
+                self.anc_name = self.iso_name
 
         # Convert tuples if passed as lists
         if isinstance(self.score_min, list):
