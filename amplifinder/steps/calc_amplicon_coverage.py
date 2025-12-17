@@ -9,8 +9,8 @@ from amplifinder.data_types import (
     RecordTypedDF, TnJc2, CoveredTnJc2, Genome,
 )
 from amplifinder.steps.base import Step
+from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.utils.coverage import (
-    load_breseq_coverage,
     get_coverage_in_range,
     calc_genome_coverage,
     calc_copy_number_distribution,

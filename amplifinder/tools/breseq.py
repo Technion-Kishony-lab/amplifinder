@@ -325,44 +325,23 @@ def _convert_value(value: str, dtype: type, none_values: Tuple[str, ...] = ("NA"
     return int(float(value)) if dtype is int else dtype(value)
 
 
-def parse_coverage(breseq_path: Path, ref_names: List[str]) -> Dict[str, np.ndarray]:
-    """Parse coverage files from breseq output.
-
+def load_breseq_coverage(breseq_path: Path, ref_name: str) -> np.ndarray:
+    """Load coverage from breseq output.
+    
     Args:
         breseq_path: Path to breseq output directory
-        ref_names: List of reference scaffold names
-
+        ref_name: Reference genome name (used in coverage file name)
+    
     Returns:
-        Dictionary mapping scaffold name to coverage array
+        1D array of coverage values (top + bottom strand combined)
     """
-    breseq_path = Path(breseq_path)
-    coverage_dir = breseq_path / "08_mutation_identification"
-
-    coverage = {}
-
-    for ref_name in ref_names:
-        cov_file = coverage_dir / f"{ref_name}.coverage.tab"
-
-        if not cov_file.exists():
-            warning(f"Coverage file not found: {cov_file}")
-            continue
-
-        info(f"Parsing coverage for {ref_name}")
-
-        # Read coverage table
-        df = pd.read_csv(
-            cov_file,
-            sep="\t",
-            usecols=[0, 1],  # unique_top_cov, unique_bot_cov
-            skiprows=1,
-            names=["top", "bot"],
-            dtype={"top": np.int32, "bot": np.int32},
-        )
-
-        # Total coverage is sum of top and bottom strand
-        coverage[ref_name] = df["top"].values + df["bot"].values
-
-    return coverage
+    cov_file = Path(breseq_path) / "08_mutation_identification" / f"{ref_name}.coverage.tab"
+    
+    if not cov_file.exists():
+        raise FileNotFoundError(f"Coverage file not found: {cov_file}")
+    
+    df = pd.read_csv(cov_file, sep="\t", usecols=["unique_top_cov", "unique_bot_cov"])
+    return (df["unique_top_cov"] + df["unique_bot_cov"]).values
 
 
 def get_breseq_summary(breseq_path: Path) -> Dict[str, Any]:
