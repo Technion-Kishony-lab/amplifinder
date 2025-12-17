@@ -110,19 +110,20 @@ class ClassifyCandidatesStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
         """Reclassify events based on iso/anc comparison."""
         classified_records = []
         
-        for _, row in self.analyzed.df.iterrows():
-            iso_arch = row["isolate_architecture"]
-            anc_arch = row.get("ancestor_architecture") if self.has_ancestor else None
+        for analyzed in self.analyzed:
+            iso_arch = analyzed.isolate_architecture
+            anc_arch = analyzed.ancestor_architecture if self.has_ancestor else None
             
             # Reclassify
             event, modifiers = classify_iso_vs_anc(iso_arch, anc_arch, self.min_jct_cov)
             
             # Update record with new classification
-            record_dict = row.to_dict()
-            record_dict["event"] = event
-            record_dict["event_modifiers"] = modifiers
+            classified = analyzed.model_copy(update={
+                "event": event,
+                "event_modifiers": modifiers,
+            })
             
-            classified_records.append(AnalyzedTnJc2(**record_dict))
+            classified_records.append(classified)
         
         result = RecordTypedDF.from_records(classified_records, AnalyzedTnJc2)
         
