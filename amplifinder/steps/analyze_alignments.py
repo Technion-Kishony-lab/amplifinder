@@ -117,8 +117,8 @@ class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
         
         # Input files are the BAM files from alignment step
         input_files = []
-        for _, row in candidates.df.iterrows():
-            analysis_dir = output_dir / row["analysis_dir"]
+        for cand in candidates:
+            analysis_dir = output_dir / cand.analysis_dir
             input_files.append(analysis_dir / "iso.sorted.bam")
             if has_ancestor:
                 input_files.append(analysis_dir / "anc.sorted.bam")
@@ -134,13 +134,13 @@ class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
         junction_length = self.read_length * 2
         
         analyzed_records = []
-        for _, row in self.candidates.df.iterrows():
-            analysis_dir = self.output_dir / row["analysis_dir"]
+        for cand in self.candidates:
+            analysis_dir = self.output_dir / cand.analysis_dir
             
             # Get isolate junction coverage
             iso_bam = analysis_dir / "iso.sorted.bam"
             if not iso_bam.exists():
-                info(f"Skipping {row['analysis_dir']}: no iso.sorted.bam")
+                info(f"Skipping {cand.analysis_dir}: no iso.sorted.bam")
                 continue
             
             iso_jc_cov = get_junction_coverage(
@@ -167,37 +167,37 @@ class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
             # Build AnalyzedTnJc2 record
             analyzed = AnalyzedTnJc2(
                 # From CandidateTnJc2
-                jc_num_L=row["jc_num_L"],
-                jc_num_R=row["jc_num_R"],
-                scaf_chr=row["scaf_chr"],
-                pos_chr_L=row["pos_chr_L"],
-                pos_chr_R=row["pos_chr_R"],
-                pos_tn_L=row["pos_tn_L"],
-                pos_tn_R=row["pos_tn_R"],
-                dir_chr_L=row["dir_chr_L"],
-                dir_chr_R=row["dir_chr_R"],
-                dir_tn_L=row["dir_tn_L"],
-                dir_tn_R=row["dir_tn_R"],
-                tn_ids=row["tn_ids"],
-                tn_orientations=row["tn_orientations"],
-                span_origin=row["span_origin"],
-                amplicon_length=row["amplicon_length"],
-                complementary_length=row["complementary_length"],
+                jc_num_L=cand.jc_num_L,
+                jc_num_R=cand.jc_num_R,
+                scaf_chr=cand.scaf_chr,
+                pos_chr_L=cand.pos_chr_L,
+                pos_chr_R=cand.pos_chr_R,
+                pos_tn_L=cand.pos_tn_L,
+                pos_tn_R=cand.pos_tn_R,
+                dir_chr_L=cand.dir_chr_L,
+                dir_chr_R=cand.dir_chr_R,
+                dir_tn_L=cand.dir_tn_L,
+                dir_tn_R=cand.dir_tn_R,
+                tn_ids=cand.tn_ids,
+                tn_orientations=cand.tn_orientations,
+                span_origin=cand.span_origin,
+                amplicon_length=cand.amplicon_length,
+                complementary_length=cand.complementary_length,
                 # From CoveredTnJc2
-                ref_name=row["ref_name"],
-                iso_name=row["iso_name"],
-                anc_name=row.get("anc_name"),
-                amplicon_coverage=row["amplicon_coverage"],
-                genome_coverage=row["genome_coverage"],
-                copy_number=row["copy_number"],
-                amplicon_coverage_mode=row["amplicon_coverage_mode"],
-                copy_number_ratio=row.get("copy_number_ratio"),
+                ref_name=cand.ref_name,
+                iso_name=cand.iso_name,
+                anc_name=cand.anc_name,
+                amplicon_coverage=cand.amplicon_coverage,
+                genome_coverage=cand.genome_coverage,
+                copy_number=cand.copy_number,
+                amplicon_coverage_mode=cand.amplicon_coverage_mode,
+                copy_number_ratio=cand.copy_number_ratio,
                 # From ClassifiedTnJc2
-                raw_event=row["raw_event"],
-                shared_tn_ids=row["shared_tn_ids"],
-                chosen_tn_id=row.get("chosen_tn_id"),
+                raw_event=cand.raw_event,
+                shared_tn_ids=cand.shared_tn_ids,
+                chosen_tn_id=cand.chosen_tn_id,
                 # From CandidateTnJc2
-                analysis_dir=row["analysis_dir"],
+                analysis_dir=cand.analysis_dir,
                 # New fields
                 jc_cov_left=[jc.left for jc in iso_jc_cov],
                 jc_cov_right=[jc.right for jc in iso_jc_cov],
