@@ -1,31 +1,10 @@
-"""Breseq coverage parsing and analysis utilities."""
+"""Coverage analysis utilities."""
 
-from pathlib import Path
 from typing import Optional
 
 import numpy as np
-import pandas as pd
 
 from amplifinder.data_types import Coverage
-
-
-def load_breseq_coverage(breseq_path: Path, ref_name: str) -> np.ndarray:
-    """Load coverage from breseq output.
-    
-    Args:
-        breseq_path: Path to breseq output directory
-        ref_name: Reference genome name (used in coverage file name)
-    
-    Returns:
-        1D array of coverage values (top + bottom strand combined)
-    """
-    cov_file = breseq_path / "08_mutation_identification" / f"{ref_name}.coverage.tab"
-    
-    if not cov_file.exists():
-        raise FileNotFoundError(f"Coverage file not found: {cov_file}")
-    
-    df = pd.read_csv(cov_file, sep="\t", usecols=["unique_top_cov", "unique_bot_cov"])
-    return (df["unique_top_cov"] + df["unique_bot_cov"]).values
 
 
 def get_coverage_in_range(

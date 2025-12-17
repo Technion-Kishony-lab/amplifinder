@@ -161,7 +161,7 @@ class ISJC2:
 | 6. Parse breseq | `breseq2mat` | `tools.breseq.parse_breseq_output()` |
 | 7. Assign ISs | `assign_potential_ISs` | TBD |
 | 8. Combine pairs | `combine_ISJC_pairs` | TBD |
-| 9. Calc coverage | `calc_coverage_ISJC2` | `tools.breseq.parse_coverage()` |
+| 9. Calc coverage | `calc_coverage_ISJC2` | `tools.breseq.load_breseq_coverage()` |
 | 10. Classify | `classify_ISJC2` | TBD |
 | 11. Export | `export_ISJC2` | TBD |
 
