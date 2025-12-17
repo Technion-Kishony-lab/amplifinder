@@ -38,8 +38,8 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
         
         # Build list of expected output BAM files
         output_files = []
-        for _, row in candidates.df.iterrows():
-            analysis_dir = output_dir / row["analysis_dir"]
+        for cand in candidates:
+            analysis_dir = output_dir / cand.analysis_dir
             output_files.append(analysis_dir / "iso.sorted.bam")
             if anc_fastq_path:
                 output_files.append(analysis_dir / "anc.sorted.bam")
@@ -48,8 +48,8 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
         if anc_fastq_path:
             input_files.append(anc_fastq_path)
         # Junction FASTA files are inputs
-        for _, row in candidates.df.iterrows():
-            input_files.append(output_dir / row["analysis_dir"] / "junctions.fasta")
+        for cand in candidates:
+            input_files.append(output_dir / cand.analysis_dir / "junctions.fasta")
         
         super().__init__(
             input_files=input_files,
@@ -64,12 +64,12 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
 
     def _calculate_output(self) -> RecordTypedDF[CandidateTnJc2]:
         """Align reads to synthetic junctions for each candidate."""
-        for _, row in self.candidates.df.iterrows():
-            analysis_dir = self.output_dir / row["analysis_dir"]
+        for cand in self.candidates:
+            analysis_dir = self.output_dir / cand.analysis_dir
             junctions_fasta = analysis_dir / "junctions.fasta"
             
             if not junctions_fasta.exists():
-                info(f"Skipping {row['analysis_dir']}: no junctions.fasta")
+                info(f"Skipping {cand.analysis_dir}: no junctions.fasta")
                 continue
             
             # Align isolate reads

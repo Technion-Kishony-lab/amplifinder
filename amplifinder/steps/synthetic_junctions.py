@@ -167,8 +167,8 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
         
         # Output files are per-candidate analysis directories
         self.analysis_dirs = [
-            output_dir / row["analysis_dir"]
-            for _, row in candidates.df.iterrows()
+            output_dir / cand.analysis_dir
+            for cand in candidates
         ]
         
         super().__init__(
@@ -183,10 +183,9 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
         chr_seq = self.genome.sequence
         
         # Build TN lookup
-        tn_lookup = {row["ID"]: row for _, row in self.tn_locs.df.iterrows()}
+        tn_lookup = {tn.ID: tn for tn in self.tn_locs}
         
-        for _, row in self.candidates.df.iterrows():
-            candidate = CandidateTnJc2(**row.to_dict())
+        for candidate in self.candidates:
             analysis_dir = self.output_dir / candidate.analysis_dir
             
             # Get chosen TN
@@ -195,8 +194,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
                 # Skip candidates without valid chosen TN
                 continue
             
-            tn_row = tn_lookup[chosen_tn_id]
-            tn_loc = TnLoc(**{k: tn_row[k] for k in TnLoc.model_fields.keys()})
+            tn_loc = tn_lookup[chosen_tn_id]
             
             # Get TN sequence (simplified - assumes same scaffold)
             tn_seq = chr_seq[tn_loc.LocLeft - 1:tn_loc.LocRight]
