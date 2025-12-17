@@ -1,20 +1,24 @@
-"""File locking utilities for parallel run safety.
+"""Folder-based locking for parallel run safety.
 
-Provides mechanisms to prevent race conditions when multiple AmpliFinder
-processes access shared resources (reference genomes, BLAST DBs, ancestor runs).
+Prevents race conditions when multiple AmpliFinder processes access 
+shared resources. Uses atomic mkdir() - no external dependencies.
 """
 
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Generator, Optional
-
-from filelock import FileLock, Timeout
+import time
 
 from amplifinder.logger import debug, info
 
 
-# Default timeout for locks (seconds)
-DEFAULT_LOCK_TIMEOUT = 3600  # 1 hour (breseq can take a while)
+DEFAULT_LOCK_TIMEOUT = 3600  # 1 hour
+POLL_INTERVAL = 1.0
+
+
+class LockTimeout(Exception):
+    """Lock acquisition timed out."""
+    pass
 
 
 @contextmanager
@@ -23,42 +27,28 @@ def locked_operation(
     timeout: int = DEFAULT_LOCK_TIMEOUT,
     description: str = "operation",
 ) -> Generator[None, None, None]:
-    """Context manager for file-locked operations.
-    
-    Acquires an exclusive lock before yielding, releases on exit.
-    Other processes attempting to acquire the same lock will block.
-    
-    Args:
-        lock_path: Path to the lock file (will be created if doesn't exist)
-        timeout: Maximum seconds to wait for lock (-1 for infinite)
-        description: Description for logging
-        
-    Yields:
-        None (use as context manager)
-        
-    Raises:
-        Timeout: If lock cannot be acquired within timeout
-        
-    Example:
-        >>> with locked_operation(Path("/tmp/myfile.lock"), description="download"):
-        ...     download_file()
-    """
+    """Folder-based lock using atomic mkdir()."""
     lock_path = Path(lock_path)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
     
-    lock = FileLock(str(lock_path), timeout=timeout)
+    deadline = time.time() + timeout
+    while True:
+        try:
+            lock_path.mkdir(exist_ok=False)
+            debug(f"Lock acquired for {description}: {lock_path}")
+            break
+        except FileExistsError:
+            if time.time() >= deadline:
+                raise LockTimeout(
+                    f"Could not acquire lock for {description} within {timeout}s. "
+                    f"Lock folder: {lock_path}"
+                )
+            time.sleep(POLL_INTERVAL)
     
-    debug(f"Acquiring lock for {description}: {lock_path}")
     try:
-        with lock:
-            debug(f"Lock acquired for {description}")
-            yield
-    except Timeout:
-        raise Timeout(
-            f"Could not acquire lock for {description} within {timeout}s. "
-            f"Another process may be running. Lock file: {lock_path}"
-        )
+        yield
     finally:
+        lock_path.rmdir()
         debug(f"Lock released for {description}")
 
 
@@ -100,16 +90,7 @@ def locked_resource(
     resource_type: str,
     timeout: int = DEFAULT_LOCK_TIMEOUT,
 ) -> Generator[None, None, None]:
-    """Lock a shared resource for exclusive access.
-    
-    Args:
-        resource_path: Path to the resource
-        resource_type: Type of resource for lock naming
-        timeout: Lock timeout in seconds
-        
-    Yields:
-        None (use as context manager)
-    """
+    """Lock a shared resource for exclusive access."""
     lock_path = get_resource_lock_path(resource_path, resource_type)
     with locked_operation(lock_path, timeout, f"{resource_type} at {resource_path}"):
         yield
