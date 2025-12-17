@@ -5,11 +5,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
+from Bio.Seq import Seq
+
 from amplifinder.logger import info, warning
-
-
-# Complement table for DNA bases
-_COMPLEMENT = str.maketrans('ACGTacgt', 'TGCAtgca')
 
 
 def reverse_complement(seq: str) -> str:
@@ -21,7 +19,7 @@ def reverse_complement(seq: str) -> str:
     Returns:
         Reverse complement sequence
     """
-    return seq.translate(_COMPLEMENT)[::-1]
+    return str(Seq(seq).reverse_complement())
 
 
 def read_fasta_lengths(fasta_path: Path, max_num_reads: Optional[int] = None) -> Dict[str, int]:
