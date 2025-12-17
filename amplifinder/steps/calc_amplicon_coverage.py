@@ -88,9 +88,9 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDF[CoveredTnJc2]]):
         
         # Process each candidate
         covered_records = []
-        for _, row in self.tnjc2.df.iterrows():
+        for tnjc in self.tnjc2:
             covered = self._calc_candidate_coverage(
-                row, iso_cov, iso_genome_median, anc_cov, anc_genome_median
+                tnjc, iso_cov, iso_genome_median, anc_cov, anc_genome_median
             )
             covered_records.append(covered)
         
@@ -98,14 +98,14 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDF[CoveredTnJc2]]):
 
     def _calc_candidate_coverage(
         self,
-        row,
+        tnjc: TnJc2,
         iso_cov: np.ndarray,
         iso_genome_median: float,
         anc_cov: Optional[np.ndarray],
         anc_genome_median: Optional[float],
     ) -> CoveredTnJc2:
         """Calculate coverage for a single candidate."""
-        amplicon_length = row["amplicon_length"]
+        amplicon_length = tnjc.amplicon_length
         
         # Default values for candidates outside length range
         amplicon_coverage = float("nan")
@@ -116,9 +116,9 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDF[CoveredTnJc2]]):
         # Only calculate for valid amplicon lengths
         if self.min_amplicon_length < amplicon_length < self.max_amplicon_length:
             # Get coverage in amplicon region
-            start = row["pos_chr_L"]
-            end = row["pos_chr_R"]
-            span_origin = row["span_origin"]
+            start = tnjc.pos_chr_L
+            end = tnjc.pos_chr_R
+            span_origin = tnjc.span_origin
             
             iso_region_cov = get_coverage_in_range(
                 iso_cov, start, end, span_origin, self.genome.length
@@ -156,26 +156,9 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDF[CoveredTnJc2]]):
                     ncp_limit1=self.ncp_limit1, ncp_limit2=self.ncp_limit2, ncp_n=self.ncp_n,
                 )
         
-        # Build CoveredTnJc2 from existing TnJc2 fields + new coverage fields
-        return CoveredTnJc2(
-            # From TnJc2
-            jc_num_L=row["jc_num_L"],
-            jc_num_R=row["jc_num_R"],
-            scaf_chr=row["scaf_chr"],
-            pos_chr_L=row["pos_chr_L"],
-            pos_chr_R=row["pos_chr_R"],
-            pos_tn_L=row["pos_tn_L"],
-            pos_tn_R=row["pos_tn_R"],
-            dir_chr_L=row["dir_chr_L"],
-            dir_chr_R=row["dir_chr_R"],
-            dir_tn_L=row["dir_tn_L"],
-            dir_tn_R=row["dir_tn_R"],
-            tn_ids=row["tn_ids"],
-            tn_orientations=row["tn_orientations"],
-            span_origin=row["span_origin"],
-            amplicon_length=row["amplicon_length"],
-            complementary_length=row["complementary_length"],
-            # New coverage fields
+        # Build CoveredTnJc2 from TnJc2 + new coverage fields
+        return CoveredTnJc2.from_other(
+            tnjc,
             ref_name=self.ref_name,
             iso_name=self.iso_name,
             anc_name=self.anc_name,
