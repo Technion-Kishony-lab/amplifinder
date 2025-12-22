@@ -34,10 +34,6 @@ def sample_candidate(tmp_path):
     )
 
 
-@pytest.mark.skipif(
-    not pytest.importorskip("matplotlib", reason="matplotlib not available"),
-    reason="matplotlib not available"
-)
 def test_plot_candidate_coverage(sample_candidate, tmp_path):
     """Should create coverage plot."""
     # Create dummy coverage arrays
