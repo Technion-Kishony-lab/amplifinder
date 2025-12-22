@@ -5,7 +5,9 @@ from amplifinder.data_types.genome import Genome, GenomeRegistry, get_genome
 from amplifinder.data_types.records import Column, Schema, Record
 from amplifinder.data_types.record_types import (
     Side, Orientation,
-    TnLoc, TnEndSeq, BlastHit, Junction, RefTnJunction, TnJunction, TnJunctionPair, TnMatch,
+    TnLoc, SeqRefTnSide, BlastHit, Junction, RefTnJunction, TnJunction, TnJc2, RefTnSide,
+    Coverage, JunctionCoverage, CoveredTnJc2, RawEvent, ClassifiedTnJc2,
+    CandidateTnJc2, JunctionType, EventModifier, AnalyzedTnJc2,
 )
 
 __all__ = [
@@ -17,14 +19,24 @@ __all__ = [
     "TypedDF",
     "Record",
     "TnLoc",
-    "TnEndSeq",
+    "SeqRefTnSide",
     "BlastHit",
     "Junction",
     "RefTnJunction",
     "TnJunction",
-    "TnJunctionPair",
-    "TnMatch",
+    "TnJc2",
+    "RefTnSide",
     "Genome",
     "GenomeRegistry",
     "get_genome",
+    # Coverage types
+    "Coverage",
+    "JunctionCoverage",
+    "CoveredTnJc2",
+    "RawEvent",
+    "ClassifiedTnJc2",
+    "CandidateTnJc2",
+    "JunctionType",
+    "EventModifier",
+    "AnalyzedTnJc2",
 ]

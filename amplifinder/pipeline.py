@@ -5,21 +5,30 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple
 
-from amplifinder.config import Config
+from amplifinder.config import Config, get_run_dir, load_config_from_run
 from amplifinder.data_types import (
-    Genome, RecordTypedDF, TnLoc, RefTnJunction, TnEndSeq, Junction, TnJunction, TnJunctionPair,
+    Genome, RecordTypedDF, TnLoc, RefTnJunction, SeqRefTnSide, Junction, TnJunction, TnJc2,
+    CoveredTnJc2, ClassifiedTnJc2, CandidateTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.logger import info
 from amplifinder.steps import (
     InitializingStep,
-    GetReferenceStep,
+    GetRefGenomeStep,
     LocateTNsUsingISfinderStep,
     LocateTNsUsingGenbankStep,
     BreseqStep,
-    CreateReferenceTnJunctionsStep,
+    CreateRefTnJcStep,
     CreateRefTnEndSeqsStep,
-    CreateTNJCStep,
-    CreateTNJC2Step,
+    CreateTnJcStep,
+    CreateTnJc2Step,
+    CalcAmpliconCoverageStep,
+    ClassifyStructureStep,
+    FilterCandidatesStep,
+    CreateSyntheticJunctionsStep,
+    AlignReadsToJunctionsStep,
+    AnalyzeAlignmentsStep,
+    ClassifyCandidatesStep,
+    ExportStep,
 )
 from amplifinder.data import get_builtin_isfinder_db_path
 from amplifinder.utils.tn_loc import compare_tn_locations
@@ -31,8 +40,13 @@ class Pipeline:
 
     config: Config
 
-    def run(self) -> RecordTypedDF[TnJunctionPair]:
-        """Run full pipeline, return TNJC2 results."""
+    def run(self) -> RecordTypedDF[AnalyzedTnJc2]:
+        """Run full pipeline, return analyzed candidates."""
+        # Handle ancestor run if needed
+        if self.config.has_ancestor:
+            self._ensure_ancestor_run()
+        
+        # Run isolate pipeline
         iso_output = self._initialize()
         genome = self._load_reference()
         tn_loc = self._locate_tns_in_reference(genome)
@@ -40,18 +54,102 @@ class Pipeline:
         breseq_jc = self._run_breseq(genome, iso_output)
         tnjc = self._create_tnjc(breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output)
         tnjc2 = self._create_tnjc2(tnjc, genome, iso_output)
-        return tnjc2
+        
+        # Steps 7-14: Coverage, classification, alignment, analysis, export
+        covered = self._calc_coverage(tnjc2, genome, iso_output)
+        classified = self._classify_structure(covered, tn_loc, iso_output)
+        candidates = self._filter_candidates(classified, iso_output)
+        self._create_synthetic_junctions(candidates, genome, tn_loc, iso_output)
+        self._align_reads(candidates, iso_output)
+        analyzed = self._analyze_alignments(candidates, iso_output)
+        classified_final = self._classify_candidates(analyzed, iso_output)
+        self._export(classified_final, iso_output)
+        
+        return classified_final
+    
+    def _ensure_ancestor_run(self) -> None:
+        """Ensure ancestor run exists, create it if missing."""
+        anc_run_dir = get_run_dir(Config(
+            iso_path=self.config.anc_path,
+            ref_name=self.config.ref_name,
+            iso_name=self.config.anc_name,
+            anc_name=self.config.anc_name,
+            anc_path=None,  # Ancestor runs itself without ancestor
+            output_dir=self.config.output_dir,
+            ref_path=self.config.ref_path,
+        ))
+        
+        if not (anc_run_dir / "run_config.yaml").exists():
+            info(f"Ancestor run not found at {anc_run_dir}, running ancestor pipeline...")
+            anc_config = Config(
+                iso_path=self.config.anc_path,
+                ref_name=self.config.ref_name,
+                iso_name=self.config.anc_name,
+                anc_name=self.config.anc_name,
+                anc_path=None,
+                output_dir=self.config.output_dir,
+                ref_path=self.config.ref_path,
+                iso_breseq_path=self.config.anc_breseq_path,
+            )
+            Pipeline(anc_config).run()
+            info("Ancestor run completed")
+    
+    def _copy_ancestor_junction_files(
+        self,
+        candidates: RecordTypedDF[CandidateTnJc2],
+        iso_output: Path,
+    ) -> None:
+        """Copy junction files and BAM from ancestor run to isolate run."""
+        if not self.config.has_ancestor:
+            return
+        
+        anc_run_dir = get_run_dir(Config(
+            iso_path=self.config.anc_path,
+            ref_name=self.config.ref_name,
+            iso_name=self.config.anc_name,
+            anc_name=self.config.anc_name,
+            anc_path=None,
+            output_dir=self.config.output_dir,
+            ref_path=self.config.ref_path,
+        ))
+        
+        import shutil
+        
+        for candidate in candidates:
+            anc_jc_dir = anc_run_dir / candidate.analysis_dir
+            iso_jc_dir = iso_output / candidate.analysis_dir
+            
+            if not anc_jc_dir.exists():
+                continue
+            
+            iso_jc_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Copy junctions.fasta
+            anc_junctions = anc_jc_dir / "junctions.fasta"
+            if anc_junctions.exists():
+                shutil.copy2(anc_junctions, iso_jc_dir / "junctions.fasta")
+            
+            # Copy ancestor's iso.sorted.bam as anc.sorted.bam
+            anc_bam = anc_jc_dir / "iso.sorted.bam"
+            if anc_bam.exists():
+                shutil.copy2(anc_bam, iso_jc_dir / "anc.sorted.bam")
+                # Also copy index if exists
+                anc_bai = anc_jc_dir / "iso.sorted.bam.bai"
+                if anc_bai.exists():
+                    shutil.copy2(anc_bai, iso_jc_dir / "anc.sorted.bam.bai")
+
+    @property
+    def ref_tn_source(self) -> str:
+        """Get the source of the reference TN data."""
+        return self.config.use_isfinder and "isfinder" or "genbank"
 
     def _initialize(self) -> Path:
         """Step 0: Initialize output directories."""
-        return InitializingStep(
-            output_dir=self.config.output_dir,
-            iso_name=self.config.iso_name,
-        ).run()
+        return InitializingStep(config=self.config).run()
 
     def _load_reference(self) -> Genome:
         """Step 1: Get reference genome."""
-        genome = GetReferenceStep(
+        genome = GetRefGenomeStep(
             ref_name=self.config.ref_name,
             ref_path=self.config.ref_path,
             ncbi=self.config.ncbi,
@@ -63,11 +161,12 @@ class Pipeline:
         """Step 2: Locate TN elements using GenBank and/or ISfinder."""
         cfg = self.config
 
+        tn_loc_dir = cfg.ref_path / "tn_loc" / genome.name
+
         # 2a: GenBank annotations
         tn_loc_genbank = LocateTNsUsingGenbankStep(
-            genbank_path=genome.genbank_path,
-            ref_name=genome.name,
-            ref_path=cfg.ref_path,
+            genome=genome,
+            output_dir=tn_loc_dir,
         ).run()
 
         if tn_loc_genbank is not None:
@@ -77,9 +176,8 @@ class Pipeline:
 
         # 2b: ISfinder database
         tn_loc_isfinder = LocateTNsUsingISfinderStep(
-            ref_fasta=genome.fasta_path,
-            ref_name=genome.name,
-            ref_path=cfg.ref_path,
+            genome=genome,
+            output_dir=tn_loc_dir,
             isdb_path=cfg.isdb_path or get_builtin_isfinder_db_path(),
             evalue=cfg.isfinder_evalue,
             critical_coverage=cfg.isfinder_critical_coverage,
@@ -100,21 +198,23 @@ class Pipeline:
 
     def _create_reference_tn_junctions(
         self, tn_loc: RecordTypedDF[TnLoc], genome: Genome, iso_output: Path
-    ) -> Tuple[RecordTypedDF[RefTnJunction], RecordTypedDF[TnEndSeq]]:
+    ) -> Tuple[RecordTypedDF[RefTnJunction], RecordTypedDF[SeqRefTnSide]]:
         """Step 3: Create reference junctions and TN end sequences."""
         cfg = self.config
 
-        ref_tn_jc = CreateReferenceTnJunctionsStep(
+        ref_tn_jc = CreateRefTnJcStep(
             tn_loc=tn_loc,
-            ref_name=genome.name,
+            genome=genome,
             output_dir=iso_output,
+            source=self.ref_tn_source,
             reference_tn_out_span=cfg.reference_IS_out_span,
         ).run()
 
         ref_tn_end_seqs = CreateRefTnEndSeqsStep(
             ref_tn_jc=ref_tn_jc,
             genome=genome,
-            ref_path=cfg.ref_path,
+            output_dir=iso_output,
+            source=self.ref_tn_source,
             max_dist_to_tn=cfg.max_dist_to_IS,
         ).run()
 
@@ -130,6 +230,7 @@ class Pipeline:
             output_path=cfg.iso_breseq_path or iso_output / "breseq",
             docker=cfg.breseq_docker,
             threads=cfg.breseq_threads,
+            csv_output_dir=iso_output / "breseq_csv",
         ).run()
 
         breseq_jc = breseq_output["JC"]
@@ -140,7 +241,7 @@ class Pipeline:
         self,
         breseq_jc: pd.DataFrame,
         ref_tn_jc: RecordTypedDF[RefTnJunction],
-        ref_tn_end_seqs: RecordTypedDF[TnEndSeq],
+        ref_tn_end_seqs: RecordTypedDF[SeqRefTnSide],
         genome: Genome,
         iso_output: Path,
     ) -> RecordTypedDF[TnJunction]:
@@ -151,7 +252,7 @@ class Pipeline:
         all_jc_df = pd.concat([breseq_jc, ref_tn_jc.df], ignore_index=True)
         all_jc = RecordTypedDF(all_jc_df, Junction)
 
-        tnjc = CreateTNJCStep(
+        tnjc = CreateTnJcStep(
             jc_df=all_jc,
             ref_tn_end_seqs=ref_tn_end_seqs,
             genome=genome,
@@ -159,7 +260,7 @@ class Pipeline:
             max_dist_to_tn=cfg.max_dist_to_IS,
             trim_jc_flanking=cfg.trim_jc_flanking,
         ).run()
-        info(f"TNJC: {len(tnjc)} TN-associated junctions")
+        info(f"TnJc: {len(tnjc)} TN-associated junctions")
         return tnjc
 
     def _create_tnjc2(
@@ -167,19 +268,205 @@ class Pipeline:
         tnjc: RecordTypedDF[TnJunction],
         genome: Genome,
         iso_output: Path,
-    ) -> RecordTypedDF[TnJunctionPair]:
-        """Step 6: Combine junction pairs (TNJC2)."""
-        tnjc2 = CreateTNJC2Step(
+    ) -> RecordTypedDF[TnJc2]:
+        """Step 6: Combine junction pairs (TnJc2)."""
+        tnjc2 = CreateTnJc2Step(
             tnjc=tnjc,
             genome=genome,
             output_dir=iso_output,
         ).run()
-        info(f"TNJC2: {len(tnjc2)} junction pairs")
+        info(f"TnJc2: {len(tnjc2)} junction pairs")
         return tnjc2
 
-    # TODO: Step 7 - Classification + Export
+    def _calc_coverage(
+        self,
+        tnjc2: RecordTypedDF[TnJc2],
+        genome: Genome,
+        iso_output: Path,
+    ) -> RecordTypedDF[CoveredTnJc2]:
+        """Step 7: Calculate amplicon coverage."""
+        cfg = self.config
+        
+        # Get ancestor breseq path if ancestor exists
+        anc_breseq_path = None
+        anc_name = None
+        if cfg.has_ancestor:
+            anc_run_dir = get_run_dir(Config(
+                iso_path=cfg.anc_path,
+                ref_name=cfg.ref_name,
+                iso_name=cfg.anc_name,
+                anc_name=cfg.anc_name,
+                anc_path=None,
+                output_dir=cfg.output_dir,
+                ref_path=cfg.ref_path,
+            ))
+            anc_config = load_config_from_run(anc_run_dir)
+            anc_breseq_path = anc_config.iso_breseq_path or (anc_run_dir / "breseq")
+            anc_name = cfg.anc_name
+        
+        iso_breseq_path = cfg.iso_breseq_path or (iso_output / "breseq")
+        
+        covered = CalcAmpliconCoverageStep(
+            tnjc2=tnjc2,
+            genome=genome,
+            iso_breseq_path=iso_breseq_path,
+            output_dir=iso_output,
+            ref_name=cfg.ref_name,
+            iso_name=cfg.iso_name,
+            anc_breseq_path=anc_breseq_path,
+            anc_name=anc_name,
+            min_amplicon_length=cfg.min_amplicon_length,
+            max_amplicon_length=cfg.max_amplicon_length,
+            ncp_limit1=cfg.ncp_limit1,
+            ncp_limit2=cfg.ncp_limit2,
+            ncp_n=cfg.ncp_n,
+        ).run()
+        info(f"Coverage: {len(covered)} candidates")
+        return covered
+    
+    def _classify_structure(
+        self,
+        covered: RecordTypedDF[CoveredTnJc2],
+        tn_loc: RecordTypedDF[TnLoc],
+        iso_output: Path,
+    ) -> RecordTypedDF[ClassifiedTnJc2]:
+        """Step 8: Classify junction pair structures."""
+        classified = ClassifyStructureStep(
+            covered_tnjc2=covered,
+            tn_locs=tn_loc,
+            output_dir=iso_output,
+            min_amplicon_length=self.config.min_amplicon_length,
+        ).run()
+        info(f"Classification: {len(classified)} candidates")
+        return classified
+    
+    def _filter_candidates(
+        self,
+        classified: RecordTypedDF[ClassifiedTnJc2],
+        iso_output: Path,
+    ) -> RecordTypedDF[CandidateTnJc2]:
+        """Step 9: Filter candidates by amplicon length."""
+        candidates = FilterCandidatesStep(
+            classified_tnjc2=classified,
+            output_dir=iso_output,
+            min_amplicon_length=self.config.min_amplicon_length,
+            max_amplicon_length=self.config.max_amplicon_length,
+        ).run()
+        info(f"Filtered: {len(candidates)} candidates")
+        return candidates
+    
+    def _create_synthetic_junctions(
+        self,
+        candidates: RecordTypedDF[CandidateTnJc2],
+        genome: Genome,
+        tn_loc: RecordTypedDF[TnLoc],
+        iso_output: Path,
+    ) -> None:
+        """Step 10: Create synthetic junction sequences."""
+        if len(candidates) == 0:
+            return
+        
+        # If ancestor exists, copy junction files from ancestor run
+        if self.config.has_ancestor:
+            self._copy_ancestor_junction_files(candidates, iso_output)
+            info(f"Copied junction files from ancestor for {len(candidates)} candidates")
+        else:
+            # Create new junction files
+            read_length = self.config.iso_read_length or 150
+            
+            CreateSyntheticJunctionsStep(
+                candidates=candidates,
+                genome=genome,
+                tn_locs=tn_loc,
+                output_dir=iso_output,
+                read_length=read_length,
+            ).run()
+            info(f"Created synthetic junctions for {len(candidates)} candidates")
+    
+    def _align_reads(
+        self,
+        candidates: RecordTypedDF[CandidateTnJc2],
+        iso_output: Path,
+    ) -> None:
+        """Step 11: Align reads to synthetic junctions."""
+        if len(candidates) == 0:
+            return
+        
+        cfg = self.config
+        
+        # Get ancestor FASTQ if ancestor exists
+        anc_fastq_path = None
+        if cfg.has_ancestor:
+            # For isolate runs, ancestor FASTQ comes from ancestor run's config
+            # But we already have it in cfg.anc_path
+            anc_fastq_path = cfg.anc_path
+        
+        AlignReadsToJunctionsStep(
+            candidates=candidates,
+            output_dir=iso_output,
+            iso_fastq_path=cfg.iso_path,
+            anc_fastq_path=anc_fastq_path,
+            threads=cfg.breseq_threads,  # Use breseq threads config
+        ).run()
+        info(f"Aligned reads for {len(candidates)} candidates")
+    
+    def _analyze_alignments(
+        self,
+        candidates: RecordTypedDF[CandidateTnJc2],
+        iso_output: Path,
+    ) -> RecordTypedDF[AnalyzedTnJc2]:
+        """Step 12: Analyze read alignments."""
+        if len(candidates) == 0:
+            return RecordTypedDF.empty(AnalyzedTnJc2)
+        
+        analyzed = AnalyzeAlignmentsStep(
+            candidates=candidates,
+            output_dir=iso_output,
+            read_length=self.config.iso_read_length or 150,
+            req_overlap=self.config.req_overlap,
+            min_jct_cov=self.config.min_jct_cov,
+            has_ancestor=self.config.has_ancestor,
+        ).run()
+        info(f"Analyzed: {len(analyzed)} candidates")
+        return analyzed
+    
+    def _classify_candidates(
+        self,
+        analyzed: RecordTypedDF[AnalyzedTnJc2],
+        iso_output: Path,
+    ) -> RecordTypedDF[AnalyzedTnJc2]:
+        """Step 13: Final classification of candidates."""
+        if len(analyzed) == 0:
+            return analyzed
+        
+        classified = ClassifyCandidatesStep(
+            analyzed=analyzed,
+            output_dir=iso_output,
+            has_ancestor=self.config.has_ancestor,
+            min_jct_cov=self.config.min_jct_cov,
+        ).run()
+        info(f"Final classification: {len(classified)} candidates")
+        return classified
+    
+    def _export(
+        self,
+        analyzed: RecordTypedDF[AnalyzedTnJc2],
+        iso_output: Path,
+    ) -> None:
+        """Step 14: Export results to Excel."""
+        if len(analyzed) == 0:
+            return
+        
+        ExportStep(
+            analyzed_candidates=analyzed,
+            output_dir=iso_output,
+            copy_number_threshold=self.config.copy_number_threshold,
+            del_copy_number_threshold=self.config.del_copy_number_threshold,
+            filter_amplicon_length=self.config.filter_amplicon_length,
+        ).run()
+        info("Exported results to Excel")
 
 
-def run_pipeline(config: Config) -> RecordTypedDF[TnJunctionPair]:
+def run_pipeline(config: Config) -> RecordTypedDF[AnalyzedTnJc2]:
     """Run the AmpliFinder pipeline."""
     return Pipeline(config).run()

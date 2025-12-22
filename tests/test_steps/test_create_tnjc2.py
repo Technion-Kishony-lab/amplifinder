@@ -1,15 +1,15 @@
-"""Tests for CreateTNJC2Step."""
+"""Tests for CreateTnJc2Step."""
 
 import pytest
 from typing import List
 
 from amplifinder.steps import (
-    CreateReferenceTnJunctionsStep,
+    CreateRefTnJcStep,
     CreateRefTnEndSeqsStep,
-    CreateTNJCStep,
-    CreateTNJC2Step,
+    CreateTnJcStep,
+    CreateTnJc2Step,
 )
-from amplifinder.data_types import RecordTypedDF, TnJunction, TnJunctionPair, Junction, TnMatch, Side, Orientation
+from amplifinder.data_types import RecordTypedDF, TnJunction, TnJc2, Junction, RefTnSide, Side, Orientation
 
 
 # =============================================================================
@@ -30,15 +30,15 @@ def make_tnjc(
         scaf1=scaf, pos1=100 * num, dir1=Orientation.FORWARD if tn_side == Side.LEFT else Orientation.REVERSE,
         scaf2=scaf, pos2=pos2, dir2=dir2,
         flanking_left=50, flanking_right=50,
-        matches=[TnMatch(tn_id=tn_id, side=tn_side, distance=0)],
+        ref_tn_sides=[RefTnSide(tn_id=tn_id, side=tn_side, distance=0)],
         switched=False,
     )
 
 
-def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTypedDF[TnJunctionPair]:
-    """Create TNJC2 from junction records."""
+def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTypedDF[TnJc2]:
+    """Create TnJc2 from junction records."""
     tnjc = RecordTypedDF.from_records(tnjc_records, TnJunction)
-    return CreateTNJC2Step(
+    return CreateTnJc2Step(
         tnjc=tnjc,
         genome=genome,
         output_dir=output_dir,
@@ -47,20 +47,22 @@ def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTyped
 
 @pytest.fixture
 def tnjc(locate_tns_step, tiny_genome, tmp_output):
-    """Create TNJC (TN-associated junctions) from test data."""
+    """Create TnJc (TN-associated junctions) from test data."""
     tn_loc = locate_tns_step.run()
 
-    ref_jc = CreateReferenceTnJunctionsStep(
+    ref_jc = CreateRefTnJcStep(
         tn_loc=tn_loc,
-        ref_name="tiny",
+        genome=tiny_genome,
         output_dir=tmp_output,
+        source="isfinder",
         reference_tn_out_span=50,
     ).run()
 
     ref_tn_end_seqs = CreateRefTnEndSeqsStep(
         ref_tn_jc=ref_jc,
         genome=tiny_genome,
-        ref_path=tmp_output,
+        output_dir=tmp_output,
+        source="isfinder",
         max_dist_to_tn=20,
     ).run()
 
@@ -75,7 +77,7 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
     ]
     mock_junctions = RecordTypedDF.from_records(junctions, Junction)
 
-    return CreateTNJCStep(
+    return CreateTnJcStep(
         jc_df=mock_junctions,
         ref_tn_end_seqs=ref_tn_end_seqs,
         genome=tiny_genome,
@@ -87,8 +89,8 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
 
 @pytest.fixture
 def tnjc2_step(tnjc, tiny_genome, tmp_output):
-    """Create TNJC2 step."""
-    return CreateTNJC2Step(
+    """Create TnJc2 step."""
+    return CreateTnJc2Step(
         tnjc=tnjc,
         genome=tiny_genome,
         output_dir=tmp_output,
@@ -104,14 +106,14 @@ def test_runs_without_error(tnjc2_step):
 
 
 def test_output_has_correct_columns(tnjc2_step):
-    """TNJC2 output should have expected columns."""
+    """TnJc2 output should have expected columns."""
     tnjc2 = tnjc2_step.run()
 
     expected_cols = {
         "jc_num_L", "jc_num_R", "scaf_chr",
         "pos_chr_L", "pos_chr_R", "pos_tn_L", "pos_tn_R",
         "dir_chr_L", "dir_chr_R", "dir_tn_L", "dir_tn_R",
-        "tn_ids", "tn_orientation", "span_origin",
+        "tn_ids", "tn_orientations", "span_origin",
         "amplicon_length", "complementary_length",
     }
     assert expected_cols.issubset(set(tnjc2.df.columns))
