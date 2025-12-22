@@ -3,14 +3,12 @@
 from pathlib import Path
 from typing import Optional
 
-import pandas as pd
-
-from amplifinder.data_types import RecordTypedDF, AnalyzedTnJc2
+from amplifinder.data_types import RecordTypedDF, AnalyzedTnJc2, ISJC2Export
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
 
 
-class ExportStep(Step[None]):
+class ExportStep(Step[RecordTypedDF[ISJC2Export]]):
     """Export analyzed candidates to CSV files.
     
     Creates two CSV files:
@@ -42,96 +40,68 @@ class ExportStep(Step[None]):
             force=force,
         )
 
-    def _calculate_output(self) -> None:
+    def _calculate_output(self) -> RecordTypedDF[ISJC2Export]:
         """Export candidates to CSV."""
         if len(self.analyzed_candidates) == 0:
-            info("No candidates to export")
-            return
+            info("No candidates to export, creating empty ISJC2.csv with headers")
+            export_df = RecordTypedDF.empty(ISJC2Export)
+            export_df.to_csv(self.isjc2_file)
+            export_df.to_csv(self.candidates_file)
+            info(f"Created empty ISJC2.csv and candidate_amplifications.csv with headers")
+            return export_df
         
-        # Convert to DataFrame
-        df = self.analyzed_candidates.df.copy()
+        # Build export records by iterating over typed records
+        export_records = []
+        for candidate in self.analyzed_candidates:
+            export_records.append(ISJC2Export(
+                isolate=candidate.iso_name,
+                Reference=candidate.ref_name,
+                Ancestor=candidate.anc_name,
+                Positions_in_chromosome=f"{candidate.pos_chr_L}-{candidate.pos_chr_R}",
+                Direction_in_chromosome=f"{candidate.dir_chr_L}/{candidate.dir_chr_R}",
+                amplicon_length=candidate.amplicon_length,
+                IS_element=','.join(map(str, candidate.tn_ids)) if candidate.tn_ids else None,
+                median_copy_number=candidate.amplicon_coverage,
+                mode_copy_number=candidate.amplicon_coverage_mode,
+                event=candidate.event,
+                isolate_architecture=str(candidate.isolate_architecture),
+            ))
         
-        # Build export DataFrame with correct column names
-        export_df = pd.DataFrame()
-        
-        # Basic columns
-        if 'iso_name' in df.columns:
-            export_df['isolate'] = df['iso_name']
-        if 'ref_name' in df.columns:
-            export_df['Reference'] = df['ref_name']
-        if 'anc_name' in df.columns:
-            export_df['Ancestor'] = df['anc_name']
-        
-        # Positions
-        if 'pos_chr_L' in df.columns and 'pos_chr_R' in df.columns:
-            export_df['Positions_in_chromosome'] = (
-                df['pos_chr_L'].astype(str) + '-' + df['pos_chr_R'].astype(str)
-            )
-        
-        # Directions
-        if 'dir_chr_L' in df.columns and 'dir_chr_R' in df.columns:
-            export_df['Direction_in_chromosome'] = (
-                df['dir_chr_L'].astype(str) + '/' + df['dir_chr_R'].astype(str)
-            )
-        
-        # Amplicon length
-        if 'amplicon_length' in df.columns:
-            export_df['amplicon_length'] = df['amplicon_length']
-        
-        # IS element (format list to string)
-        if 'tn_ids' in df.columns:
-            export_df['IS_element'] = df['tn_ids'].apply(
-                lambda x: ','.join(map(str, x)) if isinstance(x, list) else str(x)
-            )
-        
-        # Coverage columns
-        if 'amplicon_coverage' in df.columns:
-            export_df['median_copy_number'] = df['amplicon_coverage']
-        if 'amplicon_coverage_mode' in df.columns:
-            export_df['mode_copy_number'] = df['amplicon_coverage_mode']
-        
-        # Event columns
-        if 'event' in df.columns:
-            export_df['event'] = df['event']
-        if 'isolate_architecture' in df.columns:
-            export_df['isolate_architecture'] = df['isolate_architecture']
+        export_df = RecordTypedDF.from_records(export_records, ISJC2Export)
         
         # Sort by mode_copy_number descending
-        if 'mode_copy_number' in export_df.columns:
-            export_df = export_df.sort_values('mode_copy_number', ascending=False)
-        
-        # Reorder columns
-        column_order = [
-            'isolate', 'Reference', 'Positions_in_chromosome', 'Direction_in_chromosome',
-            'amplicon_length', 'IS_element', 'median_copy_number', 'mode_copy_number',
-            'Ancestor', 'event', 'isolate_architecture',
-        ]
-        available_cols = [c for c in column_order if c in export_df.columns]
-        export_df = export_df[available_cols]
+        if 'mode_copy_number' in export_df.df.columns:
+            export_df = export_df.pipe(
+                lambda df: df.sort_values('mode_copy_number', ascending=False)
+            )
         
         # Export ISJC2.csv (all candidates)
-        export_df.to_csv(self.isjc2_file, index=False)
+        export_df.to_csv(self.isjc2_file)
         info(f"Exported {len(export_df)} candidates to {self.isjc2_file}")
         
         # Filter candidates for candidate_amplifications.csv
-        if 'mode_copy_number' in export_df.columns and 'amplicon_length' in export_df.columns:
-            filtered = export_df[
-                ((export_df['mode_copy_number'] > self.copy_number_threshold) |
-                 (export_df['mode_copy_number'] < self.del_copy_number_threshold)) &
-                (export_df['amplicon_length'] > self.filter_amplicon_length)
-            ]
+        if 'mode_copy_number' in export_df.df.columns and 'amplicon_length' in export_df.df.columns:
+            filtered = export_df.pipe(
+                lambda df: df[
+                    ((df['mode_copy_number'] > self.copy_number_threshold) |
+                     (df['mode_copy_number'] < self.del_copy_number_threshold)) &
+                    (df['amplicon_length'] > self.filter_amplicon_length)
+                ]
+            )
             
-            filtered.to_csv(self.candidates_file, index=False)
+            filtered.to_csv(self.candidates_file)
             info(f"Exported {len(filtered)} filtered candidates to {self.candidates_file}")
         else:
             # If columns missing, export empty DataFrame
-            export_df.head(0).to_csv(self.candidates_file, index=False)
+            export_df.pipe(lambda df: df.head(0)).to_csv(self.candidates_file)
             info(f"Exported empty candidates file (missing required columns)")
+        
+        return export_df
 
-    def _save_output(self, output: None) -> None:
+    def _save_output(self, output: RecordTypedDF[ISJC2Export]) -> None:
         """Output already saved in _calculate_output."""
         pass
 
-    def load_outputs(self) -> None:
-        """Export step has no loadable output."""
-        return None
+    def load_outputs(self) -> RecordTypedDF[ISJC2Export]:
+        """Load exported ISJC2 data."""
+        return RecordTypedDF.from_csv(self.isjc2_file, ISJC2Export)

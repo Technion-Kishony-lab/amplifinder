@@ -261,3 +261,22 @@ class AnalyzedTnJc2(CandidateTnJc2):
     # Final event classification
     event: str                              # full event description
     event_modifiers: List[EventModifier]    # de novo, ancestral, etc.
+
+
+class ISJC2Export(Record):
+    """Export record for ISJC2.csv (Step 14 output).
+    
+    Represents the user-facing export format with renamed/combined fields.
+    All fields are optional to handle cases where input data may be missing.
+    """
+    isolate: Optional[str] = None
+    Reference: Optional[str] = None
+    Positions_in_chromosome: Optional[str] = None
+    Direction_in_chromosome: Optional[str] = None
+    amplicon_length: Optional[int] = None
+    IS_element: Optional[str] = None
+    median_copy_number: Optional[float] = None
+    mode_copy_number: Optional[float] = None
+    Ancestor: Optional[str] = None
+    event: Optional[str] = None
+    isolate_architecture: Optional[str] = None

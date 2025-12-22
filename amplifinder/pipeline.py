@@ -454,10 +454,7 @@ class Pipeline:
         analyzed: RecordTypedDF[AnalyzedTnJc2],
         iso_output: Path,
     ) -> None:
-        """Step 14: Export results to Excel."""
-        if len(analyzed) == 0:
-            return
-        
+        """Step 14: Export results to CSV."""
         ExportStep(
             analyzed_candidates=analyzed,
             output_dir=iso_output,
@@ -465,7 +462,7 @@ class Pipeline:
             del_copy_number_threshold=self.config.del_copy_number_threshold,
             filter_amplicon_length=self.config.filter_amplicon_length,
         ).run()
-        info("Exported results to Excel")
+        info("Exported results to CSV")
 
 
 def run_pipeline(config: Config) -> RecordTypedDF[AnalyzedTnJc2]:
