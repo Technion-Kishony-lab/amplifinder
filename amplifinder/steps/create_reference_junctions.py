@@ -92,17 +92,19 @@ class CreateRefTnJcStep(Step[RecordTypedDF[RefTnJunction]]):
 
 
 class CreateRefTnEndSeqsStep(Step[RecordTypedDF[SeqRefTnSide]]):
-    """Extract TN end sequences for junction matching.
+    """Extract TN sequences with margins for junction matching.
 
-    For each reference TN junction, extracts the sequence around the TN boundary
-    plus its reverse complement. Used by matching step.
+    For each TN element, creates full TN sequence with margins (IS_seqs_with_margins),
+    matching MATLAB behavior. This is the full TN element plus margins on both sides,
+    not just the end sequences.
 
-    Based on create_IS_end_seqs.m
+    Based on create_IS_end_seqs.m - creates IS_seqs_with_margins
     """
 
     def __init__(
         self,
         ref_tn_jc: RecordTypedDF[RefTnJunction],
+        tn_loc: RecordTypedDF[TnLoc],
         genome: Genome,
         output_dir: Path,
         source: str,
@@ -112,14 +114,16 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDF[SeqRefTnSide]]):
         """Initialize step.
 
         Args:
-            ref_tn_jc: RecordDF with reference TN junctions
+            ref_tn_jc: RecordDF with reference TN junctions (used to get tn_id and side)
+            tn_loc: RecordDF with TN locations (used to get full TN boundaries)
             genome: Reference genome
             output_dir: Directory to write output
             source: Source name (genbank/isfinder) for filename prefix
-            max_dist_to_tn: Margin around TN boundary
+            max_dist_to_tn: Margin around TN (out_span in MATLAB)
             force: Force re-run
         """
         self.ref_tn_jc = ref_tn_jc
+        self.tn_loc = tn_loc
         self.genome = genome
         self.output_dir = Path(output_dir)
         self.max_dist_to_tn = max_dist_to_tn
@@ -133,31 +137,54 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDF[SeqRefTnSide]]):
         )
 
     def _calculate_output(self) -> RecordTypedDF[SeqRefTnSide]:
-        """Extract TN end sequences."""
+        """Extract TN sequences with margins (matching MATLAB IS_seqs_with_margins)."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         ref_seqs = self.genome.sequences
-        margin = self.max_dist_to_tn
+        out_span = self.max_dist_to_tn  # MATLAB: out_span = max_dist_to_IS
+        
+        # Create mapping from tn_id to TN location
+        tn_loc_map = {tn.ID: tn for tn in self.tn_loc}
+        
         records = []
 
         for jc in self.ref_tn_jc:
             if jc.scaf1 not in ref_seqs:
                 raise ValueError(f"TN scaffold {jc.scaf1} not in genome")
-
+            
+            # Get TN location for this junction
+            tn_id = jc.ref_tn_side.tn_id
+            if tn_id not in tn_loc_map:
+                continue  # Skip if TN not found
+            
+            tn = tn_loc_map[tn_id]
             seq = ref_seqs[jc.scaf1]
-            pos = jc.pos1 - 1  # 0-based
-            start = max(0, pos - margin)
-            end = min(len(seq), pos + margin + 1)
-            seq_fwd = seq[start:end]
+            
+            # MATLAB: IS_seqs_with_margins{i,1} = seq(l-out_span:r+out_span)
+            # Where l=LocLeft, r=LocRight (1-based inclusive in MATLAB)
+            # Python slicing: seq[l-1:r] where l-1 is 0-based start, r is 0-based exclusive end
+            # But LocRight is 1-based inclusive, so for Python we need LocRight (exclusive end)
+            l = tn.LocLeft  # 1-based inclusive
+            r = tn.LocRight  # 1-based inclusive
+            
+            # Create full TN sequence with margins (like MATLAB IS_seqs_with_margins)
+            # MATLAB: seq(l-out_span:r+out_span) - 1-based inclusive
+            # Python: seq[(l-out_span-1):(r+out_span)] - 0-based, exclusive end
+            start = max(0, (l - out_span - 1))  # Convert to 0-based
+            end = min(len(seq), r + out_span)  # r is 1-based inclusive, so r+out_span is exclusive end
+            seq_with_margins = seq[start:end]
+            
+            # MATLAB: IS_seqs_with_margins{i,2} = seqrcomplement(seq(l-out_span:r+out_span))
+            seq_with_margins_rc = reverse_complement(seq_with_margins)
 
             records.append(SeqRefTnSide.from_other(
                 jc.ref_tn_side,
-                seq_fwd=seq_fwd,
-                seq_rc=reverse_complement(seq_fwd),
+                seq_fwd=seq_with_margins,
+                seq_rc=seq_with_margins_rc,
             ))
 
         result = RecordTypedDF.from_records(records, SeqRefTnSide)
-        info(f"Created {len(records)} TN end sequences")
+        info(f"Created {len(records)} TN sequences with margins")
         return result
 
     def _save_output(self, output: RecordTypedDF[SeqRefTnSide]) -> None:

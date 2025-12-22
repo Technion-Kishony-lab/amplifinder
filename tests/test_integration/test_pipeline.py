@@ -272,6 +272,7 @@ class TestFullPipeline:
 
         ref_tn_end_seqs = CreateRefTnEndSeqsStep(
             ref_tn_jc=ref_tn_jc,
+            tn_loc=tn_loc,
             genome=genome,
             output_dir=ref_path / "tn_loc" / genome.name,
             source="isfinder",
@@ -488,16 +489,29 @@ class TestPipeline(Pipeline):
                     matches2 = test_step._find_tn_matches(seq2)
                     print(f"    matches1: {len(matches1)}, matches2: {len(matches2)}")
                     
-                    # Check a TN end sequence
+                    # Check a TN end sequence and try substring search
                     if len(ref_tn_end_seqs) > 0:
                         tn_example = next(iter(ref_tn_end_seqs))
-                        print(f"    Example TN end seq_fwd[:50]: {tn_example.seq_fwd[:50]}")
-                        print(f"    Example TN end seq_rc[:50]: {tn_example.seq_rc[:50]}")
+                        print(f"    Example TN end seq_fwd length: {len(tn_example.seq_fwd)}, seq_fwd[:50]: {tn_example.seq_fwd[:50]}")
+                        print(f"    Example TN end seq_rc length: {len(tn_example.seq_rc)}, seq_rc[:50]: {tn_example.seq_rc[:50]}")
                         # Check if seq1 is in TN sequence
                         if seq1:
-                            in_fwd = seq1 in tn_example.seq_fwd
-                            in_rc = seq1 in tn_example.seq_rc
-                            print(f"    seq1 in TN fwd: {in_fwd}, in TN rc: {in_rc}")
+                            pos_fwd = tn_example.seq_fwd.find(seq1)
+                            pos_rc = tn_example.seq_rc.find(seq1)
+                            threshold = test_step.max_dist_to_tn * 2
+                            print(f"    seq1 find in TN fwd: pos={pos_fwd}, threshold={threshold}, valid={pos_fwd >= 0 and pos_fwd < threshold}")
+                            print(f"    seq1 find in TN rc: pos={pos_rc}, threshold={threshold}, valid={pos_rc >= 0 and pos_rc < threshold}")
+                            
+                            # Try to find a substring match (maybe junction seq is too long?)
+                            if pos_fwd < 0 and pos_rc < 0:
+                                # Try shorter substring
+                                for sublen in [50, 30, 20, 10]:
+                                    subseq = seq1[:sublen]
+                                    pos_fwd_sub = tn_example.seq_fwd.find(subseq)
+                                    pos_rc_sub = tn_example.seq_rc.find(subseq)
+                                    if pos_fwd_sub >= 0 or pos_rc_sub >= 0:
+                                        print(f"    Found substring match (len={sublen}): fwd_pos={pos_fwd_sub}, rc_pos={pos_rc_sub}")
+                                        break
             
             print("\nCheck:")
             print("  1. Junction sequences extraction (scaffold names match?)")

@@ -212,6 +212,7 @@ class Pipeline:
 
         ref_tn_end_seqs = CreateRefTnEndSeqsStep(
             ref_tn_jc=ref_tn_jc,
+            tn_loc=tn_loc,
             genome=genome,
             output_dir=iso_output,
             source=self.ref_tn_source,

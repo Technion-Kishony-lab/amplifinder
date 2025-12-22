@@ -60,6 +60,7 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
 
     ref_tn_end_seqs = CreateRefTnEndSeqsStep(
         ref_tn_jc=ref_jc,
+        tn_loc=tn_loc,
         genome=tiny_genome,
         output_dir=tmp_output,
         source="isfinder",
