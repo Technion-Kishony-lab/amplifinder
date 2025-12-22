@@ -221,11 +221,12 @@ def get_breseq_version(breseq_path: Path) -> Optional[str]:
 # Parser functions
 # =============================================================================
 
-def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
+def parse_breseq_output(breseq_path: Path, csv_output_dir: Optional[Path] = None) -> Dict[str, pd.DataFrame]:
     """Parse breseq output.gd file into DataFrames.
 
     Args:
         breseq_path: Path to breseq output directory
+        csv_output_dir: Optional directory for CSV output files. If None, writes to breseq output directory.
 
     Returns:
         Dictionary with keys: JC, SNP, MOB, DEL, UN
@@ -259,7 +260,7 @@ def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
             records[record_type].append(record)
 
     # Convert to DataFrames
-    output_dir = output_gd.parent
+    output_dir = csv_output_dir if csv_output_dir is not None else output_gd.parent
     results = {}
     for name, recs in records.items():
         df = pd.DataFrame(recs) if recs else pd.DataFrame()
