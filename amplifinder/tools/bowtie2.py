@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.logger import info, debug
+from amplifinder.env import SAMTOOLS_PATH
 
 
 def get_bowtie2_path() -> Optional[Path]:
@@ -160,10 +161,27 @@ def sam_to_sorted_bam(
         RuntimeError: If samtools fails
     """
     if samtools_path is None:
-        samtools_path = shutil.which("samtools")
-        if not samtools_path:
-            raise FileNotFoundError("samtools not found in PATH")
+        # Try config path first
+        if SAMTOOLS_PATH:
+            samtools_path = SAMTOOLS_PATH
+        else:
+            # Try PATH as last resort
+            samtools_path = shutil.which("samtools")
+            if not samtools_path:
+                raise FileNotFoundError(
+                    "samtools not found. Set samtools_path in config.yaml or ensure samtools is in PATH. "
+                    f"Config path: {SAMTOOLS_PATH}"
+                )
+    
     samtools_path = Path(samtools_path)
+    
+    # If path is a directory, append "samtools" to the path
+    if samtools_path.is_dir():
+        samtools_path = samtools_path / "samtools"
+    
+    # Verify the final path exists
+    if not samtools_path.exists():
+        raise FileNotFoundError(f"samtools not found at: {samtools_path}")
     
     if not sam_path.exists():
         raise FileNotFoundError(f"SAM file not found: {sam_path}")
