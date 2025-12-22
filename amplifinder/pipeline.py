@@ -1,11 +1,11 @@
 """Pipeline orchestration for AmpliFinder."""
 
 import pandas as pd
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Tuple
 
-from amplifinder.config import Config, get_run_dir, load_config_from_run
+from amplifinder.config import Config, get_iso_run_dir, get_anc_run_dir, load_config_from_run
 from amplifinder.data_types import (
     Genome, RecordTypedDF, TnLoc, RefTnJunction, SeqRefTnSide, Junction, TnJunction, TnJc2,
     CoveredTnJc2, ClassifiedTnJc2, CandidateTnJc2, AnalyzedTnJc2,
@@ -69,26 +69,16 @@ class Pipeline:
     
     def _ensure_ancestor_run(self) -> None:
         """Ensure ancestor run exists, create it if missing."""
-        anc_run_dir = get_run_dir(Config(
-            iso_path=self.config.anc_path,
-            ref_name=self.config.ref_name,
-            iso_name=self.config.anc_name,
-            anc_name=self.config.anc_name,
-            anc_path=None,  # Ancestor runs itself without ancestor
-            output_dir=self.config.output_dir,
-            ref_path=self.config.ref_path,
-        ))
+        anc_run_dir = get_anc_run_dir(self.config)
         
         if not (anc_run_dir / "run_config.yaml").exists():
             info(f"Ancestor run not found at {anc_run_dir}, running ancestor pipeline...")
-            anc_config = Config(
+            anc_config = replace(
+                self.config,
                 iso_path=self.config.anc_path,
-                ref_name=self.config.ref_name,
                 iso_name=self.config.anc_name,
                 anc_name=self.config.anc_name,
                 anc_path=None,
-                output_dir=self.config.output_dir,
-                ref_path=self.config.ref_path,
                 iso_breseq_path=self.config.anc_breseq_path,
             )
             Pipeline(anc_config).run()
@@ -103,15 +93,7 @@ class Pipeline:
         if not self.config.has_ancestor:
             return
         
-        anc_run_dir = get_run_dir(Config(
-            iso_path=self.config.anc_path,
-            ref_name=self.config.ref_name,
-            iso_name=self.config.anc_name,
-            anc_name=self.config.anc_name,
-            anc_path=None,
-            output_dir=self.config.output_dir,
-            ref_path=self.config.ref_path,
-        ))
+        anc_run_dir = get_anc_run_dir(self.config)
         
         import shutil
         
@@ -292,15 +274,7 @@ class Pipeline:
         anc_breseq_path = None
         anc_name = None
         if cfg.has_ancestor:
-            anc_run_dir = get_run_dir(Config(
-                iso_path=cfg.anc_path,
-                ref_name=cfg.ref_name,
-                iso_name=cfg.anc_name,
-                anc_name=cfg.anc_name,
-                anc_path=None,
-                output_dir=cfg.output_dir,
-                ref_path=cfg.ref_path,
-            ))
+            anc_run_dir = get_anc_run_dir(cfg)
             anc_config = load_config_from_run(anc_run_dir)
             anc_breseq_path = anc_config.iso_breseq_path or (anc_run_dir / "breseq")
             anc_name = cfg.anc_name

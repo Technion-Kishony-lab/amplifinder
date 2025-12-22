@@ -255,8 +255,8 @@ def merge_config(
     return merged
 
 
-def get_run_dir(config: Config) -> Path:
-    """Get the run directory path for a config.
+def get_iso_run_dir(config: Config) -> Path:
+    """Get the isolate run directory path for a config.
     
     Structure: {output_dir}/{ref_name}/{anc_name}/{iso_name}/
     
@@ -264,9 +264,23 @@ def get_run_dir(config: Config) -> Path:
         config: Config object
     
     Returns:
-        Path to run directory
+        Path to isolate run directory
     """
     return config.output_dir / config.ref_name / config.anc_name / config.iso_name
+
+
+def get_anc_run_dir(config: Config) -> Path:
+    """Get the ancestor run directory path for a config.
+    
+    Structure: {output_dir}/{ref_name}/{anc_name}/{anc_name}/
+    
+    Args:
+        config: Config object (isolate config)
+    
+    Returns:
+        Path to ancestor run directory
+    """
+    return config.output_dir / config.ref_name / config.anc_name / config.anc_name
 
 
 def save_config(config: Config, run_dir: Path) -> None:

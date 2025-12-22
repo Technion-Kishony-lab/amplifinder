@@ -3,7 +3,7 @@
 import pytest
 from pathlib import Path
 
-from amplifinder.config import Config, save_config, load_config_from_run, get_run_dir
+from amplifinder.config import Config, save_config, load_config_from_run, get_iso_run_dir
 
 
 @pytest.fixture
@@ -20,7 +20,7 @@ def sample_config(tmp_path):
 
 def test_get_run_dir(sample_config):
     """Should return correct run directory path."""
-    run_dir = get_run_dir(sample_config)
+    run_dir = get_iso_run_dir(sample_config)
     expected = sample_config.output_dir / "U00096" / "ancestor1" / "sample1"
     assert run_dir == expected
 
