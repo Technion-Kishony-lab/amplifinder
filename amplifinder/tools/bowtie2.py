@@ -234,6 +234,11 @@ def align_reads_to_fasta(
         local: Use local alignment (default True for junction alignment)
         keep_sam: Keep intermediate SAM file (default False)
     """
+    # Skip if output already exists
+    if output_bam.exists() and (output_bam.parent / f"{output_bam.name}.bai").exists():
+        info(f"BAM file already exists: {output_bam}, skipping alignment")
+        return
+    
     # Paths
     work_dir = output_bam.parent
     index_prefix = work_dir / "bowtie2_index"
