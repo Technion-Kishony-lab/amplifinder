@@ -368,6 +368,7 @@ class Pipeline:
         # If ancestor exists, copy junction files from ancestor run
         if self.config.has_ancestor:
             self._copy_ancestor_junction_files(candidates, iso_output)
+            info(f"Copied junction files from ancestor for {len(candidates)} candidates")
         else:
             # Create new junction files
             read_length = self.config.iso_read_length or 150
@@ -404,7 +405,7 @@ class Pipeline:
             output_dir=iso_output,
             iso_fastq_path=cfg.iso_path,
             anc_fastq_path=anc_fastq_path,
-            threads=1,  # TODO: get from config
+            threads=cfg.breseq_threads,  # Use breseq threads config
         ).run()
         info(f"Aligned reads for {len(candidates)} candidates")
     

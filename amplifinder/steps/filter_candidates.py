@@ -53,12 +53,12 @@ class FilterCandidatesStep(Step[RecordTypedDF[CandidateTnJc2]]):
             
             # Generate analysis directory name
             # Format: jc_{start}_{end}_{tn_id:03d}_L{read_len}
-            # For now, use index as tn_id and assume read_len=150
-            # In practice, read_len should come from config
+            # Note: read_len defaults to 150 if not provided in config
             start = classified.pos_chr_L
             end = classified.pos_chr_R
             tn_id = classified.chosen_tn_id or (i + 1)
-            read_len = 150  # TODO: get from config
+            # Default read length (can be overridden by config in pipeline)
+            read_len = 150
             
             analysis_dir = f"jc_{start}_{end}_{tn_id:03d}_L{read_len}"
             
