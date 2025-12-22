@@ -104,6 +104,18 @@ from amplifinder.pipeline import Pipeline
     default=False,
     help="Only run through breseq step, then exit.",
 )
+@click.option(
+    "--visualize",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Visualize results from a completed run directory.",
+)
+@click.option(
+    "--save-plots",
+    is_flag=True,
+    default=False,
+    help="Save plots to PNG files instead of displaying (use with --visualize).",
+)
 @click.version_option(version=__version__)
 def main(
     iso_path: Path,
@@ -121,6 +133,8 @@ def main(
     log_level: str,
     fetch_only: bool,
     breseq_only: bool,
+    visualize: Optional[Path],
+    save_plots: bool,
 ) -> None:
     """AmpliFinder: Detect IS-mediated gene amplifications from WGS data."""
     # Setup logger early (use output_dir directly for fetch-only)
@@ -129,9 +143,22 @@ def main(
     setup_logger(log_path=log_dir / "amplifinder.log", level=getattr(logging, log_level.upper()))
 
     info(f"AmpliFinder v{__version__}")
-    info(f"Reference: {ref_name}")
 
     try:
+        # Visualization mode
+        if visualize is not None:
+            info(f"Visualizing results from: {visualize}")
+            from amplifinder.visualization import visualize_candidates
+            visualize_candidates(
+                run_dir=visualize,
+                save_plots=save_plots,
+                interactive=not save_plots,
+            )
+            info("Done")
+            return
+        
+        info(f"Reference: {ref_name}")
+
         # Fetch-only mode: only need ref_name and ref_path
         if fetch_only:
             info("Running fetch-only mode (reference + TN location)")
