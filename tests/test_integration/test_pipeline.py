@@ -119,7 +119,8 @@ class TestBreseq:
             pytest.skip(f"output.gd not found: {output_gd}")
 
         # parse_breseq_output expects the breseq output directory, not the .gd file
-        result = parse_breseq_output(breseq_path)
+        # Use tmp_path for CSV output to avoid permission errors
+        result = parse_breseq_output(breseq_path, csv_output_dir=tmp_path)
 
         # Check JC (junction) output
         assert "JC" in result
@@ -234,7 +235,8 @@ class TestFullPipeline:
 
         # Step 4: Parse breseq output
         from amplifinder.tools.breseq import parse_breseq_output
-        breseq_output = parse_breseq_output(breseq_path)
+        # Use tmp_path for CSV output to avoid permission errors
+        breseq_output = parse_breseq_output(breseq_path, csv_output_dir=tmp_path)
         breseq_jc = breseq_output["JC"]
 
         # Step 5: Create TnJc
