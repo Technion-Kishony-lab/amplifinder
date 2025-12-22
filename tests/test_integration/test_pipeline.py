@@ -173,21 +173,65 @@ class TestCompareWithMATLAB:
 class TestFullPipeline:
     """Full pipeline integration tests."""
 
-    def test_pipeline_matches_matlab_tn_count(self, tmp_path, isolate_srr25242877):
-        """Run pipeline and compare TN junction count with MATLAB."""
-        matlab_path = isolate_srr25242877["matlab_output"]
-        isjc2_xlsx = matlab_path / "ISJC2.xlsx"
-
+    def test_full_pipeline_matches_matlab(self, isolate_srr25242877):
+        """Run full pipeline and compare with MATLAB outputs (1-to-1 matching)."""
+        from amplifinder.config import Config, get_run_dir
+        from amplifinder.pipeline import Pipeline
+        from tests.test_integration.matlab_compare import compare_isjc2_outputs
+        
+        # Setup output directory next to MATLAB outputs
+        matlab_output_dir = isolate_srr25242877["matlab_output"]
+        # matlab_output_dir = /zdata/user-data/rkishony/AmpliFinder_test/AmpliFinderWorkspace/output/SRR25242877
+        # Go up to AmpliFinder_test, then create python_outputs directory
+        test_output_root = matlab_output_dir.parent.parent.parent / "python_outputs"
+        # test_output_root = /zdata/user-data/rkishony/AmpliFinder_test/python_outputs
+        
+        # Check MATLAB output exists
+        isjc2_xlsx = matlab_output_dir / "ISJC2.xlsx"
         if not isjc2_xlsx.exists():
             pytest.skip("MATLAB reference output not available")
-
-        matlab_df = pd.read_excel(isjc2_xlsx)
-        matlab_jc_count = len(matlab_df)
-
-        # TODO: Run full pipeline and compare
-        # For now, just verify MATLAB output is accessible
-        assert matlab_jc_count > 0
-        print(f"MATLAB found {matlab_jc_count} TN junctions")
+        
+        # Setup config using pre-computed breseq output
+        config = Config(
+            iso_path=isolate_srr25242877["fastq_path"],
+            ref_name="U00096",
+            anc_path=None,  # Can add ancestor later
+            iso_name="SRR25242877",
+            output_dir=test_output_root / "output",
+            ref_path=test_output_root / "genomesDB",
+            iso_breseq_path=isolate_srr25242877["breseq_path"],
+            ncbi=True,
+            use_isfinder=False,  # Use GenBank for consistency
+        )
+        
+        # Run full pipeline
+        pipeline = Pipeline(config)
+        result = pipeline.run()
+        
+        # Verify outputs exist
+        run_dir = get_run_dir(config)
+        # run_dir = test_output_root / "output" / "U00096" / "SRR25242877" / "SRR25242877"
+        
+        # Check if pipeline produced any candidates
+        if len(result) == 0:
+            pytest.fail(
+                f"Pipeline found 0 candidates. Expected to match MATLAB output with 155 junctions. "
+                f"Check pipeline parameters and matching logic. Run dir: {run_dir}"
+            )
+        
+        assert (run_dir / "ISJC2.csv").exists(), f"ISJC2.csv not found in {run_dir}"
+        assert (run_dir / "candidate_amplifications.csv").exists(), f"candidate_amplifications.csv not found in {run_dir}"
+        
+        # Load Python outputs
+        python_isjc2 = pd.read_csv(run_dir / "ISJC2.csv")
+        print(f"Python found {len(python_isjc2)} candidates")
+        
+        # Load MATLAB outputs
+        matlab_isjc2 = pd.read_excel(isjc2_xlsx)
+        print(f"MATLAB found {len(matlab_isjc2)} candidates")
+        
+        # Compare outputs (1-to-1 matching required)
+        compare_isjc2_outputs(python_isjc2, matlab_isjc2)
 
     def test_tnjc2_step_produces_output(self, tmp_path, isolate_srr25242877):
         """Test TnJc2 step produces valid output structure."""
