@@ -66,7 +66,7 @@ def run_bowtie2_align(
     index_prefix: Path,
     fastq_path: Path,
     output_sam: Path,
-    score_min: str = "L,0,-0.6",
+    score_min: Optional[str] = None,
     num_alignments: int = 10,
     threads: int = 1,
     local: bool = True,
@@ -77,7 +77,9 @@ def run_bowtie2_align(
         index_prefix: Path to bowtie2 index prefix
         fastq_path: Path to FASTQ file (or directory with FASTQ files)
         output_sam: Path to output SAM file
-        score_min: Minimum alignment score function (default: L,0,-0.6)
+        score_min: Minimum alignment score function. If None, uses:
+                   - "G,0,-0.25" for local alignment (matches MATLAB)
+                   - "L,0,-0.6" for end-to-end alignment
         num_alignments: Maximum alignments to report per read (-k)
         threads: Number of threads to use
         local: Use local alignment (default True for junction alignment)
@@ -108,6 +110,11 @@ def run_bowtie2_align(
     # Create output directory if needed
     output_sam.parent.mkdir(parents=True, exist_ok=True)
     
+    # Set default score_min based on alignment mode
+    # MATLAB uses end-to-end with L,0,-0.6, local with G,0,-0.25
+    if score_min is None:
+        score_min = "G,0,-0.25" if local else "L,0,-0.6"
+    
     cmd = [
         str(bowtie2),
         "-x", str(index_prefix),
@@ -117,6 +124,10 @@ def run_bowtie2_align(
         "--score-min", score_min,
         "-p", str(threads),
     ]
+    
+    # Add mismatch penalty to match MATLAB (--mp 5,5)
+    # MATLAB uses this for both end-to-end and local modes
+    cmd.extend(["--mp", "5,5"])
     
     if local:
         cmd.append("--local")
@@ -188,8 +199,9 @@ def align_reads_to_fasta(
     fastq_path: Path,
     output_bam: Path,
     threads: int = 1,
-    score_min: str = "L,0,-0.6",
+    score_min: Optional[str] = None,
     num_alignments: int = 10,
+    local: bool = False,  # MATLAB uses --end-to-end by default
     keep_sam: bool = False,
 ) -> None:
     """Full alignment pipeline: build index, align, convert to sorted BAM.
@@ -199,8 +211,9 @@ def align_reads_to_fasta(
         fastq_path: FASTQ file or directory
         output_bam: Output sorted BAM file
         threads: Number of threads
-        score_min: Minimum alignment score function
+        score_min: Minimum alignment score function. If None, uses appropriate default.
         num_alignments: Max alignments per read
+        local: Use local alignment (default True for junction alignment)
         keep_sam: Keep intermediate SAM file (default False)
     """
     # Paths
@@ -219,6 +232,7 @@ def align_reads_to_fasta(
         score_min=score_min,
         num_alignments=num_alignments,
         threads=threads,
+        local=local,
     )
     
     # Convert to sorted BAM

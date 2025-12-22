@@ -24,7 +24,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
         iso_fastq_path: Path,
         anc_fastq_path: Optional[Path] = None,
         threads: int = 1,
-        score_min: str = "L,0,-0.6",
+        score_min: Optional[str] = None,  # None = use default (G,0,-0.25 for local)
         num_alignments: int = 10,
         force: Optional[bool] = None,
     ):

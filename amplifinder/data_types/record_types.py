@@ -175,11 +175,11 @@ class CoveredTnJc2(TnJc2):
     iso_name: str
     anc_name: Optional[str] = None  # present when anc_path was set
     
-    # Coverage fields (always present)
-    amplicon_coverage: float        # raw: iso_cov/genome_cov, normalized: iso_cov/anc_cov
+    # Coverage fields (may be NaN/None for invalid amplicon lengths)
+    amplicon_coverage: Optional[float] = None  # raw: iso_cov/genome_cov, normalized: iso_cov/anc_cov
     genome_coverage: float          # median genome coverage for this sample
-    copy_number: float              # amplicon / genome (raw copy number)
-    amplicon_coverage_mode: float   # mode of copy number distribution
+    copy_number: Optional[float] = None  # amplicon / genome (raw copy number)
+    amplicon_coverage_mode: Optional[float] = None  # mode of copy number distribution
     
     # Ancestor comparison (only when anc_path is set)
     copy_number_ratio: Optional[float] = None  # iso_copy / anc_copy

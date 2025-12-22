@@ -108,10 +108,10 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDF[CoveredTnJc2]]):
         amplicon_length = tnjc.amplicon_length
         
         # Default values for candidates outside length range
-        amplicon_coverage = float("nan")
-        copy_number = float("nan")
+        amplicon_coverage = None
+        copy_number = None
         copy_number_ratio = None
-        amplicon_coverage_mode = float("nan")
+        amplicon_coverage_mode = None
         
         # Only calculate for valid amplicon lengths
         if self.min_amplicon_length < amplicon_length < self.max_amplicon_length:
@@ -137,7 +137,7 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDF[CoveredTnJc2]]):
                 anc_copy_number = anc_mean_cov / anc_genome_median if anc_genome_median > 0 else 0.0
                 
                 # Normalized coverage = iso/anc
-                amplicon_coverage = copy_number / anc_copy_number if anc_copy_number > 0 else float("nan")
+                amplicon_coverage = copy_number / anc_copy_number if anc_copy_number > 0 else None
                 copy_number_ratio = amplicon_coverage
                 
                 # Calculate distribution mode
