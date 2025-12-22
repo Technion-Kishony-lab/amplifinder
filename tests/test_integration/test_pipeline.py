@@ -393,25 +393,117 @@ class TestPipeline(Pipeline):
         result = super()._create_tnjc(breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output)
         self.step_results["tnjc"] = result
         
-        # Compare with MATLAB
+        # Compare with MATLAB (try .mat file, but it may not be readable)
         import scipy.io as sio
+        matlab_count = None
         matlab_file = self.matlab_output_dir / "ISJC.mat"
         if matlab_file.exists():
-            matlab_data = sio.loadmat(str(matlab_file))
-            matlab_isjc = matlab_data.get("ISJC", None)
-            matlab_count = len(matlab_isjc) if matlab_isjc is not None else 0
-            print(f"Step 5: MATLAB={matlab_count} IS-associated junctions, Python={len(result)} TN-associated junctions")
+            try:
+                matlab_data = sio.loadmat(str(matlab_file))
+                # Try different possible keys
+                for key in ["ISJC", "isjc", "IS_jc"]:
+                    if key in matlab_data:
+                        matlab_isjc = matlab_data[key]
+                        if hasattr(matlab_isjc, '__len__'):
+                            matlab_count = len(matlab_isjc)
+                            break
+            except Exception as e:
+                print(f"Warning: Could not read MATLAB file {matlab_file}: {e}")
+        
+        # Use ISJC2.xlsx as fallback (we know it has 155 rows)
+        if matlab_count is None:
+            try:
+                import pandas as pd
+                isjc2_xlsx = self.matlab_output_dir / "ISJC2.xlsx"
+                if isjc2_xlsx.exists():
+                    df = pd.read_excel(isjc2_xlsx)
+                    # ISJC2 has junction pairs, so ISJC should be roughly 2x (each pair has 2 junctions)
+                    # But we know MATLAB found matches, so let's just note that
+                    print(f"Step 5: MATLAB ISJC2.xlsx has {len(df)} junction pairs (Python={len(result)} TN-associated junctions)")
+                    matlab_count = len(df) * 2  # Rough estimate
+            except Exception as e:
+                print(f"Warning: Could not read ISJC2.xlsx: {e}")
+        
+        if matlab_count is not None:
+            print(f"Step 5: MATLAB≈{matlab_count} IS-associated junctions (estimated), Python={len(result)} TN-associated junctions")
+        
+        # Detailed debugging if no matches found
+        if len(result) == 0:
+            print("\n*** DEBUGGING Step 5: No TN-associated junctions found ***")
+            print(f"Inputs to CreateTnJcStep:")
+            print(f"  - Breseq junctions: {len(breseq_jc)}")
+            print(f"  - Reference TN junctions: {len(ref_tn_jc)}")
+            print(f"  - TN end sequences: {len(ref_tn_end_seqs)}")
+            print(f"  - Config max_dist_to_IS: {self.config.max_dist_to_IS}")
+            print(f"  - Config trim_jc_flanking: {self.config.trim_jc_flanking}")
             
-            if len(result) == 0 and matlab_count > 0:
-                print("\n*** DEBUGGING NEEDED ***")
-                print("MATLAB found IS-associated junctions but Python found 0")
-                print("Check:")
-                print("  1. Junction sequences extraction")
-                print("  2. TN end sequences")
-                print("  3. Matching parameters (max_dist_to_IS)")
-                print("  4. Scaffold name matching")
-        else:
-            print(f"Step 5: Python={len(result)} TN-associated junctions (MATLAB file not found: {matlab_file})")
+            # Check scaffold names
+            if len(breseq_jc) > 0:
+                breseq_scaffolds = set(breseq_jc.get('scaf1', pd.Series()).unique()) | set(breseq_jc.get('scaf2', pd.Series()).unique())
+                genome_scaffolds = set(genome.sequences.keys())
+                print(f"  - Breseq scaffolds: {sorted(breseq_scaffolds)}")
+                print(f"  - Genome scaffolds: {sorted(genome_scaffolds)}")
+                if breseq_scaffolds != genome_scaffolds:
+                    print(f"  *** WARNING: Scaffold mismatch! ***")
+                    print(f"     Missing in genome: {breseq_scaffolds - genome_scaffolds}")
+                    print(f"     Missing in breseq: {genome_scaffolds - breseq_scaffolds}")
+            
+            # Debug: Check a few example sequences
+            print("\n*** Inspecting first breseq junction sequences ***")
+            from amplifinder.steps.create_tnjc import CreateTnJcStep
+            from amplifinder.data_types import RecordTypedDF, Junction
+            
+            # Create a test step to inspect sequences
+            all_jc_df = pd.concat([breseq_jc, ref_tn_jc.df], ignore_index=True)
+            all_jc = RecordTypedDF(all_jc_df, Junction)
+            
+            test_step = CreateTnJcStep(
+                jc_df=all_jc,
+                ref_tn_end_seqs=ref_tn_end_seqs,
+                genome=genome,
+                output_dir=iso_output,
+                max_dist_to_tn=self.config.max_dist_to_IS,
+                trim_jc_flanking=self.config.trim_jc_flanking,
+            )
+            test_step.ref_seqs = genome.sequences
+            
+            # Check first few breseq junctions
+            num_checked = 0
+            for i, jc in enumerate(all_jc):
+                if num_checked >= 3:
+                    break
+                # Only check breseq junctions (not ref_tn_jc which are synthetic)
+                if jc.scaf1 == 'U00096' or jc.scaf2 == 'U00096':
+                    num_checked += 1
+                    seq1 = test_step._get_junction_seq(jc, side=1)
+                    seq2 = test_step._get_junction_seq(jc, side=2)
+                    print(f"\n  Junction {i}:")
+                    print(f"    scaf1={jc.scaf1}, pos1={jc.pos1}, dir1={jc.dir1}, flanking_left={jc.flanking_left}")
+                    print(f"    scaf2={jc.scaf2}, pos2={jc.pos2}, dir2={jc.dir2}, flanking_right={jc.flanking_right}")
+                    print(f"    seq1 length: {len(seq1)}, seq1[:50]: {seq1[:50] if seq1 else 'EMPTY'}")
+                    print(f"    seq2 length: {len(seq2)}, seq2[:50]: {seq2[:50] if seq2 else 'EMPTY'}")
+                    
+                    # Try to find matches
+                    matches1 = test_step._find_tn_matches(seq1)
+                    matches2 = test_step._find_tn_matches(seq2)
+                    print(f"    matches1: {len(matches1)}, matches2: {len(matches2)}")
+                    
+                    # Check a TN end sequence
+                    if len(ref_tn_end_seqs) > 0:
+                        tn_example = next(iter(ref_tn_end_seqs))
+                        print(f"    Example TN end seq_fwd[:50]: {tn_example.seq_fwd[:50]}")
+                        print(f"    Example TN end seq_rc[:50]: {tn_example.seq_rc[:50]}")
+                        # Check if seq1 is in TN sequence
+                        if seq1:
+                            in_fwd = seq1 in tn_example.seq_fwd
+                            in_rc = seq1 in tn_example.seq_rc
+                            print(f"    seq1 in TN fwd: {in_fwd}, in TN rc: {in_rc}")
+            
+            print("\nCheck:")
+            print("  1. Junction sequences extraction (scaffold names match?)")
+            print("  2. TN end sequences (are they created correctly?)")
+            print(f"  3. Matching parameters (max_dist_to_IS={self.config.max_dist_to_IS} may be too small)")
+            print("  4. Sequence matching logic in CreateTnJcStep._find_tn_matches()")
         
         return result
     
