@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.steps.base import Step
-from amplifinder.config import Config, save_config, get_run_dir
+from amplifinder.config import Config, save_config, get_iso_run_dir
 from amplifinder.logger import info
 
 
@@ -21,7 +21,7 @@ class InitializingStep(Step[Path]):
         force: Optional[bool] = None,
     ):
         self.config = config
-        self.run_dir = get_run_dir(config)
+        self.run_dir = get_iso_run_dir(config)
         super().__init__(output_files=[self.run_dir], force=force)
 
     def _calculate_output(self) -> Path:
