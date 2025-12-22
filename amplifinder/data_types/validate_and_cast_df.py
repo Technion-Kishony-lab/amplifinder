@@ -54,6 +54,15 @@ def _is_namedtuple(t: Type) -> bool:
         return False
 
 
+def _is_record(t: Type) -> bool:
+    """Check if type is a Record subclass."""
+    try:
+        from amplifinder.data_types.records import Record
+        return isinstance(t, type) and issubclass(t, Record)
+    except TypeError:
+        return False
+
+
 def parse_compound(value: Any, expected_type: Type) -> Any:
     """Parse compound type using Pydantic TypeAdapter."""
     # Handle NaN
@@ -100,9 +109,9 @@ def validate_and_cast_df(
         base_type = _dtype.base_dtype  # Unwraps Optional[T] → T
 
         if cast:
-            if _is_compound(base_type) or _is_compound(_dtype.dtype) or _is_namedtuple(base_type):
-                # Compound types and NamedTuple: parse with Pydantic
-                # (NamedTuple isn't detected as compound by get_origin, so check separately)
+            if _is_compound(base_type) or _is_compound(_dtype.dtype) or _is_namedtuple(base_type) or _is_record(base_type):
+                # Compound types, NamedTuple, and Record: parse with Pydantic
+                # (NamedTuple/Record aren't detected as compound by get_origin, so check separately)
                 df = df.copy()
                 df[col_name] = df[col_name].apply(lambda x, et=_dtype.dtype: parse_compound(x, et))
             elif _is_enum(base_type):

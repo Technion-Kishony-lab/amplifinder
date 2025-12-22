@@ -7,7 +7,7 @@ from typing import Tuple
 
 from amplifinder.config import Config, get_run_dir, load_config_from_run
 from amplifinder.data_types import (
-    Genome, RecordTypedDF, TnLoc, RefTnJunction, TnEndSeq, Junction, TnJunction, TnJc2,
+    Genome, RecordTypedDF, TnLoc, RefTnJunction, SeqRefTnSide, Junction, TnJunction, TnJc2,
     CoveredTnJc2, ClassifiedTnJc2, CandidateTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.logger import info
@@ -198,7 +198,7 @@ class Pipeline:
 
     def _create_reference_tn_junctions(
         self, tn_loc: RecordTypedDF[TnLoc], genome: Genome, iso_output: Path
-    ) -> Tuple[RecordTypedDF[RefTnJunction], RecordTypedDF[TnEndSeq]]:
+    ) -> Tuple[RecordTypedDF[RefTnJunction], RecordTypedDF[SeqRefTnSide]]:
         """Step 3: Create reference junctions and TN end sequences."""
         cfg = self.config
 
@@ -240,7 +240,7 @@ class Pipeline:
         self,
         breseq_jc: pd.DataFrame,
         ref_tn_jc: RecordTypedDF[RefTnJunction],
-        ref_tn_end_seqs: RecordTypedDF[TnEndSeq],
+        ref_tn_end_seqs: RecordTypedDF[SeqRefTnSide],
         genome: Genome,
         iso_output: Path,
     ) -> RecordTypedDF[TnJunction]:
