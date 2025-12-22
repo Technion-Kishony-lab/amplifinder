@@ -6,7 +6,7 @@ from typing import Optional, List, Tuple
 from amplifinder.steps.base import Step
 from amplifinder.steps.io_naming import default_path
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, TnJunction, TnJc2, TnMatch, Side, Orientation
+from amplifinder.data_types import RecordTypedDF, TnJunction, TnJc2, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
 
 
@@ -95,7 +95,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
                     continue
 
                 # (b) Find matching TN: same ID, different sides
-                matching = self._find_matching_tns(jc_i.matches, jc_j.matches)
+                matching = self._find_matching_tns(jc_i.ref_tn_sides, jc_j.ref_tn_sides)
                 if not matching:
                     continue
 
@@ -107,8 +107,8 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
 
     def _find_matching_tns(
         self,
-        matches_i: List[TnMatch],
-        matches_j: List[TnMatch],
+        matches_i: List[RefTnSide],
+        matches_j: List[RefTnSide],
     ) -> List[Tuple[int, Side]]:
         """Find TN elements that match both junctions on different sides.
 

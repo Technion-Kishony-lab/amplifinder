@@ -79,7 +79,7 @@ def test_output_has_correct_columns(tnjc_step):
     tnjc = tnjc_step.run()
 
     expected_cols = {"num", "scaf1", "pos1", "dir1", "scaf2", "pos2", "dir2",
-                     "flanking_left", "flanking_right", "matches", "switched"}
+                     "flanking_left", "flanking_right", "ref_tn_sides", "switched"}
     assert expected_cols.issubset(set(tnjc.df.columns))
 
 
