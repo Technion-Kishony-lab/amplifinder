@@ -131,6 +131,18 @@ def validate_and_cast_df(
                 raise TypeError(f"Column {col_name}: expected {expected_dtype}, got {actual}")
 
     if cast and scalar_cols:
-        df = df.astype(scalar_cols)
+        df = df.copy()
+        for col_name, base_type in scalar_cols.items():
+            if base_type is int:
+                # Handle Optional[int] - use nullable integer type
+                if _is_optional(dtypes[col_name].dtype):
+                    df[col_name] = df[col_name].astype("Int64")  # Nullable integer
+                else:
+                    # Non-optional int - convert NaN to 0 or raise error
+                    if df[col_name].isna().any():
+                        raise ValueError(f"Column {col_name} has NaN values but is not optional")
+                    df[col_name] = df[col_name].astype("int64")
+            else:
+                df[col_name] = df[col_name].astype(base_type)
 
     return df
