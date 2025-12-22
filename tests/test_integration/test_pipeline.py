@@ -13,6 +13,7 @@ from amplifinder.steps import (
     CreateTnJc2Step,
 )
 from amplifinder.data_types import RecordTypedDF, Junction
+from amplifinder.pipeline import Pipeline
 
 pytestmark = pytest.mark.integration
 
@@ -316,3 +317,206 @@ class TestFullPipeline:
         assert expected_cols.issubset(set(tnjc2.df.columns))
 
         print(f"TnJc2: found {len(tnjc2)} junction pairs")
+
+
+# =============================================================================
+# Step-by-step debugging tests (slow) - DIAGNOSTIC TOOL
+# =============================================================================
+
+class TestPipeline(Pipeline):
+    """Pipeline subclass for testing with step-by-step MATLAB comparisons."""
+    
+    def __init__(self, config, matlab_output_dir):
+        super().__init__(config)
+        self.matlab_output_dir = matlab_output_dir
+        self.step_results = {}
+        self.is_ancestor_run = False
+    
+    def _locate_tns_in_reference(self, genome):
+        """Step 2: Locate TN elements - compare with MATLAB."""
+        result = super()._locate_tns_in_reference(genome)
+        self.step_results["tn_loc"] = result
+        
+        # Compare with MATLAB
+        import scipy.io as sio
+        matlab_file = self.matlab_output_dir / "genbank_IS_loc.mat"
+        if matlab_file.exists():
+            matlab_data = sio.loadmat(str(matlab_file))
+            matlab_is_loc = matlab_data.get("IS_loc", None)
+            matlab_count = len(matlab_is_loc) if matlab_is_loc is not None else 0
+            print(f"Step 2: MATLAB={matlab_count} TNs, Python={len(result)} TNs")
+        else:
+            print(f"Step 2: Python={len(result)} TNs (MATLAB file not found: {matlab_file})")
+        
+        return result
+    
+    def _create_reference_tn_junctions(self, tn_loc, genome, iso_output):
+        """Step 3: Create reference TN junctions - compare with MATLAB."""
+        result = super()._create_reference_tn_junctions(tn_loc, genome, iso_output)
+        ref_tn_jc, ref_tn_end_seqs = result
+        self.step_results["ref_tn_jc"] = ref_tn_jc
+        self.step_results["ref_tn_end_seqs"] = ref_tn_end_seqs
+        
+        # Compare with MATLAB
+        import scipy.io as sio
+        matlab_file = self.matlab_output_dir / "JC_refIS.mat"
+        if matlab_file.exists():
+            matlab_data = sio.loadmat(str(matlab_file))
+            matlab_jc_refis = matlab_data.get("JC_refIS", None)
+            matlab_count = len(matlab_jc_refis) if matlab_jc_refis is not None else 0
+            print(f"Step 3: MATLAB={matlab_count} ref junctions, Python={len(ref_tn_jc)} ref junctions")
+        else:
+            print(f"Step 3: Python={len(ref_tn_jc)} ref junctions (MATLAB file not found: {matlab_file})")
+        
+        return result
+    
+    def _run_breseq(self, genome, iso_output):
+        """Step 4: Parse breseq - compare with MATLAB."""
+        result = super()._run_breseq(genome, iso_output)
+        self.step_results["breseq_jc"] = result
+        
+        # Compare with MATLAB
+        import scipy.io as sio
+        matlab_file = self.matlab_output_dir / "MUT.mat"
+        if matlab_file.exists():
+            matlab_data = sio.loadmat(str(matlab_file))
+            matlab_jc = matlab_data.get("JC", None)
+            matlab_count = len(matlab_jc) if matlab_jc is not None else 0
+            print(f"Step 4: MATLAB={matlab_count} junctions, Python={len(result)} junctions")
+        else:
+            print(f"Step 4: Python={len(result)} junctions (MATLAB file not found: {matlab_file})")
+        
+        return result
+    
+    def _create_tnjc(self, breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output):
+        """Step 5: Match junctions to TN elements - compare with MATLAB (WHERE IT FAILS)."""
+        result = super()._create_tnjc(breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output)
+        self.step_results["tnjc"] = result
+        
+        # Compare with MATLAB
+        import scipy.io as sio
+        matlab_file = self.matlab_output_dir / "ISJC.mat"
+        if matlab_file.exists():
+            matlab_data = sio.loadmat(str(matlab_file))
+            matlab_isjc = matlab_data.get("ISJC", None)
+            matlab_count = len(matlab_isjc) if matlab_isjc is not None else 0
+            print(f"Step 5: MATLAB={matlab_count} IS-associated junctions, Python={len(result)} TN-associated junctions")
+            
+            if len(result) == 0 and matlab_count > 0:
+                print("\n*** DEBUGGING NEEDED ***")
+                print("MATLAB found IS-associated junctions but Python found 0")
+                print("Check:")
+                print("  1. Junction sequences extraction")
+                print("  2. TN end sequences")
+                print("  3. Matching parameters (max_dist_to_IS)")
+                print("  4. Scaffold name matching")
+        else:
+            print(f"Step 5: Python={len(result)} TN-associated junctions (MATLAB file not found: {matlab_file})")
+        
+        return result
+    
+    def _create_tnjc2(self, tnjc, genome, iso_output):
+        """Step 6: Combine junction pairs - compare with MATLAB."""
+        result = super()._create_tnjc2(tnjc, genome, iso_output)
+        self.step_results["tnjc2"] = result
+        
+        # Compare with MATLAB
+        import scipy.io as sio
+        matlab_file = self.matlab_output_dir / "ISJC2.mat"
+        if matlab_file.exists():
+            matlab_data = sio.loadmat(str(matlab_file))
+            matlab_isjc2 = matlab_data.get("ISJC2", None)
+            matlab_count = len(matlab_isjc2) if matlab_isjc2 is not None else 0
+            print(f"Step 6: MATLAB={matlab_count} junction pairs, Python={len(result)} junction pairs")
+        else:
+            print(f"Step 6: Python={len(result)} junction pairs (MATLAB file not found: {matlab_file})")
+        
+        return result
+
+
+@pytest.mark.slow
+class TestPipelineStepByStep:
+    """Step-by-step pipeline tests for debugging - compares each step with MATLAB."""
+    
+    def test_isolate_pipeline_steps_with_matlab(self, isolate_srr25242877, tmp_path):
+        """Test isolate pipeline step-by-step, comparing each step with MATLAB outputs."""
+        from amplifinder.config import Config
+        
+        matlab_output_dir = isolate_srr25242877["matlab_output"]
+        test_output_root = matlab_output_dir.parent.parent.parent / "python_outputs"
+        
+        config = Config(
+            iso_path=isolate_srr25242877["fastq_path"],
+            ref_name="U00096",
+            anc_path=None,  # No ancestor for this test
+            iso_name="SRR25242877",
+            output_dir=test_output_root / "output",
+            ref_path=test_output_root / "genomesDB",
+            iso_breseq_path=isolate_srr25242877["breseq_path"],
+            ncbi=True,
+            use_isfinder=False,  # Use GenBank for consistency
+        )
+        
+        print("\n=== Testing Isolate Pipeline (no ancestor) ===")
+        pipeline = TestPipeline(config, matlab_output_dir)
+        result = pipeline.run()
+        
+        print(f"\nFinal result: {len(result)} candidates")
+        return result
+    
+    def test_ancestor_pipeline_steps_with_matlab(self, isolate_srr25242906, tmp_path):
+        """Test ancestor pipeline step-by-step, comparing each step with MATLAB outputs."""
+        from amplifinder.config import Config
+        
+        matlab_output_dir = isolate_srr25242906["matlab_output"]
+        test_output_root = matlab_output_dir.parent.parent.parent / "python_outputs"
+        
+        config = Config(
+            iso_path=isolate_srr25242906["fastq_path"],
+            ref_name="U00096",
+            anc_path=None,  # Ancestor has no ancestor
+            iso_name="SRR25242906",
+            anc_name="SRR25242906",
+            output_dir=test_output_root / "output",
+            ref_path=test_output_root / "genomesDB",
+            iso_breseq_path=isolate_srr25242906["breseq_path"],
+            ncbi=True,
+            use_isfinder=False,
+        )
+        
+        print("\n=== Testing Ancestor Pipeline ===")
+        pipeline = TestPipeline(config, matlab_output_dir)
+        pipeline.is_ancestor_run = True
+        result = pipeline.run()
+        
+        print(f"\nFinal result: {len(result)} candidates")
+        return result
+    
+    def test_isolate_with_ancestor_pipeline_steps(self, isolate_srr25242877, isolate_srr25242906, tmp_path):
+        """Test isolate pipeline with ancestor - step-by-step comparison."""
+        from amplifinder.config import Config
+        
+        matlab_output_dir = isolate_srr25242877["matlab_output"]
+        test_output_root = matlab_output_dir.parent.parent.parent / "python_outputs"
+        
+        config = Config(
+            iso_path=isolate_srr25242877["fastq_path"],
+            ref_name="U00096",
+            anc_path=isolate_srr25242906["fastq_path"],  # Has ancestor
+            iso_name="SRR25242877",
+            anc_name="SRR25242906",
+            anc_breseq_path=isolate_srr25242906["breseq_path"],
+            output_dir=test_output_root / "output",
+            ref_path=test_output_root / "genomesDB",
+            iso_breseq_path=isolate_srr25242877["breseq_path"],
+            ncbi=True,
+            use_isfinder=False,
+        )
+        
+        print("\n=== Testing Isolate Pipeline (with ancestor) ===")
+        print("Note: Ancestor pipeline will run automatically if needed")
+        pipeline = TestPipeline(config, matlab_output_dir)
+        result = pipeline.run()  # Will run ancestor automatically if needed
+        
+        print(f"\nFinal result: {len(result)} candidates")
+        return result
