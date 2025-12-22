@@ -15,6 +15,7 @@ from amplifinder.steps.synthetic_junctions import CreateSyntheticJunctionsStep
 from amplifinder.steps.align_reads import AlignReadsToJunctionsStep
 from amplifinder.steps.analyze_alignments import AnalyzeAlignmentsStep
 from amplifinder.steps.classify_candidates import ClassifyCandidatesStep
+from amplifinder.steps.export import ExportStep
 
 # Backward compatibility alias
 ISfinderStep = LocateTNsUsingISfinderStep
@@ -38,4 +39,5 @@ __all__ = [
     "AlignReadsToJunctionsStep",
     "AnalyzeAlignmentsStep",
     "ClassifyCandidatesStep",
+    "ExportStep",
 ]
