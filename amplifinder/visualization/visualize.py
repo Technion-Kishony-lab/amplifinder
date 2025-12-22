@@ -81,7 +81,7 @@ def plot_candidate_coverage(
     ax.axvspan(candidate.pos_chr_L, candidate.pos_chr_R, alpha=0.2, color='red', label='Amplicon')
     
     # Formatting
-    copy_num = candidate.copy_number if hasattr(candidate, 'copy_number') else 0.0
+    copy_num = candidate.copy_number if (hasattr(candidate, 'copy_number') and candidate.copy_number is not None) else 0.0
     title = (
         f"{candidate.raw_event.value} | "
         f"{candidate.pos_chr_L}-{candidate.pos_chr_R} | "
