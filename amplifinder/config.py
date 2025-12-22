@@ -77,6 +77,10 @@ class Config:
     iso_breseq_path: Optional[Path] = None
     anc_breseq_path: Optional[Path] = None
 
+    # Read length (if None, calculated from FASTQ)
+    iso_read_length: Optional[int] = None
+    anc_read_length: Optional[int] = None
+
     # Names (derived from paths if not provided)
     iso_name: Optional[str] = None
     anc_name: Optional[str] = None
@@ -136,6 +140,11 @@ class Config:
     # Logging
     log_path: str = "amplifinder.log"
 
+    @property
+    def has_ancestor(self) -> bool:
+        """True if ancestor comparison should be performed."""
+        return self.anc_path is not None
+
     def __post_init__(self):
         """Convert paths and set derived values."""
         # Convert string paths to Path objects
@@ -159,8 +168,12 @@ class Config:
         # Derive names from paths if not provided
         if self.iso_name is None:
             self.iso_name = self.iso_path.stem or "isolate"
-        if self.anc_name is None and self.anc_path is not None:
-            self.anc_name = self.anc_path.stem or "ancestor"
+        if self.anc_name is None:
+            if self.anc_path is not None:
+                self.anc_name = self.anc_path.stem or "ancestor"
+            else:
+                # No ancestor: isolate is its own "ancestor" for folder structure
+                self.anc_name = self.iso_name
 
         # Convert tuples if passed as lists
         if isinstance(self.score_min, list):
@@ -240,3 +253,83 @@ def merge_config(
             merged[key] = value
 
     return merged
+
+
+def get_run_dir(config: Config) -> Path:
+    """Get the run directory path for a config.
+    
+    Structure: {output_dir}/{ref_name}/{anc_name}/{iso_name}/
+    
+    Args:
+        config: Config object
+    
+    Returns:
+        Path to run directory
+    """
+    return config.output_dir / config.ref_name / config.anc_name / config.iso_name
+
+
+def save_config(config: Config, run_dir: Path) -> None:
+    """Save config to run_config.yaml in run directory.
+    
+    Args:
+        config: Config object to save
+        run_dir: Run directory path
+    """
+    run_dir = Path(run_dir)
+    run_dir.mkdir(parents=True, exist_ok=True)
+    
+    config_path = run_dir / "run_config.yaml"
+    
+    # Convert Config to dict, handling Path objects and tuples
+    config_dict = {}
+    for key, value in config.__dict__.items():
+        if isinstance(value, Path):
+            config_dict[key] = str(value)
+        elif isinstance(value, tuple):
+            config_dict[key] = list(value)  # Convert tuple to list for YAML
+        elif value is not None:
+            config_dict[key] = value
+    
+    with open(config_path, 'w') as f:
+        yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
+    
+    from amplifinder.logger import info
+    info(f"Saved config to: {config_path}")
+
+
+def load_config_from_run(run_dir: Path) -> Config:
+    """Load config from run_config.yaml in run directory.
+    
+    Args:
+        run_dir: Run directory path
+    
+    Returns:
+        Config object
+    
+    Raises:
+        FileNotFoundError: If run_config.yaml doesn't exist
+    """
+    run_dir = Path(run_dir)
+    config_path = run_dir / "run_config.yaml"
+    
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+    
+    config_dict = load_config(config_path)
+    
+    # Convert string paths back to Path objects
+    path_fields = ['iso_path', 'anc_path', 'output_dir', 'ref_path', 
+                   'iso_breseq_path', 'anc_breseq_path', 'blastn_path', 
+                   'samtools_path', 'isdb_path']
+    for field in path_fields:
+        if field in config_dict and config_dict[field] is not None:
+            config_dict[field] = Path(config_dict[field])
+    
+    # Convert lists back to tuples for tuple fields
+    tuple_fields = ['score_min', 'mismatch_penalty']
+    for field in tuple_fields:
+        if field in config_dict and isinstance(config_dict[field], list):
+            config_dict[field] = tuple(config_dict[field])
+    
+    return Config(**config_dict)

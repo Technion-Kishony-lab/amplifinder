@@ -5,9 +5,13 @@ from pathlib import Path
 from typing import Generic, List, Optional, TypeVar
 import shutil
 
-from amplifinder.logger import info
+from amplifinder.logger import info, debug
+from amplifinder.utils.file_lock import locked_operation, get_step_lock_path
 
 T = TypeVar("T")
+
+# Default lock timeout for steps (seconds)
+STEP_LOCK_TIMEOUT = 7200  # 2 hours (breseq can be very slow)
 
 
 def _delete_file_or_dir_if_exists(p: Path) -> None:
@@ -99,16 +103,40 @@ class Step(ABC, Generic[T]):
         return missing is not None and len(missing) == 0
 
     def run(self) -> T:
-        """Execute step with caching logic."""
+        """Execute step with caching logic and parallel-safe locking.
+        
+        Uses double-check locking pattern to prevent race conditions:
+        1. Quick check without lock (fast path for cached results)
+        2. Acquire lock
+        3. Re-check under lock (another process may have created output)
+        4. Execute if still needed
+        5. Release lock
+        """
         # Check inputs exist
         if missing_input := self.missing_input_files():
             raise FileNotFoundError(f"{self.name}: missing inputs: {missing_input}")
 
-        # Check if can skip (only if saving to files)
+        # Fast path: check if can skip without lock (common case)
         if not self.force and self.has_output_files():
             info(f"{self.name}: skipped (outputs exist)")
             return self.load_outputs()
 
+        # Steps without file outputs don't need locking
+        if self.output_files is None:
+            return self._run_unlocked()
+
+        # Acquire lock and re-check (TOCTOU fix)
+        lock_path = self._get_lock_path()
+        with locked_operation(lock_path, STEP_LOCK_TIMEOUT, f"step {self.name}"):
+            # Re-check under lock: another process may have created output
+            if not self.force and self.has_output_files():
+                info(f"{self.name}: skipped (outputs exist, verified under lock)")
+                return self.load_outputs()
+            
+            return self._run_unlocked()
+
+    def _run_unlocked(self) -> T:
+        """Execute step logic (assumes lock is held or not needed)."""
         # Clean partial outputs
         self._clean_outputs()
 
@@ -122,6 +150,13 @@ class Step(ABC, Generic[T]):
             self._save_output_and_verify(output)
 
         return output
+
+    def _get_lock_path(self) -> Path:
+        """Get lock file path for this step."""
+        if self.output_files:
+            return get_step_lock_path(self.output_files[0], self.name)
+        # Fallback for steps without output files (shouldn't happen in locked path)
+        raise ValueError(f"{self.name}: cannot get lock path without output files")
 
     def _clean_outputs(self) -> None:
         """Remove existing outputs before re-run."""

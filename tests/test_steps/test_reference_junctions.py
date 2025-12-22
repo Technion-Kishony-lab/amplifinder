@@ -1,19 +1,20 @@
-"""Tests for CreateReferenceTnJunctionsStep and CreateRefTnEndSeqsStep."""
+"""Tests for CreateRefTnJcStep and CreateRefTnEndSeqsStep."""
 
 import pytest
 
-from amplifinder.steps import CreateReferenceTnJunctionsStep, CreateRefTnEndSeqsStep
+from amplifinder.steps import CreateRefTnJcStep, CreateRefTnEndSeqsStep
 from amplifinder.data_types import RecordTypedDF, Side
 
 
 @pytest.fixture
-def ref_jc_step(locate_tns_step, tmp_output):
+def ref_jc_step(locate_tns_step, tiny_genome, tmp_output):
     """Create reference junctions step."""
     tn_loc = locate_tns_step.run()
-    return CreateReferenceTnJunctionsStep(
+    return CreateRefTnJcStep(
         tn_loc=tn_loc,
-        ref_name="tiny",
+        genome=tiny_genome,
         output_dir=tmp_output,
+        source="isfinder",
         reference_tn_out_span=50,
     )
 
@@ -24,7 +25,7 @@ def test_creates_junction_records(ref_jc_step):
 
     assert isinstance(ref_jc, RecordTypedDF)
     assert len(ref_jc.df) == 4  # 2 TNs * 2 sides
-    assert set(ref_jc.df["tn_side"]) == {Side.LEFT, Side.RIGHT}
+    assert set(jc.ref_tn_side.side for jc in ref_jc) == {Side.LEFT, Side.RIGHT}
 
 
 def test_junction_positions_correct(ref_jc_step, locate_tns_step):
@@ -33,11 +34,11 @@ def test_junction_positions_correct(ref_jc_step, locate_tns_step):
     tn_loc = locate_tns_step.load_outputs()
 
     tn1 = tn_loc.df.iloc[0]
-    left_jc = ref_jc.df[(ref_jc.df["refTN"] == tn1["ID"]) & (ref_jc.df["tn_side"] == Side.LEFT)].iloc[0]
-    right_jc = ref_jc.df[(ref_jc.df["refTN"] == tn1["ID"]) & (ref_jc.df["tn_side"] == Side.RIGHT)].iloc[0]
+    left_jc = next(jc for jc in ref_jc if jc.ref_tn_side.tn_id == tn1["ID"] and jc.ref_tn_side.side == Side.LEFT)
+    right_jc = next(jc for jc in ref_jc if jc.ref_tn_side.tn_id == tn1["ID"] and jc.ref_tn_side.side == Side.RIGHT)
 
-    assert left_jc["pos1"] == tn1["LocLeft"]
-    assert right_jc["pos1"] == tn1["LocRight"]
+    assert left_jc.pos1 == tn1["LocLeft"]
+    assert right_jc.pos1 == tn1["LocRight"]
 
 
 def test_skips_if_exists(ref_jc_step):
@@ -57,7 +58,8 @@ def end_seqs_step(ref_jc_step, tiny_genome, tmp_output):
     return CreateRefTnEndSeqsStep(
         ref_tn_jc=ref_jc,
         genome=tiny_genome,
-        ref_path=tmp_output,
+        output_dir=tmp_output,
+        source="isfinder",
         max_dist_to_tn=20,
     )
 

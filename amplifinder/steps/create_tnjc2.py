@@ -1,15 +1,16 @@
-"""Step: Combine TN junction pairs (TNJC2)."""
+"""Step: Combine TN junction pairs (TnJc2)."""
 
 from pathlib import Path
 from typing import Optional, List, Tuple
 
 from amplifinder.steps.base import Step
+from amplifinder.steps.io_naming import default_path
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, TnJunction, TnJunctionPair, TnMatch, Side, Orientation
+from amplifinder.data_types import RecordTypedDF, TnJunction, TnJc2, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
 
 
-class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
+class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
     """Combine TN junctions into pairs (candidate amplicons).
 
     For each pair of junctions, checks:
@@ -29,8 +30,8 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         """Initialize step.
 
         Args:
-            tnjc: TN-associated junctions from CreateTNJCStep
-            genome: Reference genome (for circularity and length)
+            tnjc: TN-associated junctions from CreateTnJcStep
+            genome: Reference genome (for circularity and length per scaffold)
             output_dir: Directory to write output
             force: Force re-run
         """
@@ -38,7 +39,14 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         self.genome = genome
         self.output_dir = Path(output_dir)
 
-        self.output_file = self.output_dir / "TNJC2.csv"
+        # Cache scaffold properties for multi-scaffold support
+        self._scaf_lengths = {rec.name: len(rec.seq) for rec in genome.records}
+        self._scaf_circular = {
+            rec.name: rec.annotations.get("topology", "linear").lower() == "circular"
+            for rec in genome.records
+        }
+
+        self.output_file = default_path(self.output_dir, TnJc2)
 
         super().__init__(
             input_files=[],
@@ -46,7 +54,7 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDF[TnJunctionPair]:
+    def _calculate_output(self) -> RecordTypedDF[TnJc2]:
         """Combine junction pairs."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -55,17 +63,17 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         pairs = self._pair_junctions(junctions)
 
         if pairs:
-            tnjc2 = RecordTypedDF.from_records(pairs, TnJunctionPair)
+            tnjc2 = RecordTypedDF.from_records(pairs, TnJc2)
         else:
-            tnjc2 = RecordTypedDF.empty(TnJunctionPair)
+            tnjc2 = RecordTypedDF.empty(TnJc2)
 
-        info(f"Found {len(tnjc2)} junction pairs (TNJC2)")
+        info(f"Found {len(tnjc2)} junction pairs (TnJc2)")
         return tnjc2
 
-    def _save_output(self, output: RecordTypedDF[TnJunctionPair]) -> None:
+    def _save_output(self, output: RecordTypedDF[TnJc2]) -> None:
         output.to_csv(self.output_file)
 
-    def _pair_junctions(self, junctions: List[TnJunction]) -> List[TnJunctionPair]:
+    def _pair_junctions(self, junctions: List[TnJunction]) -> List[TnJc2]:
         """Find all valid junction pairs.
 
         Based on MATLAB combine_ISJC_pairs.m
@@ -87,7 +95,7 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
                     continue
 
                 # (b) Find matching TN: same ID, different sides
-                matching = self._find_matching_tns(jc_i.matches, jc_j.matches)
+                matching = self._find_matching_tns(jc_i.ref_tn_sides, jc_j.ref_tn_sides)
                 if not matching:
                     continue
 
@@ -99,12 +107,13 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
 
     def _find_matching_tns(
         self,
-        matches_i: List[TnMatch],
-        matches_j: List[TnMatch],
-    ) -> List[Tuple[int, Orientation]]:
+        matches_i: List[RefTnSide],
+        matches_j: List[RefTnSide],
+    ) -> List[Tuple[int, Side]]:
         """Find TN elements that match both junctions on different sides.
 
-        Returns list of (tn_id, orientation) tuples.
+        Returns list of (tn_id, side_i) tuples where side_i is the TN side
+        that junction i connects to.
         """
         result = []
 
@@ -118,12 +127,7 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
                 if mi.side == mj.side:
                     continue
 
-                # Orientation based on which side connects to which junction
-                # If left side of TN connects to left junction -> same orientation (FORWARD)
-                # If right side of TN connects to left junction -> inverted (REVERSE)
-                orientation = Orientation.FORWARD if mi.side == Side.LEFT else Orientation.REVERSE
-
-                result.append((mi.tn_id, orientation))
+                result.append((mi.tn_id, mi.side))
 
         return result
 
@@ -131,8 +135,8 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         self,
         jc_i: TnJunction,
         jc_j: TnJunction,
-        matching: List[Tuple[int, Orientation]],
-    ) -> TnJunctionPair:
+        matching: List[Tuple[int, Side]],
+    ) -> TnJc2:
         """Create a junction pair record.
 
         Normalizes so that L (left) junction has lower chromosome position.
@@ -143,32 +147,20 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         else:
             jc_L, jc_R = jc_j, jc_i
 
-        # Extract TN IDs and compute combined orientation
+        # Extract TN IDs and compute orientations
+        # MATLAB: orientation = side_i * dir2(i)
         tn_ids = [m[0] for m in matching]
-        orientations = [m[1] for m in matching]
+        tn_orientations = [Orientation(side_i.value * jc_i.dir2.value) for _, side_i in matching]
 
-        # Orientation: if all same -> that value, if mixed -> BOTH
-        if all(o == Orientation.FORWARD for o in orientations):
-            tn_orientation = Orientation.FORWARD
-        elif all(o == Orientation.REVERSE for o in orientations):
-            tn_orientation = Orientation.REVERSE
-        else:
-            tn_orientation = Orientation.BOTH
-
-        # Span origin: if left junction points left (REVERSE), amplicon spans origin
-        # (for circular genomes)
-        span_origin = jc_L.dir2 == Orientation.REVERSE
-
-        # Adjust orientation for span_origin (MATLAB: orientation * ISJC.dir2(i))
-        if span_origin:
-            tn_orientation = tn_orientation.opposite()
+        # Span origin: if junction i points left (REVERSE), amplicon spans origin
+        span_origin = jc_i.dir2 == Orientation.REVERSE
 
         # Calculate amplicon length
         amplicon_length, complementary_length = self._calculate_amplicon_length(
             jc_L.pos2, jc_R.pos2, jc_L.scaf2, span_origin
         )
 
-        return TnJunctionPair(
+        return TnJc2(
             jc_num_L=jc_L.num,
             jc_num_R=jc_R.num,
             scaf_chr=jc_L.scaf2,
@@ -181,7 +173,7 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
             dir_tn_L=jc_L.dir1,
             dir_tn_R=jc_R.dir1,
             tn_ids=tn_ids,
-            tn_orientation=tn_orientation,
+            tn_orientations=tn_orientations,
             span_origin=span_origin,
             amplicon_length=amplicon_length,
             complementary_length=complementary_length,
@@ -202,9 +194,9 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         # Basic length between positions
         raw_length = pos_R - pos_L + 1
 
-        # Get genome properties
-        is_circular = self.genome.circular
-        scaf_length = self.genome.length
+        # Get scaffold-specific properties (supports multi-scaffold genomes)
+        scaf_length = self._scaf_lengths[scaf]
+        is_circular = self._scaf_circular.get(scaf, False)
 
         if is_circular:
             if span_origin:
@@ -229,6 +221,6 @@ class CreateTNJC2Step(Step[RecordTypedDF[TnJunctionPair]]):
         comp = int(complementary_length) if complementary_length != float("inf") else -1
         return amp, comp
 
-    def load_outputs(self) -> RecordTypedDF[TnJunctionPair]:
-        """Load TNJC2 from output file."""
-        return RecordTypedDF.from_csv(self.output_file, TnJunctionPair)
+    def load_outputs(self) -> RecordTypedDF[TnJc2]:
+        """Load TnJc2 from output file."""
+        return RecordTypedDF.from_csv(self.output_file, TnJc2)

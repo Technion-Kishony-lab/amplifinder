@@ -17,9 +17,9 @@ def breseq_step(tmp_path, tiny_ref_fasta):
     output.mkdir()
 
     return BreseqStep(
+        output_path=output,
         fastq_path=fastq,
         ref_file=tiny_ref_fasta,
-        output_path=output,
         docker=False,
         threads=1,
     )
@@ -53,21 +53,23 @@ def test_breseq_step_skips_if_output_exists(breseq_step):
     assert breseq_step.run_count == 0  # skipped
 
 
-def test_breseq_step_read_outputs(tmp_path):
-    """Should parse breseq output correctly."""
+def test_breseq_step_read_outputs():
+    """Should parse breseq output correctly when output exists."""
+    # When output exists, fastq_path and ref_file are optional
     step = BreseqStep(
-        fastq_path=tmp_path / "dummy.fastq",
-        ref_file=tmp_path / "dummy.fasta",
         output_path=FIXTURES_DIR / "breseq",
-        docker=False,
-        threads=1,
     )
-
-    # Create dummy inputs
-    (tmp_path / "dummy.fastq").touch()
-    (tmp_path / "dummy.fasta").touch()
 
     result = step.load_outputs()
 
     assert isinstance(result, dict)
     assert "JC" in result
+
+
+def test_breseq_step_requires_inputs_when_no_output(tmp_path):
+    """Should raise error when output doesn't exist and inputs not provided."""
+    output = tmp_path / "breseq_out"
+    output.mkdir()
+
+    with pytest.raises(ValueError, match="fastq_path and ref_file are required"):
+        BreseqStep(output_path=output)

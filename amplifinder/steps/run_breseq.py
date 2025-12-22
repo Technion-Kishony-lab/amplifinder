@@ -14,22 +14,38 @@ class BreseqStep(Step[Dict[str, pd.DataFrame]]):
 
     def __init__(
         self,
-        fastq_path: Path,
-        ref_file: Path,
         output_path: Path,
-        docker: bool,
-        threads: int,
+        fastq_path: Optional[Path] = None,
+        ref_file: Optional[Path] = None,
+        docker: bool = False,
+        threads: int = 1,
+        csv_output_dir: Optional[Path] = None,
         force: Optional[bool] = None,
     ):
-        self.fastq_path = Path(fastq_path)
-        self.ref_file = Path(ref_file)
         self.output_path = Path(output_path)
+        self.fastq_path = Path(fastq_path) if fastq_path else None
+        self.ref_file = Path(ref_file) if ref_file else None
         self.docker = docker
         self.threads = threads
+        self.csv_output_dir = Path(csv_output_dir) if csv_output_dir else None
+
+        # Check if output exists
+        output_file = output_path / "output" / "output.gd"
+        output_exists = output_file.exists()
+
+        # If output doesn't exist, fastq_path and ref_file are required
+        if not output_exists and (fastq_path is None or ref_file is None):
+            raise ValueError("fastq_path and ref_file are required when output doesn't exist")
+
+        input_files = []
+        if fastq_path:
+            input_files.append(fastq_path)
+        if ref_file:
+            input_files.append(ref_file)
 
         super().__init__(
-            input_files=[fastq_path, ref_file],
-            output_files=[output_path / "output" / "output.gd"],
+            input_files=input_files if input_files else None,
+            output_files=[output_file],
             force=force,
         )
 
@@ -50,4 +66,4 @@ class BreseqStep(Step[Dict[str, pd.DataFrame]]):
         Returns:
             Dict with keys: JC, SNP, MOB, DEL, UN
         """
-        return parse_breseq_output(self.output_path)
+        return parse_breseq_output(self.output_path, csv_output_dir=self.csv_output_dir)
