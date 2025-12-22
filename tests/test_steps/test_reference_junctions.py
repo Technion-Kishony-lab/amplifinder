@@ -52,11 +52,13 @@ def test_skips_if_exists(ref_jc_step):
 # --- CreateRefTnEndSeqsStep ---
 
 @pytest.fixture
-def end_seqs_step(ref_jc_step, tiny_genome, tmp_output):
+def end_seqs_step(ref_jc_step, locate_tns_step, tiny_genome, tmp_output):
     """Create TN end sequences step."""
     ref_jc = ref_jc_step.run()
+    tn_loc = locate_tns_step.run()
     return CreateRefTnEndSeqsStep(
         ref_tn_jc=ref_jc,
+        tn_loc=tn_loc,
         genome=tiny_genome,
         output_dir=tmp_output,
         source="isfinder",
