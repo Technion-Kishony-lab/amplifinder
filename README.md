@@ -135,8 +135,8 @@ output/
             ├── breseq/
             ├── tn_jc.csv
             ├── tn_jc2.csv
-            ├── ISJC2.xlsx
-            ├── candidate_amplifications.xlsx
+            ├── ISJC2.csv
+            ├── candidate_amplifications.csv
             ├── run_config.yaml
             └── jc_*/              # per-candidate directories
                 ├── junctions.fasta
@@ -145,16 +145,16 @@ output/
                 └── coverage_plot.png  # (if --save-plots)
 ```
 
-### Excel Output Files
+### CSV Output Files
 
-**`ISJC2.xlsx`**: All analyzed candidates with:
+**`ISJC2.csv`**: All analyzed candidates with:
 - Genomic positions and directions
 - IS element identifiers
 - Coverage statistics (mean/median/mode copy number)
 - Event classification (`raw_event`, `isolate_architecture`)
 - Junction coverage patterns
 
-**`candidate_amplifications.xlsx`**: Filtered high-confidence candidates:
+**`candidate_amplifications.csv`**: Filtered high-confidence candidates:
 - Copy number ≥ 1.5x (amplifications) or ≤ 0.3x (deletions)
 - Amplicon length ≥ 100 bp
 - Based on `isolate_architecture` classification

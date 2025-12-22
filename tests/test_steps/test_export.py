@@ -62,7 +62,7 @@ def sample_analyzed(tmp_path):
 
 
 def test_export_creates_files(sample_analyzed, tmp_path):
-    """Should create ISJC2.xlsx and candidate_amplifications.xlsx."""
+    """Should create ISJC2.csv and candidate_amplifications.csv."""
     step = ExportStep(
         analyzed_candidates=sample_analyzed,
         output_dir=tmp_path,
@@ -74,19 +74,19 @@ def test_export_creates_files(sample_analyzed, tmp_path):
     step.run()
     
     # Check that files were created
-    isjc2_file = tmp_path / "ISJC2.xlsx"
-    candidates_file = tmp_path / "candidate_amplifications.xlsx"
+    isjc2_file = tmp_path / "ISJC2.csv"
+    candidates_file = tmp_path / "candidate_amplifications.csv"
     
     assert isjc2_file.exists()
     assert candidates_file.exists()
     
-    # Check that ISJC2.xlsx contains all candidates
+    # Check that ISJC2.csv contains all candidates
     import pandas as pd
-    df_all = pd.read_excel(isjc2_file)
+    df_all = pd.read_csv(isjc2_file)
     assert len(df_all) == 2
     
-    # Check that candidate_amplifications.xlsx contains filtered candidates
-    df_filtered = pd.read_excel(candidates_file)
+    # Check that candidate_amplifications.csv contains filtered candidates
+    df_filtered = pd.read_csv(candidates_file)
     # First candidate should be included (copy_number > threshold, length > filter)
     # Second should be excluded (length too short)
     assert len(df_filtered) == 1

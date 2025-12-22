@@ -117,8 +117,8 @@ xxx[]  array
                                    │ 14. Export        │
                                    └─────────┬─────────┘
                                              ▼
-                                        ISJC2.xlsx
-                                        candidate_amplifications.xlsx
+                                        ISJC2.csv
+                                        candidate_amplifications.csv
                                              │
                                              ▼
                                 ┌──────────────────────────┐
@@ -379,8 +379,8 @@ Organized by: reference → ancestor → isolate
         │   ├── tn_jc2.csv
         │   ├── tn_jc2_*.csv
         │   ├── run_config.yaml
-        │   ├── ISJC2.xlsx
-        │   ├── candidate_amplifications.xlsx
+        │   ├── ISJC2.csv
+        │   ├── candidate_amplifications.csv
         │   └── jc_{start}_{end}_{tn_id}_L{read_len}/  # per-candidate
         │       ├── junctions.fasta     # copied from {anc_name}/{anc_name}/jc_.../
         │       ├── iso.sorted.bam      # isolate-specific alignment
