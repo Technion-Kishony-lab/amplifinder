@@ -44,7 +44,7 @@ xxx[]  array
    │────►│ 4. Breseq │       │       │ 3b. CreateRefTnEndSeqs    │           │
    │     └─────┬─────┘       │       └──────────────┬────────────┘           │
    │           ▼             │                      ▼                        │
-   │        breseq JC        │                  TnEndSeq[]                   │
+   │        breseq JC        │                  SeqRefTnSide[]               │
    │      + coverage         ▼                      │                        │
    │            └─────┬──────┘                      ▼                        │
    │                  ▼            ┌───────────────────┐                     │
@@ -161,9 +161,12 @@ TnLoc(Record)
 ├── Complement: bool
 └── Join: bool
 
-TnEndSeq(Record)
+RefTnSide(Record)
 ├── tn_id: int
-├── tn_side: Side
+├── side: Side
+└── distance: Optional[int]
+
+SeqRefTnSide(RefTnSide)
 ├── seq_fwd: str
 └── seq_rc: str
 
@@ -269,11 +272,6 @@ class JunctionCoverage(NamedTuple):
     left: int      # reads ending at junction
     right: int     # reads starting at junction
 
-class RefTnSide(NamedTuple):
-    """A reference TN element side (with optional distance for matches)."""
-    tn_id: int
-    side: Side
-    distance: Optional[int] = None
 ```
 
 ### Key Enums

@@ -45,7 +45,7 @@ class Orientation(int, Enum):
         return Orientation.BOTH  # BOTH stays BOTH
 
 
-class RefTnSide(NamedTuple):
+class RefTnSide(Record):
     """A reference TN element side (with optional distance for matches)."""
     tn_id: int
     side: Side
@@ -63,10 +63,8 @@ class TnLoc(Record):
     Join: bool
 
 
-class TnEndSeq(Record):
+class SeqRefTnSide(RefTnSide):
     """TN element end sequence for matching."""
-    tn_id: int
-    tn_side: Side
     seq_fwd: str    # forward sequence
     seq_rc: str     # reverse complement
 

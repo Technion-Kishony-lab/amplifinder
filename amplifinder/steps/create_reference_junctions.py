@@ -3,12 +3,11 @@
 from pathlib import Path
 from typing import Optional
 
-from Bio.Seq import Seq
-
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, TnLoc, TnEndSeq, RefTnJunction, RefTnSide, Side, Orientation
+from amplifinder.data_types import RecordTypedDF, TnLoc, SeqRefTnSide, RefTnJunction, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
+from amplifinder.utils.fasta import reverse_complement
 
 
 class CreateRefTnJcStep(Step[RecordTypedDF[RefTnJunction]]):
@@ -92,7 +91,7 @@ class CreateRefTnJcStep(Step[RecordTypedDF[RefTnJunction]]):
         return RecordTypedDF.from_csv(self.output_file, RefTnJunction)
 
 
-class CreateRefTnEndSeqsStep(Step[RecordTypedDF[TnEndSeq]]):
+class CreateRefTnEndSeqsStep(Step[RecordTypedDF[SeqRefTnSide]]):
     """Extract TN end sequences for junction matching.
 
     For each reference TN junction, extracts the sequence around the TN boundary
@@ -133,7 +132,7 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDF[TnEndSeq]]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDF[TnEndSeq]:
+    def _calculate_output(self) -> RecordTypedDF[SeqRefTnSide]:
         """Extract TN end sequences."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -151,20 +150,19 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDF[TnEndSeq]]):
             end = min(len(seq), pos + margin + 1)
             seq_fwd = seq[start:end]
 
-            records.append(TnEndSeq(
-                tn_id=jc.ref_tn_side.tn_id,
-                tn_side=jc.ref_tn_side.side,
+            records.append(SeqRefTnSide.from_other(
+                jc.ref_tn_side,
                 seq_fwd=seq_fwd,
-                seq_rc=str(Seq(seq_fwd).reverse_complement()),
+                seq_rc=reverse_complement(seq_fwd),
             ))
 
-        result = RecordTypedDF.from_records(records, TnEndSeq)
+        result = RecordTypedDF.from_records(records, SeqRefTnSide)
         info(f"Created {len(records)} TN end sequences")
         return result
 
-    def _save_output(self, output: RecordTypedDF[TnEndSeq]) -> None:
+    def _save_output(self, output: RecordTypedDF[SeqRefTnSide]) -> None:
         output.to_csv(self.output_file)
 
-    def load_outputs(self) -> RecordTypedDF[TnEndSeq]:
+    def load_outputs(self) -> RecordTypedDF[SeqRefTnSide]:
         """Load TN end sequences from output file."""
-        return RecordTypedDF.from_csv(self.output_file, TnEndSeq)
+        return RecordTypedDF.from_csv(self.output_file, SeqRefTnSide)

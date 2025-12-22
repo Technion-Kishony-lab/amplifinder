@@ -25,13 +25,18 @@ def _clean_nan(v: Any) -> Any:
 
 
 def _serialize_for_csv(v: Any) -> Any:
-    """Convert enums to values for CSV serialization (handles nested in lists/tuples)."""
+    """Convert enums to values for CSV serialization (handles nested in lists/tuples/Records)."""
+    from amplifinder.data_types.records import Record
     if isinstance(v, Enum):
         return v.value
+    if isinstance(v, Record):
+        return v.model_dump(mode='json')  # Convert Record to dict for CSV
     if isinstance(v, tuple):
         return list(_serialize_for_csv(x) for x in v)  # tuples as lists for CSV
     if isinstance(v, list):
         return [_serialize_for_csv(x) for x in v]
+    if isinstance(v, dict):
+        return {k: _serialize_for_csv(val) for k, val in v.items()}  # Recursively serialize dict values
     return v
 
 
