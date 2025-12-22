@@ -1,5 +1,6 @@
 """Fixtures for integration tests using real AmpliFinder test data."""
 
+import shutil
 import pytest
 from pathlib import Path
 
@@ -46,6 +47,20 @@ def isolate_srr25242906():
         "breseq_path": BRESEQ_PATH / "SRR25242906",
         "matlab_output": MATLAB_OUTPUT / "SRR25242906",
     }
+
+
+@pytest.fixture
+def clear_output_dir():
+    """Clear output directory before test run."""
+    from amplifinder.config import get_iso_run_dir
+    
+    def _clear(config):
+        run_dir = get_iso_run_dir(config)
+        if run_dir.exists():
+            shutil.rmtree(run_dir)
+        return run_dir
+    
+    return _clear
 
 
 def pytest_configure(config):

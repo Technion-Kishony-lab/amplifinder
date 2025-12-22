@@ -12,6 +12,7 @@ from amplifinder.steps import (
     CreateTnJcStep,
     CreateTnJc2Step,
 )
+from amplifinder.config import Config, get_iso_run_dir
 from amplifinder.data_types import RecordTypedDF, Junction
 from amplifinder.pipeline import Pipeline
 
@@ -174,10 +175,8 @@ class TestCompareWithMATLAB:
 class TestFullPipeline:
     """Full pipeline integration tests."""
 
-    def test_full_pipeline_matches_matlab(self, isolate_srr25242877):
+    def test_full_pipeline_matches_matlab(self, isolate_srr25242877, clear_output_dir):
         """Run full pipeline and compare with MATLAB outputs (1-to-1 matching)."""
-        from amplifinder.config import Config, get_run_dir
-        from amplifinder.pipeline import Pipeline
         from tests.test_integration.matlab_compare import compare_isjc2_outputs
         
         # Setup output directory next to MATLAB outputs
@@ -205,12 +204,14 @@ class TestFullPipeline:
             use_isfinder=False,  # Use GenBank for consistency
         )
         
+        # Clear output directory before running
+        run_dir = clear_output_dir(config)
+        
         # Run full pipeline
         pipeline = Pipeline(config)
         result = pipeline.run()
         
         # Verify outputs exist
-        run_dir = get_run_dir(config)
         # run_dir = test_output_root / "output" / "U00096" / "SRR25242877" / "SRR25242877"
         
         # Check if pipeline produced any candidates
@@ -544,9 +545,8 @@ class TestPipeline(Pipeline):
 class TestPipelineStepByStep:
     """Step-by-step pipeline tests for debugging - compares each step with MATLAB."""
     
-    def test_isolate_pipeline_steps_with_matlab(self, isolate_srr25242877, tmp_path):
+    def test_isolate_pipeline_steps_with_matlab(self, isolate_srr25242877, tmp_path, clear_output_dir):
         """Test isolate pipeline step-by-step, comparing each step with MATLAB outputs."""
-        from amplifinder.config import Config, get_run_dir
         from tests.test_integration.matlab_compare import compare_isjc2_outputs
         
         matlab_output_dir = isolate_srr25242877["matlab_output"]
@@ -569,6 +569,9 @@ class TestPipelineStepByStep:
             use_isfinder=False,  # Use GenBank for consistency
         )
         
+        # Clear output directory before running
+        run_dir = clear_output_dir(config)
+        
         print("\n=== Testing Isolate Pipeline (no ancestor) ===")
         pipeline = TestPipeline(config, matlab_output_dir)
         result = pipeline.run()
@@ -576,7 +579,6 @@ class TestPipelineStepByStep:
         print(f"\nFinal result: {len(result)} candidates")
         
         # Compare with MATLAB Excel file
-        run_dir = get_run_dir(config)
         python_isjc2_file = run_dir / "ISJC2.csv"
         
         # Load MATLAB output for comparison
@@ -604,10 +606,8 @@ class TestPipelineStepByStep:
         
         return result
     
-    def test_ancestor_pipeline_steps_with_matlab(self, isolate_srr25242906, tmp_path):
+    def test_ancestor_pipeline_steps_with_matlab(self, isolate_srr25242906, tmp_path, clear_output_dir):
         """Test ancestor pipeline step-by-step, comparing each step with MATLAB outputs."""
-        from amplifinder.config import Config
-        
         matlab_output_dir = isolate_srr25242906["matlab_output"]
         test_output_root = matlab_output_dir.parent.parent.parent / "python_outputs"
         
@@ -624,6 +624,9 @@ class TestPipelineStepByStep:
             use_isfinder=False,
         )
         
+        # Clear output directory before running
+        clear_output_dir(config)
+        
         print("\n=== Testing Ancestor Pipeline ===")
         pipeline = TestPipeline(config, matlab_output_dir)
         pipeline.is_ancestor_run = True
@@ -632,10 +635,8 @@ class TestPipelineStepByStep:
         print(f"\nFinal result: {len(result)} candidates")
         return result
     
-    def test_isolate_with_ancestor_pipeline_steps(self, isolate_srr25242877, isolate_srr25242906, tmp_path):
+    def test_isolate_with_ancestor_pipeline_steps(self, isolate_srr25242877, isolate_srr25242906, tmp_path, clear_output_dir):
         """Test isolate pipeline with ancestor - step-by-step comparison."""
-        from amplifinder.config import Config
-        
         matlab_output_dir = isolate_srr25242877["matlab_output"]
         test_output_root = matlab_output_dir.parent.parent.parent / "python_outputs"
         
@@ -652,6 +653,9 @@ class TestPipelineStepByStep:
             ncbi=True,
             use_isfinder=False,
         )
+        
+        # Clear output directory before running
+        clear_output_dir(config)
         
         print("\n=== Testing Isolate Pipeline (with ancestor) ===")
         print("Note: Ancestor pipeline will run automatically if needed")
