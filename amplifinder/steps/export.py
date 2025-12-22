@@ -1,4 +1,4 @@
-"""Step 14: Export results to Excel."""
+"""Step 14: Export results to CSV."""
 
 from pathlib import Path
 from typing import Optional
@@ -11,11 +11,11 @@ from amplifinder.logger import info
 
 
 class ExportStep(Step[None]):
-    """Export analyzed candidates to Excel files.
+    """Export analyzed candidates to CSV files.
     
-    Creates two Excel files:
-    1. ISJC2.xlsx - All analyzed candidates
-    2. candidate_amplifications.xlsx - Filtered candidates based on copy number thresholds
+    Creates two CSV files:
+    1. ISJC2.csv - All analyzed candidates
+    2. candidate_amplifications.csv - Filtered candidates based on copy number thresholds
     """
 
     def __init__(
@@ -33,8 +33,8 @@ class ExportStep(Step[None]):
         self.del_copy_number_threshold = del_copy_number_threshold
         self.filter_amplicon_length = filter_amplicon_length
         
-        self.isjc2_file = output_dir / "ISJC2.xlsx"
-        self.candidates_file = output_dir / "candidate_amplifications.xlsx"
+        self.isjc2_file = output_dir / "ISJC2.csv"
+        self.candidates_file = output_dir / "candidate_amplifications.csv"
         
         super().__init__(
             input_files=[],
@@ -43,7 +43,7 @@ class ExportStep(Step[None]):
         )
 
     def _calculate_output(self) -> None:
-        """Export candidates to Excel."""
+        """Export candidates to CSV."""
         if len(self.analyzed_candidates) == 0:
             info("No candidates to export")
             return
@@ -109,11 +109,11 @@ class ExportStep(Step[None]):
         available_cols = [c for c in column_order if c in export_df.columns]
         export_df = export_df[available_cols]
         
-        # Export ISJC2.xlsx (all candidates)
-        export_df.to_excel(self.isjc2_file, index=False, engine='openpyxl')
+        # Export ISJC2.csv (all candidates)
+        export_df.to_csv(self.isjc2_file, index=False)
         info(f"Exported {len(export_df)} candidates to {self.isjc2_file}")
         
-        # Filter candidates for candidate_amplifications.xlsx
+        # Filter candidates for candidate_amplifications.csv
         if 'mode_copy_number' in export_df.columns and 'amplicon_length' in export_df.columns:
             filtered = export_df[
                 ((export_df['mode_copy_number'] > self.copy_number_threshold) |
@@ -121,11 +121,11 @@ class ExportStep(Step[None]):
                 (export_df['amplicon_length'] > self.filter_amplicon_length)
             ]
             
-            filtered.to_excel(self.candidates_file, index=False, engine='openpyxl')
+            filtered.to_csv(self.candidates_file, index=False)
             info(f"Exported {len(filtered)} filtered candidates to {self.candidates_file}")
         else:
             # If columns missing, export empty DataFrame
-            export_df.head(0).to_excel(self.candidates_file, index=False, engine='openpyxl')
+            export_df.head(0).to_csv(self.candidates_file, index=False)
             info(f"Exported empty candidates file (missing required columns)")
 
     def _save_output(self, output: None) -> None:
