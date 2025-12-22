@@ -261,6 +261,9 @@ def parse_breseq_output(breseq_path: Path, csv_output_dir: Optional[Path] = None
 
     # Convert to DataFrames
     output_dir = csv_output_dir if csv_output_dir is not None else output_gd.parent
+    # Create directory if using custom csv_output_dir (it may not exist yet)
+    if csv_output_dir is not None:
+        output_dir.mkdir(parents=True, exist_ok=True)
     results = {}
     for name, recs in records.items():
         df = pd.DataFrame(recs) if recs else pd.DataFrame()
