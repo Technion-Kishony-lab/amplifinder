@@ -49,10 +49,7 @@ class Pipeline:
 
     def _initialize(self) -> Path:
         """Step 0: Initialize output directories."""
-        return InitializingStep(
-            output_dir=self.config.output_dir,
-            iso_name=self.config.iso_name,
-        ).run()
+        return InitializingStep(config=self.config).run()
 
     def _load_reference(self) -> Genome:
         """Step 1: Get reference genome."""
