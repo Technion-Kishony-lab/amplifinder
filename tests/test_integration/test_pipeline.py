@@ -546,10 +546,16 @@ class TestPipelineStepByStep:
     
     def test_isolate_pipeline_steps_with_matlab(self, isolate_srr25242877, tmp_path):
         """Test isolate pipeline step-by-step, comparing each step with MATLAB outputs."""
-        from amplifinder.config import Config
+        from amplifinder.config import Config, get_run_dir
+        from tests.test_integration.matlab_compare import compare_isjc2_outputs
         
         matlab_output_dir = isolate_srr25242877["matlab_output"]
         test_output_root = matlab_output_dir.parent.parent.parent / "python_outputs"
+        
+        # Check MATLAB output exists
+        isjc2_xlsx = matlab_output_dir / "ISJC2.xlsx"
+        if not isjc2_xlsx.exists():
+            pytest.skip("MATLAB reference output not available")
         
         config = Config(
             iso_path=isolate_srr25242877["fastq_path"],
@@ -568,6 +574,34 @@ class TestPipelineStepByStep:
         result = pipeline.run()
         
         print(f"\nFinal result: {len(result)} candidates")
+        
+        # Compare with MATLAB Excel file
+        run_dir = get_run_dir(config)
+        python_isjc2_file = run_dir / "ISJC2.csv"
+        
+        # Load MATLAB output for comparison
+        matlab_isjc2 = pd.read_excel(isjc2_xlsx)
+        print(f"\n=== Comparing with MATLAB ISJC2.xlsx ===")
+        print(f"MATLAB: {len(matlab_isjc2)} candidates")
+        
+        if python_isjc2_file.exists():
+            python_isjc2 = pd.read_csv(python_isjc2_file)
+            print(f"Python: {len(python_isjc2)} candidates")
+            
+            # Compare outputs (1-to-1 matching required)
+            compare_isjc2_outputs(python_isjc2, matlab_isjc2)
+            print("✓ Comparison passed: 1-to-1 match with MATLAB")
+        else:
+            print(f"Python output file not found: {python_isjc2_file}")
+            print(f"Python found {len(result)} candidates, MATLAB found {len(matlab_isjc2)} candidates")
+            if len(result) == 0:
+                pytest.fail(
+                    f"Pipeline found 0 candidates but MATLAB found {len(matlab_isjc2)}. "
+                    f"Python output file not created: {python_isjc2_file}"
+                )
+            else:
+                pytest.fail(f"Python output file not found: {python_isjc2_file}")
+        
         return result
     
     def test_ancestor_pipeline_steps_with_matlab(self, isolate_srr25242906, tmp_path):

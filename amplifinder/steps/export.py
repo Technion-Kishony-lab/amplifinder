@@ -70,31 +70,25 @@ class ExportStep(Step[RecordTypedDF[ISJC2Export]]):
         export_df = RecordTypedDF.from_records(export_records, ISJC2Export)
         
         # Sort by mode_copy_number descending
-        if 'mode_copy_number' in export_df.df.columns:
-            export_df = export_df.pipe(
-                lambda df: df.sort_values('mode_copy_number', ascending=False)
-            )
+        export_df = export_df.pipe(
+            lambda df: df.sort_values('mode_copy_number', ascending=False)
+        )
         
         # Export ISJC2.csv (all candidates)
         export_df.to_csv(self.isjc2_file)
         info(f"Exported {len(export_df)} candidates to {self.isjc2_file}")
         
         # Filter candidates for candidate_amplifications.csv
-        if 'mode_copy_number' in export_df.df.columns and 'amplicon_length' in export_df.df.columns:
-            filtered = export_df.pipe(
-                lambda df: df[
-                    ((df['mode_copy_number'] > self.copy_number_threshold) |
-                     (df['mode_copy_number'] < self.del_copy_number_threshold)) &
-                    (df['amplicon_length'] > self.filter_amplicon_length)
-                ]
-            )
-            
-            filtered.to_csv(self.candidates_file)
-            info(f"Exported {len(filtered)} filtered candidates to {self.candidates_file}")
-        else:
-            # If columns missing, export empty DataFrame
-            export_df.pipe(lambda df: df.head(0)).to_csv(self.candidates_file)
-            info(f"Exported empty candidates file (missing required columns)")
+        filtered = export_df.pipe(
+            lambda df: df[
+                ((df['mode_copy_number'] > self.copy_number_threshold) |
+                 (df['mode_copy_number'] < self.del_copy_number_threshold)) &
+                (df['amplicon_length'] > self.filter_amplicon_length)
+            ]
+        )
+        
+        filtered.to_csv(self.candidates_file)
+        info(f"Exported {len(filtered)} filtered candidates to {self.candidates_file}")
         
         return export_df
 

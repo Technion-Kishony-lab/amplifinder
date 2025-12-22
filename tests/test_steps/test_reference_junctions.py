@@ -72,5 +72,5 @@ def test_creates_end_sequences(end_seqs_step):
 
     assert isinstance(end_seqs, RecordTypedDF)
     assert len(end_seqs.df) == 4  # 4 junctions
-    assert all(len(s) > 0 for s in end_seqs.df["seq_fwd"])
-    assert all(len(s) > 0 for s in end_seqs.df["seq_rc"])
+    assert all(len(seq.seq_fwd) > 0 for seq in end_seqs)
+    assert all(len(seq.seq_rc) > 0 for seq in end_seqs)
