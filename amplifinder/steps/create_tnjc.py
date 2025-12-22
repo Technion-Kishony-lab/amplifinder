@@ -8,7 +8,7 @@ from Bio.Seq import Seq
 from amplifinder.steps.base import Step
 from amplifinder.steps.io_naming import default_path
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, Junction, TnEndSeq, TnMatch, TnJunction, Orientation
+from amplifinder.data_types import RecordTypedDF, Junction, TnEndSeq, RefTnSide, TnJunction, Orientation
 from amplifinder.data_types.genome import Genome
 
 
@@ -89,7 +89,7 @@ class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
             else:
                 matches = matches1
 
-            tnjc_records.append(TnJunction.from_other(jc, matches=matches, switched=switched))
+            tnjc_records.append(TnJunction.from_other(jc, ref_tn_sides=matches, switched=switched))
 
         tnjc = RecordTypedDF.from_records(tnjc_records, TnJunction)
         tnjc = tnjc.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
@@ -129,7 +129,7 @@ class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
 
         return seq
 
-    def _find_tn_matches(self, jc_seq: str) -> List[TnMatch]:
+    def _find_tn_matches(self, jc_seq: str) -> List[RefTnSide]:
         """Find TN elements matching a junction sequence."""
         if not jc_seq:
             return []
@@ -142,14 +142,14 @@ class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
             pos_fwd = tn.seq_fwd.find(jc_seq)
             if pos_fwd >= 0 and pos_fwd < threshold:
                 dist = pos_fwd - self.max_dist_to_tn
-                matches.append(TnMatch(tn.tn_id, tn.tn_side, dist))
+                matches.append(RefTnSide(tn_id=tn.tn_id, side=tn.tn_side, distance=dist))
                 continue
 
             # Check reverse complement
             pos_rc = tn.seq_rc.find(jc_seq)
             if pos_rc >= 0 and pos_rc < threshold:
                 dist = pos_rc - self.max_dist_to_tn
-                matches.append(TnMatch(tn.tn_id, tn.tn_side, dist))
+                matches.append(RefTnSide(tn_id=tn.tn_id, side=tn.tn_side, distance=dist))
 
         return matches
 

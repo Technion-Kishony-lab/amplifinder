@@ -45,11 +45,11 @@ class Orientation(int, Enum):
         return Orientation.BOTH  # BOTH stays BOTH
 
 
-class TnMatch(NamedTuple):
-    """A single TN element match for a junction."""
+class RefTnSide(NamedTuple):
+    """A reference TN element side (with optional distance for matches)."""
     tn_id: int
     side: Side
-    distance: int
+    distance: Optional[int] = None
 
 
 class TnLoc(Record):
@@ -114,13 +114,12 @@ class Junction(Record):
 
 class RefTnJunction(Junction):
     """Synthetic junction for reference TN element."""
-    refTN: int
-    tn_side: Side
+    ref_tn_side: RefTnSide
 
 
 class TnJunction(Junction):
     """Junction matched to TN element(s)."""
-    matches: List[TnMatch]  # TN matches: [(tn_id, side, distance), ...]
+    ref_tn_sides: List[RefTnSide]  # Reference TN matches: [(tn_id, side, distance?), ...]
     switched: bool          # True if sides were swapped to normalize
 
 
