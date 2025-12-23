@@ -1,13 +1,17 @@
 """Pytest fixtures for AmpliFinder tests."""
 
+import os
 import random
-import pytest
+import shutil
 from pathlib import Path
 
+import pytest
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
+
+from amplifinder.config import get_iso_run_dir
 
 # =============================================================================
 # Assertion helpers
@@ -19,6 +23,61 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 # =============================================================================
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+# Root for real test data (MATLAB outputs, FASTQ, breseq, etc.)
+TEST_DATA_ROOT = Path(
+    os.environ.get("AMPLIFINDER_TEST_ROOT", "/zdata/user-data/rkishony/AmpliFinder_test")
+)
+MATLAB_OUTPUT = TEST_DATA_ROOT / "AmpliFinderWorkspace" / "output"
+
+# External data paths (from isolates.xlsx)
+FASTQ_PATH = Path(
+    "/zdata/user-data/idan/small_projects/breseq_to_amplification_from_dropbox/morbidostat_sra"
+)
+BRESEQ_PATH = Path(
+    "/zdata/user-data/idan/small_projects/breseq_to_amplification_from_dropbox/Breseq1"
+)
+
+
+# =============================================================================
+# Real-data integration fixtures (used across test suites)
+# =============================================================================
+
+@pytest.fixture
+def isolate_srr25242877():
+    """Test isolate SRR25242877 configuration."""
+    return {
+        "iso_name": "SRR25242877",
+        "ref_name": "U00096",
+        "fastq_path": FASTQ_PATH / "SRR25242877",
+        "breseq_path": BRESEQ_PATH / "SRR25242877",
+        "matlab_output": MATLAB_OUTPUT / "SRR25242877",
+    }
+
+
+@pytest.fixture
+def isolate_srr25242906():
+    """Test isolate SRR25242877 (ancestor)."""
+    return {
+        "iso_name": "SRR25242877",
+        "ref_name": "U00096",
+        "fastq_path": FASTQ_PATH / "SRR25242877",
+        "breseq_path": BRESEQ_PATH / "SRR25242877",
+        "matlab_output": MATLAB_OUTPUT / "SRR25242877",
+    }
+
+
+@pytest.fixture
+def clear_output_dir():
+    """Clear output directory before test run."""
+
+    def _clear(config):
+        run_dir = get_iso_run_dir(config)
+        if run_dir.exists():
+            shutil.rmtree(run_dir)
+        return run_dir
+
+    return _clear
 
 
 # =============================================================================

@@ -1,11 +1,14 @@
 """Fixtures for integration tests using real AmpliFinder test data."""
 
+import os
 import shutil
 import pytest
 from pathlib import Path
 
 # Paths to test data
-TEST_DATA_ROOT = Path("/zdata/user-data/rkishony/AmpliFinder_test")
+TEST_DATA_ROOT = Path(
+    os.environ.get("AMPLIFINDER_TEST_ROOT", "/zdata/user-data/rkishony/AmpliFinder_test")
+)
 MATLAB_OUTPUT = TEST_DATA_ROOT / "AmpliFinderWorkspace" / "output"
 
 # External data paths (from isolates.xlsx)
