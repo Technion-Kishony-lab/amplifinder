@@ -10,6 +10,7 @@ from amplifinder import __version__
 from amplifinder.config import Config, load_config, merge_config
 from amplifinder.logger import setup_logger, info, warning, error
 from amplifinder.pipeline import Pipeline
+from amplifinder.steps.base import Step
 
 
 @click.command()
@@ -116,6 +117,12 @@ from amplifinder.pipeline import Pipeline
     default=False,
     help="Save plots to PNG files instead of displaying (use with --visualize).",
 )
+@click.option(
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Report which step is running and its output files.",
+)
 @click.version_option(version=__version__)
 def main(
     iso_path: Path,
@@ -135,6 +142,7 @@ def main(
     breseq_only: bool,
     visualize: Optional[Path],
     save_plots: bool,
+    verbose: bool,
 ) -> None:
     """AmpliFinder: Detect IS-mediated gene amplifications from WGS data."""
     # Setup logger early (use output_dir directly for fetch-only)
@@ -209,6 +217,9 @@ def main(
             info(f"Ancestor: {config.anc_path}")
         else:
             warning("No ancestor assigned; using raw (non-normalized) coverage analysis")
+
+        # Set global verbose flag
+        Step.set_global_verbose(verbose)
 
         pipeline = Pipeline(config)
         if breseq_only:
