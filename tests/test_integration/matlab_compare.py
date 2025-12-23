@@ -5,10 +5,23 @@ from pathlib import Path
 from typing import Optional
 
 
-def load_matlab_isjc2(matlab_output_dir: Path) -> Optional[pd.DataFrame]:
-    """Load MATLAB ISJC2.xlsx output."""
+def load_matlab_isjc2(matlab_output_dir: Path, require_files: bool = None) -> Optional[pd.DataFrame]:
+    """Load MATLAB ISJC2.xlsx output.
+    
+    Args:
+        matlab_output_dir: Directory containing MATLAB outputs
+        require_files: If True, fail if file doesn't exist. If None, use REQUIRE_MATLAB_FILES from test_pipeline.
+    """
+    import pytest
+    from tests.test_integration.test_pipeline import REQUIRE_MATLAB_FILES
+    
+    if require_files is None:
+        require_files = REQUIRE_MATLAB_FILES
+    
     xlsx = matlab_output_dir / "ISJC2.xlsx"
     if not xlsx.exists():
+        if require_files:
+            pytest.fail(f"MATLAB ISJC2.xlsx not found: {xlsx}")
         return None
     return pd.read_excel(xlsx)
 
