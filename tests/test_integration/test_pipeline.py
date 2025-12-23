@@ -18,6 +18,9 @@ from amplifinder.pipeline import Pipeline
 
 pytestmark = pytest.mark.integration
 
+# Global flag: if True, skip tests when MATLAB files are missing; if False, fail
+REQUIRE_MATLAB_FILES = True
+
 
 # =============================================================================
 # Full pipeline comparison (slow)
@@ -41,11 +44,18 @@ class TestPipeline(Pipeline):
         self.is_ancestor_run = False
     
     def _load_matlab_isjc2(self):
-        """Load MATLAB ISJC2.xlsx if available."""
+        """Load MATLAB ISJC2.xlsx if available.
+        
+        If REQUIRE_MATLAB_FILES is True, fails if file doesn't exist.
+        Otherwise returns None if file doesn't exist.
+        """
         import pandas as pd
         isjc2_xlsx = self.matlab_output_dir / "ISJC2.xlsx"
         if isjc2_xlsx.exists():
             return pd.read_excel(isjc2_xlsx)
+        
+        if REQUIRE_MATLAB_FILES:
+            pytest.fail(f"MATLAB ISJC2.xlsx not found: {isjc2_xlsx}")
         return None
     
     def _locate_tns_in_reference(self, genome):
@@ -80,6 +90,7 @@ class TestPipeline(Pipeline):
                 print(f"Step 5: MATLAB ISJC2.xlsx has {len(df)} junction pairs (Python={len(result)} TN-associated junctions)")
                 print(f"Step 5: MATLAB≈{matlab_count} IS-associated junctions (estimated), Python={len(result)} TN-associated junctions")
             else:
+                assert not REQUIRE_MATLAB_FILES, "MATLAB file missing but REQUIRE_MATLAB_FILES=True"
                 print(f"Step 5: Python={len(result)} TN-associated junctions (MATLAB file not found)")
         else:
             print(f"Step 5: Python={len(result)} TN-associated junctions (ancestor run, no MATLAB comparison)")
@@ -96,6 +107,7 @@ class TestPipeline(Pipeline):
             if df is not None:
                 print(f"Step 6: MATLAB={len(df)} junction pairs, Python={len(result)} junction pairs")
             else:
+                assert not REQUIRE_MATLAB_FILES, "MATLAB file missing but REQUIRE_MATLAB_FILES=True"
                 print(f"Step 6: Python={len(result)} junction pairs (MATLAB file not found)")
         else:
             print(f"Step 6: Python={len(result)} junction pairs (ancestor run, no MATLAB comparison)")
@@ -152,7 +164,7 @@ class TestPipelineStepByStep:
         
         matlab_output_dir = isolate_srr25242877["matlab_output"]
         
-        # Check MATLAB output exists
+        # Check MATLAB output exists (load_matlab_isjc2 handles REQUIRE_MATLAB_FILES)
         matlab_isjc2 = load_matlab_isjc2(matlab_output_dir)
         if matlab_isjc2 is None:
             pytest.skip("MATLAB reference output not available")
@@ -225,7 +237,7 @@ class TestPipelineStepByStep:
         
         matlab_output_dir = isolate_srr25242877["matlab_output"]
         
-        # Check MATLAB output exists
+        # Check MATLAB output exists (load_matlab_isjc2 handles REQUIRE_MATLAB_FILES)
         matlab_isjc2 = load_matlab_isjc2(matlab_output_dir)
         if matlab_isjc2 is None:
             pytest.skip("MATLAB reference output not available")
