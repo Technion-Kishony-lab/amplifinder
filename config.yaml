@@ -3,8 +3,8 @@
 
 # External tool paths (null = use system PATH)
 blast_path: /opt/anaconda3/envs/shared_env/bin
-samtools_path: null
-bowtie2_path: null
+samtools_path: /zdata/user-data/Apps/samtools-1.14
+bowtie2_path: null  # Expected in PATH
 
 # breseq settings  
 breseq_docker: true
