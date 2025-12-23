@@ -43,8 +43,19 @@ class TestPipeline(Pipeline):
         self.matlab_output_dir = matlab_output_dir
         self.is_ancestor_run = False
     
+    def _load_matlab_isjc(self):
+        """Load MATLAB ISJC.xlsx (intermediate - individual junctions) if available."""
+        import pandas as pd
+        isjc_xlsx = self.matlab_output_dir / "ISJC.xlsx"
+        if isjc_xlsx.exists():
+            return pd.read_excel(isjc_xlsx)
+        
+        if REQUIRE_MATLAB_FILES:
+            pytest.fail(f"MATLAB ISJC.xlsx not found: {isjc_xlsx}")
+        return None
+    
     def _load_matlab_isjc2(self):
-        """Load MATLAB ISJC2.xlsx if available.
+        """Load MATLAB ISJC2.xlsx (final - junction pairs) if available.
         
         If REQUIRE_MATLAB_FILES is True, fails if file doesn't exist.
         Otherwise returns None if file doesn't exist.
@@ -81,14 +92,15 @@ class TestPipeline(Pipeline):
         """Step 5: Match junctions to TN elements - compare with MATLAB."""
         result = super()._create_tnjc(breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output)
         
-        # Compare with MATLAB (only for isolate runs with ancestor, not ancestor runs)
+        # Compare with MATLAB ISJC (intermediate - individual junctions)
         if not self.is_ancestor_run:
-            df = self._load_matlab_isjc2()
+            df = self._load_matlab_isjc()
             if df is not None:
-                # ISJC2 has junction pairs, so ISJC should be roughly 2x (each pair has 2 junctions)
-                matlab_count = len(df) * 2  # Rough estimate
-                print(f"Step 5: MATLAB ISJC2.xlsx has {len(df)} junction pairs (Python={len(result)} TN-associated junctions)")
-                print(f"Step 5: MATLAB≈{matlab_count} IS-associated junctions (estimated), Python={len(result)} TN-associated junctions")
+                print(f"Step 5: MATLAB ISJC.xlsx has {len(df)} junctions, Python={len(result)} TN-associated junctions")
+                # Compare line-by-line
+                from tests.test_integration.matlab_compare import compare_isjc_outputs
+                compare_isjc_outputs(result.df, df)
+                print(f"Step 5: ✓ Comparison passed: 1-to-1 match with MATLAB ISJC")
             else:
                 assert not REQUIRE_MATLAB_FILES, "MATLAB file missing but REQUIRE_MATLAB_FILES=True"
                 print(f"Step 5: Python={len(result)} TN-associated junctions (MATLAB file not found)")
@@ -98,14 +110,14 @@ class TestPipeline(Pipeline):
         return result
     
     def _create_tnjc2(self, tnjc, genome, iso_output):
-        """Step 6: Combine junction pairs - compare with MATLAB."""
+        """Step 6: Combine junction pairs - compare with MATLAB ISJC2."""
         result = super()._create_tnjc2(tnjc, genome, iso_output)
         
-        # Compare with MATLAB (only for isolate runs with ancestor, not ancestor runs)
+        # Compare with MATLAB ISJC2 (final - junction pairs)
         if not self.is_ancestor_run:
             df = self._load_matlab_isjc2()
             if df is not None:
-                print(f"Step 6: MATLAB={len(df)} junction pairs, Python={len(result)} junction pairs")
+                print(f"Step 6: MATLAB ISJC2.xlsx has {len(df)} junction pairs, Python={len(result)} junction pairs")
             else:
                 assert not REQUIRE_MATLAB_FILES, "MATLAB file missing but REQUIRE_MATLAB_FILES=True"
                 print(f"Step 6: Python={len(result)} junction pairs (MATLAB file not found)")
