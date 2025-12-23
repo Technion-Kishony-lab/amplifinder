@@ -34,6 +34,8 @@ class Step(ABC, Generic[T]):
 
     # Global force flag (applies to all steps)
     global_force: bool = False
+    # Global verbose flag (applies to all steps)
+    global_verbose: bool = False
 
     def __init__(
         self,
@@ -112,6 +114,14 @@ class Step(ABC, Generic[T]):
         4. Execute if still needed
         5. Release lock
         """
+        # Verbose reporting
+        if self.global_verbose:
+            if self.output_files:
+                output_str = ", ".join(str(p) for p in self.output_files)
+                info(f"{self.name}: running (outputs: {output_str})")
+            else:
+                info(f"{self.name}: running (no file outputs)")
+        
         # Check inputs exist
         if missing_input := self.missing_input_files():
             raise FileNotFoundError(f"{self.name}: missing inputs: {missing_input}")
@@ -169,3 +179,8 @@ class Step(ABC, Generic[T]):
     def set_global_force(cls, force: bool) -> None:
         """Set global force flag for all steps."""
         cls.global_force = force
+
+    @classmethod
+    def set_global_verbose(cls, verbose: bool) -> None:
+        """Set global verbose flag for all steps."""
+        cls.global_verbose = verbose

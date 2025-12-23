@@ -12,6 +12,7 @@ from amplifinder.steps import (
     CreateTnJcStep,
     CreateTnJc2Step,
 )
+from amplifinder.steps.base import Step
 from amplifinder.config import Config, get_iso_run_dir
 from amplifinder.data_types import RecordTypedDF, Junction
 from amplifinder.pipeline import Pipeline
@@ -206,6 +207,9 @@ class TestFullPipeline:
         
         # Clear output directory before running
         run_dir = clear_output_dir(config)
+        
+        # Enable verbose reporting
+        Step.set_global_verbose(True)
         
         # Run full pipeline
         pipeline = Pipeline(config)
@@ -572,6 +576,9 @@ class TestPipelineStepByStep:
         # Clear output directory before running
         run_dir = clear_output_dir(config)
         
+        # Enable verbose reporting
+        Step.set_global_verbose(True)
+        
         print("\n=== Testing Isolate Pipeline (no ancestor) ===")
         pipeline = TestPipeline(config, matlab_output_dir)
         result = pipeline.run()
@@ -627,6 +634,9 @@ class TestPipelineStepByStep:
         # Clear output directory before running
         clear_output_dir(config)
         
+        # Enable verbose reporting
+        Step.set_global_verbose(True)
+        
         print("\n=== Testing Ancestor Pipeline ===")
         pipeline = TestPipeline(config, matlab_output_dir)
         pipeline.is_ancestor_run = True
@@ -656,6 +666,9 @@ class TestPipelineStepByStep:
         
         # Clear output directory before running
         clear_output_dir(config)
+        
+        # Enable verbose reporting
+        Step.set_global_verbose(True)
         
         print("\n=== Testing Isolate Pipeline (with ancestor) ===")
         print("Note: Ancestor pipeline will run automatically if needed")
