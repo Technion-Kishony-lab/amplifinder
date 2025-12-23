@@ -73,3 +73,35 @@ def test_breseq_step_requires_inputs_when_no_output(tmp_path):
 
     with pytest.raises(ValueError, match="fastq_path and ref_file are required"):
         BreseqStep(output_path=output)
+
+
+# =============================================================================
+# Integration tests with real breseq output
+# =============================================================================
+
+@pytest.mark.integration
+class TestBreseqIntegration:
+    """Test breseq output parsing using existing breseq results."""
+
+    def test_parse_existing_breseq_output(self, tmp_path, isolate_srr25242877):
+        """Parse pre-computed breseq output for SRR25242877."""
+        breseq_path = isolate_srr25242877["breseq_path"]
+
+        if not breseq_path.exists():
+            pytest.skip(f"Breseq output not found: {breseq_path}")
+
+        # Parse the output.gd file directly
+        from amplifinder.tools.breseq import parse_breseq_output
+
+        output_gd = breseq_path / "output" / "output.gd"
+        if not output_gd.exists():
+            pytest.skip(f"output.gd not found: {output_gd}")
+
+        # parse_breseq_output expects the breseq output directory, not the .gd file
+        # Use tmp_path for CSV output to avoid permission errors
+        result = parse_breseq_output(breseq_path, csv_output_dir=tmp_path)
+
+        # Check JC (junction) output
+        assert "JC" in result
+        jc_df = result["JC"]
+        assert len(jc_df) > 0

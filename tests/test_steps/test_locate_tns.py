@@ -75,3 +75,61 @@ def test_force_reruns(step_factory):
     step = step_factory(force=True)
     step.run()
     assert step.run_count == 1
+
+
+# =============================================================================
+# Integration tests with real NCBI data
+# =============================================================================
+
+@pytest.mark.integration
+class TestLocateTNsIntegration:
+    """Test TN element location using GenBank annotations with real data."""
+
+    @pytest.fixture
+    def u00096_genome(self, tmp_path):
+        """Load U00096 reference (cached)."""
+        from amplifinder.steps import GetRefGenomeStep
+        
+        ref_path = tmp_path / "genomesDB"
+        ref_path.mkdir()
+
+        step = GetRefGenomeStep(
+            ref_name="U00096",
+            ref_path=ref_path,
+            ncbi=True,
+        )
+        return step.run()
+
+    def test_locate_tns_genbank(self, tmp_path, u00096_genome, isolate_srr25242877):
+        """Locate TN elements from GenBank annotations."""
+        output_dir = tmp_path / "tn_loc" / u00096_genome.name
+        step = LocateTNsUsingGenbankStep(
+            genome=u00096_genome,
+            output_dir=output_dir,
+        )
+        tn_loc = step.run()
+
+        # MATLAB found IS elements in U00096
+        assert tn_loc is not None
+        assert len(tn_loc) > 0
+
+        # Check expected columns
+        assert "TN_Name" in tn_loc.df.columns
+        assert "LocLeft" in tn_loc.df.columns
+        assert "LocRight" in tn_loc.df.columns
+
+    def test_locate_tns_isfinder(self, tmp_path, u00096_genome):
+        """Locate TN elements using ISfinder database."""
+        from amplifinder.data import get_builtin_isfinder_db_path
+
+        output_dir = tmp_path / "tn_loc" / u00096_genome.name
+        step = LocateTNsUsingISfinderStep(
+            genome=u00096_genome,
+            output_dir=output_dir,
+            isdb_path=get_builtin_isfinder_db_path(),
+            evalue=1e-4,
+            critical_coverage=0.9,
+        )
+        tn_loc = step.run()
+
+        assert len(tn_loc) > 0
