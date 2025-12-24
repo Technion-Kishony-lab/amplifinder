@@ -252,3 +252,13 @@ def locate_tns_step(tmp_output, tiny_genome):
         genome=tiny_genome,
         output_dir=tmp_output / "tn_loc" / tiny_genome.name,
     )
+
+
+def pytest_configure(config):
+    """Register custom markers."""
+    config.addinivalue_line(
+        "markers", "integration: mark test as integration test (requires real data)"
+    )
+    config.addinivalue_line(
+        "markers", "slow: mark test as slow (e.g., runs breseq)"
+    )
