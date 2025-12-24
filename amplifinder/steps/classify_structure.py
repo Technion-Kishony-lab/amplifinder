@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 
 from amplifinder.data_types import (
-    RecordTypedDF, CoveredTnJc2, ClassifiedTnJc2, RawEvent, TnLoc,
+    RecordTypedDF, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc,
 )
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
@@ -196,7 +196,7 @@ class ClassifyStructureStep(Step[RecordTypedDF[ClassifiedTnJc2]]):
     def __init__(
         self,
         covered_tnjc2: RecordTypedDF[CoveredTnJc2],
-        tn_locs: RecordTypedDF[TnLoc],
+        tn_locs: RecordTypedDF[RefTnLoc],
         output_dir: Path,
         min_amplicon_length: int = 30,
         force: Optional[bool] = None,

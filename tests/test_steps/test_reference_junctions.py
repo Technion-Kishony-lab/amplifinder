@@ -34,11 +34,11 @@ def test_junction_positions_correct(ref_jc_step, locate_tns_step):
     tn_loc = locate_tns_step.load_outputs()
 
     tn1 = tn_loc.df.iloc[0]
-    left_jc = next(jc for jc in ref_jc if jc.ref_tn_side.tn_id == tn1["ID"] and jc.ref_tn_side.side == Side.LEFT)
-    right_jc = next(jc for jc in ref_jc if jc.ref_tn_side.tn_id == tn1["ID"] and jc.ref_tn_side.side == Side.RIGHT)
+    left_jc = next(jc for jc in ref_jc if jc.ref_tn_side.tn_id == tn1["tn_id"] and jc.ref_tn_side.side == Side.LEFT)
+    right_jc = next(jc for jc in ref_jc if jc.ref_tn_side.tn_id == tn1["tn_id"] and jc.ref_tn_side.side == Side.RIGHT)
 
-    assert left_jc.pos1 == tn1["LocLeft"]
-    assert right_jc.pos1 == tn1["LocRight"]
+    assert left_jc.pos1 == tn1["loc_left"]
+    assert right_jc.pos1 == tn1["loc_right"]
 
 
 def test_skips_if_exists(ref_jc_step):

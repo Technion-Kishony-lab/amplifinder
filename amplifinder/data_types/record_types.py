@@ -7,6 +7,9 @@ from typing import List, NamedTuple, Optional, TypeVar
 from amplifinder.data_types.records import Record
 
 
+TnId = int
+
+
 # Coverage types
 class Coverage(NamedTuple):
     """Coverage statistics for a genomic region."""
@@ -22,45 +25,43 @@ class JunctionCoverage(NamedTuple):
     right: int     # reads starting at junction
 
 
-class Side(int, Enum):
-    """Side of a TN element (left or right). Values match MATLAB convention."""
+class ReversibleIntEnum(int, Enum):
+    """Base class for int enums with opposite() method."""
+    
+    def opposite(self):
+        """Return the enum member with negated value."""
+        return type(self)(-self.value)
+
+
+class Side(ReversibleIntEnum):
+    """Side of a TN element (left or right)."""
     LEFT = -1
     RIGHT = 1
 
-    def opposite(self) -> "Side":
-        return Side(-self.value)
 
-
-class Orientation(int, Enum):
+class Orientation(ReversibleIntEnum):
     """Orientation relative to reference (forward, reverse, or both/mixed)."""
     FORWARD = 1
     REVERSE = -1
     BOTH = 0
 
-    def opposite(self) -> "Orientation":
-        if self == Orientation.FORWARD:
-            return Orientation.REVERSE
-        elif self == Orientation.REVERSE:
-            return Orientation.FORWARD
-        return Orientation.BOTH  # BOTH stays BOTH
-
 
 class RefTnSide(Record):
     """A reference TN element side (with optional distance for matches)."""
-    tn_id: int
+    tn_id: TnId
     side: Side
-    distance: Optional[int] = None
+    distance: Optional[int] = None  # None for reference junctions
 
 
-class TnLoc(Record):
-    """TN element location record."""
-    ID: int
-    TN_Name: str
-    TN_scaf: str
-    LocLeft: int
-    LocRight: int
-    Complement: bool
-    Join: bool
+class RefTnLoc(Record):
+    """Reference TN element location in the genome."""
+    tn_id: TnId
+    tn_name: str
+    tn_scaf: str
+    loc_left: int
+    loc_right: int
+    complement: bool
+    join: bool
 
 
 class SeqRefTnSide(RefTnSide):
@@ -90,15 +91,15 @@ JunctionT = TypeVar("JunctionT", bound="Junction")
 
 class Junction(Record):
     """Base junction record with shared positional fields."""
-    num: int
+    num: int  # Junction identifier: breseq junction number, or 0 for reference junctions
     scaf1: str
     pos1: int
     dir1: Orientation
     scaf2: str
     pos2: int
     dir2: Orientation
-    flanking_left: int
-    flanking_right: int
+    flanking_left: int   # Length of sequence flanking side 1 (used for sequence extraction)
+    flanking_right: int  # Length of sequence flanking side 2 (used for sequence extraction)
 
     def switch_sides(self: JunctionT) -> JunctionT:
         """Return new junction with side 1 and side 2 swapped."""
@@ -111,14 +112,18 @@ class Junction(Record):
 
 
 class RefTnJunction(Junction):
-    """Synthetic junction for reference TN element."""
+    """Synthetic junction for reference TN element.
+    
+    For RefTnJunction, side 1 is always the TN side, side 2 is the chromosome side.
+    ref_tn_side indicates which TN boundary (LEFT or RIGHT) this junction represents.
+    """
     ref_tn_side: RefTnSide
 
 
 class TnJunction(Junction):
     """Junction matched to TN element(s)."""
     ref_tn_sides: List[RefTnSide]  # Reference TN matches: [(tn_id, side, distance?), ...]
-    switched: bool          # True if sides were swapped to normalize
+    switched: bool                 # True if sides were swapped to normalize
 
 
 class TnJc2(Record):

@@ -7,7 +7,7 @@ from typing import Tuple
 
 from amplifinder.config import Config, get_iso_run_dir, get_anc_run_dir, load_config_from_run
 from amplifinder.data_types import (
-    Genome, RecordTypedDF, TnLoc, RefTnJunction, SeqRefTnSide, Junction, TnJunction, TnJc2,
+    Genome, RecordTypedDF, RefTnLoc, RefTnJunction, SeqRefTnSide, Junction, TnJunction, TnJc2,
     CoveredTnJc2, ClassifiedTnJc2, CandidateTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.logger import info
@@ -137,7 +137,7 @@ class Pipeline:
         info(f"Reference: {genome.name} ({genome.length:,} bp)")
         return genome
 
-    def _locate_tns_in_reference(self, genome: Genome) -> RecordTypedDF[TnLoc]:
+    def _locate_tns_in_reference(self, genome: Genome) -> RecordTypedDF[RefTnLoc]:
         """Step 2: Locate TN elements using GenBank and/or ISfinder."""
         cfg = self.config
 
@@ -177,7 +177,7 @@ class Pipeline:
         return tn_loc
 
     def _create_reference_tn_junctions(
-        self, tn_loc: RecordTypedDF[TnLoc], genome: Genome, iso_output: Path
+        self, tn_loc: RecordTypedDF[RefTnLoc], genome: Genome, iso_output: Path
     ) -> Tuple[RecordTypedDF[RefTnJunction], RecordTypedDF[SeqRefTnSide]]:
         """Step 3: Create reference junctions and TN end sequences."""
         cfg = self.config
@@ -300,7 +300,7 @@ class Pipeline:
     def _classify_structure(
         self,
         covered: RecordTypedDF[CoveredTnJc2],
-        tn_loc: RecordTypedDF[TnLoc],
+        tn_loc: RecordTypedDF[RefTnLoc],
         iso_output: Path,
     ) -> RecordTypedDF[ClassifiedTnJc2]:
         """Step 8: Classify junction pair structures."""
@@ -332,7 +332,7 @@ class Pipeline:
         self,
         candidates: RecordTypedDF[CandidateTnJc2],
         genome: Genome,
-        tn_loc: RecordTypedDF[TnLoc],
+        tn_loc: RecordTypedDF[RefTnLoc],
         iso_output: Path,
     ) -> None:
         """Step 10: Create synthetic junction sequences."""

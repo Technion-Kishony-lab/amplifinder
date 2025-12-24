@@ -7,10 +7,10 @@ from typing import List, Optional
 from Bio import SeqIO
 from Bio.SeqFeature import SeqFeature
 
-from amplifinder.data_types.record_types import TnLoc
+from amplifinder.data_types.record_types import RefTnLoc
 
 
-def find_tn_elements(genbank_path: Path, ref_name: str) -> List[TnLoc]:
+def find_tn_elements(genbank_path: Path, ref_name: str) -> List[RefTnLoc]:
     """Find TN elements from GenBank annotations.
 
     Looks for mobile_element features with 'insertion sequence' in the type.
@@ -28,14 +28,14 @@ def find_tn_elements(genbank_path: Path, ref_name: str) -> List[TnLoc]:
 
         location = feature.location
         id_counter += 1
-        records.append(TnLoc(
-            ID=id_counter,
-            TN_Name=tn_name,
-            TN_scaf=ref_name,
-            LocLeft=int(location.start) + 1,  # BioPython is 0-based
-            LocRight=int(location.end),
-            Complement=location.strand == -1,
-            Join=hasattr(location, 'parts') and len(location.parts) > 1,
+        records.append(RefTnLoc(
+            tn_id=id_counter,
+            tn_name=tn_name,
+            tn_scaf=ref_name,
+            loc_left=int(location.start) + 1,  # BioPython is 0-based
+            loc_right=int(location.end),
+            complement=location.strand == -1,
+            join=hasattr(location, 'parts') and len(location.parts) > 1,
         ))
 
     return records

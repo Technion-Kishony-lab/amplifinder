@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from amplifinder.steps import ClassifyStructureStep
 from amplifinder.data_types import (
-    RecordTypedDF, CoveredTnJc2, TnLoc, RawEvent, Orientation,
+    RecordTypedDF, CoveredTnJc2, RefTnLoc, RawEvent, Orientation,
 )
 
 
@@ -46,12 +46,12 @@ def sample_covered_tnjc2(tmp_path):
 
 @pytest.fixture
 def sample_tn_locs():
-    """Create sample TnLoc records."""
+    """Create sample RefTnLoc records."""
     records = [
-        TnLoc(ID=1, TN_Name="IS1", TN_scaf="chr1", LocLeft=10, LocRight=20, Complement=False, Join=False),
-        TnLoc(ID=2, TN_Name="IS2", TN_scaf="chr1", LocLeft=30, LocRight=40, Complement=False, Join=False),
+        RefTnLoc(tn_id=1, tn_name="IS1", tn_scaf="chr1", loc_left=10, loc_right=20, complement=False, join=False),
+        RefTnLoc(tn_id=2, tn_name="IS2", tn_scaf="chr1", loc_left=30, loc_right=40, complement=False, join=False),
     ]
-    return RecordTypedDF.from_records(records, TnLoc)
+    return RecordTypedDF.from_records(records, RefTnLoc)
 
 
 def test_classify_structure(sample_covered_tnjc2, sample_tn_locs, tmp_path):
