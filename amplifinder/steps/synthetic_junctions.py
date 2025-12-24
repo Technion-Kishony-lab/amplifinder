@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from amplifinder.data_types import (
-    RecordTypedDF, CandidateTnJc2, Genome, JunctionType, TnLoc,
+    RecordTypedDF, CandidateTnJc2, Genome, JunctionType, RefTnLoc,
 )
 from amplifinder.steps.base import Step
 from amplifinder.utils.fasta import reverse_complement
@@ -13,7 +13,7 @@ from amplifinder.utils.fasta import reverse_complement
 def create_synthetic_junctions(
     candidate: CandidateTnJc2,
     chr_seq: str,
-    tn_loc: TnLoc,
+    tn_loc: RefTnLoc,
     tn_seq: str,
     read_length: int,
 ) -> dict[JunctionType, str]:
@@ -53,13 +53,22 @@ def create_synthetic_junctions(
     pos_out_R = pos_R + 1
     
     # TN boundaries
-    tn_left = tn_loc.LocLeft - 1  # 0-based
-    tn_right = tn_loc.LocRight  # exclusive end
+    tn_left = tn_loc.loc_left - 1  # 0-based
+    tn_right = tn_loc.loc_right  # exclusive end
     tn_length = tn_right - tn_left
     
     # TN orientation (from chosen TN)
-    # This is simplified - full implementation would track orientation from classification
-    tn_orientation = 1  # forward
+    # Get orientation from candidate's tn_orientations list
+    # MATLAB: IS_orientation = isjc2.chosen_IS{1}.orientation
+    # Orientation computed in create_tnjc2: side_i * dir2(i), accounting for span_origin
+    tn_orientation = 1  # default to forward
+    if candidate.chosen_tn_id is not None:
+        try:
+            idx = candidate.tn_ids.index(candidate.chosen_tn_id)
+            tn_orientation = candidate.tn_orientations[idx].value
+        except (ValueError, IndexError):
+            # Fallback if chosen_tn_id not found in tn_ids
+            pass
     
     junctions = {}
     
@@ -154,7 +163,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
         self,
         candidates: RecordTypedDF[CandidateTnJc2],
         genome: Genome,
-        tn_locs: RecordTypedDF[TnLoc],
+        tn_locs: RecordTypedDF[RefTnLoc],
         output_dir: Path,
         read_length: int = 150,
         force: Optional[bool] = None,
@@ -183,7 +192,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
         chr_seq = self.genome.sequence
         
         # Build TN lookup
-        tn_lookup = {tn.ID: tn for tn in self.tn_locs}
+        tn_lookup = {tn.tn_id: tn for tn in self.tn_locs}
         
         for candidate in self.candidates:
             analysis_dir = self.output_dir / candidate.analysis_dir
@@ -197,7 +206,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
             tn_loc = tn_lookup[chosen_tn_id]
             
             # Get TN sequence (simplified - assumes same scaffold)
-            tn_seq = chr_seq[tn_loc.LocLeft - 1:tn_loc.LocRight]
+            tn_seq = chr_seq[tn_loc.loc_left - 1:tn_loc.loc_right]
             
             # Create junctions
             junctions = create_synthetic_junctions(

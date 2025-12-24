@@ -62,10 +62,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
         junctions = list(self.tnjc)
         pairs = self._pair_junctions(junctions)
 
-        if pairs:
-            tnjc2 = RecordTypedDF.from_records(pairs, TnJc2)
-        else:
-            tnjc2 = RecordTypedDF.empty(TnJc2)
+        tnjc2 = RecordTypedDF.from_records(pairs, TnJc2)
 
         info(f"Found {len(tnjc2)} junction pairs (TnJc2)")
         return tnjc2
@@ -96,12 +93,12 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
                     continue
 
                 # (b) Find matching TN: same ID, different sides
-                matching = self._find_matching_tns(jc_i.ref_tn_sides, jc_j.ref_tn_sides)
-                if not matching:
+                matching_tns = self._find_matching_tns(jc_i.ref_tn_sides, jc_j.ref_tn_sides)
+                if not matching_tns:
                     continue
 
                 # Create pair record
-                pair = self._create_pair(jc_i, jc_j, matching)
+                pair = self._create_pair(jc_i, jc_j, matching_tns)
                 pairs.append(pair)
 
         return pairs
@@ -136,25 +133,27 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
         self,
         jc_i: TnJunction,
         jc_j: TnJunction,
-        matching: List[Tuple[int, Side]],
+        matching_tns: List[Tuple[int, Side]],
     ) -> TnJc2:
         """Create a junction pair record.
 
         Normalizes so that L (left) junction has lower chromosome position.
         """
         # Determine which is left/right based on position
-        if jc_i.pos2 <= jc_j.pos2:
-            jc_L, jc_R = jc_i, jc_j
-        else:
+        switched = jc_i.pos2 > jc_j.pos2
+        if switched:
             jc_L, jc_R = jc_j, jc_i
+        else:
+            jc_L, jc_R = jc_i, jc_j
 
         # Extract TN IDs and compute orientations
-        # MATLAB: orientation = side_i * dir2(i)
-        tn_ids = [m[0] for m in matching]
-        tn_orientations = [Orientation(side_i.value * jc_i.dir2.value) for _, side_i in matching]
+        # MATLAB: orientation = side_i * dir2(i), where i is L
+        tn_ids = [m[0] for m in matching_tns]
+        # Use dir2 of the left junction (jc_L) for orientation calculation
+        tn_orientations = [Orientation(side_i.value * jc_L.dir2.value * (-1 if switched else 1)) for _, side_i in matching_tns]
 
-        # Span origin: if junction i points left (REVERSE), amplicon spans origin
-        span_origin = jc_i.dir2 == Orientation.REVERSE
+        # Span origin: if left junction points left (REVERSE), amplicon spans origin
+        span_origin = jc_L.dir2 == Orientation.REVERSE
 
         # Calculate amplicon length
         amplicon_length, complementary_length = self._calculate_amplicon_length(

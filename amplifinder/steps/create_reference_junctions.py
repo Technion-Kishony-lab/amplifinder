@@ -5,7 +5,7 @@ from typing import Optional
 
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, TnLoc, SeqRefTnSide, RefTnJunction, RefTnSide, Side, Orientation
+from amplifinder.data_types import RecordTypedDF, RefTnLoc, SeqRefTnSide, RefTnJunction, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
 from amplifinder.utils.fasta import reverse_complement
 
@@ -22,7 +22,7 @@ class CreateRefTnJcStep(Step[RecordTypedDF[RefTnJunction]]):
 
     def __init__(
         self,
-        tn_loc: RecordTypedDF[TnLoc],
+        tn_loc: RecordTypedDF[RefTnLoc],
         genome: Genome,
         output_dir: Path,
         source: str,
@@ -59,24 +59,24 @@ class CreateRefTnJcStep(Step[RecordTypedDF[RefTnJunction]]):
         jc_records = []
 
         for tn in self.tn_loc:
-            tn_length = tn.LocRight - tn.LocLeft + 1
+            tn_length = tn.loc_right - tn.loc_left + 1
 
             # Left junction: TN left boundary -> chromosome
             jc_records.append(RefTnJunction(
                 num=0,
-                scaf1=tn.TN_scaf, pos1=tn.LocLeft, dir1=Orientation.FORWARD,
-                scaf2=tn.TN_scaf, pos2=tn.LocLeft - 1, dir2=Orientation.REVERSE,
+                scaf1=tn.tn_scaf, pos1=tn.loc_left, dir1=Orientation.FORWARD,
+                scaf2=tn.tn_scaf, pos2=tn.loc_left - 1, dir2=Orientation.REVERSE,
                 flanking_left=tn_length, flanking_right=self.reference_tn_out_span,
-                ref_tn_side=RefTnSide(tn_id=tn.ID, side=Side.LEFT),
+                ref_tn_side=RefTnSide(tn_id=tn.tn_id, side=Side.LEFT),
             ))
 
             # Right junction: TN right boundary -> chromosome
             jc_records.append(RefTnJunction(
                 num=0,
-                scaf1=tn.TN_scaf, pos1=tn.LocRight, dir1=Orientation.REVERSE,
-                scaf2=tn.TN_scaf, pos2=tn.LocRight + 1, dir2=Orientation.FORWARD,
+                scaf1=tn.tn_scaf, pos1=tn.loc_right, dir1=Orientation.REVERSE,
+                scaf2=tn.tn_scaf, pos2=tn.loc_right + 1, dir2=Orientation.FORWARD,
                 flanking_left=self.reference_tn_out_span, flanking_right=tn_length,
-                ref_tn_side=RefTnSide(tn_id=tn.ID, side=Side.RIGHT),
+                ref_tn_side=RefTnSide(tn_id=tn.tn_id, side=Side.RIGHT),
             ))
 
         result = RecordTypedDF.from_records(jc_records, RefTnJunction)
@@ -105,7 +105,7 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDF[SeqRefTnSide]]):
     def __init__(
         self,
         ref_tn_jc: RecordTypedDF[RefTnJunction],
-        tn_loc: RecordTypedDF[TnLoc],
+        tn_loc: RecordTypedDF[RefTnLoc],
         genome: Genome,
         output_dir: Path,
         source: str,
@@ -145,7 +145,7 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDF[SeqRefTnSide]]):
         out_span = self.max_dist_to_tn  # MATLAB: out_span = max_dist_to_IS
         
         # Create mapping from tn_id to TN location
-        tn_loc_map = {tn.ID: tn for tn in self.tn_loc}
+        tn_loc_map = {tn.tn_id: tn for tn in self.tn_loc}
         
         records = []
 
@@ -165,8 +165,8 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDF[SeqRefTnSide]]):
             # Where l=LocLeft, r=LocRight (1-based inclusive in MATLAB)
             # Python slicing: seq[l-1:r] where l-1 is 0-based start, r is 0-based exclusive end
             # But LocRight is 1-based inclusive, so for Python we need LocRight (exclusive end)
-            l = tn.LocLeft  # 1-based inclusive
-            r = tn.LocRight  # 1-based inclusive
+            l = tn.loc_left  # 1-based inclusive
+            r = tn.loc_right  # 1-based inclusive
             
             # Create full TN sequence with margins (like MATLAB IS_seqs_with_margins)
             # MATLAB: seq(l-out_span:r+out_span) - 1-based inclusive

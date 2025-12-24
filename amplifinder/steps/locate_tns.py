@@ -12,13 +12,13 @@ from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.utils.genbank import find_tn_elements
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, TnLoc, Genome
+from amplifinder.data_types import RecordTypedDF, RefTnLoc, Genome
 from amplifinder.steps.base import Step
 
 
 # Base class for TN location steps
 
-class LocateTNsStep(Step[Optional[RecordTypedDF[TnLoc]]]):
+class LocateTNsStep(Step[Optional[RecordTypedDF[RefTnLoc]]]):
     """Base class for steps that locate TN elements."""
 
     def __init__(
@@ -40,18 +40,18 @@ class LocateTNsStep(Step[Optional[RecordTypedDF[TnLoc]]]):
             force=force,
         )
 
-    def _save_output(self, output: Optional[RecordTypedDF[TnLoc]]) -> None:
+    def _save_output(self, output: Optional[RecordTypedDF[RefTnLoc]]) -> None:
         if output is not None:
             output.to_csv(self.output_file)
 
-    def load_outputs(self) -> Optional[RecordTypedDF[TnLoc]]:
+    def load_outputs(self) -> Optional[RecordTypedDF[RefTnLoc]]:
         """Load TN locations from output file."""
         if not self.output_file.exists():
             return None
-        return RecordTypedDF.from_csv(self.output_file, TnLoc)
+        return RecordTypedDF.from_csv(self.output_file, RefTnLoc)
 
     @abstractmethod
-    def _calculate_output(self) -> Optional[RecordTypedDF[TnLoc]]:
+    def _calculate_output(self) -> Optional[RecordTypedDF[RefTnLoc]]:
         """Run the TN location logic."""
         pass
 
@@ -79,7 +79,7 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
             force=force,
         )
 
-    def _calculate_output(self) -> Optional[RecordTypedDF[TnLoc]]:
+    def _calculate_output(self) -> Optional[RecordTypedDF[RefTnLoc]]:
         """Parse GenBank file and extract TN locations."""
         if self.genome.genbank_path is None:
             info("No GenBank file provided - skipping GenBank TN annotation")
@@ -87,7 +87,7 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
 
         self.output_dir.mkdir(parents=True, exist_ok=True)
         records = find_tn_elements(self.genome.genbank_path, self.genome.name)
-        tn_loc = RecordTypedDF.from_records(records, TnLoc)
+        tn_loc = RecordTypedDF.from_records(records, RefTnLoc)
         info(f"Found {len(tn_loc)} TN elements in GenBank annotations")
         return tn_loc
 
@@ -122,7 +122,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         self.blast_output = self.output_dir / "isfinder_blast.txt"
         self.output_files.append(self.blast_output)
 
-    def _calculate_output(self) -> RecordTypedDF[TnLoc]:
+    def _calculate_output(self) -> RecordTypedDF[RefTnLoc]:
         """Run BLAST and parse results."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -145,7 +145,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         info(f"Found {len(tn_loc)} TN elements via ISfinder")
         return tn_loc
 
-    def _parse_blast(self) -> RecordTypedDF[TnLoc]:
+    def _parse_blast(self) -> RecordTypedDF[RefTnLoc]:
         """Parse BLAST output and convert to TN locations."""
         blast_df = parse_blast_csv(self.blast_output)
 
@@ -156,7 +156,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         df = df.drop_duplicates(subset=["qstart", "qend"], keep="first")
 
         if df.empty:
-            return RecordTypedDF.empty(TnLoc)
+            return RecordTypedDF.empty(RefTnLoc)
 
         # Add subject length
         df["subject_length"] = df["subject"].map(tn_lengths).fillna(0).astype(int)
@@ -177,11 +177,11 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
 
         # Build tn_loc table
         return RecordTypedDF(pd.DataFrame({
-            "ID": range(1, len(df) + 1),
-            "TN_Name": df["subject"].values,
-            "TN_scaf": df["query"].values,
-            "LocLeft": loc_left,
-            "LocRight": loc_right,
-            "Complement": is_complement,
-            "Join": False,
-        }), TnLoc)
+            "tn_id": range(1, len(df) + 1),
+            "tn_name": df["subject"].values,
+            "tn_scaf": df["query"].values,
+            "loc_left": loc_left,
+            "loc_right": loc_right,
+            "complement": is_complement,
+            "join": False,
+        }), RefTnLoc)

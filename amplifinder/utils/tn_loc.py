@@ -29,44 +29,44 @@ def compare_tn_locations(
     def find_match(row, other_df):
         """Find matching TN in other_df within tolerance."""
         return other_df[
-            (other_df["TN_scaf"] == row["TN_scaf"]) &
-            (abs(other_df["LocLeft"] - row["LocLeft"]) <= tolerance) &
-            (abs(other_df["LocRight"] - row["LocRight"]) <= tolerance)
+            (other_df["tn_scaf"] == row["tn_scaf"]) &
+            (abs(other_df["loc_left"] - row["loc_left"]) <= tolerance) &
+            (abs(other_df["loc_right"] - row["loc_right"]) <= tolerance)
         ]
 
     # Check tn1 against tn2 (full check: not found, multiple, name mismatch, non-matching ends)
     for _, row in df1.iterrows():
         matches = find_match(row, df2)
-        loc = f"{row['TN_scaf']}:{row['LocLeft']}-{row['LocRight']}"
+        loc = f"{row['tn_scaf']}:{row['loc_left']}-{row['loc_right']}"
 
         if matches.empty:
-            warning(f"{name1} TN '{row['TN_Name']}' at {loc} not found in {name2}")
+            warning(f"{name1} TN '{row['tn_name']}' at {loc} not found in {name2}")
             continue
 
         if len(matches) > 1:
-            warning(f"Multiple {name2} matches ({len(matches)}) for {name1} TN '{row['TN_Name']}' at {loc}")
+            warning(f"Multiple {name2} matches ({len(matches)}) for {name1} TN '{row['tn_name']}' at {loc}")
 
         # Prefer match with same name, otherwise take first
-        name_matches = matches[matches["TN_Name"] == row["TN_Name"]]
+        name_matches = matches[matches["tn_name"] == row["tn_name"]]
         if name_matches.empty:
-            other_names = ", ".join(matches["TN_Name"].unique())
-            warning(f"TN name mismatch at {loc}: {name1}='{row['TN_Name']}', {name2}='{other_names}'")
+            other_names = ", ".join(matches["tn_name"].unique())
+            warning(f"TN name mismatch at {loc}: {name1}='{row['tn_name']}', {name2}='{other_names}'")
             match = matches.iloc[0]
         else:
             match = name_matches.iloc[0]
 
         # Check for non-matching ends
-        left_diff = row["LocLeft"] - match["LocLeft"]
-        right_diff = row["LocRight"] - match["LocRight"]
+        left_diff = row["loc_left"] - match["loc_left"]
+        right_diff = row["loc_right"] - match["loc_right"]
         if left_diff != 0 or right_diff != 0:
-            warning(f"Non-matching ends for '{row['TN_Name']}' at {row['TN_scaf']}: "
-                    f"{name1}={row['LocLeft']}-{row['LocRight']}, "
-                    f"{name2}={match['LocLeft']}-{match['LocRight']} "
+            warning(f"Non-matching ends for '{row['tn_name']}' at {row['tn_scaf']}: "
+                    f"{name1}={row['loc_left']}-{row['loc_right']}, "
+                    f"{name2}={match['loc_left']}-{match['loc_right']} "
                     f"(Δleft={left_diff:+d}, Δright={right_diff:+d})")
 
     # Check tn2 against tn1 (only "not found")
     for _, row in df2.iterrows():
         matches = find_match(row, df1)
         if matches.empty:
-            loc = f"{row['TN_scaf']}:{row['LocLeft']}-{row['LocRight']}"
-            warning(f"{name2} TN '{row['TN_Name']}' at {loc} not found in {name1}")
+            loc = f"{row['tn_scaf']}:{row['loc_left']}-{row['loc_right']}"
+            warning(f"{name2} TN '{row['tn_name']}' at {loc} not found in {name1}")

@@ -50,13 +50,13 @@ def test_extracts_tn_elements(locate_tns_step):
     assert isinstance(tn_loc, RecordTypedDF)
 
     expected = pd.DataFrame({
-        "ID": [1, 2],
-        "TN_Name": ["IS_test1", "IS_test2"],
-        "TN_scaf": ["tiny", "tiny"],
-        "LocLeft": [501, 1601],
-        "LocRight": [1200, 2200],
-        "Complement": [False, True],
-        "Join": [False, False],
+        "tn_id": [1, 2],
+        "tn_name": ["IS_test1", "IS_test2"],
+        "tn_scaf": ["tiny", "tiny"],
+        "loc_left": [501, 1601],
+        "loc_right": [1200, 2200],
+        "complement": [False, True],
+        "join": [False, False],
     })
     pd.testing.assert_frame_equal(tn_loc.df, expected)
 
@@ -114,9 +114,9 @@ class TestLocateTNsIntegration:
         assert len(tn_loc) > 0
 
         # Check expected columns
-        assert "TN_Name" in tn_loc.df.columns
-        assert "LocLeft" in tn_loc.df.columns
-        assert "LocRight" in tn_loc.df.columns
+        assert "tn_name" in tn_loc.df.columns
+        assert "loc_left" in tn_loc.df.columns
+        assert "loc_right" in tn_loc.df.columns
 
     def test_locate_tns_isfinder(self, tmp_path, u00096_genome):
         """Locate TN elements using ISfinder database."""
