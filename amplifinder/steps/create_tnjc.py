@@ -98,6 +98,7 @@ class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
         return tnjc
 
     def _save_output(self, output: RecordTypedDF[TnJunction]) -> None:
+        """Save TnJc to CSV."""
         output.to_csv(self.output_file)
 
     def _get_junction_seq(self, jc: Junction, side: int) -> str:

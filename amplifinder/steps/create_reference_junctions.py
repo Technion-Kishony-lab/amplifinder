@@ -84,6 +84,7 @@ class CreateRefTnJcStep(Step[RecordTypedDF[RefTnJunction]]):
         return result
 
     def _save_output(self, output: RecordTypedDF[RefTnJunction]) -> None:
+        """Save reference TN junctions to CSV."""
         output.to_csv(self.output_file)
 
     def load_outputs(self) -> RecordTypedDF[RefTnJunction]:
@@ -188,6 +189,7 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDF[SeqRefTnSide]]):
         return result
 
     def _save_output(self, output: RecordTypedDF[SeqRefTnSide]) -> None:
+        """Save TN end sequences to CSV."""
         output.to_csv(self.output_file)
 
     def load_outputs(self) -> RecordTypedDF[SeqRefTnSide]:

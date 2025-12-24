@@ -54,9 +54,7 @@ class Pipeline:
         breseq_jc = self._run_breseq(genome, iso_output)
         tnjc = self._create_tnjc(breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output)
         tnjc2 = self._create_tnjc2(tnjc, genome, iso_output)
-        
-        # Steps 7-14: Coverage, classification, alignment, analysis, export
-        covered = self._calc_coverage(tnjc2, genome, iso_output)
+        covered = self._calc_amplicon_coverage(tnjc2, genome, iso_output)
         classified = self._classify_structure(covered, tn_loc, iso_output)
         candidates = self._filter_candidates(classified, iso_output)
         self._create_synthetic_junctions(candidates, genome, tn_loc, iso_output)
@@ -261,7 +259,7 @@ class Pipeline:
         info(f"TnJc2: {len(tnjc2)} junction pairs")
         return tnjc2
 
-    def _calc_coverage(
+    def _calc_amplicon_coverage(
         self,
         tnjc2: RecordTypedDF[TnJc2],
         genome: Genome,

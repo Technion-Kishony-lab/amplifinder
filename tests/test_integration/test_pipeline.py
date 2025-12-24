@@ -94,7 +94,7 @@ class TestPipeline(Pipeline):
     
     def _calc_coverage(self, tnjc2, genome, iso_output):
         """Step 7: Calculate amplicon coverage - compare CoveredTnJc2 with MATLAB ISJC2."""
-        result = super()._calc_coverage(tnjc2, genome, iso_output)
+        result = super()._calc_amplicon_coverage(tnjc2, genome, iso_output)
         
         # Skip MATLAB comparison for ancestor runs
         if self.is_ancestor_run:
