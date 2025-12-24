@@ -71,6 +71,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
         return tnjc2
 
     def _save_output(self, output: RecordTypedDF[TnJc2]) -> None:
+        """Save TnJc2 to CSV."""
         output.to_csv(self.output_file)
 
     def _pair_junctions(self, junctions: List[TnJunction]) -> List[TnJc2]:
