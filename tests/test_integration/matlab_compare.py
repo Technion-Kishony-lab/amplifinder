@@ -5,12 +5,20 @@ from pathlib import Path
 from typing import Optional
 
 
-def load_matlab_isjc2(matlab_output_dir: Path, require_files: bool = None) -> Optional[pd.DataFrame]:
-    """Load MATLAB ISJC2.xlsx output.
+def _load_matlab_xlsx(
+    matlab_output_dir: Path,
+    filename: str,
+    require_files: bool = None,
+) -> Optional[pd.DataFrame]:
+    """Load MATLAB Excel file with optional requirement checking.
     
     Args:
         matlab_output_dir: Directory containing MATLAB outputs
+        filename: Name of the Excel file to load
         require_files: If True, fail if file doesn't exist. If None, use REQUIRE_MATLAB_FILES from test_pipeline.
+    
+    Returns:
+        DataFrame if file exists, None otherwise (or fails if require_files=True)
     """
     import pytest
     from tests.test_integration.test_pipeline import REQUIRE_MATLAB_FILES
@@ -18,20 +26,42 @@ def load_matlab_isjc2(matlab_output_dir: Path, require_files: bool = None) -> Op
     if require_files is None:
         require_files = REQUIRE_MATLAB_FILES
     
-    xlsx = matlab_output_dir / "ISJC2.xlsx"
+    xlsx = matlab_output_dir / filename
     if not xlsx.exists():
         if require_files:
-            pytest.fail(f"MATLAB ISJC2.xlsx not found: {xlsx}")
+            pytest.fail(f"MATLAB {filename} not found: {xlsx}")
         return None
     return pd.read_excel(xlsx)
 
 
-def load_matlab_classified(matlab_output_dir: Path) -> Optional[pd.DataFrame]:
-    """Load MATLAB classified_amplifications.xlsx output."""
-    xlsx = matlab_output_dir / "classified_amplifications.xlsx"
-    if not xlsx.exists():
-        return None
-    return pd.read_excel(xlsx)
+def load_matlab_isjc2(matlab_output_dir: Path, require_files: bool = None) -> Optional[pd.DataFrame]:
+    """Load MATLAB ISJC2.xlsx output.
+    
+    Args:
+        matlab_output_dir: Directory containing MATLAB outputs
+        require_files: If True, fail if file doesn't exist. If None, use REQUIRE_MATLAB_FILES from test_pipeline.
+    """
+    return _load_matlab_xlsx(matlab_output_dir, "ISJC2.xlsx", require_files)
+
+
+def load_matlab_classified(matlab_output_dir: Path, require_files: bool = None) -> Optional[pd.DataFrame]:
+    """Load MATLAB classified_amplifications.xlsx output.
+    
+    Args:
+        matlab_output_dir: Directory containing MATLAB outputs
+        require_files: If True, fail if file doesn't exist. If None, use REQUIRE_MATLAB_FILES from test_pipeline.
+    """
+    return _load_matlab_xlsx(matlab_output_dir, "classified_amplifications.xlsx", require_files)
+
+
+def load_matlab_candidate(matlab_output_dir: Path, require_files: bool = None) -> Optional[pd.DataFrame]:
+    """Load MATLAB candidate_amplifications.xlsx output.
+    
+    Args:
+        matlab_output_dir: Directory containing MATLAB outputs
+        require_files: If True, fail if file doesn't exist. If None, use REQUIRE_MATLAB_FILES from test_pipeline.
+    """
+    return _load_matlab_xlsx(matlab_output_dir, "candidate_amplifications.xlsx", require_files)
 
 
 def match_junctions(
