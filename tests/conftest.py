@@ -57,13 +57,13 @@ def isolate_srr25242877():
 
 @pytest.fixture
 def isolate_srr25242906():
-    """Test isolate SRR25242877 (ancestor)."""
+    """Test isolate SRR25242906 (ancestor)."""
     return {
-        "iso_name": "SRR25242877",
+        "iso_name": "SRR25242906",
         "ref_name": "U00096",
-        "fastq_path": FASTQ_PATH / "SRR25242877",
-        "breseq_path": BRESEQ_PATH / "SRR25242877",
-        "matlab_output": MATLAB_OUTPUT / "SRR25242877",
+        "fastq_path": FASTQ_PATH / "SRR25242906",
+        "breseq_path": BRESEQ_PATH / "SRR25242906",
+        "matlab_output": MATLAB_OUTPUT / "SRR25242906",
     }
 
 
