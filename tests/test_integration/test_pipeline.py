@@ -46,17 +46,6 @@ class TestPipeline(Pipeline):
         self.matlab_output_dir = matlab_output_dir
         self.is_ancestor_run = False
     
-    def _load_matlab_isjc(self):
-        """Load MATLAB ISJC.xlsx (intermediate - individual junctions) if available."""
-        import pandas as pd
-        isjc_xlsx = self.matlab_output_dir / "ISJC.xlsx"
-        if isjc_xlsx.exists():
-            return pd.read_excel(isjc_xlsx)
-        
-        if REQUIRE_MATLAB_FILES:
-            pytest.fail(f"MATLAB ISJC.xlsx not found: {isjc_xlsx}")
-        return None
-    
     def _load_matlab_isjc2(self):
         """Load MATLAB ISJC2.xlsx (final - junction pairs) if available.
         
@@ -92,42 +81,90 @@ class TestPipeline(Pipeline):
         return result
     
     def _create_tnjc(self, breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output):
-        """Step 5: Match junctions to TN elements - compare with MATLAB."""
+        """Step 5: Match junctions to TN elements."""
         result = super()._create_tnjc(breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output)
-        
-        # Compare with MATLAB ISJC (intermediate - individual junctions)
-        if not self.is_ancestor_run:
-            df = self._load_matlab_isjc()
-            if df is not None:
-                print(f"Step 5: MATLAB ISJC.xlsx has {len(df)} junctions, Python={len(result)} TN-associated junctions")
-                # Compare line-by-line
-                from tests.test_integration.matlab_compare import compare_isjc_outputs
-                compare_isjc_outputs(result.df, df)
-                print(f"Step 5: ✓ Comparison passed: 1-to-1 match with MATLAB ISJC")
-            else:
-                assert not REQUIRE_MATLAB_FILES, "MATLAB file missing but REQUIRE_MATLAB_FILES=True"
-                print(f"Step 5: Python={len(result)} TN-associated junctions (MATLAB file not found)")
-        else:
-            print(f"Step 5: Python={len(result)} TN-associated junctions (ancestor run, no MATLAB comparison)")
-        
+        print(f"Step 5: Python={len(result)} TN-associated junctions")
         return result
     
     def _create_tnjc2(self, tnjc, genome, iso_output):
-        """Step 6: Combine junction pairs - compare with MATLAB ISJC2."""
+        """Step 6: Combine junction pairs."""
         result = super()._create_tnjc2(tnjc, genome, iso_output)
+        print(f"Step 6: Python={len(result)} junction pairs")
+        return result
+    
+    def _calc_coverage(self, tnjc2, genome, iso_output):
+        """Step 7: Calculate amplicon coverage - compare CoveredTnJc2 with MATLAB ISJC2."""
+        result = super()._calc_coverage(tnjc2, genome, iso_output)
         
-        # Compare with MATLAB ISJC2 (final - junction pairs)
-        if not self.is_ancestor_run:
-            df = self._load_matlab_isjc2()
-            if df is not None:
-                print(f"Step 6: MATLAB ISJC2.xlsx has {len(df)} junction pairs, Python={len(result)} junction pairs")
-            else:
-                assert not REQUIRE_MATLAB_FILES, "MATLAB file missing but REQUIRE_MATLAB_FILES=True"
-                print(f"Step 6: Python={len(result)} junction pairs (MATLAB file not found)")
+        # Skip MATLAB comparison for ancestor runs
+        if self.is_ancestor_run:
+            print(f"Step 7: Python={len(result)} candidates (ancestor run, no MATLAB comparison)")
+            return result
+        
+        # Compare CoveredTnJc2 with MATLAB ISJC2.xlsx
+        matlab_df = self._load_matlab_isjc2()
+        if matlab_df is not None:
+            print(f"Step 7: MATLAB ISJC2.xlsx has {len(matlab_df)} candidates, Python={len(result)} candidates")
+            # Convert CoveredTnJc2 to comparable format
+            python_df = result.df.copy()
+            python_df['Positions_in_chromosome'] = python_df.apply(
+                lambda row: f"{row['pos_chr_L']}-{row['pos_chr_R']}", axis=1
+            )
+            python_df['amplicon_length'] = python_df['amplicon_length']
+            python_df['IS_element'] = python_df['tn_ids'].apply(
+                lambda x: ','.join(map(str, x)) if isinstance(x, list) else str(x)
+            )
+            python_df['amplicon_coverage'] = python_df['amplicon_coverage']
+            
+            # Compare with MATLAB ISJC2
+            from tests.test_integration.matlab_compare import compare_isjc2_outputs
+            compare_isjc2_outputs(python_df, matlab_df)
+            print(f"Step 7: ✓ Comparison passed: CoveredTnJc2 matches MATLAB ISJC2")
         else:
-            print(f"Step 6: Python={len(result)} junction pairs (ancestor run, no MATLAB comparison)")
+            assert not REQUIRE_MATLAB_FILES, "MATLAB file missing but REQUIRE_MATLAB_FILES=True"
+            print(f"Step 7: Python={len(result)} candidates (MATLAB file not found)")
         
         return result
+    
+    def _export(self, analyzed, iso_output):
+        """Step 14: Export results - compare final export tables with MATLAB."""
+        super()._export(analyzed, iso_output)
+        
+        # Compare final export tables with MATLAB
+        if not self.is_ancestor_run:
+            from tests.test_integration.matlab_compare import (
+                load_matlab_candidate, load_matlab_classified, compare_isjc2_outputs
+            )
+            
+            # Compare candidate_amplifications.csv with MATLAB candidate_amplifications.xlsx
+            python_candidate_file = iso_output / "candidate_amplifications.csv"
+            if python_candidate_file.exists():
+                matlab_candidate = load_matlab_candidate(self.matlab_output_dir)
+                if matlab_candidate is not None:
+                    python_candidate = pd.read_csv(python_candidate_file)
+                    print(f"\n=== Comparing candidate_amplifications ===")
+                    print(f"Python: {len(python_candidate)} candidates")
+                    print(f"MATLAB: {len(matlab_candidate)} candidates")
+                    compare_isjc2_outputs(python_candidate, matlab_candidate)
+                    print("✓ candidate_amplifications comparison passed")
+                else:
+                    print(f"MATLAB candidate_amplifications.xlsx not found (skipping comparison)")
+            
+            # Compare classified_amplifications (if exists)
+            # Note: Python creates ISJC2.csv which contains all analyzed candidates
+            # MATLAB creates classified_amplifications.xlsx
+            python_isjc2_file = iso_output / "ISJC2.csv"
+            if python_isjc2_file.exists():
+                matlab_classified = load_matlab_classified(self.matlab_output_dir)
+                if matlab_classified is not None:
+                    python_isjc2 = pd.read_csv(python_isjc2_file)
+                    print(f"\n=== Comparing classified_amplifications ===")
+                    print(f"Python ISJC2.csv: {len(python_isjc2)} candidates")
+                    print(f"MATLAB classified_amplifications.xlsx: {len(matlab_classified)} candidates")
+                    compare_isjc2_outputs(python_isjc2, matlab_classified)
+                    print("✓ classified_amplifications comparison passed")
+                else:
+                    print(f"MATLAB classified_amplifications.xlsx not found (skipping comparison)")
 
 
 @pytest.mark.slow
