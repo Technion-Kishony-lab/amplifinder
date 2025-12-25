@@ -3,9 +3,8 @@
 from pathlib import Path
 from typing import Optional, List
 
-from Bio.Seq import Seq
-
 from amplifinder.steps.base import Step
+from amplifinder.utils.fasta import reverse_complement
 from amplifinder.steps.io_naming import default_path
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDF, Junction, SeqRefTnSide, RefTnSide, TnJunction, Orientation
@@ -126,7 +125,7 @@ class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
             start = max(0, pos - flank_len)
             end = pos + 1
             seq = ref_seq[start:end]
-            seq = str(Seq(seq).reverse_complement())
+            seq = reverse_complement(seq)
 
         return seq
 

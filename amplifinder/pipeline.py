@@ -3,9 +3,9 @@
 import pandas as pd
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Tuple
+from typing import Tuple, Optional
 
-from amplifinder.config import Config, get_iso_run_dir, get_anc_run_dir, load_config_from_run
+from amplifinder.config import Config, get_iso_run_dir, get_anc_run_dir, load_config_from_run, save_config
 from amplifinder.data_types import (
     Genome, RecordTypedDF, RefTnLoc, RefTnJunction, SeqRefTnSide, Junction, TnJunction, TnJc2,
     CoveredTnJc2, ClassifiedTnJc2, CandidateTnJc2, AnalyzedTnJc2,
@@ -42,13 +42,15 @@ class Pipeline:
 
     def run(self) -> RecordTypedDF[AnalyzedTnJc2]:
         """Run full pipeline, return analyzed candidates."""
-        # Handle ancestor run if needed
-        if self.config.has_ancestor:
-            self._ensure_ancestor_run()
+        iso_output, anc_output = self._initialize()
+
+        # Load reference genome (needed for ancestor breseq and isolate pipeline)
+        genome = self._load_reference()
+        
+        # Handle ancestor breseq if needed
+        self._ancestor_breseq(genome, anc_output)
         
         # Run isolate pipeline
-        iso_output = self._initialize()
-        genome = self._load_reference()
         tn_loc = self._locate_tns_in_reference(genome)
         ref_tn_jc, ref_tn_end_seqs = self._create_reference_tn_junctions(tn_loc, genome, iso_output)
         breseq_jc = self._run_breseq(genome, iso_output)
@@ -65,22 +67,27 @@ class Pipeline:
         
         return classified_final
     
-    def _ensure_ancestor_run(self) -> None:
-        """Ensure ancestor run exists, create it if missing."""
-        anc_run_dir = get_anc_run_dir(self.config)
+    def _ancestor_breseq(self, genome: Genome, anc_output: Path) -> None:
+        """Ensure ancestor breseq output exists, run breseq if needed."""
+        if not self.config.has_ancestor:
+            return
         
-        if not (anc_run_dir / "run_config.yaml").exists():
-            info(f"Ancestor run not found at {anc_run_dir}, running ancestor pipeline...")
-            anc_config = replace(
-                self.config,
-                iso_path=self.config.anc_path,
-                iso_name=self.config.anc_name,
-                anc_name=self.config.anc_name,
-                anc_path=None,
-                iso_breseq_path=self.config.anc_breseq_path,
-            )
-            Pipeline(anc_config).run()
-            info("Ancestor run completed")
+        # Determine breseq path (provided or default)
+        if self.config.anc_breseq_path:
+            anc_breseq_path = Path(self.config.anc_breseq_path)
+        else:
+            anc_breseq_path = anc_output / "breseq"
+                
+        # Run breseq (BreseqStep handles caching - skips if output exists)
+        BreseqStep(
+            output_path=anc_breseq_path,
+            fastq_path=self.config.anc_path,
+            ref_file=genome.genbank_path or genome.fasta_path,
+            docker=self.config.breseq_docker,
+            threads=self.config.breseq_threads,
+        ).run()
+        
+        info("Ancestor breseq completed")
     
     def _copy_ancestor_junction_files(
         self,
@@ -123,9 +130,10 @@ class Pipeline:
         """Get the source of the reference TN data."""
         return self.config.use_isfinder and "isfinder" or "genbank"
 
-    def _initialize(self) -> Path:
+    def _initialize(self) -> Tuple[Path, Optional[Path]]:
         """Step 0: Initialize output directories."""
-        return InitializingStep(config=self.config).run()
+        iso_output, anc_output = InitializingStep(config=self.config).run()
+        return iso_output, anc_output
 
     def _load_reference(self) -> Genome:
         """Step 1: Get reference genome."""
@@ -272,9 +280,13 @@ class Pipeline:
         anc_breseq_path = None
         anc_name = None
         if cfg.has_ancestor:
-            anc_run_dir = get_anc_run_dir(cfg)
-            anc_config = load_config_from_run(anc_run_dir)
-            anc_breseq_path = anc_config.iso_breseq_path or (anc_run_dir / "breseq")
+            if cfg.anc_breseq_path:
+                # User provided breseq path
+                anc_breseq_path = cfg.anc_breseq_path
+            else:
+                # Use breseq from ancestor run directory
+                anc_run_dir = get_anc_run_dir(cfg)
+                anc_breseq_path = anc_run_dir / "breseq"
             anc_name = cfg.anc_name
         
         iso_breseq_path = cfg.iso_breseq_path or (iso_output / "breseq")
