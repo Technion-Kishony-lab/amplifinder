@@ -44,7 +44,6 @@ class TestPipeline(Pipeline):
     def __init__(self, config, matlab_output_dir):
         super().__init__(config)
         self.matlab_output_dir = matlab_output_dir
-        self.is_ancestor_run = False
     
     def _load_matlab_isjc2(self):
         """Load MATLAB ISJC2.xlsx (final - junction pairs) if available.
@@ -96,11 +95,6 @@ class TestPipeline(Pipeline):
         """Step 7: Calculate amplicon coverage - compare CoveredTnJc2 with MATLAB ISJC2."""
         result = super()._calc_amplicon_coverage(tnjc2, genome, iso_output)
         
-        # Skip MATLAB comparison for ancestor runs
-        if self.is_ancestor_run:
-            print(f"Step 7: Python={len(result)} candidates (ancestor run, no MATLAB comparison)")
-            return result
-        
         # Compare CoveredTnJc2 with MATLAB ISJC2.xlsx
         matlab_df = self._load_matlab_isjc2()
         if matlab_df is not None:
@@ -131,40 +125,39 @@ class TestPipeline(Pipeline):
         super()._export(analyzed, iso_output)
         
         # Compare final export tables with MATLAB
-        if not self.is_ancestor_run:
-            from tests.test_integration.matlab_compare import (
-                load_matlab_candidate, load_matlab_classified, compare_isjc2_outputs
-            )
-            
-            # Compare candidate_amplifications.csv with MATLAB candidate_amplifications.xlsx
-            python_candidate_file = iso_output / "candidate_amplifications.csv"
-            if python_candidate_file.exists():
-                matlab_candidate = load_matlab_candidate(self.matlab_output_dir)
-                if matlab_candidate is not None:
-                    python_candidate = pd.read_csv(python_candidate_file)
-                    print(f"\n=== Comparing candidate_amplifications ===")
-                    print(f"Python: {len(python_candidate)} candidates")
-                    print(f"MATLAB: {len(matlab_candidate)} candidates")
-                    compare_isjc2_outputs(python_candidate, matlab_candidate)
-                    print("✓ candidate_amplifications comparison passed")
-                else:
-                    print(f"MATLAB candidate_amplifications.xlsx not found (skipping comparison)")
-            
-            # Compare classified_amplifications (if exists)
-            # Note: Python creates ISJC2.csv which contains all analyzed candidates
-            # MATLAB creates classified_amplifications.xlsx
-            python_isjc2_file = iso_output / "ISJC2.csv"
-            if python_isjc2_file.exists():
-                matlab_classified = load_matlab_classified(self.matlab_output_dir)
-                if matlab_classified is not None:
-                    python_isjc2 = pd.read_csv(python_isjc2_file)
-                    print(f"\n=== Comparing classified_amplifications ===")
-                    print(f"Python ISJC2.csv: {len(python_isjc2)} candidates")
-                    print(f"MATLAB classified_amplifications.xlsx: {len(matlab_classified)} candidates")
-                    compare_isjc2_outputs(python_isjc2, matlab_classified)
-                    print("✓ classified_amplifications comparison passed")
-                else:
-                    print(f"MATLAB classified_amplifications.xlsx not found (skipping comparison)")
+        from tests.test_integration.matlab_compare import (
+            load_matlab_candidate, load_matlab_classified, compare_isjc2_outputs
+        )
+        
+        # Compare candidate_amplifications.csv with MATLAB candidate_amplifications.xlsx
+        python_candidate_file = iso_output / "candidate_amplifications.csv"
+        if python_candidate_file.exists():
+            matlab_candidate = load_matlab_candidate(self.matlab_output_dir)
+            if matlab_candidate is not None:
+                python_candidate = pd.read_csv(python_candidate_file)
+                print(f"\n=== Comparing candidate_amplifications ===")
+                print(f"Python: {len(python_candidate)} candidates")
+                print(f"MATLAB: {len(matlab_candidate)} candidates")
+                compare_isjc2_outputs(python_candidate, matlab_candidate)
+                print("✓ candidate_amplifications comparison passed")
+            else:
+                print(f"MATLAB candidate_amplifications.xlsx not found (skipping comparison)")
+        
+        # Compare classified_amplifications (if exists)
+        # Note: Python creates ISJC2.csv which contains all analyzed candidates
+        # MATLAB creates classified_amplifications.xlsx
+        python_isjc2_file = iso_output / "ISJC2.csv"
+        if python_isjc2_file.exists():
+            matlab_classified = load_matlab_classified(self.matlab_output_dir)
+            if matlab_classified is not None:
+                python_isjc2 = pd.read_csv(python_isjc2_file)
+                print(f"\n=== Comparing classified_amplifications ===")
+                print(f"Python ISJC2.csv: {len(python_isjc2)} candidates")
+                print(f"MATLAB classified_amplifications.xlsx: {len(matlab_classified)} candidates")
+                compare_isjc2_outputs(python_isjc2, matlab_classified)
+                print("✓ classified_amplifications comparison passed")
+            else:
+                print(f"MATLAB classified_amplifications.xlsx not found (skipping comparison)")
 
 
 @pytest.mark.slow
@@ -285,7 +278,6 @@ class TestPipelineStepByStep:
         
         print("\n=== Testing Ancestor Pipeline ===")
         pipeline = TestPipeline(config, matlab_output_dir)
-        pipeline.is_ancestor_run = True
         result = pipeline.run()
         
         print(f"\nFinal result: {len(result)} candidates")
