@@ -98,8 +98,7 @@ class TestBreseqIntegration:
             pytest.skip(f"output.gd not found: {output_gd}")
 
         # parse_breseq_output expects the breseq output directory, not the .gd file
-        # Use tmp_path for CSV output to avoid permission errors
-        result = parse_breseq_output(breseq_path, csv_output_dir=tmp_path)
+        result = parse_breseq_output(breseq_path)
 
         # Check JC (junction) output
         assert "JC" in result

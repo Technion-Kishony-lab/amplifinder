@@ -219,7 +219,6 @@ class Pipeline:
             output_path=cfg.iso_breseq_path or iso_output / "breseq",
             docker=cfg.breseq_docker,
             threads=cfg.breseq_threads,
-            csv_output_dir=iso_output / "breseq_csv",
         ).run()
 
         breseq_jc = breseq_output["JC"]

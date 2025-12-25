@@ -19,7 +19,6 @@ class BreseqStep(Step[Dict[str, pd.DataFrame]]):
         ref_file: Optional[Path] = None,
         docker: bool = False,
         threads: int = 1,
-        csv_output_dir: Optional[Path] = None,
         force: Optional[bool] = None,
     ):
         self.output_path = Path(output_path)
@@ -27,7 +26,6 @@ class BreseqStep(Step[Dict[str, pd.DataFrame]]):
         self.ref_file = Path(ref_file) if ref_file else None
         self.docker = docker
         self.threads = threads
-        self.csv_output_dir = Path(csv_output_dir) if csv_output_dir else None
 
         # Check if output exists
         output_file = output_path / "output" / "output.gd"
@@ -66,4 +64,4 @@ class BreseqStep(Step[Dict[str, pd.DataFrame]]):
         Returns:
             Dict with keys: JC, SNP, MOB, DEL, UN
         """
-        return parse_breseq_output(self.output_path, csv_output_dir=self.csv_output_dir)
+        return parse_breseq_output(self.output_path)
