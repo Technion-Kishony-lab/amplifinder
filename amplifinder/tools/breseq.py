@@ -12,7 +12,7 @@ import pandas as pd
 from amplifinder.logger import info, warning
 from amplifinder.data_types.typed_df import Schema
 from amplifinder.data import load_all_field_defs
-from amplifinder.utils.tools import run_command
+from amplifinder.utils.tools import run_command, ensure_dir
 
 if TYPE_CHECKING:
     from amplifinder.data_types.genome import Genome
@@ -71,7 +71,7 @@ def run_breseq(
         warning(f"Cleaning incomplete breseq output: {output_path}")
         run_command(["rm", "-rf", str(output_path)], check=True)
 
-    output_path.mkdir(parents=True, exist_ok=True)
+    ensure_dir(output_path)
 
     if docker:
         _run_breseq_docker(ref_paths, fastq_path, fastq_files, output_path, threads)

@@ -11,6 +11,7 @@ from amplifinder.config import Config, load_config, merge_config
 from amplifinder.logger import setup_logger, info, warning, error
 from amplifinder.pipeline import Pipeline
 from amplifinder.steps.base import Step
+from amplifinder.utils.tools import ensure_dir
 
 
 @click.command()
@@ -147,7 +148,7 @@ def main(
     """AmpliFinder: Detect IS-mediated gene amplifications from WGS data."""
     # Setup logger early (use output_dir directly for fetch-only)
     log_dir = output_dir / ref_name
-    log_dir.mkdir(parents=True, exist_ok=True)
+    ensure_dir(log_dir)
     setup_logger(log_path=log_dir / "amplifinder.log", level=getattr(logging, log_level.upper()))
 
     info(f"AmpliFinder v{__version__}")
