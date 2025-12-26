@@ -22,6 +22,9 @@ from amplifinder.utils.tools import (
     find_tool,
     get_tool_path,
     run_command,
+    ensure_dir,
+    ensure_parent_dir,
+    remove_file_or_dir,
 )
 
 __all__ = [
@@ -44,4 +47,8 @@ __all__ = [
     "find_tool",
     "get_tool_path",
     "run_command",
+    # Path utilities
+    "ensure_dir",
+    "ensure_parent_dir",
+    "remove_file_or_dir",
 ]

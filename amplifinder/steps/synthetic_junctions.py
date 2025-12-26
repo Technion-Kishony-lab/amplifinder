@@ -8,6 +8,7 @@ from amplifinder.data_types import (
 )
 from amplifinder.steps.base import Step
 from amplifinder.utils.fasta import reverse_complement
+from amplifinder.utils.tools import ensure_parent_dir
 
 
 def create_synthetic_junctions(
@@ -146,7 +147,7 @@ def write_junctions_fasta(
         junctions: Dict mapping JunctionType to sequence
         output_path: Output FASTA file path
     """
-    output_path.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent_dir(output_path)
     
     with open(output_path, 'w') as f:
         for jtype, seq in sorted(junctions.items(), key=lambda x: x[0].value):

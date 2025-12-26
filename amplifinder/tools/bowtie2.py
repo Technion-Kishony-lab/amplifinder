@@ -5,7 +5,7 @@ from typing import Optional
 
 from amplifinder.logger import info
 from amplifinder.env import SAMTOOLS_PATH, BOWTIE2_PATH
-from amplifinder.utils.tools import get_tool_path, run_command
+from amplifinder.utils.tools import get_tool_path, run_command, ensure_parent_dir
 
 
 def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
@@ -25,7 +25,7 @@ def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
         raise FileNotFoundError(f"Reference FASTA not found: {ref_fasta}")
     
     # Create output directory if needed
-    index_prefix.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent_dir(index_prefix)
     
     cmd = [
         bowtie2_build,
@@ -82,7 +82,7 @@ def run_bowtie2_align(
         reads_arg = str(fastq_path)
     
     # Create output directory if needed
-    output_sam.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent_dir(output_sam)
     
     # Set default score_min based on alignment mode
     # MATLAB uses end-to-end with L,0,-0.6, local with G,0,-0.25
