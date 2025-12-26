@@ -165,11 +165,13 @@ class TestPipelineStepByStep:
     """Pipeline integration tests with step-by-step MATLAB comparison."""
     
     @staticmethod
-    def _setup_pipeline(config, clear_output_dir, return_run_dir=False):
-        """Common setup: clear output dir and enable verbose reporting."""
-        run_dir = clear_output_dir(config)
+    def _setup_pipeline(config, return_run_dir=False):
+        """Common setup: enable verbose reporting."""
         Step.set_global_verbose(True)
-        return run_dir if return_run_dir else None
+        if return_run_dir:
+            from amplifinder.config import get_iso_run_dir
+            return get_iso_run_dir(config)
+        return None
     
     @staticmethod
     def _get_test_output_root(matlab_output_dir):
@@ -185,17 +187,15 @@ class TestPipelineStepByStep:
         return base / "python_outputs"
     
     @staticmethod
-    def _create_config(isolate, anc_isolate=None, anc_name=None, test_output_root=None):
+    def _create_config(isolate, output_dir, anc_isolate=None, anc_name=None):
         """Create Config with common defaults."""
-        if test_output_root is None:
-            matlab_output_dir = isolate["matlab_output"]
-            test_output_root = TestPipelineStepByStep._get_test_output_root(matlab_output_dir)
+        test_output_root = output_dir.parent
         
         config_kwargs = {
             "iso_path": isolate["fastq_path"],
             "ref_name": "U00096",
             "iso_name": isolate["iso_name"],
-            "output_dir": test_output_root / "output",
+            "output_dir": output_dir,
             "ref_path": test_output_root / "genomesDB",
             "iso_breseq_path": isolate["breseq_path"],
             "ncbi": True,
@@ -211,7 +211,7 @@ class TestPipelineStepByStep:
         
         return Config(**config_kwargs)
     
-    def test_full_pipeline_matches_matlab(self, isolate_srr25242877, clear_output_dir):
+    def test_full_pipeline_matches_matlab(self, isolate_srr25242877, cleared_output_dir):
         """Run full pipeline and compare with MATLAB outputs (1-to-1 matching)."""
         from tests.test_integration.matlab_compare import compare_isjc2_outputs, load_matlab_isjc2
         
@@ -223,10 +223,10 @@ class TestPipelineStepByStep:
             pytest.skip("MATLAB reference output not available")
         
         # Create config (without ancestor for this test)
-        config = self._create_config(isolate_srr25242877)
+        config = self._create_config(isolate_srr25242877, cleared_output_dir)
         
         # Setup pipeline
-        run_dir = self._setup_pipeline(config, clear_output_dir, return_run_dir=True)
+        run_dir = self._setup_pipeline(config, return_run_dir=True)
         
         # Run full pipeline with step-by-step comparison
         pipeline = TestPipeline(config, matlab_output_dir)
@@ -252,13 +252,13 @@ class TestPipelineStepByStep:
         compare_isjc2_outputs(python_isjc2, matlab_isjc2)
         print("✓ Comparison passed: 1-to-1 match with MATLAB")
     
-    def test_isolate_pipeline_steps_without_ancestor(self, isolate_srr25242877, tmp_path, clear_output_dir):
+    def test_isolate_pipeline_steps_without_ancestor(self, isolate_srr25242877, tmp_path, cleared_output_dir):
         """Test isolate pipeline step-by-step without ancestor (no MATLAB comparison)."""
         matlab_output_dir = isolate_srr25242877["matlab_output"]
-        config = self._create_config(isolate_srr25242877)
+        config = self._create_config(isolate_srr25242877, cleared_output_dir)
         
         # Setup pipeline
-        self._setup_pipeline(config, clear_output_dir)
+        self._setup_pipeline(config)
         
         print("\n=== Testing Isolate Pipeline (no ancestor) ===")
         pipeline = TestPipeline(config, matlab_output_dir)
@@ -267,14 +267,14 @@ class TestPipelineStepByStep:
         print(f"\nFinal result: {len(result)} candidates")
         return result
     
-    def test_ancestor_as_isolate_pipeline_steps(self, isolate_srr25242906, tmp_path, clear_output_dir):
+    def test_ancestor_as_isolate_pipeline_steps(self, isolate_srr25242906, tmp_path, cleared_output_dir):
         """Test ancestor run as isolate (self-ancestor) - step-by-step comparison."""
         matlab_output_dir = isolate_srr25242906["matlab_output"]
-        config = self._create_config(isolate_srr25242906)
+        config = self._create_config(isolate_srr25242906, cleared_output_dir)
         config.anc_name = isolate_srr25242906["iso_name"]  # Self-ancestor
         
         # Setup pipeline
-        self._setup_pipeline(config, clear_output_dir)
+        self._setup_pipeline(config)
         
         print("\n=== Testing Ancestor Pipeline ===")
         pipeline = TestPipeline(config, matlab_output_dir)
@@ -283,7 +283,7 @@ class TestPipelineStepByStep:
         print(f"\nFinal result: {len(result)} candidates")
         return result
     
-    def test_isolate_pipeline_with_ancestor_steps(self, isolate_srr25242877, isolate_srr25242906, tmp_path, clear_output_dir):
+    def test_isolate_pipeline_with_ancestor_steps(self, isolate_srr25242877, isolate_srr25242906, tmp_path, cleared_output_dir):
         """Test isolate pipeline with ancestor - step-by-step comparison with MATLAB."""
         from tests.test_integration.matlab_compare import compare_isjc2_outputs, load_matlab_isjc2
         
@@ -294,10 +294,10 @@ class TestPipelineStepByStep:
         if matlab_isjc2 is None:
             pytest.skip("MATLAB reference output not available")
         
-        config = self._create_config(isolate_srr25242877, anc_isolate=isolate_srr25242906)
+        config = self._create_config(isolate_srr25242877, cleared_output_dir, anc_isolate=isolate_srr25242906)
         
         # Setup pipeline
-        run_dir = self._setup_pipeline(config, clear_output_dir, return_run_dir=True)
+        run_dir = self._setup_pipeline(config, return_run_dir=True)
         
         print("\n=== Testing Isolate Pipeline (with ancestor) ===")
         print("Note: Ancestor pipeline will run automatically if needed")
