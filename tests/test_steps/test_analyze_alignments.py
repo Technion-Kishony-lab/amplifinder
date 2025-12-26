@@ -1,16 +1,16 @@
-"""Tests for AnalyzeAlignmentsStep."""
+"""Tests for AnalyzeTnJc2AlignmentsStep."""
 
 import pytest
 from pathlib import Path
-from amplifinder.steps import AnalyzeAlignmentsStep
-from amplifinder.data_types import RecordTypedDf, CandidateTnJc2, RawEvent, Orientation
+from amplifinder.steps import AnalyzeTnJc2AlignmentsStep
+from amplifinder.data_types import RecordTypedDf, FilteredTnJc2, RawEvent, Orientation
 from amplifinder.utils.tools import ensure_parent_dir
 
 
 @pytest.fixture
 def sample_candidate(tmp_path):
-    """Create a sample CandidateTnJc2."""
-    return CandidateTnJc2(
+    """Create a sample FilteredTnJc2."""
+    return FilteredTnJc2(
         jc_num_L=1, jc_num_R=2,
         scaf_chr="tiny",
         pos_chr_L=200, pos_chr_R=300,
@@ -31,20 +31,20 @@ def sample_candidate(tmp_path):
 
 def test_step_initialization(sample_candidate, tmp_path):
     """Should initialize step correctly."""
-    candidates = RecordTypedDf.from_records([sample_candidate], CandidateTnJc2)
+    filtered_tnjc2s = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
     
     # Create dummy BAM file (empty, just for initialization test)
     bam_file = tmp_path / sample_candidate.analysis_dir / "iso.sorted.bam"
     ensure_parent_dir(bam_file)
     bam_file.write_text("dummy")
     
-    step = AnalyzeAlignmentsStep(
-        candidates=candidates,
+    step = AnalyzeTnJc2AlignmentsStep(
+        filtered_tnjc2s=filtered_tnjc2s,
         output_dir=tmp_path,
         read_length=150,
         has_ancestor=False,
     )
     
-    assert step.candidates == candidates
+    assert step.filtered_tnjc2s == filtered_tnjc2s
     assert step.read_length == 150
     assert step.has_ancestor is False

@@ -141,9 +141,9 @@ def visualize_candidates(
         raise FileNotFoundError(f"Analyzed candidates file not found in {run_dir}")
     
     from amplifinder.data_types import RecordTypedDf
-    analyzed = RecordTypedDf.from_csv(analyzed_file, AnalyzedTnJc2)
+    analyzed_tnjc2s = RecordTypedDf.from_csv(analyzed_file, AnalyzedTnJc2)
     
-    if len(analyzed) == 0:
+    if len(analyzed_tnjc2s) == 0:
         warning("No candidates to visualize")
         return
     
@@ -165,11 +165,11 @@ def visualize_candidates(
     # Visualize each candidate
     if save_plots:
         # Save all plots to files
-        for candidate in analyzed:
-            plot_path = run_dir / candidate.analysis_dir / "coverage_plot.png"
+        for analyzed_tnjc2 in analyzed_tnjc2s:
+            plot_path = run_dir / analyzed_tnjc2.analysis_dir / "coverage_plot.png"
             ensure_parent_dir(plot_path)
             plot_candidate_coverage(
-                candidate=candidate,
+                candidate=analyzed_tnjc2,
                 iso_coverage=iso_coverage,
                 anc_coverage=anc_coverage,
                 genome_length=genome_length,
@@ -177,17 +177,17 @@ def visualize_candidates(
                 flank_fraction=flank_fraction,
                 show=False,
             )
-        info(f"Saved {len(analyzed)} coverage plots")
+        info(f"Saved {len(analyzed_tnjc2s)} coverage plots")
     elif interactive:
         # Interactive mode with navigation
         _interactive_visualization(
-            analyzed, iso_coverage, anc_coverage, genome_length, flank_fraction
+            analyzed_tnjc2s, iso_coverage, anc_coverage, genome_length, flank_fraction
         )
     else:
         # Show all plots sequentially
-        for candidate in analyzed:
+        for analyzed_tnjc2 in analyzed_tnjc2s:
             plot_candidate_coverage(
-                candidate=candidate,
+                candidate=analyzed_tnjc2,
                 iso_coverage=iso_coverage,
                 anc_coverage=anc_coverage,
                 genome_length=genome_length,
@@ -197,7 +197,7 @@ def visualize_candidates(
 
 
 def _interactive_visualization(
-    candidates: RecordTypedDf[AnalyzedTnJc2],
+    analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
     iso_coverage: np.ndarray,
     anc_coverage: Optional[np.ndarray],
     genome_length: int,
@@ -209,7 +209,7 @@ def _interactive_visualization(
     
     from matplotlib.widgets import Button
     
-    candidates_list = list(candidates)
+    analyzed_tnjc2s_list = list(analyzed_tnjc2s)
     current_idx = [0]  # Use list to allow modification in nested function
     
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -217,9 +217,9 @@ def _interactive_visualization(
     
     def update_plot():
         ax.clear()
-        candidate = candidates_list[current_idx[0]]
+        analyzed_tnjc2 = analyzed_tnjc2s_list[current_idx[0]]
         plot_candidate_coverage(
-            candidate=candidate,
+            candidate=analyzed_tnjc2,
             iso_coverage=iso_coverage,
             anc_coverage=anc_coverage,
             genome_length=genome_length,
@@ -229,7 +229,7 @@ def _interactive_visualization(
         plt.draw()
     
     def next_candidate(event):
-        if current_idx[0] < len(candidates_list) - 1:
+        if current_idx[0] < len(analyzed_tnjc2s_list) - 1:
             current_idx[0] += 1
             update_plot()
     
