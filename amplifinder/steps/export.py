@@ -42,14 +42,6 @@ class ExportStep(Step[RecordTypedDf[ISJC2Export]]):
 
     def _calculate_output(self) -> RecordTypedDf[ISJC2Export]:
         """Export candidates to CSV."""
-        if len(self.analyzed_candidates) == 0:
-            info("No candidates to export, creating empty ISJC2.csv with headers")
-            export_df = RecordTypedDf.empty(ISJC2Export)
-            export_df.to_csv(self.isjc2_file)
-            export_df.to_csv(self.candidates_file)
-            info(f"Created empty ISJC2.csv and candidate_amplifications.csv with headers")
-            return export_df
-        
         # Build export records by iterating over typed records
         export_records = []
         for candidate in self.analyzed_candidates:
@@ -74,7 +66,7 @@ class ExportStep(Step[RecordTypedDf[ISJC2Export]]):
             lambda df: df.sort_values('mode_copy_number', ascending=False)
         )
         
-        # Export ISJC2.csv (all candidates)
+        # Export ISJC2.csv (all candidates) - to_csv handles empty DataFrames automatically
         export_df.to_csv(self.isjc2_file)
         info(f"Exported {len(export_df)} candidates to {self.isjc2_file}")
         
@@ -87,6 +79,7 @@ class ExportStep(Step[RecordTypedDf[ISJC2Export]]):
             ]
         )
         
+        # to_csv handles empty DataFrames automatically
         filtered.to_csv(self.candidates_file)
         info(f"Exported {len(filtered)} filtered candidates to {self.candidates_file}")
         
