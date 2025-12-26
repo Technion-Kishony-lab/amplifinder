@@ -6,7 +6,7 @@ from typing import Optional, List, Tuple
 from amplifinder.data_types import (
     RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc,
 )
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
 
 
@@ -181,7 +181,7 @@ def classify_structure(
     return RecordTypedDf.from_records(classified_records, ClassifiedTnJc2)
 
 
-class ClassifyStructureStep(Step[RecordTypedDf[ClassifiedTnJc2]]):
+class ClassifyStructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
     """Classify junction pair structures based on TN relationships.
     
     This step analyzes how junction pairs relate to reference TN elements
@@ -203,14 +203,11 @@ class ClassifyStructureStep(Step[RecordTypedDf[ClassifiedTnJc2]]):
     ):
         self.covered_tnjc2 = covered_tnjc2
         self.tn_locs = tn_locs
-        self.output_dir = Path(output_dir)
         self.min_amplicon_length = min_amplicon_length
         
-        self.output_file = output_dir / "tn_jc2_classified.csv"
-        
         super().__init__(
+            output_dir=output_dir,
             input_files=[],
-            output_files=[self.output_file],
             force=force,
         )
 
@@ -227,11 +224,3 @@ class ClassifyStructureStep(Step[RecordTypedDf[ClassifiedTnJc2]]):
              f"{len([r for r in classified if r.raw_event == RawEvent.HEMI_FLANKED_RIGHT])} hemi-right")
         
         return classified
-
-    def _save_output(self, output: RecordTypedDf[ClassifiedTnJc2]) -> None:
-        """Save classified results to CSV."""
-        output.to_csv(self.output_file)
-
-    def load_outputs(self) -> RecordTypedDf[ClassifiedTnJc2]:
-        """Load classified results from CSV."""
-        return RecordTypedDf.from_csv(self.output_file, ClassifiedTnJc2)

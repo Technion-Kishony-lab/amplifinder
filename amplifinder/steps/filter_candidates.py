@@ -6,11 +6,11 @@ from typing import Optional
 from amplifinder.data_types import (
     RecordTypedDf, ClassifiedTnJc2, CandidateTnJc2,
 )
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
 
 
-class FilterCandidatesStep(Step[RecordTypedDf[CandidateTnJc2]]):
+class FilterCandidatesStep(RecordTypedDfStep[CandidateTnJc2]):
     """Filter candidates by amplicon length.
     
     Filters out candidates that are:
@@ -29,15 +29,12 @@ class FilterCandidatesStep(Step[RecordTypedDf[CandidateTnJc2]]):
         force: Optional[bool] = None,
     ):
         self.classified_tnjc2 = classified_tnjc2
-        self.output_dir = Path(output_dir)
         self.min_amplicon_length = min_amplicon_length
         self.max_amplicon_length = max_amplicon_length
         
-        self.output_file = output_dir / "tn_jc2_candidates.csv"
-        
         super().__init__(
+            output_dir=output_dir,
             input_files=[],
-            output_files=[self.output_file],
             force=force,
         )
 
@@ -73,11 +70,3 @@ class FilterCandidatesStep(Step[RecordTypedDf[CandidateTnJc2]]):
         info(f"Filtered to {len(result)} candidates (from {len(self.classified_tnjc2)} classified)")
         
         return result
-
-    def _save_output(self, output: RecordTypedDf[CandidateTnJc2]) -> None:
-        """Save candidates to CSV."""
-        output.to_csv(self.output_file)
-
-    def load_outputs(self) -> RecordTypedDf[CandidateTnJc2]:
-        """Load candidates from CSV."""
-        return RecordTypedDf.from_csv(self.output_file, CandidateTnJc2)

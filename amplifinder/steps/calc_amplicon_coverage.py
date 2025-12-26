@@ -8,7 +8,7 @@ import numpy as np
 from amplifinder.data_types import (
     RecordTypedDf, TnJc2, CoveredTnJc2, Genome,
 )
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.utils.coverage import (
     get_coverage_in_range,
@@ -17,7 +17,7 @@ from amplifinder.utils.coverage import (
 )
 
 
-class CalcAmpliconCoverageStep(Step[RecordTypedDf[CoveredTnJc2]]):
+class CalcAmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
     """Calculate amplicon coverage for TnJc2 candidates.
     
     Coverage calculation depends on run type:
@@ -45,7 +45,6 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDf[CoveredTnJc2]]):
         self.tnjc2 = tnjc2
         self.genome = genome
         self.iso_breseq_path = Path(iso_breseq_path)
-        self.output_dir = Path(output_dir)
         self.ref_name = ref_name
         self.iso_name = iso_name
         self.anc_breseq_path = Path(anc_breseq_path) if anc_breseq_path else None
@@ -56,15 +55,13 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDf[CoveredTnJc2]]):
         self.ncp_limit2 = ncp_limit2
         self.ncp_n = ncp_n
         
-        self.output_file = output_dir / "tn_jc2_covered.csv"
-        
         input_files = [iso_breseq_path]
         if anc_breseq_path:
             input_files.append(anc_breseq_path)
         
         super().__init__(
+            output_dir=output_dir,
             input_files=input_files,
-            output_files=[self.output_file],
             force=force,
         )
 
@@ -168,12 +165,3 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDf[CoveredTnJc2]]):
             amplicon_coverage_mode=amplicon_coverage_mode,
             copy_number_ratio=copy_number_ratio,
         )
-
-    def _save_output(self, output: RecordTypedDf[CoveredTnJc2]) -> None:
-        """Save covered TnJc2 to CSV."""
-        output.to_csv(self.output_file)
-
-    def load_outputs(self) -> RecordTypedDf[CoveredTnJc2]:
-        """Load covered TnJc2 from CSV."""
-        return RecordTypedDf.from_csv(self.output_file, CoveredTnJc2)
-
