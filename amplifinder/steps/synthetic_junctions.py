@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from amplifinder.data_types import (
-    RecordTypedDf, CandidateTnJc2, Genome, JunctionType, RefTnLoc,
+    RecordTypedDf, FilteredTnJc2, Genome, JunctionType, RefTnLoc,
 )
 from amplifinder.steps.base import Step
 from amplifinder.utils.fasta import reverse_complement
@@ -12,7 +12,7 @@ from amplifinder.utils.tools import ensure_parent_dir
 
 
 def create_synthetic_junctions(
-    candidate: CandidateTnJc2,
+    candidate: FilteredTnJc2,
     chr_seq: str,
     tn_loc: RefTnLoc,
     tn_seq: str,
@@ -154,7 +154,7 @@ def write_junctions_fasta(
             f.write(f">{jtype.value}\n{seq}\n")
 
 
-class CreateSyntheticJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
+class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
     """Create synthetic junction FASTA files for each candidate.
     
     Creates 7 junction sequences per candidate for read alignment analysis.
@@ -162,7 +162,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
 
     def __init__(
         self,
-        candidates: RecordTypedDf[CandidateTnJc2],
+        candidates: RecordTypedDf[FilteredTnJc2],
         genome: Genome,
         tn_locs: RecordTypedDf[RefTnLoc],
         output_dir: Path,
@@ -187,7 +187,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDf[CandidateTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[FilteredTnJc2]:
         """Create synthetic junctions for each candidate."""
         # Load chromosome sequence
         chr_seq = self.genome.sequence
@@ -223,11 +223,11 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
         
         return self.candidates
 
-    def _save_output(self, output: RecordTypedDf[CandidateTnJc2]) -> None:
+    def _save_output(self, output: RecordTypedDf[FilteredTnJc2]) -> None:
         """Output already saved in _calculate_output."""
         pass
 
-    def load_outputs(self) -> RecordTypedDf[CandidateTnJc2]:
+    def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
         """Return candidates (junction files are side effects)."""
         return self.candidates
 

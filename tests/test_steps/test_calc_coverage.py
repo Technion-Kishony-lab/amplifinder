@@ -6,16 +6,16 @@ import pandas as pd
 from pathlib import Path
 from amplifinder.steps import CalcAmpliconCoverageStep
 from amplifinder.data_types import (
-    RecordTypedDf, TnJc2, Genome, Orientation,
+    RecordTypedDf, RawTnJc2, Genome, Orientation,
 )
 from amplifinder.utils.tools import ensure_dir
 
 
 @pytest.fixture
 def sample_tnjc2(tmp_path):
-    """Create sample TnJc2 records."""
+    """Create sample RawTnJc2 records."""
     records = [
-        TnJc2(
+        RawTnJc2(
             jc_num_L=1, jc_num_R=2,
             scaf_chr="chr1",
             pos_chr_L=100, pos_chr_R=200,
@@ -26,7 +26,7 @@ def sample_tnjc2(tmp_path):
             span_origin=False,
             amplicon_length=100, complementary_length=900,
         ),
-        TnJc2(
+        RawTnJc2(
             jc_num_L=3, jc_num_R=4,
             scaf_chr="chr1",
             pos_chr_L=300, pos_chr_R=320,
@@ -39,7 +39,7 @@ def sample_tnjc2(tmp_path):
             complementary_length=980,
         ),
     ]
-    return RecordTypedDf.from_records(records, TnJc2)
+    return RecordTypedDf.from_records(records, RawTnJc2)
 
 
 @pytest.fixture

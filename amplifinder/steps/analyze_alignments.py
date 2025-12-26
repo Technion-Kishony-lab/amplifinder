@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from amplifinder.data_types import (
-    RecordTypedDf, CandidateTnJc2, AnalyzedTnJc2, RawEvent, EventModifier,
+    RecordTypedDf, FilteredTnJc2, AnalyzedTnJc2, RawEvent, EventModifier,
 )
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.utils.bam import get_junction_coverage, JunctionReadCounts
@@ -98,7 +98,7 @@ class AnalyzeAlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
     def __init__(
         self,
-        candidates: RecordTypedDf[CandidateTnJc2],
+        candidates: RecordTypedDf[FilteredTnJc2],
         output_dir: Path,
         anc_output_dir: Optional[Path] = None,
         read_length: int = 150,

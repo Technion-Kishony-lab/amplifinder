@@ -4,15 +4,15 @@ import pytest
 from pathlib import Path
 from amplifinder.steps import CreateSyntheticJunctionsStep
 from amplifinder.data_types import (
-    RecordTypedDf, CandidateTnJc2, RefTnLoc, RawEvent, Orientation,
+    RecordTypedDf, FilteredTnJc2, RefTnLoc, RawEvent, Orientation,
 )
 from amplifinder.utils.tools import ensure_parent_dir
 
 
 @pytest.fixture
 def sample_candidate(tmp_path):
-    """Create a sample CandidateTnJc2."""
-    return CandidateTnJc2(
+    """Create a sample FilteredTnJc2."""
+    return FilteredTnJc2(
         jc_num_L=1, jc_num_R=2,
         scaf_chr="tiny",
         pos_chr_L=200, pos_chr_R=300,
@@ -43,7 +43,7 @@ def sample_tn_loc():
 
 def test_creates_junctions_fasta(tiny_genome, sample_candidate, sample_tn_loc, tmp_path):
     """Should create junctions.fasta file."""
-    candidates = RecordTypedDf.from_records([sample_candidate], CandidateTnJc2)
+    candidates = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
     tn_locs = RecordTypedDf.from_records([sample_tn_loc], RefTnLoc)
     
     step = CreateSyntheticJunctionsStep(
@@ -70,7 +70,7 @@ def test_creates_junctions_fasta(tiny_genome, sample_candidate, sample_tn_loc, t
 def test_handles_missing_tn(tiny_genome, sample_candidate, tmp_path):
     """Should skip candidates with missing TN."""
     # Create candidate with non-existent TN ID
-    candidate_no_tn = CandidateTnJc2(
+    candidate_no_tn = FilteredTnJc2(
         jc_num_L=1, jc_num_R=2,
         scaf_chr="tiny",
         pos_chr_L=200, pos_chr_R=300,
@@ -88,7 +88,7 @@ def test_handles_missing_tn(tiny_genome, sample_candidate, tmp_path):
         analysis_dir="jc_200_300_999_L150",
     )
     
-    candidates = RecordTypedDf.from_records([candidate_no_tn], CandidateTnJc2)
+    candidates = RecordTypedDf.from_records([candidate_no_tn], FilteredTnJc2)
     tn_locs = RecordTypedDf.from_records([], RefTnLoc)  # Empty TN list
     
     # Create empty junctions.fasta to satisfy step output requirements

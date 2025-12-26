@@ -3,14 +3,14 @@
 import pytest
 from pathlib import Path
 from amplifinder.steps import AnalyzeAlignmentsStep
-from amplifinder.data_types import RecordTypedDf, CandidateTnJc2, RawEvent, Orientation
+from amplifinder.data_types import RecordTypedDf, FilteredTnJc2, RawEvent, Orientation
 from amplifinder.utils.tools import ensure_parent_dir
 
 
 @pytest.fixture
 def sample_candidate(tmp_path):
-    """Create a sample CandidateTnJc2."""
-    return CandidateTnJc2(
+    """Create a sample FilteredTnJc2."""
+    return FilteredTnJc2(
         jc_num_L=1, jc_num_R=2,
         scaf_chr="tiny",
         pos_chr_L=200, pos_chr_R=300,
@@ -31,7 +31,7 @@ def sample_candidate(tmp_path):
 
 def test_step_initialization(sample_candidate, tmp_path):
     """Should initialize step correctly."""
-    candidates = RecordTypedDf.from_records([sample_candidate], CandidateTnJc2)
+    candidates = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
     
     # Create dummy BAM file (empty, just for initialization test)
     bam_file = tmp_path / sample_candidate.analysis_dir / "iso.sorted.bam"

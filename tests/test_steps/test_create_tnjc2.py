@@ -9,7 +9,7 @@ from amplifinder.steps import (
     CreateTnJcStep,
     CreateTnJc2Step,
 )
-from amplifinder.data_types import RecordTypedDf, TnJunction, TnJc2, Junction, RefTnSide, Side, Orientation
+from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, Junction, RefTnSide, Side, Orientation
 
 
 # =============================================================================
@@ -35,8 +35,8 @@ def make_tnjc(
     )
 
 
-def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTypedDf[TnJc2]:
-    """Create TnJc2 from junction records."""
+def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTypedDf[RawTnJc2]:
+    """Create RawTnJc2 from junction records."""
     tnjc = RecordTypedDf.from_records(tnjc_records, TnJunction)
     return CreateTnJc2Step(
         tnjc=tnjc,
@@ -107,7 +107,7 @@ def test_runs_without_error(tnjc2_step):
 
 
 def test_output_has_correct_columns(tnjc2_step):
-    """TnJc2 output should have expected columns."""
+    """RawTnJc2 output should have expected columns."""
     tnjc2 = tnjc2_step.run()
 
     expected_cols = {
