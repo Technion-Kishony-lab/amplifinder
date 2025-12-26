@@ -1,8 +1,8 @@
-"""Tests for AnalyzeAlignmentsStep."""
+"""Tests for AnalyzeTnJc2AlignmentsStep."""
 
 import pytest
 from pathlib import Path
-from amplifinder.steps import AnalyzeAlignmentsStep
+from amplifinder.steps import AnalyzeTnJc2AlignmentsStep
 from amplifinder.data_types import RecordTypedDf, FilteredTnJc2, RawEvent, Orientation
 from amplifinder.utils.tools import ensure_parent_dir
 
@@ -38,7 +38,7 @@ def test_step_initialization(sample_candidate, tmp_path):
     ensure_parent_dir(bam_file)
     bam_file.write_text("dummy")
     
-    step = AnalyzeAlignmentsStep(
+    step = AnalyzeTnJc2AlignmentsStep(
         candidates=candidates,
         output_dir=tmp_path,
         read_length=150,

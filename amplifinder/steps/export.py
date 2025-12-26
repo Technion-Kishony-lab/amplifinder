@@ -8,7 +8,7 @@ from amplifinder.steps.base import Step
 from amplifinder.logger import info
 
 
-class ExportStep(Step[RecordTypedDf[ExportedTnJc2]]):
+class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
     """Export analyzed candidates to CSV files.
     
     Creates two CSV files:

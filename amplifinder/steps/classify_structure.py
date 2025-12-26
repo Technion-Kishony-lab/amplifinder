@@ -181,7 +181,7 @@ def classify_structure(
     return RecordTypedDf.from_records(classified_records, ClassifiedTnJc2)
 
 
-class ClassifyStructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
+class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
     """Classify junction pair structures based on TN relationships.
     
     This step analyzes how junction pairs relate to reference TN elements

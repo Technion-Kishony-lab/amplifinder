@@ -1,8 +1,8 @@
-"""Tests for ClassifyStructureStep."""
+"""Tests for ClassifyTnJc2StructureStep."""
 
 import pytest
 from pathlib import Path
-from amplifinder.steps import ClassifyStructureStep
+from amplifinder.steps import ClassifyTnJc2StructureStep
 from amplifinder.data_types import (
     RecordTypedDf, CoveredTnJc2, RefTnLoc, RawEvent, Orientation,
 )
@@ -56,7 +56,7 @@ def sample_tn_locs():
 
 def test_classify_structure(sample_covered_tnjc2, sample_tn_locs, tmp_path):
     """Should classify junction pairs."""
-    step = ClassifyStructureStep(
+    step = ClassifyTnJc2StructureStep(
         covered_tnjc2=sample_covered_tnjc2,
         tn_locs=sample_tn_locs,
         output_dir=tmp_path,
@@ -96,7 +96,7 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, tmp_path):
         CoveredTnJc2
     )
     
-    step = ClassifyStructureStep(
+    step = ClassifyTnJc2StructureStep(
         covered_tnjc2=all_records,
         tn_locs=sample_tn_locs,
         output_dir=tmp_path,

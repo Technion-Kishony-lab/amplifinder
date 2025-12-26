@@ -21,15 +21,15 @@ from amplifinder.steps import (
     CreateRefTnJcStep,
     CreateRefTnEndSeqsStep,
     CreateTnJcStep,
-    CreateTnJc2Step,
-    CalcAmpliconCoverageStep,
-    ClassifyStructureStep,
-    FilterCandidatesStep,
+    PairTnJc2Step,
+    CalcTnJc2AmpliconCoverageStep,
+    ClassifyTnJc2StructureStep,
+    FilterTnJc2CandidatesStep,
     CreateSyntheticJunctionsStep,
     AlignReadsToJunctionsStep,
-    AnalyzeAlignmentsStep,
-    ClassifyCandidatesStep,
-    ExportStep,
+    AnalyzeTnJc2AlignmentsStep,
+    ClassifyTnJc2CandidatesStep,
+    ExportTnJc2Step,
 )
 from amplifinder.data import get_builtin_isfinder_db_path
 from amplifinder.utils.tn_loc import compare_tn_locations
@@ -254,7 +254,7 @@ class Pipeline:
         iso_output: Path,
     ) -> RecordTypedDf[RawTnJc2]:
         """Step 6: Combine junction pairs (RawTnJc2)."""
-        tnjc2 = CreateTnJc2Step(
+        tnjc2 = PairTnJc2Step(
             tnjc=tnjc,
             genome=genome,
             output_dir=iso_output,
@@ -286,7 +286,7 @@ class Pipeline:
         
         iso_breseq_path = cfg.iso_breseq_path or (iso_output / "breseq")
         
-        covered = CalcAmpliconCoverageStep(
+        covered = CalcTnJc2AmpliconCoverageStep(
             tnjc2=tnjc2,
             genome=genome,
             iso_breseq_path=iso_breseq_path,
@@ -311,7 +311,7 @@ class Pipeline:
         iso_output: Path,
     ) -> RecordTypedDf[ClassifiedTnJc2]:
         """Step 8: Classify junction pair structures."""
-        classified = ClassifyStructureStep(
+        classified = ClassifyTnJc2StructureStep(
             covered_tnjc2=covered,
             tn_locs=tn_loc,
             output_dir=iso_output,
@@ -326,7 +326,7 @@ class Pipeline:
         iso_output: Path,
     ) -> RecordTypedDf[FilteredTnJc2]:
         """Step 9: Filter candidates by amplicon length."""
-        candidates = FilterCandidatesStep(
+        candidates = FilterTnJc2CandidatesStep(
             classified_tnjc2=classified,
             output_dir=iso_output,
             min_amplicon_length=self.config.min_amplicon_length,
@@ -406,7 +406,7 @@ class Pipeline:
         if len(candidates) == 0:
             return RecordTypedDf.empty(AnalyzedTnJc2)
         
-        analyzed = AnalyzeAlignmentsStep(
+        analyzed = AnalyzeTnJc2AlignmentsStep(
             candidates=candidates,
             output_dir=iso_output,
             anc_output_dir=anc_output,  # Ancestor BAM files are read from here
@@ -427,7 +427,7 @@ class Pipeline:
         if len(analyzed) == 0:
             return analyzed
         
-        classified = ClassifyCandidatesStep(
+        classified = ClassifyTnJc2CandidatesStep(
             analyzed=analyzed,
             output_dir=iso_output,
             has_ancestor=self.config.has_ancestor,
@@ -442,7 +442,7 @@ class Pipeline:
         iso_output: Path,
     ) -> None:
         """Step 14: Export results to CSV."""
-        ExportStep(
+        ExportTnJc2Step(
             analyzed_candidates=analyzed,
             output_dir=iso_output,
             copy_number_threshold=self.config.copy_number_threshold,

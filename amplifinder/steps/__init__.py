@@ -7,15 +7,15 @@ from amplifinder.steps.locate_tns import LocateTNsUsingGenbankStep, LocateTNsUsi
 from amplifinder.steps.run_breseq import BreseqStep
 from amplifinder.steps.create_reference_junctions import CreateRefTnJcStep, CreateRefTnEndSeqsStep
 from amplifinder.steps.create_tnjc import CreateTnJcStep
-from amplifinder.steps.create_tnjc2 import CreateTnJc2Step
-from amplifinder.steps.classify_structure import ClassifyStructureStep
-from amplifinder.steps.filter_candidates import FilterCandidatesStep
-from amplifinder.steps.calc_amplicon_coverage import CalcAmpliconCoverageStep
+from amplifinder.steps.create_tnjc2 import PairTnJc2Step
+from amplifinder.steps.classify_structure import ClassifyTnJc2StructureStep
+from amplifinder.steps.filter_candidates import FilterTnJc2CandidatesStep
+from amplifinder.steps.calc_amplicon_coverage import CalcTnJc2AmpliconCoverageStep
 from amplifinder.steps.synthetic_junctions import CreateSyntheticJunctionsStep
 from amplifinder.steps.align_reads import AlignReadsToJunctionsStep
-from amplifinder.steps.analyze_alignments import AnalyzeAlignmentsStep
-from amplifinder.steps.classify_candidates import ClassifyCandidatesStep
-from amplifinder.steps.export import ExportStep
+from amplifinder.steps.analyze_alignments import AnalyzeTnJc2AlignmentsStep
+from amplifinder.steps.classify_candidates import ClassifyTnJc2CandidatesStep
+from amplifinder.steps.export import ExportTnJc2Step
 
 # Backward compatibility alias
 ISfinderStep = LocateTNsUsingISfinderStep
@@ -31,13 +31,13 @@ __all__ = [
     "CreateRefTnJcStep",
     "CreateRefTnEndSeqsStep",
     "CreateTnJcStep",
-    "CreateTnJc2Step",
-    "CalcAmpliconCoverageStep",
-    "ClassifyStructureStep",
-    "FilterCandidatesStep",
+    "PairTnJc2Step",
+    "CalcTnJc2AmpliconCoverageStep",
+    "ClassifyTnJc2StructureStep",
+    "FilterTnJc2CandidatesStep",
     "CreateSyntheticJunctionsStep",
     "AlignReadsToJunctionsStep",
-    "AnalyzeAlignmentsStep",
-    "ClassifyCandidatesStep",
-    "ExportStep",
+    "AnalyzeTnJc2AlignmentsStep",
+    "ClassifyTnJc2CandidatesStep",
+    "ExportTnJc2Step",
 ]

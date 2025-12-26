@@ -10,7 +10,7 @@ from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
 
 
-class FilterCandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
+class FilterTnJc2CandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
     """Filter candidates by amplicon length.
     
     Filters out candidates that are:

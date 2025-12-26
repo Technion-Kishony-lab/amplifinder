@@ -17,7 +17,7 @@ from amplifinder.utils.coverage import (
 )
 
 
-class CalcAmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
+class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
     """Calculate amplicon coverage for TnJc2 candidates.
     
     Coverage calculation depends on run type:

@@ -1,8 +1,8 @@
-"""Tests for ExportStep."""
+"""Tests for ExportTnJc2Step."""
 
 import pytest
 from pathlib import Path
-from amplifinder.steps import ExportStep
+from amplifinder.steps import ExportTnJc2Step
 from amplifinder.data_types import (
     RecordTypedDf, AnalyzedTnJc2, RawEvent, Orientation, EventModifier,
 )
@@ -63,7 +63,7 @@ def sample_analyzed(tmp_path):
 
 def test_export_creates_files(sample_analyzed, tmp_path):
     """Should create ISJC2.csv and candidate_amplifications.csv."""
-    step = ExportStep(
+    step = ExportTnJc2Step(
         analyzed_candidates=sample_analyzed,
         output_dir=tmp_path,
         copy_number_threshold=1.5,
