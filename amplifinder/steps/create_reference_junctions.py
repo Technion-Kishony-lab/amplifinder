@@ -3,14 +3,14 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, RefTnLoc, SeqRefTnSide, RefTnJunction, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
 from amplifinder.utils.fasta import reverse_complement
 
 
-class CreateRefTnJcStep(Step[RecordTypedDf[RefTnJunction]]):
+class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
     """Create synthetic junction records (ref_tn_jc) from reference TN locations.
 
     For each TN element, creates two junction records representing the
@@ -41,14 +41,13 @@ class CreateRefTnJcStep(Step[RecordTypedDf[RefTnJunction]]):
         """
         self.tn_loc = tn_loc
         self.genome = genome
-        self.output_dir = Path(output_dir)
         self.reference_tn_out_span = reference_tn_out_span
-
-        self.output_file = self.output_dir / f"{source}_ref_tn_jc.csv"
-
+        
+        output_file = output_dir / f"{source}_ref_tn_jc.csv"
+        
         super().__init__(
+            output_file=output_file,
             input_files=[],  # tn_loc passed in memory
-            output_files=[self.output_file],
             force=force,
         )
 
@@ -83,16 +82,8 @@ class CreateRefTnJcStep(Step[RecordTypedDf[RefTnJunction]]):
         info(f"Created {len(jc_records)} reference TN junctions")
         return result
 
-    def _save_output(self, output: RecordTypedDf[RefTnJunction]) -> None:
-        """Save reference TN junctions to CSV."""
-        output.to_csv(self.output_file)
 
-    def load_outputs(self) -> RecordTypedDf[RefTnJunction]:
-        """Load reference TN junctions from output file."""
-        return RecordTypedDf.from_csv(self.output_file, RefTnJunction)
-
-
-class CreateRefTnEndSeqsStep(Step[RecordTypedDf[SeqRefTnSide]]):
+class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
     """Extract TN sequences with margins for junction matching.
 
     For each TN element, creates full TN sequence with margins (IS_seqs_with_margins),
@@ -126,14 +117,13 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDf[SeqRefTnSide]]):
         self.ref_tn_jc = ref_tn_jc
         self.tn_loc = tn_loc
         self.genome = genome
-        self.output_dir = Path(output_dir)
         self.max_dist_to_tn = max_dist_to_tn
-
-        self.output_file = self.output_dir / f"{source}_tn_end_seqs.csv"
-
+        
+        output_file = output_dir / f"{source}_tn_end_seqs.csv"
+        
         super().__init__(
+            output_file=output_file,
             input_files=[],
-            output_files=[self.output_file],
             force=force,
         )
 
@@ -187,11 +177,3 @@ class CreateRefTnEndSeqsStep(Step[RecordTypedDf[SeqRefTnSide]]):
         result = RecordTypedDf.from_records(records, SeqRefTnSide)
         info(f"Created {len(records)} TN sequences with margins")
         return result
-
-    def _save_output(self, output: RecordTypedDf[SeqRefTnSide]) -> None:
-        """Save TN end sequences to CSV."""
-        output.to_csv(self.output_file)
-
-    def load_outputs(self) -> RecordTypedDf[SeqRefTnSide]:
-        """Load TN end sequences from output file."""
-        return RecordTypedDf.from_csv(self.output_file, SeqRefTnSide)

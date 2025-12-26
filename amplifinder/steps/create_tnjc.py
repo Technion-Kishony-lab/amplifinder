@@ -3,15 +3,14 @@
 from pathlib import Path
 from typing import Optional, List
 
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.utils.fasta import reverse_complement
-from amplifinder.steps.io_naming import default_path
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, Junction, SeqRefTnSide, RefTnSide, TnJunction, Orientation
 from amplifinder.data_types.genome import Genome
 
 
-class CreateTnJcStep(Step[RecordTypedDf[TnJunction]]):
+class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
     """Match junctions to TN elements by sequence comparison.
 
     For each junction, extracts flanking sequences and compares them to
@@ -45,15 +44,12 @@ class CreateTnJcStep(Step[RecordTypedDf[TnJunction]]):
         self.jc_df = jc_df
         self.ref_tn_end_seqs = ref_tn_end_seqs
         self.genome = genome
-        self.output_dir = Path(output_dir)
         self.max_dist_to_tn = max_dist_to_tn
         self.trim_jc_flanking = trim_jc_flanking
-
-        self.output_file = default_path(self.output_dir, TnJunction)
-
+        
         super().__init__(
+            output_dir=output_dir,
             input_files=[p for p in [genome.genbank_path, genome.fasta_path] if p],
-            output_files=[self.output_file],
             force=force,
         )
 
@@ -95,10 +91,6 @@ class CreateTnJcStep(Step[RecordTypedDf[TnJunction]]):
 
         info(f"Found {len(tnjc)} TN-associated junctions (TnJc)")
         return tnjc
-
-    def _save_output(self, output: RecordTypedDf[TnJunction]) -> None:
-        """Save TnJc to CSV."""
-        output.to_csv(self.output_file)
 
     def _get_junction_seq(self, jc: Junction, side: int) -> str:
         """Extract sequence at junction side."""
@@ -152,7 +144,3 @@ class CreateTnJcStep(Step[RecordTypedDf[TnJunction]]):
                 matches.append(RefTnSide.from_other(tn, distance=dist))
 
         return matches
-
-    def load_outputs(self) -> RecordTypedDf[TnJunction]:
-        """Load TnJc from output file."""
-        return RecordTypedDf.from_csv(self.output_file, TnJunction)

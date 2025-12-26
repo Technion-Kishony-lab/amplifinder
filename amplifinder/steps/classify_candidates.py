@@ -6,7 +6,7 @@ from typing import Optional, List, Tuple
 from amplifinder.data_types import (
     RecordTypedDf, AnalyzedTnJc2, RawEvent, EventModifier,
 )
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
 
 
@@ -74,7 +74,7 @@ def classify_iso_vs_anc(
     return " ".join(event_parts), modifiers
 
 
-class ClassifyCandidatesStep(Step[RecordTypedDf[AnalyzedTnJc2]]):
+class ClassifyCandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
     """Final classification of candidates based on iso/anc comparison.
     
     This step refines the event classification from AnalyzeAlignmentsStep
@@ -94,15 +94,12 @@ class ClassifyCandidatesStep(Step[RecordTypedDf[AnalyzedTnJc2]]):
         force: Optional[bool] = None,
     ):
         self.analyzed = analyzed
-        self.output_dir = Path(output_dir)
         self.has_ancestor = has_ancestor
         self.min_jct_cov = min_jct_cov
         
-        self.output_file = output_dir / "tn_jc2_classified.csv"
-        
         super().__init__(
+            output_dir=output_dir,
             input_files=[],
-            output_files=[self.output_file],
             force=force,
         )
 
@@ -136,12 +133,3 @@ class ClassifyCandidatesStep(Step[RecordTypedDf[AnalyzedTnJc2]]):
             info(f"Classification: {len(classified_records)} candidates (no ancestor comparison)")
         
         return result
-
-    def _save_output(self, output: RecordTypedDf[AnalyzedTnJc2]) -> None:
-        """Save classified results to CSV."""
-        output.to_csv(self.output_file)
-
-    def load_outputs(self) -> RecordTypedDf[AnalyzedTnJc2]:
-        """Load classified results from CSV."""
-        return RecordTypedDf.from_csv(self.output_file, AnalyzedTnJc2)
-
