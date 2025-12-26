@@ -68,6 +68,14 @@ class Pipeline:
         
         return analyzed_tnjc2s
     
+    def run_breseq_only(self) -> None:
+        """Run only breseq steps (ancestor and isolate), then exit."""
+        iso_output, anc_output = self._initialize()
+        genome = self._load_reference()
+        self._ancestor_breseq(genome, anc_output)
+        self._run_breseq(genome, iso_output)
+        info("breseq-only mode completed")
+    
     def _ancestor_breseq(self, genome: Genome, anc_output: Path) -> None:
         """Ensure ancestor breseq output exists, run breseq if needed."""
         if not self.config.has_ancestor:
