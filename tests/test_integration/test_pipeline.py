@@ -174,19 +174,6 @@ class TestPipelineStepByStep:
         return None
     
     @staticmethod
-    def _get_test_output_root(matlab_output_dir):
-        """Get test output root directory next to MATLAB outputs.
-
-        By default this is:
-            {AMPLIFINDER_TEST_ROOT or default}/python_outputs
-
-        Override base directory with AMPLIFINDER_OUTPUT_ROOT.
-        """
-        default_base = matlab_output_dir.parent.parent.parent
-        base = Path(os.environ.get("AMPLIFINDER_OUTPUT_ROOT", default_base))
-        return base / "python_outputs"
-    
-    @staticmethod
     def _create_config(isolate, output_dir, anc_isolate=None, anc_name=None):
         """Create Config with common defaults."""
         test_output_root = output_dir.parent
