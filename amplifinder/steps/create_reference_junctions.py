@@ -8,6 +8,7 @@ from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, RefTnLoc, SeqRefTnSide, RefTnJunction, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
 from amplifinder.utils.fasta import reverse_complement
+from amplifinder.utils.tools import ensure_dir
 
 
 class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
@@ -53,7 +54,7 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
 
     def _calculate_output(self) -> RecordTypedDf[RefTnJunction]:
         """Create synthetic junction records from TN locations."""
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        ensure_dir(self.output_dir)
 
         jc_records = []
 
@@ -129,7 +130,7 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
 
     def _calculate_output(self) -> RecordTypedDf[SeqRefTnSide]:
         """Extract TN sequences with margins (matching MATLAB IS_seqs_with_margins)."""
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        ensure_dir(self.output_dir)
 
         ref_seqs = self.genome.sequences
         out_span = self.max_dist_to_tn  # MATLAB: out_span = max_dist_to_IS

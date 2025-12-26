@@ -6,6 +6,8 @@ from typing import Any, Optional, Tuple
 import json
 import yaml
 
+from amplifinder.utils.tools import ensure_dir
+
 
 # Default configuration values (from config.txt)
 DEFAULT_CONFIG = {
@@ -290,8 +292,7 @@ def save_config(config: Config, run_dir: Path) -> None:
         config: Config object to save
         run_dir: Run directory path
     """
-    run_dir = Path(run_dir)
-    run_dir.mkdir(parents=True, exist_ok=True)
+    run_dir = ensure_dir(run_dir)
     
     config_path = run_dir / "run_config.yaml"
     

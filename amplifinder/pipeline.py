@@ -11,6 +11,7 @@ from amplifinder.data_types import (
     CoveredTnJc2, ClassifiedTnJc2, CandidateTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.logger import info
+from amplifinder.utils.tools import ensure_dir
 from amplifinder.steps import (
     InitializingStep,
     GetRefGenomeStep,
@@ -116,7 +117,7 @@ class Pipeline:
             # Copy junctions.fasta from isolate to ancestor folder
             iso_junctions = iso_jc_dir / "junctions.fasta"
             if iso_junctions.exists():
-                anc_jc_dir.mkdir(parents=True, exist_ok=True)
+                ensure_dir(anc_jc_dir)
                 shutil.copy2(iso_junctions, anc_junctions)
     
 

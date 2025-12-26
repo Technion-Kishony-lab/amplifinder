@@ -12,6 +12,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 from amplifinder.config import get_iso_run_dir
+from amplifinder.utils.tools import ensure_dir
 
 # =============================================================================
 # Assertion helpers
@@ -78,9 +79,7 @@ def cleared_output_dir():
     test_output_root = base / "python_outputs"
     output_dir = test_output_root / "output"
     
-    if output_dir.exists():!!
-        shutil.rmtree(output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
+    ensure_dir(output_dir, cleanup=True)
     
     return output_dir
 
@@ -198,8 +197,7 @@ def test_data(tmp_path, tn_sequences):
     Returns:
         Path to test_data directory
     """
-    data_dir = tmp_path / "test_data"
-    data_dir.mkdir()
+    data_dir = ensure_dir(tmp_path / "test_data")
 
     # Build reference with TN elements
     seq, tn_locs = make_reference_with_tn(tn_sequences)
@@ -215,8 +213,7 @@ def test_data(tmp_path, tn_sequences):
 @pytest.fixture
 def tmp_output(tmp_path):
     """Isolated output directory for each test."""
-    out = tmp_path / "output"
-    out.mkdir()
+    out = ensure_dir(tmp_path / "output")
     return out
 
 

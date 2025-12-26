@@ -13,6 +13,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
 from amplifinder.logger import info
+from amplifinder.utils.tools import ensure_dir
 
 # Set email for NCBI Entrez (required)
 Entrez.email = "amplifinder@example.com"
@@ -215,7 +216,7 @@ class GenomeRegistry:
     def _fetch_from_ncbi(self, ref_name: str) -> Genome:
         """Fetch genome from NCBI and cache locally."""
         info(f"Fetching {ref_name} from NCBI...")
-        self.genbank_dir.mkdir(parents=True, exist_ok=True)
+        ensure_dir(self.genbank_dir)
 
         # Download GenBank
         genbank_file = self.genbank_dir / f"{ref_name}.gb"
@@ -243,7 +244,7 @@ class GenomeRegistry:
         fasta_file = self.fasta_dir / f"{locus_name}.fasta"
         if not fasta_file.exists():
             info(f"Creating FASTA for {locus_name}")
-            self.fasta_dir.mkdir(parents=True, exist_ok=True)
+            ensure_dir(self.fasta_dir)
             record.id = locus_name
             record.description = ""
             SeqIO.write(record, fasta_file, "fasta")

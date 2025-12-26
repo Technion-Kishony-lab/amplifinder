@@ -4,6 +4,7 @@ import pytest
 from pathlib import Path
 from amplifinder.steps import AlignReadsToJunctionsStep
 from amplifinder.data_types import RecordTypedDf, CandidateTnJc2, RawEvent, Orientation
+from amplifinder.utils.tools import ensure_parent_dir
 
 
 @pytest.fixture
@@ -38,7 +39,7 @@ def test_step_initialization(sample_candidate, tmp_path):
     
     # Create dummy junctions.fasta
     junctions_file = tmp_path / sample_candidate.analysis_dir / "junctions.fasta"
-    junctions_file.parent.mkdir(parents=True)
+    ensure_parent_dir(junctions_file)
     junctions_file.write_text(">1\nACGTACGT\n")
     
     step = AlignReadsToJunctionsStep(

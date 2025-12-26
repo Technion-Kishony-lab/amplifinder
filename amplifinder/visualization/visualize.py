@@ -15,6 +15,7 @@ from amplifinder.data_types import AnalyzedTnJc2, RecordTypedDf
 from amplifinder.config import load_config_from_run
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.utils.coverage import get_coverage_in_range
+from amplifinder.utils.tools import ensure_parent_dir
 from amplifinder.logger import info, warning
 
 
@@ -166,7 +167,7 @@ def visualize_candidates(
         # Save all plots to files
         for candidate in analyzed:
             plot_path = run_dir / candidate.analysis_dir / "coverage_plot.png"
-            plot_path.parent.mkdir(parents=True, exist_ok=True)
+            ensure_parent_dir(plot_path)
             plot_candidate_coverage(
                 candidate=candidate,
                 iso_coverage=iso_coverage,

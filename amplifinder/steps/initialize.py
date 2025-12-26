@@ -6,6 +6,7 @@ from typing import Optional, Tuple
 from amplifinder.steps.base import Step
 from amplifinder.config import Config, save_config, get_iso_run_dir, get_anc_run_dir
 from amplifinder.logger import info
+from amplifinder.utils.tools import ensure_dir
 
 
 class InitializingStep(Step[Tuple[Path, Optional[Path]]]):
@@ -35,11 +36,11 @@ class InitializingStep(Step[Tuple[Path, Optional[Path]]]):
 
     def _calculate_output(self) -> Tuple[Path, Optional[Path]]:
         """Create directories and save config."""
-        self.iso_run_dir.mkdir(parents=True, exist_ok=True)
+        ensure_dir(self.iso_run_dir)
         
         # Also create ancestor run directory if ancestor exists (needed for breseq output)
         if self.anc_run_dir is not None:
-            self.anc_run_dir.mkdir(parents=True, exist_ok=True)
+            ensure_dir(self.anc_run_dir)
         
         # Save config to run directory
         save_config(self.config, self.iso_run_dir)

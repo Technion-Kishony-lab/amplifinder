@@ -8,6 +8,7 @@ from amplifinder.steps import CalcAmpliconCoverageStep
 from amplifinder.data_types import (
     RecordTypedDf, TnJc2, Genome, Orientation,
 )
+from amplifinder.utils.tools import ensure_dir
 
 
 @pytest.fixture
@@ -63,8 +64,7 @@ def mock_genome(tmp_path):
 @pytest.fixture
 def mock_breseq_output(tmp_path):
     """Create mock breseq coverage output."""
-    breseq_dir = tmp_path / "breseq" / "08_mutation_identification"
-    breseq_dir.mkdir(parents=True)
+    breseq_dir = ensure_dir(tmp_path / "breseq" / "08_mutation_identification")
     
     # Create coverage.tab file
     coverage_file = breseq_dir / "chr1.coverage.tab"
@@ -132,8 +132,7 @@ def test_calc_coverage_step(mock_genome, sample_tnjc2, mock_breseq_output, tmp_p
 def test_calc_coverage_with_ancestor(mock_genome, sample_tnjc2, mock_breseq_output, tmp_path):
     """Should calculate normalized coverage when ancestor is provided."""
     # Create ancestor breseq output with lower coverage
-    anc_breseq_dir = tmp_path / "anc_breseq" / "08_mutation_identification"
-    anc_breseq_dir.mkdir(parents=True)
+    anc_breseq_dir = ensure_dir(tmp_path / "anc_breseq" / "08_mutation_identification")
     anc_coverage_file = anc_breseq_dir / "chr1.coverage.tab"
     
     # Ancestor has uniform coverage of 10
