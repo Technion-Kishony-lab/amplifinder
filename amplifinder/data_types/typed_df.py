@@ -67,6 +67,7 @@ class TypedDF:
         self.df = validate_and_cast_df(df, self.schema, check_missing=True, check_extra=True, cast=True)
 
     def to_csv(self, path: Path) -> None:
+        """Save DataFrame to CSV. Handles empty DataFrames by creating file with headers only."""
         df = self.df.copy()
         for col in df.columns:
             if df[col].dtype == object:
