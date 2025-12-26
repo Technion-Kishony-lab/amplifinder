@@ -43,11 +43,11 @@ def sample_tn_loc():
 
 def test_creates_junctions_fasta(tiny_genome, sample_candidate, sample_tn_loc, tmp_path):
     """Should create junctions.fasta file."""
-    candidates = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
+    filtered_tnjc2s = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
     tn_locs = RecordTypedDf.from_records([sample_tn_loc], RefTnLoc)
     
     step = CreateSyntheticJunctionsStep(
-        candidates=candidates,
+        filtered_tnjc2s=filtered_tnjc2s,
         genome=tiny_genome,
         tn_locs=tn_locs,
         output_dir=tmp_path,
@@ -88,7 +88,7 @@ def test_handles_missing_tn(tiny_genome, sample_candidate, tmp_path):
         analysis_dir="jc_200_300_999_L150",
     )
     
-    candidates = RecordTypedDf.from_records([candidate_no_tn], FilteredTnJc2)
+    filtered_tnjc2s = RecordTypedDf.from_records([candidate_no_tn], FilteredTnJc2)
     tn_locs = RecordTypedDf.from_records([], RefTnLoc)  # Empty TN list
     
     # Create empty junctions.fasta to satisfy step output requirements
@@ -97,7 +97,7 @@ def test_handles_missing_tn(tiny_genome, sample_candidate, tmp_path):
     junctions_file.write_text("")
     
     step = CreateSyntheticJunctionsStep(
-        candidates=candidates,
+        filtered_tnjc2s=filtered_tnjc2s,
         genome=tiny_genome,
         tn_locs=tn_locs,
         output_dir=tmp_path,

@@ -31,7 +31,7 @@ def sample_candidate(tmp_path):
 
 def test_step_initialization(sample_candidate, tmp_path):
     """Should initialize step correctly."""
-    candidates = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
+    filtered_tnjc2s = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
     
     # Create dummy FASTQ file
     fastq_file = tmp_path / "test.fastq"
@@ -43,11 +43,11 @@ def test_step_initialization(sample_candidate, tmp_path):
     junctions_file.write_text(">1\nACGTACGT\n")
     
     step = AlignReadsToJunctionsStep(
-        candidates=candidates,
+        filtered_tnjc2s=filtered_tnjc2s,
         output_dir=tmp_path,
         iso_fastq_path=fastq_file,
     )
     
-    assert step.candidates == candidates
+    assert step.filtered_tnjc2s == filtered_tnjc2s
     assert step.iso_fastq_path == fastq_file
     assert step.anc_fastq_path is None

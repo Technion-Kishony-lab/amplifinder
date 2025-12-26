@@ -31,7 +31,7 @@ def sample_candidate(tmp_path):
 
 def test_step_initialization(sample_candidate, tmp_path):
     """Should initialize step correctly."""
-    candidates = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
+    filtered_tnjc2s = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
     
     # Create dummy BAM file (empty, just for initialization test)
     bam_file = tmp_path / sample_candidate.analysis_dir / "iso.sorted.bam"
@@ -39,12 +39,12 @@ def test_step_initialization(sample_candidate, tmp_path):
     bam_file.write_text("dummy")
     
     step = AnalyzeTnJc2AlignmentsStep(
-        candidates=candidates,
+        filtered_tnjc2s=filtered_tnjc2s,
         output_dir=tmp_path,
         read_length=150,
         has_ancestor=False,
     )
     
-    assert step.candidates == candidates
+    assert step.filtered_tnjc2s == filtered_tnjc2s
     assert step.read_length == 150
     assert step.has_ancestor is False
