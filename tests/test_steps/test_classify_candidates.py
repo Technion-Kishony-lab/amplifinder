@@ -1,8 +1,8 @@
-"""Tests for ClassifyCandidatesStep."""
+"""Tests for ClassifyTnJc2CandidatesStep."""
 
 import pytest
 from pathlib import Path
-from amplifinder.steps import ClassifyCandidatesStep
+from amplifinder.steps import ClassifyTnJc2CandidatesStep
 from amplifinder.data_types import (
     RecordTypedDf, AnalyzedTnJc2, RawEvent, Orientation, EventModifier,
 )
@@ -39,7 +39,7 @@ def test_step_initialization(sample_analyzed, tmp_path):
     """Should initialize step correctly."""
     analyzed = RecordTypedDf.from_records([sample_analyzed], AnalyzedTnJc2)
     
-    step = ClassifyCandidatesStep(
+    step = ClassifyTnJc2CandidatesStep(
         analyzed=analyzed,
         output_dir=tmp_path,
         has_ancestor=False,

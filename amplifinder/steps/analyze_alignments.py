@@ -88,7 +88,7 @@ def classify_event(
     return event, modifiers
 
 
-class AnalyzeAlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
+class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
     """Analyze read alignments to classify junction architectures.
     
     Analysis depends on run type:

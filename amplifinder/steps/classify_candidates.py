@@ -74,7 +74,7 @@ def classify_iso_vs_anc(
     return " ".join(event_parts), modifiers
 
 
-class ClassifyCandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
+class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
     """Final classification of candidates based on iso/anc comparison.
     
     This step refines the event classification from AnalyzeAlignmentsStep
