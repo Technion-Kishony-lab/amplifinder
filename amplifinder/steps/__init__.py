@@ -17,16 +17,12 @@ from amplifinder.steps.analyze_alignments import AnalyzeTnJc2AlignmentsStep
 from amplifinder.steps.classify_candidates import ClassifyTnJc2CandidatesStep
 from amplifinder.steps.export import ExportTnJc2Step
 
-# Backward compatibility alias
-ISfinderStep = LocateTNsUsingISfinderStep
-
 __all__ = [
     "Step",
     "InitializingStep",
     "GetRefGenomeStep",
     "LocateTNsUsingGenbankStep",
     "LocateTNsUsingISfinderStep",
-    "ISfinderStep",  # deprecated alias
     "BreseqStep",
     "CreateRefTnJcStep",
     "CreateRefTnEndSeqsStep",

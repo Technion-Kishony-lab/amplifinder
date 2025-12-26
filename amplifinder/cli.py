@@ -95,12 +95,6 @@ from amplifinder.utils.tools import ensure_dir
     help="Logging level (default: INFO).",
 )
 @click.option(
-    "--fetch-only",
-    is_flag=True,
-    default=False,
-    help="Only fetch reference genome and create BLAST DB, then exit.",
-)
-@click.option(
     "--breseq-only",
     is_flag=True,
     default=False,
@@ -139,14 +133,13 @@ def main(
     use_isfinder: bool,
     config_file: Optional[Path],
     log_level: str,
-    fetch_only: bool,
     breseq_only: bool,
     visualize: Optional[Path],
     save_plots: bool,
     verbose: bool,
 ) -> None:
     """AmpliFinder: Detect IS-mediated gene amplifications from WGS data."""
-    # Setup logger early (use output_dir directly for fetch-only)
+    # Setup logger early
     log_dir = output_dir / ref_name
     ensure_dir(log_dir)
     setup_logger(log_path=log_dir / "amplifinder.log", level=getattr(logging, log_level.upper()))
@@ -168,22 +161,9 @@ def main(
         
         info(f"Reference: {ref_name}")
 
-        # Fetch-only mode: only need ref_name and ref_path
-        if fetch_only:
-            info("Running fetch-only mode (reference + TN location)")
-            from amplifinder.pipeline import run_fetch_only
-            run_fetch_only(
-                ref_name=ref_name,
-                ref_path=ref_path,
-                ncbi=ncbi,
-                use_isfinder=use_isfinder,
-            )
-            info("Done")
-            return
-
         # Full pipeline modes require iso_path
         if iso_path is None:
-            raise click.ClickException("--iso-path is required (unless using --fetch-only)")
+            raise click.ClickException("--iso-path is required")
 
         # Load config file if provided
         file_config = None
