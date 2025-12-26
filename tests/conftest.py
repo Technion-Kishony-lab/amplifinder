@@ -68,16 +68,21 @@ def isolate_srr25242906():
 
 
 @pytest.fixture
-def clear_output_dir():
-    """Clear output directory before test run."""
-
-    def _clear(config):
-        run_dir = get_iso_run_dir(config)
-        if run_dir.exists():
-            shutil.rmtree(run_dir)
-        return run_dir
-
-    return _clear
+def cleared_output_dir():
+    """Clear entire output directory before test run.
+    
+    Returns the cleared output_dir Path.
+    """
+    default_base = TEST_DATA_ROOT.parent
+    base = Path(os.environ.get("AMPLIFINDER_OUTPUT_ROOT", default_base))
+    test_output_root = base / "python_outputs"
+    output_dir = test_output_root / "output"
+    
+    if output_dir.exists():
+        shutil.rmtree(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    return output_dir
 
 
 # =============================================================================
