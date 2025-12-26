@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from amplifinder.steps import LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep
-from amplifinder.data_types import RecordTypedDF
+from amplifinder.data_types import RecordTypedDf
 from tests.env import RUN_BLAST_TESTS
 
 
@@ -47,7 +47,7 @@ def test_extracts_tn_elements(locate_tns_step):
     """Should extract TN elements correctly."""
     tn_loc = locate_tns_step.run()
 
-    assert isinstance(tn_loc, RecordTypedDF)
+    assert isinstance(tn_loc, RecordTypedDf)
 
     expected = pd.DataFrame({
         "tn_id": [1, 2],

@@ -6,7 +6,7 @@ import pandas as pd
 from pathlib import Path
 from amplifinder.steps import CalcAmpliconCoverageStep
 from amplifinder.data_types import (
-    RecordTypedDF, TnJc2, Genome, Orientation,
+    RecordTypedDf, TnJc2, Genome, Orientation,
 )
 
 
@@ -38,7 +38,7 @@ def sample_tnjc2(tmp_path):
             complementary_length=980,
         ),
     ]
-    return RecordTypedDF.from_records(records, TnJc2)
+    return RecordTypedDf.from_records(records, TnJc2)
 
 
 @pytest.fixture

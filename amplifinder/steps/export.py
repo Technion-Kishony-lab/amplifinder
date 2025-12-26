@@ -3,12 +3,12 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.data_types import RecordTypedDF, AnalyzedTnJc2, ISJC2Export
+from amplifinder.data_types import RecordTypedDf, AnalyzedTnJc2, ISJC2Export
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
 
 
-class ExportStep(Step[RecordTypedDF[ISJC2Export]]):
+class ExportStep(Step[RecordTypedDf[ISJC2Export]]):
     """Export analyzed candidates to CSV files.
     
     Creates two CSV files:
@@ -18,7 +18,7 @@ class ExportStep(Step[RecordTypedDF[ISJC2Export]]):
 
     def __init__(
         self,
-        analyzed_candidates: RecordTypedDF[AnalyzedTnJc2],
+        analyzed_candidates: RecordTypedDf[AnalyzedTnJc2],
         output_dir: Path,
         copy_number_threshold: float = 1.5,
         del_copy_number_threshold: float = 0.3,
@@ -40,11 +40,11 @@ class ExportStep(Step[RecordTypedDF[ISJC2Export]]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDF[ISJC2Export]:
+    def _calculate_output(self) -> RecordTypedDf[ISJC2Export]:
         """Export candidates to CSV."""
         if len(self.analyzed_candidates) == 0:
             info("No candidates to export, creating empty ISJC2.csv with headers")
-            export_df = RecordTypedDF.empty(ISJC2Export)
+            export_df = RecordTypedDf.empty(ISJC2Export)
             export_df.to_csv(self.isjc2_file)
             export_df.to_csv(self.candidates_file)
             info(f"Created empty ISJC2.csv and candidate_amplifications.csv with headers")
@@ -67,7 +67,7 @@ class ExportStep(Step[RecordTypedDF[ISJC2Export]]):
                 isolate_architecture=str(candidate.isolate_architecture),
             ))
         
-        export_df = RecordTypedDF.from_records(export_records, ISJC2Export)
+        export_df = RecordTypedDf.from_records(export_records, ISJC2Export)
         
         # Sort by mode_copy_number descending
         export_df = export_df.pipe(
@@ -92,10 +92,10 @@ class ExportStep(Step[RecordTypedDF[ISJC2Export]]):
         
         return export_df
 
-    def _save_output(self, output: RecordTypedDF[ISJC2Export]) -> None:
+    def _save_output(self, output: RecordTypedDf[ISJC2Export]) -> None:
         """Output already saved in _calculate_output."""
         pass
 
-    def load_outputs(self) -> RecordTypedDF[ISJC2Export]:
+    def load_outputs(self) -> RecordTypedDf[ISJC2Export]:
         """Load exported ISJC2 data."""
-        return RecordTypedDF.from_csv(self.isjc2_file, ISJC2Export)
+        return RecordTypedDf.from_csv(self.isjc2_file, ISJC2Export)

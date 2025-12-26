@@ -78,7 +78,7 @@ def cleared_output_dir():
     test_output_root = base / "python_outputs"
     output_dir = test_output_root / "output"
     
-    if output_dir.exists():
+    if output_dir.exists():!!
         shutil.rmtree(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     

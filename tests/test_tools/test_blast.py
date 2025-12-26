@@ -3,7 +3,7 @@
 import pytest
 
 from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
-from amplifinder.data_types import RecordTypedDF
+from amplifinder.data_types import RecordTypedDf
 from tests.env import RUN_BLAST_TESTS
 
 
@@ -46,7 +46,7 @@ def test_parse_blast_csv(blast_output):
     result = parse_blast_csv(blast_output)
 
     assert len(result) > 0
-    assert isinstance(result, RecordTypedDF)
+    assert isinstance(result, RecordTypedDf)
     result.assert_matches()
 
 
@@ -63,4 +63,4 @@ def test_blast_no_hits(blast_db, tmp_path):
     result = parse_blast_csv(output)
 
     assert len(result) == 0
-    assert isinstance(result, RecordTypedDF)
+    assert isinstance(result, RecordTypedDf)

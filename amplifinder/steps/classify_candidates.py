@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 
 from amplifinder.data_types import (
-    RecordTypedDF, AnalyzedTnJc2, RawEvent, EventModifier,
+    RecordTypedDf, AnalyzedTnJc2, RawEvent, EventModifier,
 )
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
@@ -74,7 +74,7 @@ def classify_iso_vs_anc(
     return " ".join(event_parts), modifiers
 
 
-class ClassifyCandidatesStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
+class ClassifyCandidatesStep(Step[RecordTypedDf[AnalyzedTnJc2]]):
     """Final classification of candidates based on iso/anc comparison.
     
     This step refines the event classification from AnalyzeAlignmentsStep
@@ -87,7 +87,7 @@ class ClassifyCandidatesStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
 
     def __init__(
         self,
-        analyzed: RecordTypedDF[AnalyzedTnJc2],
+        analyzed: RecordTypedDf[AnalyzedTnJc2],
         output_dir: Path,
         has_ancestor: bool = False,
         min_jct_cov: int = 5,
@@ -106,7 +106,7 @@ class ClassifyCandidatesStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDF[AnalyzedTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Reclassify events based on iso/anc comparison."""
         classified_records = []
         
@@ -125,7 +125,7 @@ class ClassifyCandidatesStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
             
             classified_records.append(classified)
         
-        result = RecordTypedDF.from_records(classified_records, AnalyzedTnJc2)
+        result = RecordTypedDf.from_records(classified_records, AnalyzedTnJc2)
         
         # Log summary
         if self.has_ancestor:
@@ -137,11 +137,11 @@ class ClassifyCandidatesStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
         
         return result
 
-    def _save_output(self, output: RecordTypedDF[AnalyzedTnJc2]) -> None:
+    def _save_output(self, output: RecordTypedDf[AnalyzedTnJc2]) -> None:
         """Save classified results to CSV."""
         output.to_csv(self.output_file)
 
-    def load_outputs(self) -> RecordTypedDF[AnalyzedTnJc2]:
+    def load_outputs(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Load classified results from CSV."""
-        return RecordTypedDF.from_csv(self.output_file, AnalyzedTnJc2)
+        return RecordTypedDf.from_csv(self.output_file, AnalyzedTnJc2)
 

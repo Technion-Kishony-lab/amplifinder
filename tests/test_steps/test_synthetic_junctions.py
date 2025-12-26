@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from amplifinder.steps import CreateSyntheticJunctionsStep
 from amplifinder.data_types import (
-    RecordTypedDF, CandidateTnJc2, RefTnLoc, RawEvent, Orientation,
+    RecordTypedDf, CandidateTnJc2, RefTnLoc, RawEvent, Orientation,
 )
 
 
@@ -42,8 +42,8 @@ def sample_tn_loc():
 
 def test_creates_junctions_fasta(tiny_genome, sample_candidate, sample_tn_loc, tmp_path):
     """Should create junctions.fasta file."""
-    candidates = RecordTypedDF.from_records([sample_candidate], CandidateTnJc2)
-    tn_locs = RecordTypedDF.from_records([sample_tn_loc], RefTnLoc)
+    candidates = RecordTypedDf.from_records([sample_candidate], CandidateTnJc2)
+    tn_locs = RecordTypedDf.from_records([sample_tn_loc], RefTnLoc)
     
     step = CreateSyntheticJunctionsStep(
         candidates=candidates,
@@ -87,8 +87,8 @@ def test_handles_missing_tn(tiny_genome, sample_candidate, tmp_path):
         analysis_dir="jc_200_300_999_L150",
     )
     
-    candidates = RecordTypedDF.from_records([candidate_no_tn], CandidateTnJc2)
-    tn_locs = RecordTypedDF.from_records([], RefTnLoc)  # Empty TN list
+    candidates = RecordTypedDf.from_records([candidate_no_tn], CandidateTnJc2)
+    tn_locs = RecordTypedDf.from_records([], RefTnLoc)  # Empty TN list
     
     # Create empty junctions.fasta to satisfy step output requirements
     junctions_file = tmp_path / candidate_no_tn.analysis_dir / "junctions.fasta"

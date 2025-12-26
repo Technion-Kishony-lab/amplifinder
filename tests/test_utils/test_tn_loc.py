@@ -3,14 +3,14 @@
 import pandas as pd
 
 from amplifinder.utils.tn_loc import compare_tn_locations
-from amplifinder.data_types import RecordTypedDF, RefTnLoc
+from amplifinder.data_types import RecordTypedDf, RefTnLoc
 
 
-def make_tn_loc(records: list[dict]) -> RecordTypedDF[RefTnLoc]:
+def make_tn_loc(records: list[dict]) -> RecordTypedDf[RefTnLoc]:
     """Helper to create TN location RecordDF."""
     if not records:
-        return RecordTypedDF.empty(RefTnLoc)
-    return RecordTypedDF(pd.DataFrame({
+        return RecordTypedDf.empty(RefTnLoc)
+    return RecordTypedDf(pd.DataFrame({
         "tn_id": [r.get("tn_id", i + 1) for i, r in enumerate(records)],
         "tn_name": [r["tn_name"] for r in records],
         "tn_scaf": [r.get("tn_scaf", "chr1") for r in records],

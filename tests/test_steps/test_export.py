@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from amplifinder.steps import ExportStep
 from amplifinder.data_types import (
-    RecordTypedDF, AnalyzedTnJc2, RawEvent, Orientation, EventModifier,
+    RecordTypedDf, AnalyzedTnJc2, RawEvent, Orientation, EventModifier,
 )
 
 
@@ -58,7 +58,7 @@ def sample_analyzed(tmp_path):
             event_modifiers=[],
         ),
     ]
-    return RecordTypedDF.from_records(records, AnalyzedTnJc2)
+    return RecordTypedDf.from_records(records, AnalyzedTnJc2)
 
 
 def test_export_creates_files(sample_analyzed, tmp_path):
