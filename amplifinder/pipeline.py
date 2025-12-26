@@ -21,7 +21,7 @@ from amplifinder.steps import (
     CreateRefTnJcStep,
     CreateRefTnEndSeqsStep,
     CreateTnJcStep,
-    PairTnJc2Step,
+    PairTnJcToRawTnJc2Step,
     CalcTnJc2AmpliconCoverageStep,
     ClassifyTnJc2StructureStep,
     FilterTnJc2CandidatesStep,
@@ -254,7 +254,7 @@ class Pipeline:
         iso_output: Path,
     ) -> RecordTypedDf[RawTnJc2]:
         """Step 6: Combine junction pairs (RawTnJc2)."""
-        tnjc2 = PairTnJc2Step(
+        tnjc2 = PairTnJcToRawTnJc2Step(
             tnjc=tnjc,
             genome=genome,
             output_dir=iso_output,

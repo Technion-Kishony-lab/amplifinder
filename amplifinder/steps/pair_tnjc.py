@@ -10,7 +10,7 @@ from amplifinder.data_types.genome import Genome
 from amplifinder.utils.tools import ensure_dir
 
 
-class PairTnJc2Step(RecordTypedDfStep[RawTnJc2]):
+class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
     """Combine TN junctions into pairs (candidate amplicons).
 
     For each pair of junctions, checks:
