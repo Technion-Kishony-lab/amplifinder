@@ -4,6 +4,7 @@ import pytest
 from pathlib import Path
 
 from amplifinder.config import Config, save_config, load_config_from_run, get_iso_run_dir
+from amplifinder.utils.tools import ensure_dir
 
 
 @pytest.fixture
@@ -58,8 +59,7 @@ def test_load_config_from_run(sample_config, tmp_path):
 
 def test_load_config_missing_file(tmp_path):
     """Should raise FileNotFoundError if config file doesn't exist."""
-    run_dir = tmp_path / "output" / "U00096" / "ancestor1" / "sample1"
-    run_dir.mkdir(parents=True)
+    run_dir = ensure_dir(tmp_path / "output" / "U00096" / "ancestor1" / "sample1")
     
     with pytest.raises(FileNotFoundError):
         load_config_from_run(run_dir)

@@ -4,6 +4,7 @@ import pytest
 from pathlib import Path
 from amplifinder.steps import AnalyzeAlignmentsStep
 from amplifinder.data_types import RecordTypedDf, CandidateTnJc2, RawEvent, Orientation
+from amplifinder.utils.tools import ensure_parent_dir
 
 
 @pytest.fixture
@@ -34,7 +35,7 @@ def test_step_initialization(sample_candidate, tmp_path):
     
     # Create dummy BAM file (empty, just for initialization test)
     bam_file = tmp_path / sample_candidate.analysis_dir / "iso.sorted.bam"
-    bam_file.parent.mkdir(parents=True)
+    ensure_parent_dir(bam_file)
     bam_file.write_text("dummy")
     
     step = AnalyzeAlignmentsStep(

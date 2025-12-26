@@ -3,6 +3,7 @@
 import pytest
 
 from amplifinder.steps import GetRefGenomeStep
+from amplifinder.utils.tools import ensure_dir
 
 
 @pytest.mark.integration
@@ -11,8 +12,7 @@ class TestGetReference:
 
     def test_load_u00096_from_ncbi(self, tmp_path, isolate_srr25242877):
         """Load E. coli U00096 reference from NCBI."""
-        ref_path = tmp_path / "genomesDB"
-        ref_path.mkdir()
+        ref_path = ensure_dir(tmp_path / "genomesDB")
 
         step = GetRefGenomeStep(
             ref_name="U00096",

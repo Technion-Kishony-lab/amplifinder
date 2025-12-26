@@ -6,6 +6,7 @@ from amplifinder.steps import CreateSyntheticJunctionsStep
 from amplifinder.data_types import (
     RecordTypedDf, CandidateTnJc2, RefTnLoc, RawEvent, Orientation,
 )
+from amplifinder.utils.tools import ensure_parent_dir
 
 
 @pytest.fixture
@@ -92,7 +93,7 @@ def test_handles_missing_tn(tiny_genome, sample_candidate, tmp_path):
     
     # Create empty junctions.fasta to satisfy step output requirements
     junctions_file = tmp_path / candidate_no_tn.analysis_dir / "junctions.fasta"
-    junctions_file.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent_dir(junctions_file)
     junctions_file.write_text("")
     
     step = CreateSyntheticJunctionsStep(
