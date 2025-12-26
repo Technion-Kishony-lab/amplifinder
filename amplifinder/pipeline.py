@@ -1,5 +1,5 @@
 """Pipeline orchestration for AmpliFinder."""
-
+import shutil
 import pandas as pd
 from dataclasses import dataclass, replace
 from pathlib import Path
@@ -61,7 +61,7 @@ class Pipeline:
         candidates = self._filter_candidates(classified, iso_output)
         self._create_synthetic_junctions(candidates, genome, tn_loc, iso_output)
         self._align_reads(candidates, iso_output)
-        analyzed = self._analyze_alignments(candidates, iso_output)
+        analyzed = self._analyze_alignments(candidates, iso_output, anc_output)
         classified_final = self._classify_candidates(analyzed, iso_output)
         self._export(classified_final, iso_output)
         
@@ -89,41 +89,36 @@ class Pipeline:
         
         info("Ancestor breseq completed")
     
-    def _copy_ancestor_junction_files(
+    def _copy_junctions_to_ancestor(
         self,
         candidates: RecordTypedDF[CandidateTnJc2],
         iso_output: Path,
     ) -> None:
-        """Copy junction files and BAM from ancestor run to isolate run."""
+        """Copy junction files from isolate to ancestor folder (only if not already there).
+        
+        This allows ancestor alignments to be stored in the ancestor folder
+        and shared across multiple isolate runs.
+        """
         if not self.config.has_ancestor:
             return
         
         anc_run_dir = get_anc_run_dir(self.config)
         
-        import shutil
-        
         for candidate in candidates:
-            anc_jc_dir = anc_run_dir / candidate.analysis_dir
             iso_jc_dir = iso_output / candidate.analysis_dir
+            anc_jc_dir = anc_run_dir / candidate.analysis_dir
+            anc_junctions = anc_jc_dir / "junctions.fasta"
             
-            if not anc_jc_dir.exists():
+            # Only copy if not already in ancestor folder
+            if anc_junctions.exists():
                 continue
             
-            iso_jc_dir.mkdir(parents=True, exist_ok=True)
-            
-            # Copy junctions.fasta
-            anc_junctions = anc_jc_dir / "junctions.fasta"
-            if anc_junctions.exists():
-                shutil.copy2(anc_junctions, iso_jc_dir / "junctions.fasta")
-            
-            # Copy ancestor's iso.sorted.bam as anc.sorted.bam
-            anc_bam = anc_jc_dir / "iso.sorted.bam"
-            if anc_bam.exists():
-                shutil.copy2(anc_bam, iso_jc_dir / "anc.sorted.bam")
-                # Also copy index if exists
-                anc_bai = anc_jc_dir / "iso.sorted.bam.bai"
-                if anc_bai.exists():
-                    shutil.copy2(anc_bai, iso_jc_dir / "anc.sorted.bam.bai")
+            # Copy junctions.fasta from isolate to ancestor folder
+            iso_junctions = iso_jc_dir / "junctions.fasta"
+            if iso_junctions.exists():
+                anc_jc_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(iso_junctions, anc_junctions)
+    
 
     @property
     def ref_tn_source(self) -> str:
@@ -350,22 +345,17 @@ class Pipeline:
         if len(candidates) == 0:
             return
         
-        # If ancestor exists, copy junction files from ancestor run
-        if self.config.has_ancestor:
-            self._copy_ancestor_junction_files(candidates, iso_output)
-            info(f"Copied junction files from ancestor for {len(candidates)} candidates")
-        else:
-            # Create new junction files
-            read_length = self.config.iso_read_length or 150
-            
-            CreateSyntheticJunctionsStep(
-                candidates=candidates,
-                genome=genome,
-                tn_locs=tn_loc,
-                output_dir=iso_output,
-                read_length=read_length,
-            ).run()
-            info(f"Created synthetic junctions for {len(candidates)} candidates")
+        # Always create junction files for isolate candidates
+        read_length = self.config.iso_read_length or 150
+        
+        CreateSyntheticJunctionsStep(
+            candidates=candidates,
+            genome=genome,
+            tn_locs=tn_loc,
+            output_dir=iso_output,
+            read_length=read_length,
+        ).run()
+        info(f"Created synthetic junctions for {len(candidates)} candidates")
     
     def _align_reads(
         self,
@@ -378,26 +368,38 @@ class Pipeline:
         
         cfg = self.config
         
-        # Get ancestor FASTQ if ancestor exists
-        anc_fastq_path = None
-        if cfg.has_ancestor:
-            # For isolate runs, ancestor FASTQ comes from ancestor run's config
-            # But we already have it in cfg.anc_path
-            anc_fastq_path = cfg.anc_path
-        
+        # Align isolate reads in isolate folder
         AlignReadsToJunctionsStep(
             candidates=candidates,
             output_dir=iso_output,
             iso_fastq_path=cfg.iso_path,
-            anc_fastq_path=anc_fastq_path,
-            threads=cfg.breseq_threads,  # Use breseq threads config
+            anc_fastq_path=None,  # Only align isolate reads here
+            threads=cfg.breseq_threads,
         ).run()
-        info(f"Aligned reads for {len(candidates)} candidates")
+        info(f"Aligned isolate reads for {len(candidates)} candidates")
+        
+        # If ancestor exists, copy junctions to ancestor folder (if not already there),
+        # then align ancestor reads in ancestor folder
+        # This allows ancestor alignments to be shared across multiple isolate runs
+        if cfg.has_ancestor:
+            anc_run_dir = get_anc_run_dir(cfg)
+            # Copy junctions first (only if not already there)
+            self._copy_junctions_to_ancestor(candidates, iso_output)
+            # Then align ancestor reads in ancestor folder
+            AlignReadsToJunctionsStep(
+                candidates=candidates,
+                output_dir=anc_run_dir,
+                iso_fastq_path=cfg.anc_path,  # Ancestor reads aligned as "iso" in ancestor folder
+                anc_fastq_path=None,
+                threads=cfg.breseq_threads,
+            ).run()
+            info(f"Aligned ancestor reads for {len(candidates)} candidates")
     
     def _analyze_alignments(
         self,
         candidates: RecordTypedDF[CandidateTnJc2],
         iso_output: Path,
+        anc_output: Optional[Path],
     ) -> RecordTypedDF[AnalyzedTnJc2]:
         """Step 12: Analyze read alignments."""
         if len(candidates) == 0:
@@ -406,6 +408,7 @@ class Pipeline:
         analyzed = AnalyzeAlignmentsStep(
             candidates=candidates,
             output_dir=iso_output,
+            anc_output_dir=anc_output,  # Ancestor BAM files are read from here
             read_length=self.config.iso_read_length or 150,
             req_overlap=self.config.req_overlap,
             min_jct_cov=self.config.min_jct_cov,

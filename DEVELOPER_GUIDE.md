@@ -360,17 +360,13 @@ Organized by: reference → ancestor → isolate
 └── {ref_name}/                     # reference genome (e.g., U00096)
     └── {anc_name}/                 # ancestor defines the group
         │
-        │ # Ancestor run (same structure as isolates, RAW coverage)
-        ├── {anc_name}/                 # ancestor run
+        │ # Ancestor folder (stores ancestor breseq and alignments for sharing)
+        ├── {anc_name}/                 # ancestor folder
         │   ├── breseq/
-        │   │   └── output/output.gd
-        │   ├── tn_jc.csv
-        │   ├── tn_jc2.csv
-        │   ├── tn_jc2_*.csv            # Output of different Steps
-        │   ├── run_config.yaml
-        │   └── jc_{start}_{end}_{tn_id}_L{read_len}/  # CANONICAL SOURCE
-        │       ├── junctions.fasta     # created during ancestor run
-        │       └── iso.sorted.bam      # ancestor's own alignment
+        │   │   └── output/output.gd    # ancestor breseq output (Step 7)
+        │   └── jc_{start}_{end}_{tn_id}_L{read_len}/  # per-candidate (from isolate runs)
+        │       ├── junctions.fasta     # copied from isolate run
+        │       └── iso.sorted.bam      # ancestor reads aligned to junctions
         │
         │ # Isolate runs (normalized coverage: iso/anc ratio)
         ├── {iso_name_1}/               # isolate 1 vs this ancestor
@@ -382,16 +378,16 @@ Organized by: reference → ancestor → isolate
         │   ├── ISJC2.csv
         │   ├── candidate_amplifications.csv
         │   └── jc_{start}_{end}_{tn_id}_L{read_len}/  # per-candidate
-        │       ├── junctions.fasta     # copied from {anc_name}/{anc_name}/jc_.../
-        │       ├── iso.sorted.bam      # isolate-specific alignment
-        │       ├── anc.sorted.bam      # copied from ancestor run
+        │       ├── junctions.fasta     # created from isolate candidates
+        │       ├── iso.sorted.bam      # isolate reads aligned to junctions
+        │       ├── anc.sorted.bam      # copied from {anc_name}/jc_.../iso.sorted.bam
         │       └── coverage_plot.png   # (if --save-plots)
         │
         └── {iso_name_2}/               # isolate 2 vs this ancestor
             └── jc_{start}_{end}_{tn_id}_L{read_len}/
-                ├── junctions.fasta     # copied from ancestor run
-                ├── iso.sorted.bam      # isolate-specific
-                └── anc.sorted.bam      # copied from ancestor run
+                ├── junctions.fasta     # created from isolate candidates
+                ├── iso.sorted.bam      # isolate reads aligned to junctions
+                └── anc.sorted.bam      # copied from {anc_name}/jc_.../iso.sorted.bam (shared)
 ```
 
 **Per-candidate folder naming:** `jc_{start}_{end}_{tn_id}_L{read_len}`
@@ -399,18 +395,31 @@ Organized by: reference → ancestor → isolate
 - `tn_id`: TN index from TnLoc table (e.g., 001, 002)
 - `read_len`: read length (affects junction flank size)
 
-**Caching logic:**
-1. Ancestor run creates (in `{anc_name}/{anc_name}/jc_.../`):
-   - `junctions.fasta`
-   - `iso.sorted.bam` (ancestor reads aligned to junctions)
-2. Isolate runs copy from ancestor's `jc_.../` folder:
-   - `junctions.fasta` → `junctions.fasta`
-   - `iso.sorted.bam` → `anc.sorted.bam` (renamed: ancestor's "iso" is isolate's "anc")
-3. Isolate creates its own `iso.sorted.bam`
+**Junction and alignment workflow:**
+1. Isolate run creates junction files (in `{iso_name}/jc_.../`):
+   - `junctions.fasta` (created from isolate candidates)
+2. Junction files are copied to ancestor folder (in `{anc_name}/jc_.../`):
+   - `junctions.fasta` (copied from isolate, allows ancestor alignments to be shared)
+3. Ancestor reads are aligned in ancestor folder:
+   - `{anc_name}/jc_.../iso.sorted.bam` (ancestor reads aligned to junctions)
+4. Ancestor alignments are copied back to isolate folder:
+   - `{anc_name}/jc_.../iso.sorted.bam` → `{iso_name}/jc_.../anc.sorted.bam`
+5. Isolate reads are aligned in isolate folder:
+   - `{iso_name}/jc_.../iso.sorted.bam` (isolate reads aligned to junctions)
+
+**Key design:**
+- Junction files are created from isolate candidates (not from ancestor)
+- Ancestor alignments are stored in ancestor folder and can be reused for multiple isolate runs
+- Only ancestor breseq output (Step 7) and ancestor reads (Step 11) are needed from ancestor
 
 **Coverage:**
-- Ancestor run (`anc_path=None`): RAW coverage (no normalization)
-- Isolate run (`anc_path=set`): iso/anc RATIO
+- Isolate run without ancestor (`anc_path=None`): RAW coverage (no normalization)
+- Isolate run with ancestor (`anc_path=set`): iso/anc RATIO (uses ancestor breseq coverage from Step 7)
+
+**Ancestor requirements:**
+- Only ancestor breseq output (Step 7) is needed for coverage calculation
+- Ancestor reads (Step 11) are aligned to isolate candidate junctions
+- Ancestor alignments are stored in ancestor folder and can be shared across multiple isolate runs
 
 ## Implemented Steps
 
@@ -441,8 +450,8 @@ Organized by: reference → ancestor → isolate
 - `anc_path=set` → load anc coverage, compute amplicon_coverage ratio
 
 **Steps 10-11 (CreateSyntheticJunctions, AlignReads):**
-- `anc_path=None` → create junctions, align THIS sample only
-- `anc_path=set` → create junctions, align BOTH iso reads AND anc reads
+- `anc_path=None` → create junctions, align isolate reads only
+- `anc_path=set` → create junctions (from isolate candidates), copy to ancestor folder, align ancestor reads in ancestor folder, copy ancestor alignments back to isolate folder
 
 **Step 12 (AnalyzeAlignments):**
 - `anc_path=None` → parse own BAM → `jc_cov_*` fields
@@ -579,15 +588,15 @@ iso_run_dir / "run_config.yaml"
 # per-candidate directory naming
 jc_name = f"jc_{start}_{end}_{tn_id:03d}_L{read_len}"
 
-# Ancestor run's candidate dir (CANONICAL SOURCE)
+# Ancestor run's candidate dir (stores ancestor alignments for sharing)
 anc_jc_dir = anc_run_dir / jc_name
-anc_jc_dir / "junctions.fasta"           # created during ancestor run
-anc_jc_dir / "iso.sorted.bam"            # ancestor's alignment (becomes isolate's anc.sorted.bam)
+anc_jc_dir / "junctions.fasta"           # copied from isolate run
+anc_jc_dir / "iso.sorted.bam"            # ancestor reads aligned to junctions
 
 # Isolate run's candidate dir
 iso_jc_dir = iso_run_dir / jc_name
-iso_jc_dir / "junctions.fasta"           # copied from anc_jc_dir
-iso_jc_dir / "anc.sorted.bam"            # copied from anc_jc_dir/iso.sorted.bam (renamed)
-iso_jc_dir / "iso.sorted.bam"            # isolate-specific alignment
+iso_jc_dir / "junctions.fasta"           # created from isolate candidates
+iso_jc_dir / "anc.sorted.bam"            # copied from anc_jc_dir/iso.sorted.bam
+iso_jc_dir / "iso.sorted.bam"            # isolate reads aligned to junctions
 iso_jc_dir / "coverage_plot.png"         # (if --save-plots)
 ```

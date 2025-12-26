@@ -100,6 +100,7 @@ class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
         self,
         candidates: RecordTypedDF[CandidateTnJc2],
         output_dir: Path,
+        anc_output_dir: Optional[Path] = None,
         read_length: int = 150,
         req_overlap: int = 12,
         min_jct_cov: int = 5,
@@ -108,6 +109,7 @@ class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
     ):
         self.candidates = candidates
         self.output_dir = Path(output_dir)
+        self.anc_output_dir = Path(anc_output_dir) if anc_output_dir else None
         self.read_length = read_length
         self.req_overlap = req_overlap
         self.min_jct_cov = min_jct_cov
@@ -121,7 +123,11 @@ class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
             analysis_dir = output_dir / cand.analysis_dir
             input_files.append(analysis_dir / "iso.sorted.bam")
             if has_ancestor:
-                input_files.append(analysis_dir / "anc.sorted.bam")
+                # Ancestor BAM is in ancestor folder (as iso.sorted.bam)
+                if not self.anc_output_dir:
+                    raise ValueError("anc_output_dir must be provided when has_ancestor=True")
+                anc_analysis_dir = self.anc_output_dir / cand.analysis_dir
+                input_files.append(anc_analysis_dir / "iso.sorted.bam")
         
         super().__init__(
             input_files=input_files,
@@ -151,10 +157,15 @@ class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
             iso_arch = classify_architecture(iso_jc_cov, self.min_jct_cov)
             
             # Get ancestor junction coverage if available
+            # Ancestor BAM is stored in ancestor folder as iso.sorted.bam
             anc_jc_cov = None
             anc_arch = None
             if self.has_ancestor:
-                anc_bam = analysis_dir / "anc.sorted.bam"
+                if not self.anc_output_dir:
+                    raise ValueError("anc_output_dir must be provided when has_ancestor=True")
+                anc_analysis_dir = self.anc_output_dir / cand.analysis_dir
+                anc_bam = anc_analysis_dir / "iso.sorted.bam"
+                
                 if anc_bam.exists():
                     anc_jc_cov = get_junction_coverage(
                         anc_bam, junction_length, self.read_length, self.req_overlap
