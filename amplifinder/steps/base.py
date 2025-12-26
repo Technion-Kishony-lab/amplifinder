@@ -39,6 +39,8 @@ class Step(ABC, Generic[T]):
     global_force: bool = False
     # Global verbose flag (applies to all steps)
     global_verbose: bool = False
+    # Should save output flag (False = do not save output)
+    should_save: bool = True
 
     def __init__(
         self,
@@ -158,8 +160,8 @@ class Step(ABC, Generic[T]):
         self.run_count += 1
         output = self._calculate_output()
 
-        # Save output (only if output_files defined)
-        if self.output_files is not None:
+        # Save output (only if output_files defined and should_save is True)
+        if self.output_files is not None and self.should_save:
             self._save_output_and_verify(output)
 
         return output
