@@ -16,7 +16,7 @@ from amplifinder.steps import (
 )
 from amplifinder.steps.base import Step
 from amplifinder.config import Config
-from amplifinder.data_types import RecordTypedDF, Junction
+from amplifinder.data_types import RecordTypedDf, Junction
 from amplifinder.pipeline import Pipeline
 
 pytestmark = pytest.mark.integration

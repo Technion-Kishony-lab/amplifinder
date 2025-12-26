@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 
 from amplifinder.data_types import (
-    RecordTypedDF, TnJc2, CoveredTnJc2, Genome,
+    RecordTypedDf, TnJc2, CoveredTnJc2, Genome,
 )
 from amplifinder.steps.base import Step
 from amplifinder.tools.breseq import load_breseq_coverage
@@ -17,7 +17,7 @@ from amplifinder.utils.coverage import (
 )
 
 
-class CalcAmpliconCoverageStep(Step[RecordTypedDF[CoveredTnJc2]]):
+class CalcAmpliconCoverageStep(Step[RecordTypedDf[CoveredTnJc2]]):
     """Calculate amplicon coverage for TnJc2 candidates.
     
     Coverage calculation depends on run type:
@@ -27,7 +27,7 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDF[CoveredTnJc2]]):
 
     def __init__(
         self,
-        tnjc2: RecordTypedDF[TnJc2],
+        tnjc2: RecordTypedDf[TnJc2],
         genome: Genome,
         iso_breseq_path: Path,
         output_dir: Path,
@@ -73,7 +73,7 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDF[CoveredTnJc2]]):
         """True if ancestor comparison should be performed."""
         return self.anc_breseq_path is not None
 
-    def _calculate_output(self) -> RecordTypedDF[CoveredTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[CoveredTnJc2]:
         """Calculate coverage for each TnJc2 candidate."""
         # Load isolate coverage
         iso_cov = load_breseq_coverage(self.iso_breseq_path, self.genome.name)
@@ -94,7 +94,7 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDF[CoveredTnJc2]]):
             )
             covered_records.append(covered)
         
-        return RecordTypedDF.from_records(covered_records, CoveredTnJc2)
+        return RecordTypedDf.from_records(covered_records, CoveredTnJc2)
 
     def _calc_candidate_coverage(
         self,
@@ -169,11 +169,11 @@ class CalcAmpliconCoverageStep(Step[RecordTypedDF[CoveredTnJc2]]):
             copy_number_ratio=copy_number_ratio,
         )
 
-    def _save_output(self, output: RecordTypedDF[CoveredTnJc2]) -> None:
+    def _save_output(self, output: RecordTypedDf[CoveredTnJc2]) -> None:
         """Save covered TnJc2 to CSV."""
         output.to_csv(self.output_file)
 
-    def load_outputs(self) -> RecordTypedDF[CoveredTnJc2]:
+    def load_outputs(self) -> RecordTypedDf[CoveredTnJc2]:
         """Load covered TnJc2 from CSV."""
-        return RecordTypedDF.from_csv(self.output_file, CoveredTnJc2)
+        return RecordTypedDf.from_csv(self.output_file, CoveredTnJc2)
 

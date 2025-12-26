@@ -7,7 +7,7 @@ from typing import Tuple, Optional
 
 from amplifinder.config import Config, get_iso_run_dir, get_anc_run_dir, load_config_from_run, save_config
 from amplifinder.data_types import (
-    Genome, RecordTypedDF, RefTnLoc, RefTnJunction, SeqRefTnSide, Junction, TnJunction, TnJc2,
+    Genome, RecordTypedDf, RefTnLoc, RefTnJunction, SeqRefTnSide, Junction, TnJunction, TnJc2,
     CoveredTnJc2, ClassifiedTnJc2, CandidateTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.logger import info
@@ -40,7 +40,7 @@ class Pipeline:
 
     config: Config
 
-    def run(self) -> RecordTypedDF[AnalyzedTnJc2]:
+    def run(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Run full pipeline, return analyzed candidates."""
         iso_output, anc_output = self._initialize()
 
@@ -91,7 +91,7 @@ class Pipeline:
     
     def _copy_junctions_to_ancestor(
         self,
-        candidates: RecordTypedDF[CandidateTnJc2],
+        candidates: RecordTypedDf[CandidateTnJc2],
         iso_output: Path,
     ) -> None:
         """Copy junction files from isolate to ancestor folder (only if not already there).
@@ -140,7 +140,7 @@ class Pipeline:
         info(f"Reference: {genome.name} ({genome.length:,} bp)")
         return genome
 
-    def _locate_tns_in_reference(self, genome: Genome) -> RecordTypedDF[RefTnLoc]:
+    def _locate_tns_in_reference(self, genome: Genome) -> RecordTypedDf[RefTnLoc]:
         """Step 2: Locate TN elements using GenBank and/or ISfinder."""
         cfg = self.config
 
@@ -180,8 +180,8 @@ class Pipeline:
         return tn_loc
 
     def _create_reference_tn_junctions(
-        self, tn_loc: RecordTypedDF[RefTnLoc], genome: Genome, iso_output: Path
-    ) -> Tuple[RecordTypedDF[RefTnJunction], RecordTypedDF[SeqRefTnSide]]:
+        self, tn_loc: RecordTypedDf[RefTnLoc], genome: Genome, iso_output: Path
+    ) -> Tuple[RecordTypedDf[RefTnJunction], RecordTypedDf[SeqRefTnSide]]:
         """Step 3: Create reference junctions and TN end sequences."""
         cfg = self.config
 
@@ -223,17 +223,17 @@ class Pipeline:
     def _create_tnjc(
         self,
         breseq_jc: pd.DataFrame,
-        ref_tn_jc: RecordTypedDF[RefTnJunction],
-        ref_tn_end_seqs: RecordTypedDF[SeqRefTnSide],
+        ref_tn_jc: RecordTypedDf[RefTnJunction],
+        ref_tn_end_seqs: RecordTypedDf[SeqRefTnSide],
         genome: Genome,
         iso_output: Path,
-    ) -> RecordTypedDF[TnJunction]:
+    ) -> RecordTypedDf[TnJunction]:
         """Step 5: Match junctions to TN elements."""
         cfg = self.config
 
         # Combine breseq junctions with reference TN junctions
         all_jc_df = pd.concat([breseq_jc, ref_tn_jc.df], ignore_index=True)
-        all_jc = RecordTypedDF(all_jc_df, Junction)
+        all_jc = RecordTypedDf(all_jc_df, Junction)
 
         tnjc = CreateTnJcStep(
             jc_df=all_jc,
@@ -248,10 +248,10 @@ class Pipeline:
 
     def _create_tnjc2(
         self,
-        tnjc: RecordTypedDF[TnJunction],
+        tnjc: RecordTypedDf[TnJunction],
         genome: Genome,
         iso_output: Path,
-    ) -> RecordTypedDF[TnJc2]:
+    ) -> RecordTypedDf[TnJc2]:
         """Step 6: Combine junction pairs (TnJc2)."""
         tnjc2 = CreateTnJc2Step(
             tnjc=tnjc,
@@ -263,10 +263,10 @@ class Pipeline:
 
     def _calc_amplicon_coverage(
         self,
-        tnjc2: RecordTypedDF[TnJc2],
+        tnjc2: RecordTypedDf[TnJc2],
         genome: Genome,
         iso_output: Path,
-    ) -> RecordTypedDF[CoveredTnJc2]:
+    ) -> RecordTypedDf[CoveredTnJc2]:
         """Step 7: Calculate amplicon coverage."""
         cfg = self.config
         
@@ -305,10 +305,10 @@ class Pipeline:
     
     def _classify_structure(
         self,
-        covered: RecordTypedDF[CoveredTnJc2],
-        tn_loc: RecordTypedDF[RefTnLoc],
+        covered: RecordTypedDf[CoveredTnJc2],
+        tn_loc: RecordTypedDf[RefTnLoc],
         iso_output: Path,
-    ) -> RecordTypedDF[ClassifiedTnJc2]:
+    ) -> RecordTypedDf[ClassifiedTnJc2]:
         """Step 8: Classify junction pair structures."""
         classified = ClassifyStructureStep(
             covered_tnjc2=covered,
@@ -321,9 +321,9 @@ class Pipeline:
     
     def _filter_candidates(
         self,
-        classified: RecordTypedDF[ClassifiedTnJc2],
+        classified: RecordTypedDf[ClassifiedTnJc2],
         iso_output: Path,
-    ) -> RecordTypedDF[CandidateTnJc2]:
+    ) -> RecordTypedDf[CandidateTnJc2]:
         """Step 9: Filter candidates by amplicon length."""
         candidates = FilterCandidatesStep(
             classified_tnjc2=classified,
@@ -336,9 +336,9 @@ class Pipeline:
     
     def _create_synthetic_junctions(
         self,
-        candidates: RecordTypedDF[CandidateTnJc2],
+        candidates: RecordTypedDf[CandidateTnJc2],
         genome: Genome,
-        tn_loc: RecordTypedDF[RefTnLoc],
+        tn_loc: RecordTypedDf[RefTnLoc],
         iso_output: Path,
     ) -> None:
         """Step 10: Create synthetic junction sequences."""
@@ -359,7 +359,7 @@ class Pipeline:
     
     def _align_reads(
         self,
-        candidates: RecordTypedDF[CandidateTnJc2],
+        candidates: RecordTypedDf[CandidateTnJc2],
         iso_output: Path,
     ) -> None:
         """Step 11: Align reads to synthetic junctions."""
@@ -397,13 +397,13 @@ class Pipeline:
     
     def _analyze_alignments(
         self,
-        candidates: RecordTypedDF[CandidateTnJc2],
+        candidates: RecordTypedDf[CandidateTnJc2],
         iso_output: Path,
         anc_output: Optional[Path],
-    ) -> RecordTypedDF[AnalyzedTnJc2]:
+    ) -> RecordTypedDf[AnalyzedTnJc2]:
         """Step 12: Analyze read alignments."""
         if len(candidates) == 0:
-            return RecordTypedDF.empty(AnalyzedTnJc2)
+            return RecordTypedDf.empty(AnalyzedTnJc2)
         
         analyzed = AnalyzeAlignmentsStep(
             candidates=candidates,
@@ -419,9 +419,9 @@ class Pipeline:
     
     def _classify_candidates(
         self,
-        analyzed: RecordTypedDF[AnalyzedTnJc2],
+        analyzed: RecordTypedDf[AnalyzedTnJc2],
         iso_output: Path,
-    ) -> RecordTypedDF[AnalyzedTnJc2]:
+    ) -> RecordTypedDf[AnalyzedTnJc2]:
         """Step 13: Final classification of candidates."""
         if len(analyzed) == 0:
             return analyzed
@@ -437,7 +437,7 @@ class Pipeline:
     
     def _export(
         self,
-        analyzed: RecordTypedDF[AnalyzedTnJc2],
+        analyzed: RecordTypedDf[AnalyzedTnJc2],
         iso_output: Path,
     ) -> None:
         """Step 14: Export results to CSV."""
@@ -451,6 +451,6 @@ class Pipeline:
         info("Exported results to CSV")
 
 
-def run_pipeline(config: Config) -> RecordTypedDF[AnalyzedTnJc2]:
+def run_pipeline(config: Config) -> RecordTypedDf[AnalyzedTnJc2]:
     """Run the AmpliFinder pipeline."""
     return Pipeline(config).run()

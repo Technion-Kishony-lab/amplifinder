@@ -11,7 +11,7 @@ try:
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
 
-from amplifinder.data_types import AnalyzedTnJc2, RecordTypedDF
+from amplifinder.data_types import AnalyzedTnJc2, RecordTypedDf
 from amplifinder.config import load_config_from_run
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.utils.coverage import get_coverage_in_range
@@ -139,8 +139,8 @@ def visualize_candidates(
     if not analyzed_file.exists():
         raise FileNotFoundError(f"Analyzed candidates file not found in {run_dir}")
     
-    from amplifinder.data_types import RecordTypedDF
-    analyzed = RecordTypedDF.from_csv(analyzed_file, AnalyzedTnJc2)
+    from amplifinder.data_types import RecordTypedDf
+    analyzed = RecordTypedDf.from_csv(analyzed_file, AnalyzedTnJc2)
     
     if len(analyzed) == 0:
         warning("No candidates to visualize")
@@ -196,7 +196,7 @@ def visualize_candidates(
 
 
 def _interactive_visualization(
-    candidates: RecordTypedDF[AnalyzedTnJc2],
+    candidates: RecordTypedDf[AnalyzedTnJc2],
     iso_coverage: np.ndarray,
     anc_coverage: Optional[np.ndarray],
     genome_length: int,

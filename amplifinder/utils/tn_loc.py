@@ -7,11 +7,11 @@ import pandas as pd
 from amplifinder.logger import warning
 
 if TYPE_CHECKING:
-    from amplifinder.data_types import RecordTypedDF
+    from amplifinder.data_types import RecordTypedDf
 
 
 def compare_tn_locations(
-    tn1: Union[pd.DataFrame, "RecordTypedDF"], tn2: Union[pd.DataFrame, "RecordTypedDF"],
+    tn1: Union[pd.DataFrame, "RecordTypedDf"], tn2: Union[pd.DataFrame, "RecordTypedDf"],
     name1: str = "GenBank", name2: str = "ISfinder",
     tolerance: int = 50,
 ) -> None:

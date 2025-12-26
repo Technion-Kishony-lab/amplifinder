@@ -4,7 +4,7 @@ import pytest
 from enum import Enum
 from typing import List, NamedTuple, Tuple
 
-from amplifinder.data_types import RecordTypedDF
+from amplifinder.data_types import RecordTypedDf
 from amplifinder.data_types.records import Record
 
 
@@ -54,11 +54,11 @@ def test_save_load_csv(sample_records, tmp_path):
     csv_path = tmp_path / "test.csv"
 
     # Save
-    df = RecordTypedDF.from_records(sample_records, SampleRecord)
+    df = RecordTypedDf.from_records(sample_records, SampleRecord)
     df.to_csv(csv_path)
 
     # Load
-    df2 = RecordTypedDF.from_csv(csv_path, SampleRecord)
+    df2 = RecordTypedDf.from_csv(csv_path, SampleRecord)
 
     # Check
     assert len(df2) == 2
@@ -91,11 +91,11 @@ def test_save_load_namedtuple_with_enum(tmp_path):
     ]
 
     # Save
-    df = RecordTypedDF.from_records(records, RecordWithMatches)
+    df = RecordTypedDf.from_records(records, RecordWithMatches)
     df.to_csv(csv_path)
 
     # Load
-    df2 = RecordTypedDF.from_csv(csv_path, RecordWithMatches)
+    df2 = RecordTypedDf.from_csv(csv_path, RecordWithMatches)
 
     # Check
     assert len(df2) == 2

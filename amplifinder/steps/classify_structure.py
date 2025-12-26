@@ -4,16 +4,16 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 
 from amplifinder.data_types import (
-    RecordTypedDF, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc,
+    RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc,
 )
 from amplifinder.steps.base import Step
 from amplifinder.logger import info
 
 
 def classify_structure(
-    covered_tnjc2: RecordTypedDF[CoveredTnJc2],
+    covered_tnjc2: RecordTypedDf[CoveredTnJc2],
     min_amplicon_length: int = 30,
-) -> RecordTypedDF[ClassifiedTnJc2]:
+) -> RecordTypedDf[ClassifiedTnJc2]:
     """Classify junction pairs based on TN relationships.
     
     Based on MATLAB classify_ISJC2.m
@@ -37,7 +37,7 @@ def classify_structure(
         Classified TnJc2 records
     """
     if len(covered_tnjc2) == 0:
-        return RecordTypedDF.empty(ClassifiedTnJc2)
+        return RecordTypedDf.empty(ClassifiedTnJc2)
     
     # Step 1: Identify reference and transposition pairs
     is_reference = []
@@ -178,10 +178,10 @@ def classify_structure(
         )
         classified_records.append(classified)
     
-    return RecordTypedDF.from_records(classified_records, ClassifiedTnJc2)
+    return RecordTypedDf.from_records(classified_records, ClassifiedTnJc2)
 
 
-class ClassifyStructureStep(Step[RecordTypedDF[ClassifiedTnJc2]]):
+class ClassifyStructureStep(Step[RecordTypedDf[ClassifiedTnJc2]]):
     """Classify junction pair structures based on TN relationships.
     
     This step analyzes how junction pairs relate to reference TN elements
@@ -195,8 +195,8 @@ class ClassifyStructureStep(Step[RecordTypedDF[ClassifiedTnJc2]]):
 
     def __init__(
         self,
-        covered_tnjc2: RecordTypedDF[CoveredTnJc2],
-        tn_locs: RecordTypedDF[RefTnLoc],
+        covered_tnjc2: RecordTypedDf[CoveredTnJc2],
+        tn_locs: RecordTypedDf[RefTnLoc],
         output_dir: Path,
         min_amplicon_length: int = 30,
         force: Optional[bool] = None,
@@ -214,7 +214,7 @@ class ClassifyStructureStep(Step[RecordTypedDF[ClassifiedTnJc2]]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDF[ClassifiedTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[ClassifiedTnJc2]:
         """Classify junction pairs."""
         classified = classify_structure(
             self.covered_tnjc2,
@@ -228,10 +228,10 @@ class ClassifyStructureStep(Step[RecordTypedDF[ClassifiedTnJc2]]):
         
         return classified
 
-    def _save_output(self, output: RecordTypedDF[ClassifiedTnJc2]) -> None:
+    def _save_output(self, output: RecordTypedDf[ClassifiedTnJc2]) -> None:
         """Save classified results to CSV."""
         output.to_csv(self.output_file)
 
-    def load_outputs(self) -> RecordTypedDF[ClassifiedTnJc2]:
+    def load_outputs(self) -> RecordTypedDf[ClassifiedTnJc2]:
         """Load classified results from CSV."""
-        return RecordTypedDF.from_csv(self.output_file, ClassifiedTnJc2)
+        return RecordTypedDf.from_csv(self.output_file, ClassifiedTnJc2)

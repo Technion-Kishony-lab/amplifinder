@@ -7,11 +7,11 @@ from amplifinder.steps.base import Step
 from amplifinder.utils.fasta import reverse_complement
 from amplifinder.steps.io_naming import default_path
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, Junction, SeqRefTnSide, RefTnSide, TnJunction, Orientation
+from amplifinder.data_types import RecordTypedDf, Junction, SeqRefTnSide, RefTnSide, TnJunction, Orientation
 from amplifinder.data_types.genome import Genome
 
 
-class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
+class CreateTnJcStep(Step[RecordTypedDf[TnJunction]]):
     """Match junctions to TN elements by sequence comparison.
 
     For each junction, extracts flanking sequences and compares them to
@@ -23,8 +23,8 @@ class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
 
     def __init__(
         self,
-        jc_df: RecordTypedDF[Junction],
-        ref_tn_end_seqs: RecordTypedDF[SeqRefTnSide],
+        jc_df: RecordTypedDf[Junction],
+        ref_tn_end_seqs: RecordTypedDf[SeqRefTnSide],
         genome: Genome,
         output_dir: Path,
         max_dist_to_tn: int,
@@ -57,7 +57,7 @@ class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDF[TnJunction]:
+    def _calculate_output(self) -> RecordTypedDf[TnJunction]:
         """Match junctions to TN elements."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -90,13 +90,13 @@ class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
 
             tnjc_records.append(TnJunction.from_other(jc, ref_tn_sides=matches, switched=switched))
 
-        tnjc = RecordTypedDF.from_records(tnjc_records, TnJunction)
+        tnjc = RecordTypedDf.from_records(tnjc_records, TnJunction)
         tnjc = tnjc.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
 
         info(f"Found {len(tnjc)} TN-associated junctions (TnJc)")
         return tnjc
 
-    def _save_output(self, output: RecordTypedDF[TnJunction]) -> None:
+    def _save_output(self, output: RecordTypedDf[TnJunction]) -> None:
         """Save TnJc to CSV."""
         output.to_csv(self.output_file)
 
@@ -153,6 +153,6 @@ class CreateTnJcStep(Step[RecordTypedDF[TnJunction]]):
 
         return matches
 
-    def load_outputs(self) -> RecordTypedDF[TnJunction]:
+    def load_outputs(self) -> RecordTypedDf[TnJunction]:
         """Load TnJc from output file."""
-        return RecordTypedDF.from_csv(self.output_file, TnJunction)
+        return RecordTypedDf.from_csv(self.output_file, TnJunction)

@@ -3,7 +3,7 @@
 import pytest
 
 from amplifinder.steps import CreateRefTnJcStep, CreateRefTnEndSeqsStep
-from amplifinder.data_types import RecordTypedDF, Side
+from amplifinder.data_types import RecordTypedDf, Side
 
 
 @pytest.fixture
@@ -23,7 +23,7 @@ def test_creates_junction_records(ref_jc_step):
     """Should create 2 junctions per TN (left + right)."""
     ref_jc = ref_jc_step.run()
 
-    assert isinstance(ref_jc, RecordTypedDF)
+    assert isinstance(ref_jc, RecordTypedDf)
     assert len(ref_jc.df) == 4  # 2 TNs * 2 sides
     assert set(jc.ref_tn_side.side for jc in ref_jc) == {Side.LEFT, Side.RIGHT}
 
@@ -70,7 +70,7 @@ def test_creates_end_sequences(end_seqs_step):
     """Should create end sequences for each junction."""
     end_seqs = end_seqs_step.run()
 
-    assert isinstance(end_seqs, RecordTypedDF)
+    assert isinstance(end_seqs, RecordTypedDf)
     assert len(end_seqs.df) == 4  # 4 junctions
     assert all(len(seq.seq_fwd) > 0 for seq in end_seqs)
     assert all(len(seq.seq_rc) > 0 for seq in end_seqs)

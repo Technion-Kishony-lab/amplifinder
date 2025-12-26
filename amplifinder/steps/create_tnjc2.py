@@ -6,11 +6,11 @@ from typing import Optional, List, Tuple
 from amplifinder.steps.base import Step
 from amplifinder.steps.io_naming import default_path
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, TnJunction, TnJc2, RefTnSide, Side, Orientation
+from amplifinder.data_types import RecordTypedDf, TnJunction, TnJc2, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
 
 
-class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
+class CreateTnJc2Step(Step[RecordTypedDf[TnJc2]]):
     """Combine TN junctions into pairs (candidate amplicons).
 
     For each pair of junctions, checks:
@@ -22,7 +22,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
 
     def __init__(
         self,
-        tnjc: RecordTypedDF[TnJunction],
+        tnjc: RecordTypedDf[TnJunction],
         genome: Genome,
         output_dir: Path,
         force: Optional[bool] = None,
@@ -54,7 +54,7 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDF[TnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[TnJc2]:
         """Combine junction pairs."""
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -62,12 +62,12 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
         junctions = list(self.tnjc)
         pairs = self._pair_junctions(junctions)
 
-        tnjc2 = RecordTypedDF.from_records(pairs, TnJc2)
+        tnjc2 = RecordTypedDf.from_records(pairs, TnJc2)
 
         info(f"Found {len(tnjc2)} junction pairs (TnJc2)")
         return tnjc2
 
-    def _save_output(self, output: RecordTypedDF[TnJc2]) -> None:
+    def _save_output(self, output: RecordTypedDf[TnJc2]) -> None:
         """Save TnJc2 to CSV."""
         output.to_csv(self.output_file)
 
@@ -221,6 +221,6 @@ class CreateTnJc2Step(Step[RecordTypedDF[TnJc2]]):
         comp = int(complementary_length) if complementary_length != float("inf") else -1
         return amp, comp
 
-    def load_outputs(self) -> RecordTypedDF[TnJc2]:
+    def load_outputs(self) -> RecordTypedDf[TnJc2]:
         """Load TnJc2 from output file."""
-        return RecordTypedDF.from_csv(self.output_file, TnJc2)
+        return RecordTypedDf.from_csv(self.output_file, TnJc2)

@@ -3,7 +3,7 @@
 import pytest
 
 from amplifinder.steps import CreateRefTnJcStep, CreateRefTnEndSeqsStep, CreateTnJcStep
-from amplifinder.data_types import RecordTypedDF, Junction
+from amplifinder.data_types import RecordTypedDf, Junction
 
 
 @pytest.fixture
@@ -51,7 +51,7 @@ def mock_junctions(locate_tns_step, tiny_genome, tmp_output):
         )
         for jc in ref_jc
     ]
-    return RecordTypedDF.from_records(junctions, Junction)
+    return RecordTypedDf.from_records(junctions, Junction)
 
 
 @pytest.fixture
@@ -71,7 +71,7 @@ def test_runs_without_error(tnjc_step):
     """Should run and produce output file."""
     tnjc = tnjc_step.run()
 
-    assert isinstance(tnjc, RecordTypedDF)
+    assert isinstance(tnjc, RecordTypedDf)
     assert tnjc_step.output_file.exists()
 
 

@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from amplifinder.steps import FilterCandidatesStep
 from amplifinder.data_types import (
-    RecordTypedDF, ClassifiedTnJc2, RawEvent, Orientation,
+    RecordTypedDf, ClassifiedTnJc2, RawEvent, Orientation,
 )
 
 
@@ -46,7 +46,7 @@ def sample_classified_tnjc2(tmp_path):
             shared_tn_ids=[2], chosen_tn_id=2,
         ),
     ]
-    return RecordTypedDF.from_records(records, ClassifiedTnJc2)
+    return RecordTypedDf.from_records(records, ClassifiedTnJc2)
 
 
 def test_filters_by_length(sample_classified_tnjc2, tmp_path):
