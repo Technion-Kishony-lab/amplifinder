@@ -4,9 +4,9 @@ from pathlib import Path
 from typing import Optional, List
 
 from amplifinder.data_types import (
-    RecordTypedDF, CandidateTnJc2, AnalyzedTnJc2, RawEvent, EventModifier,
+    RecordTypedDf, CandidateTnJc2, AnalyzedTnJc2, RawEvent, EventModifier,
 )
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.utils.bam import get_junction_coverage, JunctionReadCounts
 from amplifinder.logger import info
 
@@ -88,7 +88,7 @@ def classify_event(
     return event, modifiers
 
 
-class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
+class AnalyzeAlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
     """Analyze read alignments to classify junction architectures.
     
     Analysis depends on run type:
@@ -98,7 +98,7 @@ class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
 
     def __init__(
         self,
-        candidates: RecordTypedDF[CandidateTnJc2],
+        candidates: RecordTypedDf[CandidateTnJc2],
         output_dir: Path,
         anc_output_dir: Optional[Path] = None,
         read_length: int = 150,
@@ -115,8 +115,6 @@ class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
         self.min_jct_cov = min_jct_cov
         self.has_ancestor = has_ancestor
         
-        self.output_file = output_dir / "tn_jc2_analyzed.csv"
-        
         # Input files are the BAM files from alignment step
         input_files = []
         for cand in candidates:
@@ -130,12 +128,12 @@ class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
                 input_files.append(anc_analysis_dir / "iso.sorted.bam")
         
         super().__init__(
+            output_dir=output_dir,
             input_files=input_files,
-            output_files=[self.output_file],
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDF[AnalyzedTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Analyze alignments for each candidate."""
         junction_length = self.read_length * 2
         
@@ -191,13 +189,4 @@ class AnalyzeAlignmentsStep(Step[RecordTypedDF[AnalyzedTnJc2]]):
             )
             analyzed_records.append(analyzed)
         
-        return RecordTypedDF.from_records(analyzed_records, AnalyzedTnJc2)
-
-    def _save_output(self, output: RecordTypedDF[AnalyzedTnJc2]) -> None:
-        """Save analyzed results to CSV."""
-        output.to_csv(self.output_file)
-
-    def load_outputs(self) -> RecordTypedDF[AnalyzedTnJc2]:
-        """Load analyzed results from CSV."""
-        return RecordTypedDF.from_csv(self.output_file, AnalyzedTnJc2)
-
+        return RecordTypedDf.from_records(analyzed_records, AnalyzedTnJc2)

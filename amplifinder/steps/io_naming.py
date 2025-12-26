@@ -3,7 +3,10 @@
 from pathlib import Path
 from typing import Dict, Type
 
-from amplifinder.data_types import RefTnJunction, TnJunction, TnJc2
+from amplifinder.data_types import (
+    RefTnJunction, TnJunction, TnJc2, CoveredTnJc2, ClassifiedTnJc2,
+    CandidateTnJc2, AnalyzedTnJc2,
+)
 from amplifinder.data_types.records import Record
 
 
@@ -11,6 +14,10 @@ DEFAULT_FILENAMES: Dict[Type[Record], str] = {
     RefTnJunction: "ref_tn_jc.csv",
     TnJunction: "tn_jc.csv",
     TnJc2: "tn_jc2.csv",
+    CoveredTnJc2: "tn_jc2_covered.csv",
+    ClassifiedTnJc2: "tn_jc2_classified.csv",
+    CandidateTnJc2: "tn_jc2_candidates.csv",
+    AnalyzedTnJc2: "tn_jc2_analyzed.csv",
 }
 
 

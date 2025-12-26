@@ -2,11 +2,14 @@
 
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Generic, List, Optional, TypeVar
+from typing import Generic, List, Optional, TypeVar, get_args, get_origin, Type
 import shutil
 
 from amplifinder.logger import info, debug
 from amplifinder.utils.file_lock import locked_operation, get_step_lock_path
+from amplifinder.data_types.typed_df import RecordTypedDf
+from amplifinder.data_types.records import Record
+from amplifinder.steps.io_naming import default_path
 
 T = TypeVar("T")
 
@@ -36,6 +39,8 @@ class Step(ABC, Generic[T]):
     global_force: bool = False
     # Global verbose flag (applies to all steps)
     global_verbose: bool = False
+    # Should save output flag (False = do not save output)
+    should_save: bool = True
 
     def __init__(
         self,
@@ -155,8 +160,8 @@ class Step(ABC, Generic[T]):
         self.run_count += 1
         output = self._calculate_output()
 
-        # Save output (only if output_files defined)
-        if self.output_files is not None:
+        # Save output (only if output_files defined and should_save is True)
+        if self.output_files is not None and self.should_save:
             self._save_output_and_verify(output)
 
         return output
@@ -184,3 +189,86 @@ class Step(ABC, Generic[T]):
     def set_global_verbose(cls, verbose: bool) -> None:
         """Set global verbose flag for all steps."""
         cls.global_verbose = verbose
+
+
+R = TypeVar("R", bound=Record)
+
+
+class RecordTypedDfStep(Step[RecordTypedDf[R]], Generic[R]):
+    """Base class for steps that output RecordTypedDf to CSV.
+    
+    Automatically handles:
+    - Output file path from io_naming.default_path()
+    - CSV save/load using RecordTypedDf
+    
+    Subclasses should:
+    - Set class var `record_cls` (or it will be auto-deduced from typing)
+    - Override `_calculate_output()` to return RecordTypedDf[R]
+    """
+    
+    record_cls: Optional[Type[R]] = None  # Can be set explicitly or auto-deduced
+    
+    def __init__(
+        self,
+        output_dir: Optional[Path] = None,
+        output_file: Optional[Path] = None,
+        input_files: Optional[List[Path]] = None,
+        force: Optional[bool] = None,
+    ):
+        """Initialize step.
+        
+        Args:
+            output_dir: Directory for output CSV file (uses default filename from io_naming)
+            output_file: Full path to output CSV file (overrides output_dir)
+            input_files: Required input files/dirs
+            force: Step-specific force flag
+        """
+        if output_dir is not None and output_file is not None:
+            raise ValueError("Cannot specify both output_dir and output_file")
+        if output_dir is None and output_file is None:
+            raise ValueError("Must specify either output_dir or output_file")
+        
+        if output_file is not None:
+            # Use provided output_file directly
+            self.output_file = Path(output_file)
+            self.output_dir = self.output_file.parent
+        else:
+            # Use output_dir with default filename
+            self.output_dir = Path(output_dir)
+            record_type = self._get_record_cls()
+            self.output_file = default_path(self.output_dir, record_type)
+        
+        super().__init__(
+            input_files=input_files,
+            output_files=[self.output_file],
+            force=force,
+        )
+    
+    @classmethod
+    def _get_record_cls(cls) -> Type[R]:
+        """Get record class from class var or auto-deduce from typing."""
+        # Check class var first
+        if cls.record_cls is not None:
+            return cls.record_cls
+        
+        # Auto-deduce from RecordTypedDfStep[R] typing
+        # Look for RecordTypedDfStep[...] in __orig_bases__
+        if hasattr(cls, '__orig_bases__'):
+            for base in cls.__orig_bases__:
+                origin = get_origin(base)
+                # Check if it's RecordTypedDfStep[...]
+                if origin is RecordTypedDfStep or (hasattr(RecordTypedDfStep, '__origin__') and origin == RecordTypedDfStep.__origin__):
+                    args = get_args(base)
+                    if args:
+                        return args[0]  # R
+        
+        raise ValueError(f"{cls.__name__}: cannot deduce record_cls. Set record_cls class var or use RecordTypedDfStep[RecordType] typing.")
+    
+    def _save_output(self, output: RecordTypedDf[R]) -> None:
+        """Save RecordTypedDf to CSV."""
+        output.to_csv(self.output_file)
+    
+    def load_outputs(self) -> RecordTypedDf[R]:
+        """Load RecordTypedDf from CSV."""
+        record_type = self._get_record_cls()
+        return RecordTypedDf.from_csv(self.output_file, record_type)

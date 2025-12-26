@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDF, BlastHit
+from amplifinder.data_types import RecordTypedDf, BlastHit
 from amplifinder.env import BLAST_PATH
 
 
@@ -68,7 +68,7 @@ def run_blastn(
     subprocess.run(cmd, check=True)
 
 
-def parse_blast_csv(path: Path) -> RecordTypedDF[BlastHit]:
+def parse_blast_csv(path: Path) -> RecordTypedDf[BlastHit]:
     """Parse BLAST CSV output (format 10).
 
     Args:
@@ -77,4 +77,4 @@ def parse_blast_csv(path: Path) -> RecordTypedDF[BlastHit]:
     Returns:
         RecordDF with BLAST results, empty with correct schema if file missing/empty
     """
-    return RecordTypedDF.from_csv(path, BlastHit, headers=False)
+    return RecordTypedDf.from_csv(path, BlastHit, headers=False)

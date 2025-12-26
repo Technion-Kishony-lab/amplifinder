@@ -4,13 +4,13 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import (
-    RecordTypedDF, ClassifiedTnJc2, CandidateTnJc2,
+    RecordTypedDf, ClassifiedTnJc2, CandidateTnJc2,
 )
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
 
 
-class FilterCandidatesStep(Step[RecordTypedDF[CandidateTnJc2]]):
+class FilterCandidatesStep(RecordTypedDfStep[CandidateTnJc2]):
     """Filter candidates by amplicon length.
     
     Filters out candidates that are:
@@ -22,26 +22,23 @@ class FilterCandidatesStep(Step[RecordTypedDF[CandidateTnJc2]]):
 
     def __init__(
         self,
-        classified_tnjc2: RecordTypedDF[ClassifiedTnJc2],
+        classified_tnjc2: RecordTypedDf[ClassifiedTnJc2],
         output_dir: Path,
         min_amplicon_length: int = 30,
         max_amplicon_length: int = 1_000_000,
         force: Optional[bool] = None,
     ):
         self.classified_tnjc2 = classified_tnjc2
-        self.output_dir = Path(output_dir)
         self.min_amplicon_length = min_amplicon_length
         self.max_amplicon_length = max_amplicon_length
         
-        self.output_file = output_dir / "tn_jc2_candidates.csv"
-        
         super().__init__(
+            output_dir=output_dir,
             input_files=[],
-            output_files=[self.output_file],
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDF[CandidateTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[CandidateTnJc2]:
         """Filter candidates by amplicon length."""
         candidate_records = []
         
@@ -69,15 +66,7 @@ class FilterCandidatesStep(Step[RecordTypedDF[CandidateTnJc2]]):
             )
             candidate_records.append(candidate)
         
-        result = RecordTypedDF.from_records(candidate_records, CandidateTnJc2)
+        result = RecordTypedDf.from_records(candidate_records, CandidateTnJc2)
         info(f"Filtered to {len(result)} candidates (from {len(self.classified_tnjc2)} classified)")
         
         return result
-
-    def _save_output(self, output: RecordTypedDF[CandidateTnJc2]) -> None:
-        """Save candidates to CSV."""
-        output.to_csv(self.output_file)
-
-    def load_outputs(self) -> RecordTypedDF[CandidateTnJc2]:
-        """Load candidates from CSV."""
-        return RecordTypedDF.from_csv(self.output_file, CandidateTnJc2)
