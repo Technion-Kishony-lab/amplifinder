@@ -137,11 +137,6 @@ class Record(BaseModel):
         return Schema(columns=tuple(columns), allow_extra=cls.ALLOW_EXTRA)
 
     @classmethod
-    def from_dict(cls: type[T], data: Dict[str, Any]) -> T:
-        """Create instance from dict (alias for model_validate)."""
-        return cls.model_validate(data)
-
-    @classmethod
     def from_other(cls: type[T], obj: "Record", **kwargs) -> T:
         """Create instance from another record, copying shared fields."""
         shared = set(cls.model_fields.keys()) & set(type(obj).model_fields.keys())
