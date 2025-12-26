@@ -3,13 +3,13 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.data_types import RecordTypedDf, CandidateTnJc2
+from amplifinder.data_types import RecordTypedDf, FilteredTnJc2
 from amplifinder.steps.base import Step
 from amplifinder.tools.bowtie2 import align_reads_to_fasta
 from amplifinder.logger import info
 
 
-class AlignReadsToJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
+class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
     """Align reads to synthetic junction sequences.
     
     Alignment depends on run type:
@@ -19,7 +19,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
 
     def __init__(
         self,
-        candidates: RecordTypedDf[CandidateTnJc2],
+        candidates: RecordTypedDf[FilteredTnJc2],
         output_dir: Path,
         iso_fastq_path: Path,
         anc_fastq_path: Optional[Path] = None,
@@ -62,7 +62,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
         """True if ancestor reads should be aligned."""
         return self.anc_fastq_path is not None
 
-    def _calculate_output(self) -> RecordTypedDf[CandidateTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[FilteredTnJc2]:
         """Align reads to synthetic junctions for each candidate."""
         for cand in self.candidates:
             analysis_dir = self.output_dir / cand.analysis_dir
@@ -97,11 +97,11 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
         
         return self.candidates
 
-    def _save_output(self, output: RecordTypedDf[CandidateTnJc2]) -> None:
+    def _save_output(self, output: RecordTypedDf[FilteredTnJc2]) -> None:
         """BAM files already created in _calculate_output."""
         pass
 
-    def load_outputs(self) -> RecordTypedDf[CandidateTnJc2]:
+    def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
         """Return candidates (BAM files are side effects)."""
         return self.candidates
 

@@ -4,13 +4,13 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import (
-    RecordTypedDf, ClassifiedTnJc2, CandidateTnJc2,
+    RecordTypedDf, ClassifiedTnJc2, FilteredTnJc2,
 )
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
 
 
-class FilterCandidatesStep(RecordTypedDfStep[CandidateTnJc2]):
+class FilterCandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
     """Filter candidates by amplicon length.
     
     Filters out candidates that are:
@@ -38,7 +38,7 @@ class FilterCandidatesStep(RecordTypedDfStep[CandidateTnJc2]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDf[CandidateTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[FilteredTnJc2]:
         """Filter candidates by amplicon length."""
         candidate_records = []
         
@@ -60,13 +60,13 @@ class FilterCandidatesStep(RecordTypedDfStep[CandidateTnJc2]):
             analysis_dir = f"jc_{start}_{end}_{tn_id:03d}_L{read_len}"
             
             # Create candidate record
-            candidate = CandidateTnJc2.from_other(
+            candidate = FilteredTnJc2.from_other(
                 classified,
                 analysis_dir=analysis_dir,
             )
             candidate_records.append(candidate)
         
-        result = RecordTypedDf.from_records(candidate_records, CandidateTnJc2)
+        result = RecordTypedDf.from_records(candidate_records, FilteredTnJc2)
         info(f"Filtered to {len(result)} candidates (from {len(self.classified_tnjc2)} classified)")
         
         return result

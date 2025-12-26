@@ -5,12 +5,12 @@ from typing import Optional, List, Tuple
 
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDf, TnJunction, TnJc2, RefTnSide, Side, Orientation
+from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
 from amplifinder.utils.tools import ensure_dir
 
 
-class CreateTnJc2Step(RecordTypedDfStep[TnJc2]):
+class CreateTnJc2Step(RecordTypedDfStep[RawTnJc2]):
     """Combine TN junctions into pairs (candidate amplicons).
 
     For each pair of junctions, checks:
@@ -51,7 +51,7 @@ class CreateTnJc2Step(RecordTypedDfStep[TnJc2]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDf[TnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[RawTnJc2]:
         """Combine junction pairs."""
         ensure_dir(self.output_dir)
 
@@ -59,12 +59,12 @@ class CreateTnJc2Step(RecordTypedDfStep[TnJc2]):
         junctions = list(self.tnjc)
         pairs = self._pair_junctions(junctions)
 
-        tnjc2 = RecordTypedDf.from_records(pairs, TnJc2)
+        tnjc2 = RecordTypedDf.from_records(pairs, RawTnJc2)
 
-        info(f"Found {len(tnjc2)} junction pairs (TnJc2)")
+        info(f"Found {len(tnjc2)} junction pairs (RawTnJc2)")
         return tnjc2
 
-    def _pair_junctions(self, junctions: List[TnJunction]) -> List[TnJc2]:
+    def _pair_junctions(self, junctions: List[TnJunction]) -> List[RawTnJc2]:
         """Find all valid junction pairs.
 
         Based on MATLAB combine_ISJC_pairs.m
@@ -127,7 +127,7 @@ class CreateTnJc2Step(RecordTypedDfStep[TnJc2]):
         jc_i: TnJunction,
         jc_j: TnJunction,
         matching_tns: List[Tuple[int, Side]],
-    ) -> TnJc2:
+    ) -> RawTnJc2:
         """Create a junction pair record.
 
         Normalizes so that L (left) junction has lower chromosome position.
@@ -153,7 +153,7 @@ class CreateTnJc2Step(RecordTypedDfStep[TnJc2]):
             jc_L.pos2, jc_R.pos2, jc_L.scaf2, span_origin
         )
 
-        return TnJc2(
+        return RawTnJc2(
             jc_num_L=jc_L.num,
             jc_num_R=jc_R.num,
             scaf_chr=jc_L.scaf2,

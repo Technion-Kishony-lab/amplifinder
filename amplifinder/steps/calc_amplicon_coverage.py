@@ -6,7 +6,7 @@ from typing import Optional
 import numpy as np
 
 from amplifinder.data_types import (
-    RecordTypedDf, TnJc2, CoveredTnJc2, Genome,
+    RecordTypedDf, RawTnJc2, CoveredTnJc2, Genome,
 )
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.tools.breseq import load_breseq_coverage
@@ -27,7 +27,7 @@ class CalcAmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
 
     def __init__(
         self,
-        tnjc2: RecordTypedDf[TnJc2],
+        tnjc2: RecordTypedDf[RawTnJc2],
         genome: Genome,
         iso_breseq_path: Path,
         output_dir: Path,
@@ -95,7 +95,7 @@ class CalcAmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
 
     def _calc_candidate_coverage(
         self,
-        tnjc: TnJc2,
+        tnjc: RawTnJc2,
         iso_cov: np.ndarray,
         iso_genome_median: float,
         anc_cov: Optional[np.ndarray],
@@ -153,7 +153,7 @@ class CalcAmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                     ncp_limit1=self.ncp_limit1, ncp_limit2=self.ncp_limit2, ncp_n=self.ncp_n,
                 )
         
-        # Build CoveredTnJc2 from TnJc2 + new coverage fields
+        # Build CoveredTnJc2 from RawTnJc2 + new coverage fields
         return CoveredTnJc2.from_other(
             tnjc,
             ref_name=self.ref_name,
