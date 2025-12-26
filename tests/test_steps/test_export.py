@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from amplifinder.steps import ExportTnJc2Step
 from amplifinder.data_types import (
-    RecordTypedDf, AnalyzedTnJc2, RawEvent, Orientation, EventModifier,
+    RecordTypedDf, AnalyzedTnJc2, RawEvent, Orientation, EventModifier, Coverage,
 )
 
 
@@ -23,7 +23,7 @@ def sample_analyzed(tmp_path):
             span_origin=False,
             amplicon_length=150, complementary_length=850,
             ref_name="U00096", iso_name="sample1",
-            amplicon_coverage=2.5, genome_coverage=1.0,
+            amplicon_coverage=2.5, scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
             copy_number=2.5, amplicon_coverage_mode=2.5,
             raw_event=RawEvent.FLANKED,
             shared_tn_ids=[1], chosen_tn_id=1,
@@ -46,7 +46,7 @@ def sample_analyzed(tmp_path):
             amplicon_length=50,  # Too short for filtering
             complementary_length=950,
             ref_name="U00096", iso_name="sample1",
-            amplicon_coverage=0.2, genome_coverage=1.0,
+            amplicon_coverage=0.2, scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
             copy_number=0.2, amplicon_coverage_mode=0.2,
             raw_event=RawEvent.UNFLANKED,
             shared_tn_ids=[2], chosen_tn_id=2,

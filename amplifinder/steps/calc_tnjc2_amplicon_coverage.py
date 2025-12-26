@@ -14,6 +14,8 @@ from amplifinder.utils.coverage import (
     get_coverage_in_range,
     calc_genome_coverage,
     calc_copy_number_distribution,
+    get_scaffold_coverage,
+    calc_coverage_stats,
 )
 
 
@@ -153,11 +155,15 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                     ncp_limit1=self.ncp_limit1, ncp_limit2=self.ncp_limit2, ncp_n=self.ncp_n,
                 )
         
+        # Calculate scaffold-specific coverage statistics
+        scaf_cov = get_scaffold_coverage(iso_cov, raw_tnjc2.scaf_chr, self.genome)
+        scaf_coverage = calc_coverage_stats(scaf_cov)
+        
         # Build CoveredTnJc2 from RawTnJc2 + new coverage fields
         return CoveredTnJc2.from_other(
             raw_tnjc2,
             amplicon_coverage=amplicon_coverage,
-            genome_coverage=iso_genome_median,
+            scaf_coverage=scaf_coverage,
             copy_number=copy_number,
             amplicon_coverage_mode=amplicon_coverage_mode,
             copy_number_ratio=copy_number_ratio,
