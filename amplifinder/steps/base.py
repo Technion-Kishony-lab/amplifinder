@@ -7,6 +7,7 @@ import shutil
 
 from amplifinder.logger import info, debug
 from amplifinder.utils.file_lock import locked_operation, get_step_lock_path
+from amplifinder.utils.tools import remove_file_or_dir
 from amplifinder.data_types.typed_df import RecordTypedDf
 from amplifinder.data_types.records import Record
 from amplifinder.steps.io_naming import default_path
@@ -15,15 +16,6 @@ T = TypeVar("T")
 
 # Default lock timeout for steps (seconds)
 STEP_LOCK_TIMEOUT = 7200  # 2 hours (breseq can be very slow)
-
-
-def _delete_file_or_dir_if_exists(p: Path) -> None:
-    """Delete file or directory if it exists."""
-    if p.exists():
-        if p.is_dir():
-            shutil.rmtree(p)
-        else:
-            p.unlink()
 
 
 class Step(ABC, Generic[T]):
@@ -178,7 +170,7 @@ class Step(ABC, Generic[T]):
         if self.output_files is None:
             return
         for p in self.output_files:
-            _delete_file_or_dir_if_exists(p)
+            remove_file_or_dir(p)
 
     @classmethod
     def set_global_force(cls, force: bool) -> None:

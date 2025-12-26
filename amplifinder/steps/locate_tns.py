@@ -11,6 +11,7 @@ from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
 from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.utils.genbank import find_tn_elements
 from amplifinder.utils.file_lock import locked_resource
+from amplifinder.utils.tools import ensure_dir
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, RefTnLoc, Genome
 from amplifinder.steps.base import Step
@@ -85,7 +86,7 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
             info("No GenBank file provided - skipping GenBank TN annotation")
             return None
 
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        ensure_dir(self.output_dir)
         records = find_tn_elements(self.genome.genbank_path, self.genome.name)
         tn_loc = RecordTypedDf.from_records(records, RefTnLoc)
         info(f"Found {len(tn_loc)} TN elements in GenBank annotations")
@@ -124,7 +125,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
 
     def _calculate_output(self) -> RecordTypedDf[RefTnLoc]:
         """Run BLAST and parse results."""
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        ensure_dir(self.output_dir)
 
         # Create BLAST DB if needed (with lock to prevent parallel creation)
         with locked_resource(self.isdb_path, "blast_db", timeout=300):

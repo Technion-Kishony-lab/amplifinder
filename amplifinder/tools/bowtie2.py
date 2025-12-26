@@ -1,29 +1,11 @@
 """Bowtie2 wrapper for read alignment."""
 
-import subprocess
-import shutil
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.logger import info, debug
-from amplifinder.env import SAMTOOLS_PATH
-
-
-def get_bowtie2_path() -> Optional[Path]:
-    """Find bowtie2 executable in PATH."""
-    path = shutil.which("bowtie2")
-    return Path(path) if path else None
-
-
-def get_bowtie2_build_path() -> Optional[Path]:
-    """Find bowtie2-build executable in PATH."""
-    path = shutil.which("bowtie2-build")
-    return Path(path) if path else None
-
-
-def check_bowtie2_available() -> bool:
-    """Check if bowtie2 and bowtie2-build are available."""
-    return get_bowtie2_path() is not None and get_bowtie2_build_path() is not None
+from amplifinder.logger import info
+from amplifinder.env import SAMTOOLS_PATH, BOWTIE2_PATH
+from amplifinder.utils.tools import get_tool_path, run_command, ensure_parent_dir
 
 
 def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
@@ -37,29 +19,22 @@ def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
         FileNotFoundError: If bowtie2-build not found or ref_fasta doesn't exist
         RuntimeError: If bowtie2-build fails
     """
-    bowtie2_build = get_bowtie2_build_path()
-    if not bowtie2_build:
-        raise FileNotFoundError("bowtie2-build not found in PATH")
+    bowtie2_build = get_tool_path("bowtie2-build", config_path=BOWTIE2_PATH, required=True)
     
     if not ref_fasta.exists():
         raise FileNotFoundError(f"Reference FASTA not found: {ref_fasta}")
     
     # Create output directory if needed
-    index_prefix.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent_dir(index_prefix)
     
     cmd = [
-        str(bowtie2_build),
+        bowtie2_build,
         "--quiet",
         str(ref_fasta),
         str(index_prefix),
     ]
     
-    debug(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    
-    if result.returncode != 0:
-        raise RuntimeError(f"bowtie2-build failed: {result.stderr}")
-    
+    run_command(cmd, check=True, capture_output=True, text=True)
     info(f"Built bowtie2 index: {index_prefix}")
 
 
@@ -89,9 +64,7 @@ def run_bowtie2_align(
         FileNotFoundError: If bowtie2 not found or inputs don't exist
         RuntimeError: If bowtie2 fails
     """
-    bowtie2 = get_bowtie2_path()
-    if not bowtie2:
-        raise FileNotFoundError("bowtie2 not found in PATH")
+    bowtie2 = get_tool_path("bowtie2", config_path=BOWTIE2_PATH, required=True)
     
     fastq_path = Path(fastq_path)
     if not fastq_path.exists():
@@ -109,7 +82,7 @@ def run_bowtie2_align(
         reads_arg = str(fastq_path)
     
     # Create output directory if needed
-    output_sam.parent.mkdir(parents=True, exist_ok=True)
+    ensure_parent_dir(output_sam)
     
     # Set default score_min based on alignment mode
     # MATLAB uses end-to-end with L,0,-0.6, local with G,0,-0.25
@@ -117,7 +90,7 @@ def run_bowtie2_align(
         score_min = "G,0,-0.25" if local else "L,0,-0.6"
     
     cmd = [
-        str(bowtie2),
+        bowtie2,
         "-x", str(index_prefix),
         "-U", reads_arg,
         "-S", str(output_sam),
@@ -133,12 +106,7 @@ def run_bowtie2_align(
     if local:
         cmd.append("--local")
     
-    debug(f"Running: {' '.join(cmd)}")
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    
-    if result.returncode != 0:
-        raise RuntimeError(f"bowtie2 failed: {result.stderr}")
-    
+    run_command(cmd, check=True, capture_output=True, text=True)
     info(f"Aligned reads to: {output_sam}")
 
 
@@ -160,54 +128,25 @@ def sam_to_sorted_bam(
         FileNotFoundError: If samtools not found or SAM doesn't exist
         RuntimeError: If samtools fails
     """
-    if samtools_path is None:
-        # Try config path first
-        if SAMTOOLS_PATH:
-            samtools_path = SAMTOOLS_PATH
-        else:
-            # Try PATH as last resort
-            samtools_path = shutil.which("samtools")
-            if not samtools_path:
-                raise FileNotFoundError(
-                    "samtools not found. Set samtools_path in config.yaml or ensure samtools is in PATH. "
-                    f"Config path: {SAMTOOLS_PATH}"
-                )
-    
-    samtools_path = Path(samtools_path)
-    
-    # If path is a directory, append "samtools" to the path
-    if samtools_path.is_dir():
-        samtools_path = samtools_path / "samtools"
-    
-    # Verify the final path exists
-    if not samtools_path.exists():
-        raise FileNotFoundError(f"samtools not found at: {samtools_path}")
+    samtools = get_tool_path("samtools", config_path=samtools_path or SAMTOOLS_PATH)
     
     if not sam_path.exists():
         raise FileNotFoundError(f"SAM file not found: {sam_path}")
     
     # Convert and sort
     cmd_sort = [
-        str(samtools_path), "sort",
+        samtools, "sort",
         "-@", str(threads),
         "-o", str(bam_path),
         str(sam_path),
     ]
     
-    debug(f"Running: {' '.join(cmd_sort)}")
-    result = subprocess.run(cmd_sort, capture_output=True, text=True)
-    
-    if result.returncode != 0:
-        raise RuntimeError(f"samtools sort failed: {result.stderr}")
+    run_command(cmd_sort, check=True, capture_output=True, text=True)
     
     # Index
-    cmd_index = [str(samtools_path), "index", str(bam_path)]
+    cmd_index = [samtools, "index", str(bam_path)]
     
-    debug(f"Running: {' '.join(cmd_index)}")
-    result = subprocess.run(cmd_index, capture_output=True, text=True)
-    
-    if result.returncode != 0:
-        raise RuntimeError(f"samtools index failed: {result.stderr}")
+    run_command(cmd_index, check=True, capture_output=True, text=True)
     
     info(f"Created sorted BAM: {bam_path}")
 
