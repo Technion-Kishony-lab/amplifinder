@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from amplifinder.steps import ClassifyStructureStep
 from amplifinder.data_types import (
-    RecordTypedDF, CoveredTnJc2, RefTnLoc, RawEvent, Orientation,
+    RecordTypedDf, CoveredTnJc2, RefTnLoc, RawEvent, Orientation,
 )
 
 
@@ -41,7 +41,7 @@ def sample_covered_tnjc2(tmp_path):
             copy_number=1.0, amplicon_coverage_mode=1.0,
         ),
     ]
-    return RecordTypedDF.from_records(records, CoveredTnJc2)
+    return RecordTypedDf.from_records(records, CoveredTnJc2)
 
 
 @pytest.fixture
@@ -51,7 +51,7 @@ def sample_tn_locs():
         RefTnLoc(tn_id=1, tn_name="IS1", tn_scaf="chr1", loc_left=10, loc_right=20, complement=False, join=False),
         RefTnLoc(tn_id=2, tn_name="IS2", tn_scaf="chr1", loc_left=30, loc_right=40, complement=False, join=False),
     ]
-    return RecordTypedDF.from_records(records, RefTnLoc)
+    return RecordTypedDf.from_records(records, RefTnLoc)
 
 
 def test_classify_structure(sample_covered_tnjc2, sample_tn_locs, tmp_path):
@@ -91,7 +91,7 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, tmp_path):
         copy_number=1.0, amplicon_coverage_mode=1.0,
     )
     
-    all_records = RecordTypedDF.from_records(
+    all_records = RecordTypedDf.from_records(
         list(sample_covered_tnjc2) + [short_record],
         CoveredTnJc2
     )

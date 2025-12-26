@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from amplifinder.data_types import (
-    RecordTypedDF, CandidateTnJc2, Genome, JunctionType, RefTnLoc,
+    RecordTypedDf, CandidateTnJc2, Genome, JunctionType, RefTnLoc,
 )
 from amplifinder.steps.base import Step
 from amplifinder.utils.fasta import reverse_complement
@@ -153,7 +153,7 @@ def write_junctions_fasta(
             f.write(f">{jtype.value}\n{seq}\n")
 
 
-class CreateSyntheticJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
+class CreateSyntheticJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
     """Create synthetic junction FASTA files for each candidate.
     
     Creates 7 junction sequences per candidate for read alignment analysis.
@@ -161,9 +161,9 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
 
     def __init__(
         self,
-        candidates: RecordTypedDF[CandidateTnJc2],
+        candidates: RecordTypedDf[CandidateTnJc2],
         genome: Genome,
-        tn_locs: RecordTypedDF[RefTnLoc],
+        tn_locs: RecordTypedDf[RefTnLoc],
         output_dir: Path,
         read_length: int = 150,
         force: Optional[bool] = None,
@@ -186,7 +186,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDF[CandidateTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[CandidateTnJc2]:
         """Create synthetic junctions for each candidate."""
         # Load chromosome sequence
         chr_seq = self.genome.sequence
@@ -222,11 +222,11 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDF[CandidateTnJc2]]):
         
         return self.candidates
 
-    def _save_output(self, output: RecordTypedDF[CandidateTnJc2]) -> None:
+    def _save_output(self, output: RecordTypedDf[CandidateTnJc2]) -> None:
         """Output already saved in _calculate_output."""
         pass
 
-    def load_outputs(self) -> RecordTypedDF[CandidateTnJc2]:
+    def load_outputs(self) -> RecordTypedDf[CandidateTnJc2]:
         """Return candidates (junction files are side effects)."""
         return self.candidates
 

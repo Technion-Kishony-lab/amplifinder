@@ -12,7 +12,7 @@ from amplifinder.data_types.validate_and_cast_df import validate_and_cast_df
 
 T = TypeVar("T", bound=Record)
 SelfTypedDF = TypeVar("SelfTypedDF", bound="TypedDF")
-SelfRecordTypedDF = TypeVar("SelfRecordTypedDF", bound="RecordTypedDF")
+SelfRecordTypedDF = TypeVar("SelfRecordTypedDF", bound="RecordTypedDf")
 
 
 def _clean_nan(v: Any) -> Any:
@@ -110,7 +110,7 @@ class TypedDF:
             yield {k: _clean_nan(v) for k, v in row.items()}
 
 
-class RecordTypedDF(TypedDF, Generic[T]):
+class RecordTypedDf(TypedDF, Generic[T]):
     """DataFrame with Record schema. Iteration yields typed instances."""
 
     __slots__ = ("_record_type",)
