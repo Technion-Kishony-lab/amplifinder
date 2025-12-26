@@ -2,12 +2,20 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List, NamedTuple, Optional, TypeVar
+from operator import add, mul, sub, truediv
+from typing import Callable, List, NamedTuple, Optional, TypeVar
 
 from amplifinder.data_types.records import Record
 
 
 TnId = int
+
+NAMES_TO_OPERATORS = {
+    "__truediv__": truediv,
+    "__mul__": mul,
+    "__add__": add,
+    "__sub__": sub,
+}
 
 
 # Coverage types
@@ -16,6 +24,13 @@ class Coverage(NamedTuple):
     mean: float
     median: float
     mode: float
+
+
+# add operator methods
+for op_name, op in NAMES_TO_OPERATORS.items():
+    def wrapper(self, other: Coverage) -> Coverage:
+        return Coverage(op(self.mean, other.mean), op(self.median, other.median), op(self.mode, other.mode))
+    setattr(Coverage, op_name, wrapper)
 
 
 class JunctionCoverage(NamedTuple):
