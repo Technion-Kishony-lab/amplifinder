@@ -90,18 +90,9 @@ amplifinder -i isolate2.fastq --ref-name U00096 --iso-name iso2 \
 | `--use-isfinder/--no-use-isfinder` | Use ISfinder database for IS detection | False |
 | `--config` | Path to YAML/JSON config file | None |
 | `--log-level` | Logging level (DEBUG/INFO/WARNING/ERROR) | INFO |
-| `--fetch-only` | Only fetch reference genome, then exit | False |
 | `--breseq-only` | Only run through breseq step, then exit | False |
 | `--visualize` | Visualize results from a completed run directory | None |
 | `--save-plots` | Save plots to PNG files instead of displaying | False |
-
-### Fetch Reference Only
-
-Download reference genome and prepare TN locations without running full pipeline:
-
-```bash
-amplifinder --ref-name U00096 --fetch-only
-```
 
 ### Visualization
 
