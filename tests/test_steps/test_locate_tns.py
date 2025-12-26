@@ -5,6 +5,7 @@ import pytest
 
 from amplifinder.steps import LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep
 from amplifinder.data_types import RecordTypedDf
+from amplifinder.utils.tools import ensure_dir
 from tests.env import RUN_BLAST_TESTS
 
 
@@ -90,8 +91,7 @@ class TestLocateTNsIntegration:
         """Load U00096 reference (cached)."""
         from amplifinder.steps import GetRefGenomeStep
         
-        ref_path = tmp_path / "genomesDB"
-        ref_path.mkdir()
+        ref_path = ensure_dir(tmp_path / "genomesDB")
 
         step = GetRefGenomeStep(
             ref_name="U00096",
