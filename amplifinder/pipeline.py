@@ -287,7 +287,7 @@ class Pipeline:
         iso_breseq_path = cfg.iso_breseq_path or (iso_output / "breseq")
         
         covered = CalcTnJc2AmpliconCoverageStep(
-            tnjc2=tnjc2,
+            raw_tnjc2s=tnjc2,
             genome=genome,
             iso_breseq_path=iso_breseq_path,
             output_dir=iso_output,
@@ -312,7 +312,7 @@ class Pipeline:
     ) -> RecordTypedDf[ClassifiedTnJc2]:
         """Step 8: Classify junction pair structures."""
         classified = ClassifyTnJc2StructureStep(
-            covered_tnjc2=covered,
+            covered_tnjc2s=covered,
             tn_locs=tn_loc,
             output_dir=iso_output,
             min_amplicon_length=self.config.min_amplicon_length,
@@ -327,7 +327,7 @@ class Pipeline:
     ) -> RecordTypedDf[FilteredTnJc2]:
         """Step 9: Filter candidates by amplicon length."""
         candidates = FilterTnJc2CandidatesStep(
-            classified_tnjc2=classified,
+            classified_tnjc2s=classified,
             output_dir=iso_output,
             min_amplicon_length=self.config.min_amplicon_length,
             max_amplicon_length=self.config.max_amplicon_length,
@@ -428,7 +428,7 @@ class Pipeline:
             return analyzed
         
         classified = ClassifyTnJc2CandidatesStep(
-            analyzed=analyzed,
+            analyzed_tnjc2s=analyzed,
             output_dir=iso_output,
             has_ancestor=self.config.has_ancestor,
             min_jct_cov=self.config.min_jct_cov,
@@ -443,7 +443,7 @@ class Pipeline:
     ) -> None:
         """Step 14: Export results to CSV."""
         ExportTnJc2Step(
-            analyzed_candidates=analyzed,
+            analyzed_tnjc2s=analyzed,
             output_dir=iso_output,
             copy_number_threshold=self.config.copy_number_threshold,
             del_copy_number_threshold=self.config.del_copy_number_threshold,

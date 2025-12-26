@@ -88,7 +88,7 @@ def mock_breseq_output(tmp_path):
 def test_calc_coverage_step(mock_genome, sample_tnjc2, mock_breseq_output, tmp_path):
     """Should calculate coverage for candidates."""
     step = CalcTnJc2AmpliconCoverageStep(
-        tnjc2=sample_tnjc2,
+        raw_tnjc2s=sample_tnjc2,
         genome=mock_genome,
         iso_breseq_path=mock_breseq_output,
         output_dir=tmp_path,
@@ -143,7 +143,7 @@ def test_calc_coverage_with_ancestor(mock_genome, sample_tnjc2, mock_breseq_outp
     anc_coverage_file.write_text("".join(anc_coverage_data))
     
     step = CalcTnJc2AmpliconCoverageStep(
-        tnjc2=sample_tnjc2,
+        raw_tnjc2s=sample_tnjc2,
         genome=mock_genome,
         iso_breseq_path=mock_breseq_output,
         anc_breseq_path=tmp_path / "anc_breseq",
@@ -177,7 +177,7 @@ def test_calc_coverage_with_ancestor(mock_genome, sample_tnjc2, mock_breseq_outp
 def test_filters_by_length(mock_genome, sample_tnjc2, mock_breseq_output, tmp_path):
     """Should filter candidates outside length range."""
     step = CalcTnJc2AmpliconCoverageStep(
-        tnjc2=sample_tnjc2,
+        raw_tnjc2s=sample_tnjc2,
         genome=mock_genome,
         iso_breseq_path=mock_breseq_output,
         output_dir=tmp_path,

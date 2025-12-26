@@ -18,14 +18,14 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
 
     def __init__(
         self,
-        analyzed_candidates: RecordTypedDf[AnalyzedTnJc2],
+        analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
         output_dir: Path,
         copy_number_threshold: float = 1.5,
         del_copy_number_threshold: float = 0.3,
         filter_amplicon_length: int = 100,
         force: Optional[bool] = None,
     ):
-        self.analyzed_candidates = analyzed_candidates
+        self.analyzed_tnjc2s = analyzed_tnjc2s
         self.output_dir = Path(output_dir)
         self.copy_number_threshold = copy_number_threshold
         self.del_copy_number_threshold = del_copy_number_threshold
@@ -44,19 +44,19 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
         """Export candidates to CSV."""
         # Build export records by iterating over typed records
         export_records = []
-        for candidate in self.analyzed_candidates:
+        for analyzed_tnjc2 in self.analyzed_tnjc2s:
             export_records.append(ExportedTnJc2(
-                isolate=candidate.iso_name,
-                Reference=candidate.ref_name,
-                Ancestor=candidate.anc_name,
-                Positions_in_chromosome=f"{candidate.pos_chr_L}-{candidate.pos_chr_R}",
-                Direction_in_chromosome=f"{candidate.dir_chr_L}/{candidate.dir_chr_R}",
-                amplicon_length=candidate.amplicon_length,
-                IS_element=','.join(map(str, candidate.tn_ids)) if candidate.tn_ids else None,
-                median_copy_number=candidate.amplicon_coverage,
-                mode_copy_number=candidate.amplicon_coverage_mode,
-                event=candidate.event,
-                isolate_architecture=str(candidate.isolate_architecture),
+                isolate=analyzed_tnjc2.iso_name,
+                Reference=analyzed_tnjc2.ref_name,
+                Ancestor=analyzed_tnjc2.anc_name,
+                Positions_in_chromosome=f"{analyzed_tnjc2.pos_chr_L}-{analyzed_tnjc2.pos_chr_R}",
+                Direction_in_chromosome=f"{analyzed_tnjc2.dir_chr_L}/{analyzed_tnjc2.dir_chr_R}",
+                amplicon_length=analyzed_tnjc2.amplicon_length,
+                IS_element=','.join(map(str, analyzed_tnjc2.tn_ids)) if analyzed_tnjc2.tn_ids else None,
+                median_copy_number=analyzed_tnjc2.amplicon_coverage,
+                mode_copy_number=analyzed_tnjc2.amplicon_coverage_mode,
+                event=analyzed_tnjc2.event,
+                isolate_architecture=str(analyzed_tnjc2.isolate_architecture),
             ))
         
         export_df = RecordTypedDf.from_records(export_records, ExportedTnJc2)

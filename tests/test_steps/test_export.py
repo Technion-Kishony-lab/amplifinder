@@ -64,7 +64,7 @@ def sample_analyzed(tmp_path):
 def test_export_creates_files(sample_analyzed, tmp_path):
     """Should create tnjc2_exported.csv and candidate_amplifications.csv."""
     step = ExportTnJc2Step(
-        analyzed_candidates=sample_analyzed,
+        analyzed_tnjc2s=sample_analyzed,
         output_dir=tmp_path,
         copy_number_threshold=1.5,
         del_copy_number_threshold=0.3,
