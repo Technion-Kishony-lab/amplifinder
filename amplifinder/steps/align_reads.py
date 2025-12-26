@@ -3,13 +3,13 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.data_types import RecordTypedDf, CandidateTnJc2
+from amplifinder.data_types import RecordTypedDf, FilteredTnJc2
 from amplifinder.steps.base import Step
 from amplifinder.tools.bowtie2 import align_reads_to_fasta
 from amplifinder.logger import info
 
 
-class AlignReadsToJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
+class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
     """Align reads to synthetic junction sequences.
     
     Alignment depends on run type:
@@ -19,7 +19,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
 
     def __init__(
         self,
-        candidates: RecordTypedDf[CandidateTnJc2],
+        filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
         output_dir: Path,
         iso_fastq_path: Path,
         anc_fastq_path: Optional[Path] = None,
@@ -28,7 +28,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
         num_alignments: int = 10,
         force: Optional[bool] = None,
     ):
-        self.candidates = candidates
+        self.filtered_tnjc2s = filtered_tnjc2s
         self.output_dir = Path(output_dir)
         self.iso_fastq_path = Path(iso_fastq_path)
         self.anc_fastq_path = Path(anc_fastq_path) if anc_fastq_path else None
@@ -38,8 +38,8 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
         
         # Build list of expected output BAM files
         output_files = []
-        for cand in candidates:
-            analysis_dir = output_dir / cand.analysis_dir
+        for filtered_tnjc2 in filtered_tnjc2s:
+            analysis_dir = output_dir / filtered_tnjc2.analysis_dir
             output_files.append(analysis_dir / "iso.sorted.bam")
             if anc_fastq_path:
                 output_files.append(analysis_dir / "anc.sorted.bam")
@@ -48,8 +48,8 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
         if anc_fastq_path:
             input_files.append(anc_fastq_path)
         # Junction FASTA files are inputs
-        for cand in candidates:
-            input_files.append(output_dir / cand.analysis_dir / "junctions.fasta")
+        for filtered_tnjc2 in filtered_tnjc2s:
+            input_files.append(output_dir / filtered_tnjc2.analysis_dir / "junctions.fasta")
         
         super().__init__(
             input_files=input_files,
@@ -62,14 +62,14 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
         """True if ancestor reads should be aligned."""
         return self.anc_fastq_path is not None
 
-    def _calculate_output(self) -> RecordTypedDf[CandidateTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[FilteredTnJc2]:
         """Align reads to synthetic junctions for each candidate."""
-        for cand in self.candidates:
-            analysis_dir = self.output_dir / cand.analysis_dir
+        for filtered_tnjc2 in self.filtered_tnjc2s:
+            analysis_dir = self.output_dir / filtered_tnjc2.analysis_dir
             junctions_fasta = analysis_dir / "junctions.fasta"
             
             if not junctions_fasta.exists():
-                info(f"Skipping {cand.analysis_dir}: no junctions.fasta")
+                info(f"Skipping {filtered_tnjc2.analysis_dir}: no junctions.fasta")
                 continue
             
             # Align isolate reads
@@ -95,13 +95,13 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[CandidateTnJc2]]):
                     num_alignments=self.num_alignments,
                 )
         
-        return self.candidates
+        return self.filtered_tnjc2s
 
-    def _save_output(self, output: RecordTypedDf[CandidateTnJc2]) -> None:
+    def _save_output(self, output: RecordTypedDf[FilteredTnJc2]) -> None:
         """BAM files already created in _calculate_output."""
         pass
 
-    def load_outputs(self) -> RecordTypedDf[CandidateTnJc2]:
+    def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
         """Return candidates (BAM files are side effects)."""
-        return self.candidates
+        return self.filtered_tnjc2s
 

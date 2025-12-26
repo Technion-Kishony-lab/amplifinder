@@ -12,7 +12,7 @@ from amplifinder.steps import (
     CreateRefTnJcStep,
     CreateRefTnEndSeqsStep,
     CreateTnJcStep,
-    CreateTnJc2Step,
+    PairTnJcToRawTnJc2Step,
 )
 from amplifinder.steps.base import Step
 from amplifinder.config import Config

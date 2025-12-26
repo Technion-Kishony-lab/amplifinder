@@ -69,19 +69,19 @@ def tnjc_step(mock_junctions, ref_tn_end_seqs, tiny_genome, tmp_output):
 
 def test_runs_without_error(tnjc_step):
     """Should run and produce output file."""
-    tnjc = tnjc_step.run()
+    tnjcs = tnjc_step.run()
 
-    assert isinstance(tnjc, RecordTypedDf)
+    assert isinstance(tnjcs, RecordTypedDf)
     assert tnjc_step.output_file.exists()
 
 
 def test_output_has_correct_columns(tnjc_step):
     """TnJc output should have expected columns."""
-    tnjc = tnjc_step.run()
+    tnjcs = tnjc_step.run()
 
     expected_cols = {"num", "scaf1", "pos1", "dir1", "scaf2", "pos2", "dir2",
                      "flanking_left", "flanking_right", "ref_tn_sides", "switched"}
-    assert expected_cols.issubset(set(tnjc.df.columns))
+    assert expected_cols.issubset(set(tnjcs.df.columns))
 
 
 def test_skips_if_exists(tnjc_step):

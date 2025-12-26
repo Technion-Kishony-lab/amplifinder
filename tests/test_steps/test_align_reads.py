@@ -3,14 +3,14 @@
 import pytest
 from pathlib import Path
 from amplifinder.steps import AlignReadsToJunctionsStep
-from amplifinder.data_types import RecordTypedDf, CandidateTnJc2, RawEvent, Orientation
+from amplifinder.data_types import RecordTypedDf, FilteredTnJc2, RawEvent, Orientation
 from amplifinder.utils.tools import ensure_parent_dir
 
 
 @pytest.fixture
 def sample_candidate(tmp_path):
-    """Create a sample CandidateTnJc2."""
-    return CandidateTnJc2(
+    """Create a sample FilteredTnJc2."""
+    return FilteredTnJc2(
         jc_num_L=1, jc_num_R=2,
         scaf_chr="tiny",
         pos_chr_L=200, pos_chr_R=300,
@@ -31,7 +31,7 @@ def sample_candidate(tmp_path):
 
 def test_step_initialization(sample_candidate, tmp_path):
     """Should initialize step correctly."""
-    candidates = RecordTypedDf.from_records([sample_candidate], CandidateTnJc2)
+    filtered_tnjc2s = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
     
     # Create dummy FASTQ file
     fastq_file = tmp_path / "test.fastq"
@@ -43,11 +43,11 @@ def test_step_initialization(sample_candidate, tmp_path):
     junctions_file.write_text(">1\nACGTACGT\n")
     
     step = AlignReadsToJunctionsStep(
-        candidates=candidates,
+        filtered_tnjc2s=filtered_tnjc2s,
         output_dir=tmp_path,
         iso_fastq_path=fastq_file,
     )
     
-    assert step.candidates == candidates
+    assert step.filtered_tnjc2s == filtered_tnjc2s
     assert step.iso_fastq_path == fastq_file
     assert step.anc_fastq_path is None

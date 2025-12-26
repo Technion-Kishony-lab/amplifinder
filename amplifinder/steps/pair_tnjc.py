@@ -1,16 +1,16 @@
-"""Step: Combine TN junction pairs (TnJc2)."""
+"""Step: Pair TN junctions into TnJc2."""
 
 from pathlib import Path
 from typing import Optional, List, Tuple
 
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDf, TnJunction, TnJc2, RefTnSide, Side, Orientation
+from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
 from amplifinder.utils.tools import ensure_dir
 
 
-class CreateTnJc2Step(RecordTypedDfStep[TnJc2]):
+class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
     """Combine TN junctions into pairs (candidate amplicons).
 
     For each pair of junctions, checks:
@@ -22,7 +22,7 @@ class CreateTnJc2Step(RecordTypedDfStep[TnJc2]):
 
     def __init__(
         self,
-        tnjc: RecordTypedDf[TnJunction],
+        tnjcs: RecordTypedDf[TnJunction],
         genome: Genome,
         output_dir: Path,
         force: Optional[bool] = None,
@@ -30,12 +30,12 @@ class CreateTnJc2Step(RecordTypedDfStep[TnJc2]):
         """Initialize step.
 
         Args:
-            tnjc: TN-associated junctions from CreateTnJcStep
+            tnjcs: TN-associated junctions from CreateTnJcStep
             genome: Reference genome (for circularity and length per scaffold)
             output_dir: Directory to write output
             force: Force re-run
         """
-        self.tnjc = tnjc
+        self.tnjcs = tnjcs
         self.genome = genome
         
         # Cache scaffold properties for multi-scaffold support
@@ -51,20 +51,20 @@ class CreateTnJc2Step(RecordTypedDfStep[TnJc2]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDf[TnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[RawTnJc2]:
         """Combine junction pairs."""
         ensure_dir(self.output_dir)
 
         # Convert to list for O(n^2) pairing
-        junctions = list(self.tnjc)
+        junctions = list(self.tnjcs)
         pairs = self._pair_junctions(junctions)
 
-        tnjc2 = RecordTypedDf.from_records(pairs, TnJc2)
+        raw_tnjc2s = RecordTypedDf.from_records(pairs, RawTnJc2)
 
-        info(f"Found {len(tnjc2)} junction pairs (TnJc2)")
-        return tnjc2
+        info(f"Found {len(raw_tnjc2s)} junction pairs (RawTnJc2)")
+        return raw_tnjc2s
 
-    def _pair_junctions(self, junctions: List[TnJunction]) -> List[TnJc2]:
+    def _pair_junctions(self, junctions: List[TnJunction]) -> List[RawTnJc2]:
         """Find all valid junction pairs.
 
         Based on MATLAB combine_ISJC_pairs.m
@@ -127,7 +127,7 @@ class CreateTnJc2Step(RecordTypedDfStep[TnJc2]):
         jc_i: TnJunction,
         jc_j: TnJunction,
         matching_tns: List[Tuple[int, Side]],
-    ) -> TnJc2:
+    ) -> RawTnJc2:
         """Create a junction pair record.
 
         Normalizes so that L (left) junction has lower chromosome position.
@@ -153,7 +153,7 @@ class CreateTnJc2Step(RecordTypedDfStep[TnJc2]):
             jc_L.pos2, jc_R.pos2, jc_L.scaf2, span_origin
         )
 
-        return TnJc2(
+        return RawTnJc2(
             jc_num_L=jc_L.num,
             jc_num_R=jc_R.num,
             scaf_chr=jc_L.scaf2,

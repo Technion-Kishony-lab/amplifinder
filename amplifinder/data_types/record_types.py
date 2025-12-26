@@ -126,7 +126,7 @@ class TnJunction(Junction):
     switched: bool                 # True if sides were swapped to normalize
 
 
-class TnJc2(Record):
+class RawTnJc2(Record):
     """Paired TN junctions (candidate amplicon).
 
     Represents two junctions that:
@@ -168,8 +168,8 @@ class TnJc2(Record):
     complementary_length: int
 
 
-class CoveredTnJc2(TnJc2):
-    """TnJc2 with coverage information (Step 7 output).
+class CoveredTnJc2(RawTnJc2):
+    """RawTnJc2 with coverage information (Step 7 output).
     
     Coverage fields depend on run type:
     - anc_path=None: raw coverage only, copy_number_ratio is None
@@ -203,13 +203,13 @@ class RawEvent(str, Enum):
 
 
 class ClassifiedTnJc2(CoveredTnJc2):
-    """TnJc2 with structural classification (Step 8 output)."""
+    """CoveredTnJc2 with structural classification (Step 8 output)."""
     raw_event: RawEvent
     shared_tn_ids: List[int]        # TN IDs shared by both junctions
     chosen_tn_id: Optional[int]     # selected TN for analysis
 
 
-class CandidateTnJc2(ClassifiedTnJc2):
+class FilteredTnJc2(ClassifiedTnJc2):
     """Filtered candidate for detailed analysis (Step 9 output)."""
     analysis_dir: str  # "tn_jc2_001", "tn_jc2_002", etc.
 
@@ -242,7 +242,7 @@ class EventModifier(str, Enum):
     LOW_COVERAGE = "low coverage near junction"
 
 
-class AnalyzedTnJc2(CandidateTnJc2):
+class AnalyzedTnJc2(FilteredTnJc2):
     """Candidate with junction coverage analysis (Step 12 output).
     
     Junction coverage fields depend on run type:
@@ -268,8 +268,8 @@ class AnalyzedTnJc2(CandidateTnJc2):
     event_modifiers: List[EventModifier]    # de novo, ancestral, etc.
 
 
-class ISJC2Export(Record):
-    """Export record for ISJC2.csv (Step 14 output).
+class ExportedTnJc2(Record):
+    """Export record for tnjc2_exported.csv (Step 14 output).
     
     Represents the user-facing export format with renamed/combined fields.
     All fields are optional to handle cases where input data may be missing.
