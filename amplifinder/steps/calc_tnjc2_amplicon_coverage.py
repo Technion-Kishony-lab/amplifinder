@@ -37,8 +37,6 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         iso_name: str,
         anc_breseq_path: Optional[Path] = None,
         anc_name: Optional[str] = None,
-        min_amplicon_length: int = 30,
-        max_amplicon_length: int = 1_000_000,
         ncp_limit1: float = -1,
         ncp_limit2: float = 3,
         ncp_n: int = 150,
@@ -51,8 +49,6 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         self.iso_name = iso_name
         self.anc_breseq_path = Path(anc_breseq_path) if anc_breseq_path else None
         self.anc_name = anc_name
-        self.min_amplicon_length = min_amplicon_length
-        self.max_amplicon_length = max_amplicon_length
         self.ncp_limit1 = ncp_limit1
         self.ncp_limit2 = ncp_limit2
         self.ncp_n = ncp_n
@@ -104,56 +100,50 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         anc_genome_median: Optional[float],
     ) -> CoveredTnJc2:
         """Calculate coverage for a single candidate."""
-        amplicon_length = raw_tnjc2.amplicon_length
+        # Get coverage in amplicon region
+        start = raw_tnjc2.pos_chr_L
+        end = raw_tnjc2.pos_chr_R
+        span_origin = raw_tnjc2.span_origin
         
-        # Default values for candidates outside length range
+        iso_region_cov = get_coverage_in_range(
+            iso_cov, start, end, span_origin, self.genome.length
+        )
+        
+        # Calculate raw copy number
+        iso_mean_cov = float(np.mean(iso_region_cov[iso_region_cov > 0])) if np.any(iso_region_cov > 0) else 0.0
+        copy_number = iso_mean_cov / iso_genome_median if iso_genome_median > 0 else 0.0
+        
         amplicon_coverage = None
-        copy_number = None
         copy_number_ratio = None
         amplicon_coverage_mode = None
         
-        # Only calculate for valid amplicon lengths
-        if self.min_amplicon_length < amplicon_length < self.max_amplicon_length:
-            # Get coverage in amplicon region
-            start = raw_tnjc2.pos_chr_L
-            end = raw_tnjc2.pos_chr_R
-            span_origin = raw_tnjc2.span_origin
-            
-            iso_region_cov = get_coverage_in_range(
-                iso_cov, start, end, span_origin, self.genome.length
+        if self.has_ancestor:
+            # Get ancestor coverage in same region
+            anc_region_cov = get_coverage_in_range(
+                anc_cov, start, end, span_origin, self.genome.length
             )
+            anc_mean_cov = float(np.mean(anc_region_cov[anc_region_cov > 0])) if np.any(anc_region_cov > 0) else 0.0
+            anc_copy_number = anc_mean_cov / anc_genome_median if anc_genome_median > 0 else 0.0
             
-            # Calculate raw copy number
-            iso_mean_cov = float(np.mean(iso_region_cov[iso_region_cov > 0])) if np.any(iso_region_cov > 0) else 0.0
-            copy_number = iso_mean_cov / iso_genome_median if iso_genome_median > 0 else 0.0
+            # Normalized coverage = iso/anc
+            amplicon_coverage = copy_number / anc_copy_number if anc_copy_number > 0 else None
+            copy_number_ratio = amplicon_coverage
             
-            if self.has_ancestor:
-                # Get ancestor coverage in same region
-                anc_region_cov = get_coverage_in_range(
-                    anc_cov, start, end, span_origin, self.genome.length
-                )
-                anc_mean_cov = float(np.mean(anc_region_cov[anc_region_cov > 0])) if np.any(anc_region_cov > 0) else 0.0
-                anc_copy_number = anc_mean_cov / anc_genome_median if anc_genome_median > 0 else 0.0
-                
-                # Normalized coverage = iso/anc
-                amplicon_coverage = copy_number / anc_copy_number if anc_copy_number > 0 else None
-                copy_number_ratio = amplicon_coverage
-                
-                # Calculate distribution mode
-                _, amplicon_coverage_mode = calc_copy_number_distribution(
-                    iso_region_cov, iso_genome_median,
-                    anc_region_cov, anc_genome_median,
-                    self.ncp_limit1, self.ncp_limit2, self.ncp_n,
-                )
-            else:
-                # Raw coverage
-                amplicon_coverage = copy_number
-                
-                # Calculate distribution mode (raw)
-                _, amplicon_coverage_mode = calc_copy_number_distribution(
-                    iso_region_cov, iso_genome_median,
-                    ncp_limit1=self.ncp_limit1, ncp_limit2=self.ncp_limit2, ncp_n=self.ncp_n,
-                )
+            # Calculate distribution mode
+            _, amplicon_coverage_mode = calc_copy_number_distribution(
+                iso_region_cov, iso_genome_median,
+                anc_region_cov, anc_genome_median,
+                self.ncp_limit1, self.ncp_limit2, self.ncp_n,
+            )
+        else:
+            # Raw coverage
+            amplicon_coverage = copy_number
+            
+            # Calculate distribution mode (raw)
+            _, amplicon_coverage_mode = calc_copy_number_distribution(
+                iso_region_cov, iso_genome_median,
+                ncp_limit1=self.ncp_limit1, ncp_limit2=self.ncp_limit2, ncp_n=self.ncp_n,
+            )
         
         # Calculate scaffold-specific coverage statistics
         scaf_cov = get_scaffold_coverage(iso_cov, raw_tnjc2.scaf_chr, self.genome)

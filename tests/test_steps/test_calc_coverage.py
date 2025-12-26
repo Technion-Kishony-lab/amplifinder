@@ -94,8 +94,6 @@ def test_calc_coverage_step(mock_genome, sample_tnjc2, mock_breseq_output, tmp_p
         output_dir=tmp_path,
         ref_name="chr1",
         iso_name="sample1",
-        min_amplicon_length=30,
-        max_amplicon_length=1_000_000,
         force=True,  # Force run to avoid loading from CSV
     )
     
@@ -123,10 +121,10 @@ def test_calc_coverage_step(mock_genome, sample_tnjc2, mock_breseq_output, tmp_p
     if iso_col:
         assert first_row[iso_col] == "sample1"
     
-    # Second candidate (too short) should have NaN coverage
+    # Second candidate should also have coverage calculated
     second_row = result_df.iloc[1]
     if cov_col:
-        assert pd.isna(second_row[cov_col]) or second_row[cov_col] == 0
+        assert not pd.isna(second_row[cov_col])
 
 
 def test_calc_coverage_with_ancestor(mock_genome, sample_tnjc2, mock_breseq_output, tmp_path):
@@ -151,8 +149,6 @@ def test_calc_coverage_with_ancestor(mock_genome, sample_tnjc2, mock_breseq_outp
         ref_name="chr1",
         iso_name="sample1",
         anc_name="ancestor1",
-        min_amplicon_length=30,
-        max_amplicon_length=1_000_000,
         force=True,  # Force run to avoid loading from CSV
     )
     
@@ -174,8 +170,8 @@ def test_calc_coverage_with_ancestor(mock_genome, sample_tnjc2, mock_breseq_outp
         assert first_row[ratio_col] > 1.5
 
 
-def test_filters_by_length(mock_genome, sample_tnjc2, mock_breseq_output, tmp_path):
-    """Should filter candidates outside length range."""
+def test_calculates_coverage_for_all_lengths(mock_genome, sample_tnjc2, mock_breseq_output, tmp_path):
+    """Should calculate coverage for all candidates regardless of length."""
     step = CalcTnJc2AmpliconCoverageStep(
         raw_tnjc2s=sample_tnjc2,
         genome=mock_genome,
@@ -183,21 +179,19 @@ def test_filters_by_length(mock_genome, sample_tnjc2, mock_breseq_output, tmp_pa
         output_dir=tmp_path,
         ref_name="chr1",
         iso_name="sample1",
-        min_amplicon_length=30,
-        max_amplicon_length=1_000_000,
         force=True,  # Force run to avoid loading from CSV
     )
     
     result = step.run()
     
-    # Both candidates should be in result, but short one has NaN coverage
+    # Both candidates should be in result with coverage calculated
     assert len(result) == 2
     result_df = result.df
     schema = result.schema
     
-    # Short candidate should have NaN or 0 coverage
+    # Both candidates should have coverage calculated (not NaN)
     length_col = 'amplicon_length' if 'amplicon_length' in schema.column_names else None
     cov_col = 'amplicon_coverage' if 'amplicon_coverage' in schema.column_names else None
     if length_col and cov_col:
         short_row = result_df[result_df[length_col] == 20].iloc[0]
-        assert pd.isna(short_row[cov_col]) or short_row[cov_col] == 0
+        assert not pd.isna(short_row[cov_col])
