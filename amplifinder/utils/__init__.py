@@ -18,6 +18,11 @@ from amplifinder.utils.file_lock import (
     locked_step_execution,
     DEFAULT_LOCK_TIMEOUT,
 )
+from amplifinder.utils.tools import (
+    find_tool,
+    get_tool_path,
+    run_command,
+)
 
 __all__ = [
     "read_fasta_lengths",
@@ -35,4 +40,8 @@ __all__ = [
     "DoneMarker",
     "locked_step_execution",
     "DEFAULT_LOCK_TIMEOUT",
+    # Tool utilities
+    "find_tool",
+    "get_tool_path",
+    "run_command",
 ]
