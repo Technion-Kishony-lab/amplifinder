@@ -231,7 +231,7 @@ CoveredTnJc2(TnJc2)  # Step 7: Coverage added
 ├── iso_name: str
 ├── anc_name: Optional[str]
 ├── amplicon_coverage: float
-├── genome_coverage: float
+├── scaf_coverage: Coverage
 ├── copy_number: float
 ├── amplicon_coverage_mode: float
 └── copy_number_ratio: Optional[float]

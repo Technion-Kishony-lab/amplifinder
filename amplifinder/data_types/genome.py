@@ -128,6 +128,28 @@ class Genome:
         Uses record.name (locus name) as key to match TN scaffold names.
         """
         return {rec.name: str(rec.seq) for rec in self.records}
+    
+    def get_scaffold_coverage_range(self, scaffold_name: str) -> tuple[int, int]:
+        """Get start and end positions (0-based) for a scaffold in concatenated coverage array.
+        
+        Args:
+            scaffold_name: Name of scaffold to find
+        
+        Returns:
+            (start, end) tuple of 0-based positions in concatenated array
+        
+        Raises:
+            ValueError: If scaffold not found
+        """
+        cumulative = 0
+        for rec in self.records:
+            if rec.name == scaffold_name:
+                start = cumulative
+                end = cumulative + len(rec.seq)
+                return (start, end)
+            cumulative += len(rec.seq)
+        
+        raise ValueError(f"Scaffold '{scaffold_name}' not found in genome {self.name}")
 
 
 class GenomeRegistry:

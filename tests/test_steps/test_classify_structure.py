@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from amplifinder.steps import ClassifyTnJc2StructureStep
 from amplifinder.data_types import (
-    RecordTypedDf, CoveredTnJc2, RefTnLoc, RawEvent, Orientation,
+    RecordTypedDf, CoveredTnJc2, RefTnLoc, RawEvent, Orientation, Coverage,
 )
 
 
@@ -23,7 +23,7 @@ def sample_covered_tnjc2(tmp_path):
             span_origin=False,
             amplicon_length=100, complementary_length=900,
             ref_name="U00096", iso_name="sample1",
-            amplicon_coverage=2.0, genome_coverage=1.0,
+            amplicon_coverage=2.0, scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
             copy_number=2.0, amplicon_coverage_mode=2.0,
         ),
         CoveredTnJc2(
@@ -37,7 +37,7 @@ def sample_covered_tnjc2(tmp_path):
             span_origin=False,
             amplicon_length=100, complementary_length=900,
             ref_name="U00096", iso_name="sample1",
-            amplicon_coverage=1.0, genome_coverage=1.0,
+            amplicon_coverage=1.0, scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
             copy_number=1.0, amplicon_coverage_mode=1.0,
         ),
     ]

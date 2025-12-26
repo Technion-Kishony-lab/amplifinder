@@ -1,10 +1,14 @@
 """Coverage analysis utilities."""
+from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, List, TYPE_CHECKING
 
 import numpy as np
 
 from amplifinder.data_types import Coverage
+
+if TYPE_CHECKING:
+    from amplifinder.data_types.genome import Genome
 
 
 def get_coverage_in_range(
@@ -74,6 +78,25 @@ def calc_genome_coverage(cov: np.ndarray) -> float:
     """
     cov_nonzero = cov[cov > 0]
     return float(np.median(cov_nonzero)) if len(cov_nonzero) > 0 else 0.0
+
+
+def get_scaffold_coverage(
+    cov: np.ndarray,
+    scaffold_name: str,
+    genome: Genome,
+) -> np.ndarray:
+    """Get coverage array for a specific scaffold.
+    
+    Args:
+        cov: Full genome coverage array (concatenated by scaffold order)
+        scaffold_name: Name of scaffold to extract
+        genome: Genome object with scaffold information
+    
+    Returns:
+        Coverage array for the specified scaffold
+    """
+    start, end = genome.get_scaffold_coverage_range(scaffold_name)
+    return cov[start:end]
 
 
 def calc_copy_number_distribution(

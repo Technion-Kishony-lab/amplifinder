@@ -177,7 +177,7 @@ class CoveredTnJc2(RawTnJc2):
     """
     # Coverage fields (may be NaN/None for invalid amplicon lengths)
     amplicon_coverage: Optional[float] = None  # raw: iso_cov/genome_cov, normalized: iso_cov/anc_cov
-    genome_coverage: float          # median genome coverage for this sample
+    scaf_coverage: Coverage          # Coverage statistics of relevant scaffold
     copy_number: Optional[float] = None  # amplicon / genome (raw copy number)
     amplicon_coverage_mode: Optional[float] = None  # mode of copy number distribution
     
