@@ -162,14 +162,14 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
 
     def __init__(
         self,
-        candidates: RecordTypedDf[FilteredTnJc2],
+        filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
         genome: Genome,
         tn_locs: RecordTypedDf[RefTnLoc],
         output_dir: Path,
         read_length: int = 150,
         force: Optional[bool] = None,
     ):
-        self.candidates = candidates
+        self.filtered_tnjc2s = filtered_tnjc2s
         self.genome = genome
         self.tn_locs = tn_locs
         self.output_dir = Path(output_dir)
@@ -177,8 +177,8 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         
         # Output files are per-candidate analysis directories
         self.analysis_dirs = [
-            output_dir / cand.analysis_dir
-            for cand in candidates
+            output_dir / filtered_tnjc2.analysis_dir
+            for filtered_tnjc2 in filtered_tnjc2s
         ]
         
         super().__init__(
@@ -195,11 +195,11 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         # Build TN lookup
         tn_lookup = {tn.tn_id: tn for tn in self.tn_locs}
         
-        for candidate in self.candidates:
-            analysis_dir = self.output_dir / candidate.analysis_dir
+        for filtered_tnjc2 in self.filtered_tnjc2s:
+            analysis_dir = self.output_dir / filtered_tnjc2.analysis_dir
             
             # Get chosen TN
-            chosen_tn_id = candidate.chosen_tn_id
+            chosen_tn_id = filtered_tnjc2.chosen_tn_id
             if chosen_tn_id is None or chosen_tn_id not in tn_lookup:
                 # Skip candidates without valid chosen TN
                 continue
@@ -211,7 +211,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
             
             # Create junctions
             junctions = create_synthetic_junctions(
-                candidate=candidate,
+                candidate=filtered_tnjc2,
                 chr_seq=chr_seq,
                 tn_loc=tn_loc,
                 tn_seq=tn_seq,
@@ -221,7 +221,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
             # Write FASTA
             write_junctions_fasta(junctions, analysis_dir / "junctions.fasta")
         
-        return self.candidates
+        return self.filtered_tnjc2s
 
     def _save_output(self, output: RecordTypedDf[FilteredTnJc2]) -> None:
         """Output already saved in _calculate_output."""
@@ -229,5 +229,5 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
 
     def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
         """Return candidates (junction files are side effects)."""
-        return self.candidates
+        return self.filtered_tnjc2s
 

@@ -98,7 +98,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
     def __init__(
         self,
-        candidates: RecordTypedDf[FilteredTnJc2],
+        filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
         output_dir: Path,
         anc_output_dir: Optional[Path] = None,
         read_length: int = 150,
@@ -107,7 +107,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         has_ancestor: bool = False,
         force: Optional[bool] = None,
     ):
-        self.candidates = candidates
+        self.filtered_tnjc2s = filtered_tnjc2s
         self.output_dir = Path(output_dir)
         self.anc_output_dir = Path(anc_output_dir) if anc_output_dir else None
         self.read_length = read_length
@@ -117,14 +117,14 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         
         # Input files are the BAM files from alignment step
         input_files = []
-        for cand in candidates:
-            analysis_dir = output_dir / cand.analysis_dir
+        for filtered_tnjc2 in filtered_tnjc2s:
+            analysis_dir = output_dir / filtered_tnjc2.analysis_dir
             input_files.append(analysis_dir / "iso.sorted.bam")
             if has_ancestor:
                 # Ancestor BAM is in ancestor folder (as iso.sorted.bam)
                 if not self.anc_output_dir:
                     raise ValueError("anc_output_dir must be provided when has_ancestor=True")
-                anc_analysis_dir = self.anc_output_dir / cand.analysis_dir
+                anc_analysis_dir = self.anc_output_dir / filtered_tnjc2.analysis_dir
                 input_files.append(anc_analysis_dir / "iso.sorted.bam")
         
         super().__init__(
@@ -138,13 +138,13 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         junction_length = self.read_length * 2
         
         analyzed_records = []
-        for cand in self.candidates:
-            analysis_dir = self.output_dir / cand.analysis_dir
+        for filtered_tnjc2 in self.filtered_tnjc2s:
+            analysis_dir = self.output_dir / filtered_tnjc2.analysis_dir
             
             # Get isolate junction coverage
             iso_bam = analysis_dir / "iso.sorted.bam"
             if not iso_bam.exists():
-                info(f"Skipping {cand.analysis_dir}: no iso.sorted.bam")
+                info(f"Skipping {filtered_tnjc2.analysis_dir}: no iso.sorted.bam")
                 continue
             
             iso_jc_cov = get_junction_coverage(
@@ -161,7 +161,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             if self.has_ancestor:
                 if not self.anc_output_dir:
                     raise ValueError("anc_output_dir must be provided when has_ancestor=True")
-                anc_analysis_dir = self.anc_output_dir / cand.analysis_dir
+                anc_analysis_dir = self.anc_output_dir / filtered_tnjc2.analysis_dir
                 anc_bam = anc_analysis_dir / "iso.sorted.bam"
                 
                 if anc_bam.exists():
@@ -174,8 +174,8 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             event, modifiers = classify_event(iso_arch, anc_arch, self.min_jct_cov)
             
             # Build AnalyzedTnJc2 record from candidate + new fields
-            analyzed = AnalyzedTnJc2.from_other(
-                cand,
+            analyzed_tnjc2 = AnalyzedTnJc2.from_other(
+                filtered_tnjc2,
                 jc_cov_left=[jc.left for jc in iso_jc_cov],
                 jc_cov_right=[jc.right for jc in iso_jc_cov],
                 jc_cov_spanning=[jc.spanning for jc in iso_jc_cov],
@@ -187,6 +187,6 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 event=event,
                 event_modifiers=modifiers,
             )
-            analyzed_records.append(analyzed)
+            analyzed_records.append(analyzed_tnjc2)
         
         return RecordTypedDf.from_records(analyzed_records, AnalyzedTnJc2)

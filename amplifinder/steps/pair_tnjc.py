@@ -22,7 +22,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
 
     def __init__(
         self,
-        tnjc: RecordTypedDf[TnJunction],
+        tnjcs: RecordTypedDf[TnJunction],
         genome: Genome,
         output_dir: Path,
         force: Optional[bool] = None,
@@ -30,12 +30,12 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         """Initialize step.
 
         Args:
-            tnjc: TN-associated junctions from CreateTnJcStep
+            tnjcs: TN-associated junctions from CreateTnJcStep
             genome: Reference genome (for circularity and length per scaffold)
             output_dir: Directory to write output
             force: Force re-run
         """
-        self.tnjc = tnjc
+        self.tnjcs = tnjcs
         self.genome = genome
         
         # Cache scaffold properties for multi-scaffold support
@@ -56,13 +56,13 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         ensure_dir(self.output_dir)
 
         # Convert to list for O(n^2) pairing
-        junctions = list(self.tnjc)
+        junctions = list(self.tnjcs)
         pairs = self._pair_junctions(junctions)
 
-        tnjc2 = RecordTypedDf.from_records(pairs, RawTnJc2)
+        raw_tnjc2s = RecordTypedDf.from_records(pairs, RawTnJc2)
 
-        info(f"Found {len(tnjc2)} junction pairs (RawTnJc2)")
-        return tnjc2
+        info(f"Found {len(raw_tnjc2s)} junction pairs (RawTnJc2)")
+        return raw_tnjc2s
 
     def _pair_junctions(self, junctions: List[TnJunction]) -> List[RawTnJc2]:
         """Find all valid junction pairs.

@@ -87,11 +87,11 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
 
             tnjc_records.append(TnJunction.from_other(jc, ref_tn_sides=matches, switched=switched))
 
-        tnjc = RecordTypedDf.from_records(tnjc_records, TnJunction)
-        tnjc = tnjc.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
+        tnjcs = RecordTypedDf.from_records(tnjc_records, TnJunction)
+        tnjcs = tnjcs.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
 
-        info(f"Found {len(tnjc)} TN-associated junctions (TnJc)")
-        return tnjc
+        info(f"Found {len(tnjcs)} TN-associated junctions (TnJc)")
+        return tnjcs
 
     def _get_junction_seq(self, jc: Junction, side: int) -> str:
         """Extract sequence at junction side."""
