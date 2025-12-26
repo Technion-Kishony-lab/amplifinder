@@ -156,9 +156,6 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         # Build CoveredTnJc2 from RawTnJc2 + new coverage fields
         return CoveredTnJc2.from_other(
             raw_tnjc2,
-            ref_name=self.ref_name,
-            iso_name=self.iso_name,
-            anc_name=self.anc_name,
             amplicon_coverage=amplicon_coverage,
             genome_coverage=iso_genome_median,
             copy_number=copy_number,

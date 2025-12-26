@@ -20,6 +20,9 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
         self,
         analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
         output_dir: Path,
+        ref_name: str,
+        iso_name: str,
+        anc_name: Optional[str] = None,
         copy_number_threshold: float = 1.5,
         del_copy_number_threshold: float = 0.3,
         filter_amplicon_length: int = 100,
@@ -27,6 +30,9 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
     ):
         self.analyzed_tnjc2s = analyzed_tnjc2s
         self.output_dir = Path(output_dir)
+        self.ref_name = ref_name
+        self.iso_name = iso_name
+        self.anc_name = anc_name
         self.copy_number_threshold = copy_number_threshold
         self.del_copy_number_threshold = del_copy_number_threshold
         self.filter_amplicon_length = filter_amplicon_length
@@ -46,9 +52,9 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
         export_records = []
         for analyzed_tnjc2 in self.analyzed_tnjc2s:
             export_records.append(ExportedTnJc2(
-                isolate=analyzed_tnjc2.iso_name,
-                Reference=analyzed_tnjc2.ref_name,
-                Ancestor=analyzed_tnjc2.anc_name,
+                isolate=self.iso_name,
+                Reference=self.ref_name,
+                Ancestor=self.anc_name,
                 Positions_in_chromosome=f"{analyzed_tnjc2.pos_chr_L}-{analyzed_tnjc2.pos_chr_R}",
                 Direction_in_chromosome=f"{analyzed_tnjc2.dir_chr_L}/{analyzed_tnjc2.dir_chr_R}",
                 amplicon_length=analyzed_tnjc2.amplicon_length,
