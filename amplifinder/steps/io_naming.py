@@ -22,9 +22,9 @@ DEFAULT_FILENAMES: Dict[Type[Record], str] = {
 }
 
 
-def default_filename(record_type: Type[Record]) -> str:
+def _default_filename(record_type: Type[Record]) -> str:
     return DEFAULT_FILENAMES[record_type]
 
 
 def default_path(output_dir: Path, record_type: Type[Record]) -> Path:
-    return output_dir / default_filename(record_type)
+    return output_dir / _default_filename(record_type)
