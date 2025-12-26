@@ -55,13 +55,10 @@ def calc_coverage_stats(cov: np.ndarray, include_zeros: bool = False) -> Coverag
     median = float(np.median(cov))
     
     # Mode calculation using histogram (numpy-only approach)
-    if len(cov) > 1:
-        # Use histogram to find mode
-        hist, bin_edges = np.histogram(cov, bins='auto')
-        max_bin = np.argmax(hist)
-        mode = float((bin_edges[max_bin] + bin_edges[max_bin + 1]) / 2)
-    else:
-        mode = float(cov[0]) if len(cov) == 1 else 0.0
+    # Works for len >= 1: histogram creates appropriate bins and mode is bin midpoint
+    hist, bin_edges = np.histogram(cov, bins='auto')
+    max_bin = np.argmax(hist)
+    mode = float((bin_edges[max_bin] + bin_edges[max_bin + 1]) / 2)
     
     return Coverage(mean=mean, median=median, mode=mode)
 
