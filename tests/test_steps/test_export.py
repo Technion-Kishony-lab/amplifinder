@@ -62,7 +62,7 @@ def sample_analyzed(tmp_path):
 
 
 def test_export_creates_files(sample_analyzed, tmp_path):
-    """Should create ISJC2.csv and candidate_amplifications.csv."""
+    """Should create tnjc2_exported.csv and candidate_amplifications.csv."""
     step = ExportTnJc2Step(
         analyzed_candidates=sample_analyzed,
         output_dir=tmp_path,
@@ -74,15 +74,15 @@ def test_export_creates_files(sample_analyzed, tmp_path):
     step.run()
     
     # Check that files were created
-    isjc2_file = tmp_path / "ISJC2.csv"
+    exported_file = tmp_path / "tnjc2_exported.csv"
     candidates_file = tmp_path / "candidate_amplifications.csv"
     
-    assert isjc2_file.exists()
+    assert exported_file.exists()
     assert candidates_file.exists()
     
-    # Check that ISJC2.csv contains all candidates
+    # Check that tnjc2_exported.csv contains all candidates
     import pandas as pd
-    df_all = pd.read_csv(isjc2_file)
+    df_all = pd.read_csv(exported_file)
     assert len(df_all) == 2
     
     # Check that candidate_amplifications.csv contains filtered candidates
