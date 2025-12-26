@@ -453,6 +453,9 @@ class Pipeline:
         ExportTnJc2Step(
             analyzed_tnjc2s=analyzed_tnjc2s,
             output_dir=iso_output,
+            ref_name=self.config.ref_name,
+            iso_name=self.config.iso_name,
+            anc_name=self.config.anc_name,
             copy_number_threshold=self.config.copy_number_threshold,
             del_copy_number_threshold=self.config.del_copy_number_threshold,
             filter_amplicon_length=self.config.filter_amplicon_length,
