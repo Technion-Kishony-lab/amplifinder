@@ -303,8 +303,6 @@ class Pipeline:
             iso_name=cfg.iso_name,
             anc_breseq_path=anc_breseq_path,
             anc_name=anc_name,
-            min_amplicon_length=cfg.min_amplicon_length,
-            max_amplicon_length=cfg.max_amplicon_length,
             ncp_limit1=cfg.ncp_limit1,
             ncp_limit2=cfg.ncp_limit2,
             ncp_n=cfg.ncp_n,
