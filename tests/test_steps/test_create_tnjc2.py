@@ -1,4 +1,4 @@
-"""Tests for PairTnJc2Step."""
+"""Tests for PairTnJcToRawTnJc2Step."""
 
 import pytest
 from typing import List
@@ -7,7 +7,7 @@ from amplifinder.steps import (
     CreateRefTnJcStep,
     CreateRefTnEndSeqsStep,
     CreateTnJcStep,
-    PairTnJc2Step,
+    PairTnJcToRawTnJc2Step,
 )
 from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, Junction, RefTnSide, Side, Orientation
 
@@ -38,7 +38,7 @@ def make_tnjc(
 def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTypedDf[RawTnJc2]:
     """Create RawTnJc2 from junction records."""
     tnjc = RecordTypedDf.from_records(tnjc_records, TnJunction)
-    return PairTnJc2Step(
+    return PairTnJcToRawTnJc2Step(
         tnjc=tnjc,
         genome=genome,
         output_dir=output_dir,
@@ -91,7 +91,7 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
 @pytest.fixture
 def tnjc2_step(tnjc, tiny_genome, tmp_output):
     """Create TnJc2 step."""
-    return PairTnJc2Step(
+    return PairTnJcToRawTnJc2Step(
         tnjc=tnjc,
         genome=tiny_genome,
         output_dir=tmp_output,
