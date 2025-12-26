@@ -1,13 +1,9 @@
 """BAM file parsing utilities using pysam."""
 
 from pathlib import Path
-from typing import List, NamedTuple, Optional
+from typing import List, NamedTuple
 
-try:
-    import pysam
-    PYSAM_AVAILABLE = True
-except ImportError:
-    PYSAM_AVAILABLE = False
+import pysam
 
 
 class AlignedRead(NamedTuple):
@@ -27,11 +23,6 @@ class JunctionReadCounts(NamedTuple):
     spanning: int  # reads spanning the junction
 
 
-def check_pysam_available() -> bool:
-    """Check if pysam is available."""
-    return PYSAM_AVAILABLE
-
-
 def parse_bam_reads(bam_path: Path) -> List[AlignedRead]:
     """Parse BAM file and extract alignment information.
     
@@ -42,11 +33,8 @@ def parse_bam_reads(bam_path: Path) -> List[AlignedRead]:
         List of AlignedRead records
     
     Raises:
-        ImportError: If pysam is not available
         FileNotFoundError: If BAM file doesn't exist
     """
-    if not PYSAM_AVAILABLE:
-        raise ImportError("pysam is required for BAM parsing. Install with: pip install pysam")
     
     if not bam_path.exists():
         raise FileNotFoundError(f"BAM file not found: {bam_path}")
@@ -168,4 +156,3 @@ def get_junction_coverage(
             result.append(JunctionReadCounts(left=0, right=0, spanning=0))
     
     return result
-
