@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 
@@ -13,6 +12,7 @@ import pandas as pd
 from amplifinder.logger import info, warning
 from amplifinder.data_types.typed_df import Schema
 from amplifinder.data import load_all_field_defs
+from amplifinder.utils.tools import run_command
 
 if TYPE_CHECKING:
     from amplifinder.data_types.genome import Genome
@@ -69,7 +69,7 @@ def run_breseq(
     # Clean output directory if partial run exists
     if output_path.exists():
         warning(f"Cleaning incomplete breseq output: {output_path}")
-        subprocess.run(["rm", "-rf", str(output_path)], check=True)
+        run_command(["rm", "-rf", str(output_path)], check=True)
 
     output_path.mkdir(parents=True, exist_ok=True)
 
@@ -126,17 +126,14 @@ def _run_breseq_docker(
         *fastq_args,
     ]
 
-    info(f"Running breseq (Docker): {' '.join(cmd[:10])}...")
-
-    result = subprocess.run(
+    info(f"Running breseq (Docker): {' '.join(str(c) for c in cmd[:10])}...")
+    run_command(
         cmd,
+        check=True,
         capture_output=True,
         text=True,
+        error_msg="breseq failed",
     )
-
-    if result.returncode != 0:
-        warning(f"breseq stderr: {result.stderr}")
-        raise RuntimeError(f"breseq failed with exit code {result.returncode}")
 
 
 def _run_breseq_local(
@@ -162,17 +159,14 @@ def _run_breseq_local(
         *fastq_args,
     ]
 
-    info(f"Running breseq (local): {' '.join(cmd[:8])}...")
-
-    result = subprocess.run(
+    info(f"Running breseq (local): {' '.join(str(c) for c in cmd[:8])}...")
+    run_command(
         cmd,
+        check=True,
         capture_output=True,
         text=True,
+        error_msg="breseq failed",
     )
-
-    if result.returncode != 0:
-        warning(f"breseq stderr: {result.stderr}")
-        raise RuntimeError(f"breseq failed with exit code {result.returncode}")
 
 
 def get_ref_file(genome: "Genome", use_annotations: bool = True) -> Path:

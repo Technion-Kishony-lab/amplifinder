@@ -1,19 +1,12 @@
 """BLAST runner and parser."""
 
-import subprocess
 from pathlib import Path
 from typing import List, Optional
 
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, BlastHit
 from amplifinder.env import BLAST_PATH
-
-
-def _get_blast_cmd(cmd_name: str) -> str:
-    """Get full path to BLAST command."""
-    if BLAST_PATH:
-        return str(BLAST_PATH / cmd_name)
-    return cmd_name
+from amplifinder.utils.tools import get_tool_path, run_command
 
 
 def make_blast_db(
@@ -22,14 +15,15 @@ def make_blast_db(
     dbtype: str = "nucl",
 ) -> None:
     """Create a BLAST database from a FASTA file."""
+    makeblastdb = get_tool_path("makeblastdb", config_path=BLAST_PATH)
     cmd = [
-        _get_blast_cmd("makeblastdb"),
+        makeblastdb,
         "-in", str(fasta),
         "-dbtype", dbtype,
         "-out", str(db_path),
     ]
-    info(f"Creating BLAST DB: {' '.join(cmd)}")
-    subprocess.run(cmd, check=True)
+    info(f"Creating BLAST DB: {' '.join(str(c) for c in cmd)}")
+    run_command(cmd, check=True)
 
 
 def run_blastn(
@@ -52,8 +46,9 @@ def run_blastn(
         outfmt: Output format (10 = CSV)
         extra_args: Additional blastn arguments
     """
+    blastn = get_tool_path("blastn", config_path=BLAST_PATH)
     cmd = [
-        _get_blast_cmd("blastn"),
+        blastn,
         "-db", str(db),
         "-query", str(query),
         "-evalue", str(evalue),
@@ -64,8 +59,8 @@ def run_blastn(
     if extra_args:
         cmd.extend(extra_args)
 
-    info(f"Running BLAST: {' '.join(cmd)}")
-    subprocess.run(cmd, check=True)
+    info(f"Running BLAST: {' '.join(str(c) for c in cmd)}")
+    run_command(cmd, check=True)
 
 
 def parse_blast_csv(path: Path) -> RecordTypedDf[BlastHit]:
