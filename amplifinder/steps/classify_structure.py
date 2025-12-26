@@ -11,7 +11,7 @@ from amplifinder.logger import info
 
 
 def classify_structure(
-    covered_tnjc2: RecordTypedDf[CoveredTnJc2],
+    covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
     min_amplicon_length: int = 30,
 ) -> RecordTypedDf[ClassifiedTnJc2]:
     """Classify junction pairs based on TN relationships.
@@ -30,13 +30,13 @@ def classify_structure(
        - Multiple matches: multiple single locus
     
     Args:
-        covered_tnjc2: Covered TnJc2 records
+        covered_tnjc2s: Covered TnJc2 records
         min_amplicon_length: Threshold for transposition detection
     
     Returns:
         Classified TnJc2 records
     """
-    if len(covered_tnjc2) == 0:
+    if len(covered_tnjc2s) == 0:
         return RecordTypedDf.empty(ClassifiedTnJc2)
     
     # Step 1: Identify reference and transposition pairs
@@ -44,7 +44,7 @@ def classify_structure(
     is_transposition = []
     is_single_locus = []
     
-    for tnjc2 in covered_tnjc2:
+    for tnjc2 in covered_tnjc2s:
         # Reference: both junctions are reference (jc_num == 0) and match same TN
         # Simplified: check if both jc_num are 0 (reference junctions)
         # In practice, we'd need to check if they match the same reference TN location
@@ -68,19 +68,19 @@ def classify_structure(
         is_single_locus.append(is_ref or is_trans)
     
     # Step 2: For each junction, find other single-locus pairs that share it
-    n = len(covered_tnjc2)
+    n = len(covered_tnjc2s)
     shared_tn_ids_left = [[] for _ in range(n)]
     shared_tn_ids_right = [[] for _ in range(n)]
     shared_tn_ids_both = [[] for _ in range(n)]
     multiple_single_locus = [False] * n
     
-    for i, tnjc2_i in enumerate(covered_tnjc2):
+    for i, tnjc2_i in enumerate(covered_tnjc2s):
         if not is_single_locus[i]:
             continue
         
         # Check left junction
         matches_left = []
-        for j, tnjc2_j in enumerate(covered_tnjc2):
+        for j, tnjc2_j in enumerate(covered_tnjc2s):
             if i == j or not is_single_locus[j]:
                 continue
             
@@ -99,7 +99,7 @@ def classify_structure(
         
         # Check right junction
         matches_right = []
-        for j, tnjc2_j in enumerate(covered_tnjc2):
+        for j, tnjc2_j in enumerate(covered_tnjc2s):
             if i == j or not is_single_locus[j]:
                 continue
             
@@ -122,7 +122,7 @@ def classify_structure(
     
     # Step 3: Classify based on shared IS
     classified_records = []
-    for i, tnjc2 in enumerate(covered_tnjc2):
+    for i, tnjc2 in enumerate(covered_tnjc2s):
         # Determine classification
         if multiple_single_locus[i]:
             raw_event = RawEvent.MULTIPLE_SINGLE_LOCUS
@@ -195,13 +195,13 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
 
     def __init__(
         self,
-        covered_tnjc2: RecordTypedDf[CoveredTnJc2],
+        covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
         tn_locs: RecordTypedDf[RefTnLoc],
         output_dir: Path,
         min_amplicon_length: int = 30,
         force: Optional[bool] = None,
     ):
-        self.covered_tnjc2 = covered_tnjc2
+        self.covered_tnjc2s = covered_tnjc2s
         self.tn_locs = tn_locs
         self.min_amplicon_length = min_amplicon_length
         
@@ -214,7 +214,7 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
     def _calculate_output(self) -> RecordTypedDf[ClassifiedTnJc2]:
         """Classify junction pairs."""
         classified = classify_structure(
-            self.covered_tnjc2,
+            self.covered_tnjc2s,
             min_amplicon_length=self.min_amplicon_length,
         )
         

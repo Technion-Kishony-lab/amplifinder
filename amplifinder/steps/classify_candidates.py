@@ -87,13 +87,13 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
     def __init__(
         self,
-        analyzed: RecordTypedDf[AnalyzedTnJc2],
+        analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
         output_dir: Path,
         has_ancestor: bool = False,
         min_jct_cov: int = 5,
         force: Optional[bool] = None,
     ):
-        self.analyzed = analyzed
+        self.analyzed_tnjc2s = analyzed_tnjc2s
         self.has_ancestor = has_ancestor
         self.min_jct_cov = min_jct_cov
         
@@ -107,15 +107,15 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
         """Reclassify events based on iso/anc comparison."""
         classified_records = []
         
-        for analyzed in self.analyzed:
-            iso_arch = analyzed.isolate_architecture
-            anc_arch = analyzed.ancestor_architecture if self.has_ancestor else None
+        for analyzed_tnjc2 in self.analyzed_tnjc2s:
+            iso_arch = analyzed_tnjc2.isolate_architecture
+            anc_arch = analyzed_tnjc2.ancestor_architecture if self.has_ancestor else None
             
             # Reclassify
             event, modifiers = classify_iso_vs_anc(iso_arch, anc_arch, self.min_jct_cov)
             
             # Update record with new classification
-            classified = analyzed.model_copy(update={
+            classified = analyzed_tnjc2.model_copy(update={
                 "event": event,
                 "event_modifiers": modifiers,
             })

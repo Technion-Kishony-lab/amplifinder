@@ -22,13 +22,13 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
 
     def __init__(
         self,
-        classified_tnjc2: RecordTypedDf[ClassifiedTnJc2],
+        classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
         output_dir: Path,
         min_amplicon_length: int = 30,
         max_amplicon_length: int = 1_000_000,
         force: Optional[bool] = None,
     ):
-        self.classified_tnjc2 = classified_tnjc2
+        self.classified_tnjc2s = classified_tnjc2s
         self.min_amplicon_length = min_amplicon_length
         self.max_amplicon_length = max_amplicon_length
         
@@ -42,7 +42,7 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
         """Filter candidates by amplicon length."""
         candidate_records = []
         
-        for i, classified in enumerate(self.classified_tnjc2):
+        for i, classified in enumerate(self.classified_tnjc2s):
             # Filter by length
             if (classified.amplicon_length <= self.min_amplicon_length or
                 classified.amplicon_length >= self.max_amplicon_length):
@@ -67,6 +67,6 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
             candidate_records.append(candidate)
         
         result = RecordTypedDf.from_records(candidate_records, FilteredTnJc2)
-        info(f"Filtered to {len(result)} candidates (from {len(self.classified_tnjc2)} classified)")
+        info(f"Filtered to {len(result)} candidates (from {len(self.classified_tnjc2s)} classified)")
         
         return result

@@ -52,7 +52,7 @@ def sample_classified_tnjc2(tmp_path):
 def test_filters_by_length(sample_classified_tnjc2, tmp_path):
     """Should filter candidates by amplicon length."""
     step = FilterTnJc2CandidatesStep(
-        classified_tnjc2=sample_classified_tnjc2,
+        classified_tnjc2s=sample_classified_tnjc2,
         output_dir=tmp_path,
         min_amplicon_length=30,
         max_amplicon_length=1_000_000,
@@ -70,7 +70,7 @@ def test_filters_by_length(sample_classified_tnjc2, tmp_path):
 def test_assigns_analysis_dir(sample_classified_tnjc2, tmp_path):
     """Should assign analysis directory names."""
     step = FilterTnJc2CandidatesStep(
-        classified_tnjc2=sample_classified_tnjc2,
+        classified_tnjc2s=sample_classified_tnjc2,
         output_dir=tmp_path,
         min_amplicon_length=30,
     )

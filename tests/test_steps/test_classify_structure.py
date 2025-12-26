@@ -57,7 +57,7 @@ def sample_tn_locs():
 def test_classify_structure(sample_covered_tnjc2, sample_tn_locs, tmp_path):
     """Should classify junction pairs."""
     step = ClassifyTnJc2StructureStep(
-        covered_tnjc2=sample_covered_tnjc2,
+        covered_tnjc2s=sample_covered_tnjc2,
         tn_locs=sample_tn_locs,
         output_dir=tmp_path,
     )
@@ -97,7 +97,7 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, tmp_path):
     )
     
     step = ClassifyTnJc2StructureStep(
-        covered_tnjc2=all_records,
+        covered_tnjc2s=all_records,
         tn_locs=sample_tn_locs,
         output_dir=tmp_path,
         min_amplicon_length=30,

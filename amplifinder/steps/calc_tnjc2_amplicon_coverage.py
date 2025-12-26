@@ -27,7 +27,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
 
     def __init__(
         self,
-        tnjc2: RecordTypedDf[RawTnJc2],
+        raw_tnjc2s: RecordTypedDf[RawTnJc2],
         genome: Genome,
         iso_breseq_path: Path,
         output_dir: Path,
@@ -42,7 +42,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         ncp_n: int = 150,
         force: Optional[bool] = None,
     ):
-        self.tnjc2 = tnjc2
+        self.raw_tnjc2s = raw_tnjc2s
         self.genome = genome
         self.iso_breseq_path = Path(iso_breseq_path)
         self.ref_name = ref_name
@@ -85,9 +85,9 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         
         # Process each candidate
         covered_records = []
-        for tnjc in self.tnjc2:
+        for raw_tnjc2 in self.raw_tnjc2s:
             covered = self._calc_candidate_coverage(
-                tnjc, iso_cov, iso_genome_median, anc_cov, anc_genome_median
+                raw_tnjc2, iso_cov, iso_genome_median, anc_cov, anc_genome_median
             )
             covered_records.append(covered)
         
@@ -95,14 +95,14 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
 
     def _calc_candidate_coverage(
         self,
-        tnjc: RawTnJc2,
+        raw_tnjc2: RawTnJc2,
         iso_cov: np.ndarray,
         iso_genome_median: float,
         anc_cov: Optional[np.ndarray],
         anc_genome_median: Optional[float],
     ) -> CoveredTnJc2:
         """Calculate coverage for a single candidate."""
-        amplicon_length = tnjc.amplicon_length
+        amplicon_length = raw_tnjc2.amplicon_length
         
         # Default values for candidates outside length range
         amplicon_coverage = None
@@ -113,9 +113,9 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         # Only calculate for valid amplicon lengths
         if self.min_amplicon_length < amplicon_length < self.max_amplicon_length:
             # Get coverage in amplicon region
-            start = tnjc.pos_chr_L
-            end = tnjc.pos_chr_R
-            span_origin = tnjc.span_origin
+            start = raw_tnjc2.pos_chr_L
+            end = raw_tnjc2.pos_chr_R
+            span_origin = raw_tnjc2.span_origin
             
             iso_region_cov = get_coverage_in_range(
                 iso_cov, start, end, span_origin, self.genome.length
@@ -155,7 +155,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         
         # Build CoveredTnJc2 from RawTnJc2 + new coverage fields
         return CoveredTnJc2.from_other(
-            tnjc,
+            raw_tnjc2,
             ref_name=self.ref_name,
             iso_name=self.iso_name,
             anc_name=self.anc_name,
