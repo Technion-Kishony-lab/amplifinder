@@ -14,8 +14,6 @@ from amplifinder.utils.file_lock import (
     locked_resource,
     get_step_lock_path,
     get_resource_lock_path,
-    DoneMarker,
-    locked_step_execution,
     DEFAULT_LOCK_TIMEOUT,
 )
 from amplifinder.utils.tools import (
@@ -40,8 +38,6 @@ __all__ = [
     "locked_resource",
     "get_step_lock_path",
     "get_resource_lock_path",
-    "DoneMarker",
-    "locked_step_execution",
     "DEFAULT_LOCK_TIMEOUT",
     # Tool utilities
     "find_tool",
