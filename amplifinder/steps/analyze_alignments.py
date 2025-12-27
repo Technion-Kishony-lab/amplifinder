@@ -102,6 +102,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         output_dir: Path,
         anc_output_dir: Optional[Path] = None,
         read_length: int = 150,
+        anc_read_length: Optional[int] = None,
         req_overlap: int = 12,
         min_jct_cov: int = 5,
         has_ancestor: bool = False,
@@ -111,6 +112,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         self.output_dir = Path(output_dir)
         self.anc_output_dir = Path(anc_output_dir) if anc_output_dir else None
         self.read_length = read_length
+        self.anc_read_length = anc_read_length if anc_read_length else read_length
         self.req_overlap = req_overlap
         self.min_jct_cov = min_jct_cov
         self.has_ancestor = has_ancestor
@@ -148,7 +150,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 continue
             
             iso_jc_cov = get_junction_coverage(
-                iso_bam, junction_length, self.read_length, self.req_overlap
+                iso_bam, junction_length, self.read_length, req_overlap=self.req_overlap
             )
             
             # Classify isolate architecture
@@ -165,8 +167,9 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 anc_bam = anc_analysis_dir / "iso.sorted.bam"
                 
                 if anc_bam.exists():
+                    anc_junction_length = self.anc_read_length * 2
                     anc_jc_cov = get_junction_coverage(
-                        anc_bam, junction_length, self.read_length, self.req_overlap
+                        anc_bam, anc_junction_length, self.anc_read_length, req_overlap=self.req_overlap
                     )
                     anc_arch = classify_architecture(anc_jc_cov, self.min_jct_cov)
             
