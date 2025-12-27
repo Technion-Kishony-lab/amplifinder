@@ -23,7 +23,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
 
     def __init__(
         self,
-        jc_df: RecordTypedDf[Junction],
+        junctions: RecordTypedDf[Junction],
         ref_tn_end_seqs: RecordTypedDf[SeqRefTnSide],
         genome: Genome,
         output_dir: Path,
@@ -42,7 +42,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
             trim_jc_flanking: Trim junction edges to avoid misalignment
             force: Force re-run
         """
-        self.jc_df = jc_df
+        self.jc_df = junctions
         self.ref_tn_end_seqs = ref_tn_end_seqs
         self.genome = genome
         self.max_dist_to_tn = max_dist_to_tn

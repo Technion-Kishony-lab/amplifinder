@@ -58,7 +58,7 @@ def mock_junctions(locate_tns_step, tiny_genome, tmp_output):
 def tnjc_step(mock_junctions, ref_tn_end_seqs, tiny_genome, tmp_output):
     """Create TnJc step."""
     return CreateTnJcStep(
-        jc_df=mock_junctions,
+        junctions=mock_junctions,
         ref_tn_end_seqs=ref_tn_end_seqs,
         genome=tiny_genome,
         output_dir=tmp_output,

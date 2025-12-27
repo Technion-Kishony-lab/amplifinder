@@ -79,7 +79,7 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
     mock_junctions = RecordTypedDf.from_records(junctions, Junction)
 
     return CreateTnJcStep(
-        jc_df=mock_junctions,
+        junctions=mock_junctions,
         ref_tn_end_seqs=ref_tn_end_seqs,
         genome=tiny_genome,
         output_dir=tmp_output,
