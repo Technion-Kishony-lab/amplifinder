@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 
 from amplifinder.config import Config, save_config, load_config_from_run, get_iso_run_dir
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir
 
 
 @pytest.fixture

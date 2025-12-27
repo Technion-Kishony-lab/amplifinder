@@ -10,13 +10,13 @@ from amplifinder.data_types import (
 )
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.tools.breseq import load_breseq_coverage
-from amplifinder.utils.coverage import (
+from amplifinder.steps.amplicon_coverage.coverage import (
     get_coverage_in_range,
-    calc_distribution_mode,
     get_scaffold_coverage,
     calc_coverage_stats,
     calc_scaffold_coverages_and_medians,
 )
+from amplifinder.steps.amplicon_coverage.statistics import calc_distribution_mode
 
 
 class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):

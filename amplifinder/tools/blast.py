@@ -6,7 +6,7 @@ from typing import List, Optional
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, BlastHit
 from amplifinder.env import BLAST_PATH
-from amplifinder.utils.tools import get_tool_path, run_command
+from amplifinder.utils.run_utils import get_tool_path, run_command
 
 
 def make_blast_db(

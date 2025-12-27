@@ -11,7 +11,7 @@ from amplifinder.config import Config, load_config, merge_config
 from amplifinder.logger import setup_logger, info, warning, error
 from amplifinder.pipeline import Pipeline
 from amplifinder.steps.base import Step
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir
 
 
 @click.command()

@@ -10,7 +10,7 @@ from amplifinder.steps.create_tnjc import CreateTnJcStep
 from amplifinder.steps.pair_tnjc import PairTnJcToRawTnJc2Step
 from amplifinder.steps.classify_structure import ClassifyTnJc2StructureStep
 from amplifinder.steps.filter_candidates import FilterTnJc2CandidatesStep
-from amplifinder.steps.calc_tnjc2_amplicon_coverage import CalcTnJc2AmpliconCoverageStep
+from amplifinder.steps.amplicon_coverage import CalcTnJc2AmpliconCoverageStep
 from amplifinder.steps.synthetic_junctions import CreateSyntheticJunctionsStep
 from amplifinder.steps.align_reads import AlignReadsToJunctionsStep
 from amplifinder.steps.analyze_alignments import AnalyzeTnJc2AlignmentsStep

@@ -1,4 +1,4 @@
-"""TN location utilities."""
+"""TN location comparison utilities."""
 
 from typing import TYPE_CHECKING, Union
 

@@ -13,7 +13,7 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature
 
 from amplifinder.logger import info
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir
 
 # Set email for NCBI Entrez (required)
 Entrez.email = "amplifinder@example.com"
