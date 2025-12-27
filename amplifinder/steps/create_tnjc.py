@@ -8,7 +8,6 @@ from amplifinder.utils.fasta import reverse_complement
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, Junction, SeqRefTnSide, RefTnSide, TnJunction, Orientation
 from amplifinder.data_types.genome import Genome
-from amplifinder.utils.tools import ensure_dir
 
 
 class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
@@ -56,7 +55,6 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
 
     def _calculate_output(self) -> RecordTypedDf[TnJunction]:
         """Match junctions to TN elements."""
-        ensure_dir(self.output_dir)
 
         self.ref_seqs = self.genome.sequences
         tnjc_records = []

@@ -43,6 +43,7 @@ class LocateTNsStep(Step[Optional[RecordTypedDf[RefTnLoc]]]):
 
     def _save_output(self, output: Optional[RecordTypedDf[RefTnLoc]]) -> None:
         if output is not None:
+            ensure_dir(self.output_file.parent)
             output.to_csv(self.output_file)
 
     def load_outputs(self) -> Optional[RecordTypedDf[RefTnLoc]]:
@@ -85,8 +86,6 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
         if self.genome.genbank_path is None:
             info("No GenBank file provided - skipping GenBank TN annotation")
             return None
-
-        ensure_dir(self.output_dir)
         records = find_tn_elements(self.genome.genbank_path, self.genome.name)
         tn_loc = RecordTypedDf.from_records(records, RefTnLoc)
         info(f"Found {len(tn_loc)} TN elements in GenBank annotations")
