@@ -8,8 +8,10 @@ from pathlib import Path
 from typing import Optional, List, Dict
 
 from Bio import Entrez, SeqIO
+from Bio.Seq import reverse_complement
 from Bio.SeqRecord import SeqRecord
 
+from amplifinder.data_types.record_types import Junction, Orientation
 from amplifinder.logger import info
 from amplifinder.utils.file_utils import ensure_dir
 
@@ -114,6 +116,37 @@ class Genome:
             cumulative += length
         return ranges
 
+    def get_fowrard_sequence_in_range(self, scaf: str, start: int, end: int) -> str:
+        """
+        Get sequence in a range. 1-based inclusive.
+        Uses modulo arithmetic to handle circular genome.
+        """
+        scaf_circular = self.scaffold_circularities[scaf]
+        scaf_seq = self.scaffold_sequences[scaf]
+        if not scaf_circular:
+            return scaf_seq[start - 1:end]
+        start = (start - 1) % len(scaf_seq) + 1
+        end = (end - 1) % len(scaf_seq) + 1
+        if start <= end:
+            return scaf_seq[start - 1:end]
+        else:
+            return scaf_seq[start - 1:] + scaf_seq[:end]
+
+    def get_sequence_in_range(self, scaf: str, start: int, end: int, direction: Orientation) -> str:
+        """Get sequence in a range."""
+        if direction == Orientation.FORWARD:
+            return self.get_fowrard_sequence_in_range(scaf, start, end)
+        else:
+            return reverse_complement(self.get_fowrard_sequence_in_range(scaf, end, start))
+
+    def get_junction_side_sequence(self, jc: Junction, side: int) -> str:
+        """Get sequence for a junction side."""
+        scaf, pos, direction, flank_len = jc.get_scaf_pos_dir_flank(side)
+        return self.get_sequence_in_range(scaf, pos, pos + flank_len * direction, direction)
+
+    def get_junction_sequence(self, jc: Junction) -> str:
+        """Get sequence for a junction."""
+        return reverse_complement(self.get_junction_side_sequence(jc, 1)) + self.get_junction_side_sequence(jc, 2)
 
 class GenomeRegistry:
     """Registry for fetching and caching genomes.
