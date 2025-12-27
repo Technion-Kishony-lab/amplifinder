@@ -1,18 +1,18 @@
-"""Folder-based locking for parallel run safety.
+"""File-based locking for parallel run safety.
 
 Prevents race conditions when multiple AmpliFinder processes access
-shared resources. Uses atomic mkdir() - no external dependencies.
+shared resources. Uses filelock for cross-platform file locks.
 """
 
 from contextlib import contextmanager
 from pathlib import Path
-import time
+
+from filelock import FileLock, Timeout
 
 from amplifinder.logger import debug
 
 
 DEFAULT_LOCK_TIMEOUT = 3600  # 1 hour
-POLL_INTERVAL = 1.0
 
 
 class LockTimeout(Exception):
@@ -21,66 +21,30 @@ class LockTimeout(Exception):
 
 
 @contextmanager
-def locked_operation(
-    lock_path: Path,
+def _locked_operation(
+    lock_filepath: Path,
     timeout: int = DEFAULT_LOCK_TIMEOUT,
     description: str = "operation",
 ):
-    """Folder-based lock using atomic mkdir()."""
-    lock_path = Path(lock_path)
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-
-    deadline = time.time() + timeout
-    while True:
-        try:
-            lock_path.mkdir(exist_ok=False)
-            debug(f"Lock acquired for {description}: {lock_path}")
-            break
-        except FileExistsError:
-            if time.time() >= deadline:
-                raise LockTimeout(
-                    f"Could not acquire lock for {description} within {timeout}s. "
-                    f"Lock folder: {lock_path}"
-                )
-            time.sleep(POLL_INTERVAL)
+    """File-based lock using filelock."""
+    lock_filepath = Path(lock_filepath)
+    lock_filepath.parent.mkdir(parents=True, exist_ok=True)
+    lock = FileLock(lock_filepath)
+    try:
+        lock.acquire(timeout=timeout)
+        debug(f"Lock acquired for {description}: {lock_filepath}")
+    except Timeout as exc:
+        raise LockTimeout(
+            f"Could not acquire lock for {description} within {timeout}s. "
+            f"Lock file: {lock_filepath}"
+        ) from exc
 
     try:
         yield
     finally:
-        lock_path.rmdir()
-        debug(f"Lock released for {description}")
-
-
-def get_step_lock_path(output_file: Path, step_name: str) -> Path:
-    """Get lock file path for a step based on its output file.
-
-    Lock files are placed in the same directory as the output,
-    with a hidden name based on the step name.
-
-    Args:
-        output_file: Primary output file of the step
-        step_name: Name of the step (used in lock filename)
-
-    Returns:
-        Path to the lock file
-    """
-    return output_file.parent / f".{step_name}.lock"
-
-
-def get_resource_lock_path(resource_path: Path, resource_type: str) -> Path:
-    """Get lock file path for a shared resource.
-
-    Args:
-        resource_path: Path to the resource (file or directory)
-        resource_type: Type of resource (e.g., 'blast_db', 'genome')
-
-    Returns:
-        Path to the lock file
-    """
-    if resource_path.is_dir():
-        return resource_path / f".{resource_type}.lock"
-    else:
-        return resource_path.parent / f".{resource_path.stem}.{resource_type}.lock"
+        if lock.is_locked:
+            lock.release()
+            debug(f"Lock released for {description}")
 
 
 @contextmanager
@@ -90,6 +54,9 @@ def locked_resource(
     timeout: int = DEFAULT_LOCK_TIMEOUT,
 ):
     """Lock a shared resource for exclusive access."""
-    lock_path = get_resource_lock_path(resource_path, resource_type)
-    with locked_operation(lock_path, timeout, f"{resource_type} at {resource_path}"):
+    if resource_path.is_dir():
+        lock_filepath = resource_path / f".{resource_type}.lock"
+    else:
+        lock_filepath = resource_path.parent / f".{resource_path.stem}.{resource_type}.lock"
+    with _locked_operation(lock_filepath, timeout, f"{resource_type} at {resource_path}"):
         yield

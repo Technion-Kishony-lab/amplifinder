@@ -9,10 +9,7 @@ from amplifinder.utils.fasta import (
     reverse_complement,
 )
 from amplifinder.utils.file_lock import (
-    locked_operation,
     locked_resource,
-    get_step_lock_path,
-    get_resource_lock_path,
     DEFAULT_LOCK_TIMEOUT,
 )
 from amplifinder.utils.run_utils import (
@@ -34,16 +31,16 @@ __all__ = [
     "get_read_length",
     "ReadLengthStats",
     "reverse_complement",
+
     # File locking utilities
-    "locked_operation",
     "locked_resource",
-    "get_step_lock_path",
-    "get_resource_lock_path",
     "DEFAULT_LOCK_TIMEOUT",
+
     # Tool utilities
     "find_tool",
     "get_tool_path",
     "run_command",
+
     # Path utilities
     "ensure_dir",
     "ensure_parent_dir",

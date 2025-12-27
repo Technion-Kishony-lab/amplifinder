@@ -5,16 +5,13 @@ from pathlib import Path
 from typing import Generic, List, Optional, TypeVar, get_args, get_origin, Type
 
 from amplifinder.logger import info
-from amplifinder.utils.file_lock import locked_operation, get_step_lock_path
+from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import remove_file_or_dir, ensure_dir
 from amplifinder.data_types.typed_df import RecordTypedDf
 from amplifinder.data_types.records import Record
 from amplifinder.steps.io_naming import default_path
 
 T = TypeVar("T")
-
-# Default lock timeout for steps (seconds)
-STEP_LOCK_TIMEOUT = 7200  # 2 hours (breseq can be very slow)
 
 
 class Step(ABC, Generic[T]):
@@ -25,6 +22,9 @@ class Step(ABC, Generic[T]):
     - Clean partial outputs before re-run
     - Global and step-specific force control
     """
+
+    # Default lock timeout for steps (seconds); override per step if needed
+    STEP_LOCK_TIMEOUT = 1800
 
     # Global force flag (applies to all steps)
     global_force: bool = False
@@ -65,6 +65,11 @@ class Step(ABC, Generic[T]):
         if self._force is not None:
             return self._force
         return Step.global_force
+
+    @property
+    def is_saving(self) -> bool:
+        """True if output_files defined and should_save is True."""
+        return self.output_files is not None and len(self.output_files) > 0 and self.should_save
 
     @abstractmethod
     def _calculate_output(self) -> T:
@@ -127,13 +132,13 @@ class Step(ABC, Generic[T]):
             info(f"{self.name}: skipped (outputs exist)")
             return self.load_outputs()
 
-        # Steps without file outputs don't need locking
-        if self.output_files is None:
+        # Steps without file outputs or not saving don't need locking
+        if not self.is_saving:
             return self._run_unlocked()
 
         # Acquire lock and re-check (TOCTOU fix)
-        lock_path = self._get_lock_path()
-        with locked_operation(lock_path, STEP_LOCK_TIMEOUT, f"step {self.name}"):
+        lock_target = self.output_files[0]
+        with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
             # Re-check under lock: another process may have created output
             if not self.force and self.has_output_files():
                 info(f"{self.name}: skipped (outputs exist, verified under lock)")
@@ -152,17 +157,10 @@ class Step(ABC, Generic[T]):
         output = self._calculate_output()
 
         # Save output (only if output_files defined and should_save is True)
-        if self.output_files is not None and self.should_save:
+        if self.is_saving:
             self._save_output_and_verify(output)
 
         return output
-
-    def _get_lock_path(self) -> Path:
-        """Get lock file path for this step."""
-        if self.output_files:
-            return get_step_lock_path(self.output_files[0], self.name)
-        # Fallback for steps without output files (shouldn't happen in locked path)
-        raise ValueError(f"{self.name}: cannot get lock path without output files")
 
     def _clean_outputs(self) -> None:
         """Remove existing outputs before re-run."""
