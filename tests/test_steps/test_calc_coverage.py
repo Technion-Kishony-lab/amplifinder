@@ -4,40 +4,40 @@ import pytest
 import pandas as pd
 from amplifinder.steps import CalcTnJc2AmpliconCoverageStep
 from amplifinder.data_types import (
-    RecordTypedDf, RawTnJc2, Genome, Orientation,
+    RecordTypedDf, RawTnJc2, Genome,
 )
 from amplifinder.utils.file_utils import ensure_dir
 
 
 @pytest.fixture
-def sample_tnjc2(tmp_path):
+def sample_tnjc2(raw_tnjc2_record):
     """Create sample RawTnJc2 records."""
-    records = [
-        RawTnJc2(
-            jc_num_L=1, jc_num_R=2,
-            scaf="chr1",
-            pos_scaf_L=100, pos_scaf_R=200,
-            pos_tn_L=10, pos_tn_R=20,
-            dir_scaf_L=Orientation.FORWARD, dir_scaf_R=Orientation.REVERSE,
-            dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
-            tn_ids=[1], tn_orientations=[Orientation.FORWARD],
-            span_origin=False,
-            amplicon_length=100, complementary_length=900,
-        ),
-        RawTnJc2(
-            jc_num_L=3, jc_num_R=4,
-            scaf="chr1",
-            pos_scaf_L=300, pos_scaf_R=320,
-            pos_tn_L=30, pos_tn_R=40,
-            dir_scaf_L=Orientation.FORWARD, dir_scaf_R=Orientation.REVERSE,
-            dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
-            tn_ids=[2], tn_orientations=[Orientation.FORWARD],
-            span_origin=False,
-            amplicon_length=20,  # Too short
-            complementary_length=980,
-        ),
-    ]
-    return RecordTypedDf.from_records(records, RawTnJc2)
+    first = RawTnJc2.from_other(
+        raw_tnjc2_record,
+        scaf="chr1",
+        pos_scaf_L=100,
+        pos_scaf_R=200,
+        pos_tn_L=10,
+        pos_tn_R=20,
+        amplicon_length=100,
+        complementary_length=900,
+    )
+
+    second = RawTnJc2.from_other(
+        raw_tnjc2_record,
+        jc_num_L=3,
+        jc_num_R=4,
+        scaf="chr1",
+        pos_scaf_L=300,
+        pos_scaf_R=320,
+        pos_tn_L=30,
+        pos_tn_R=40,
+        tn_ids=[2],
+        amplicon_length=20,  # Too short
+        complementary_length=980,
+    )
+
+    return RecordTypedDf.from_records([first, second], RawTnJc2)
 
 
 @pytest.fixture

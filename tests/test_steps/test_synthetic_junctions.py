@@ -1,52 +1,16 @@
 """Tests for CreateSyntheticJunctionsStep."""
 
-import pytest
 from amplifinder.steps import CreateSyntheticJunctionsStep
 from amplifinder.data_types import (
-    RecordTypedDf, FilteredTnJc2, RefTnLoc, RawEvent, Orientation, Coverage,
+    RecordTypedDf, FilteredTnJc2, RefTnLoc, Orientation,
 )
 from amplifinder.utils.file_utils import ensure_parent_dir
 
 
-@pytest.fixture
-def sample_candidate(tmp_path):
-    """Create a sample FilteredTnJc2."""
-    return FilteredTnJc2(
-        jc_num_L=1, jc_num_R=2,
-        scaf="tiny",
-        pos_scaf_L=200, pos_scaf_R=300,
-        pos_tn_L=10, pos_tn_R=20,
-        dir_scaf_L=Orientation.FORWARD, dir_scaf_R=Orientation.REVERSE,
-        dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
-        tn_ids=[1], tn_orientations=[Orientation.FORWARD],
-        span_origin=False,
-        amplicon_length=100, complementary_length=900,
-        ref_name="tiny", iso_name="sample1",
-        amplicon_coverage=2.0,
-        scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
-        iso_amplicon_coverage=Coverage(mean=2.0, median=2.0, mode=2.0),
-        iso_scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
-        copy_number=2.0, amplicon_coverage_mode=2.0,
-        raw_event=RawEvent.FLANKED,
-        shared_tn_ids=[1], chosen_tn_id=1,
-        analysis_dir="jc_200_300_001_L150",
-    )
-
-
-@pytest.fixture
-def sample_tn_loc():
-    """Create a sample RefTnLoc."""
-    return RefTnLoc(
-        tn_id=1, tn_name="IS1", tn_scaf="tiny",
-        loc_left=200, loc_right=300,
-        complement=False, join=False,
-    )
-
-
-def test_creates_junctions_fasta(tiny_genome, sample_candidate, sample_tn_loc, tmp_path):
+def test_creates_junctions_fasta(tiny_genome, filtered_tnjc2_record, ref_tn_loc_record, tmp_path):
     """Should create junctions.fasta file."""
-    filtered_tnjc2s = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
-    tn_locs = RecordTypedDf.from_records([sample_tn_loc], RefTnLoc)
+    filtered_tnjc2s = RecordTypedDf.from_records([filtered_tnjc2_record], FilteredTnJc2)
+    tn_locs = RecordTypedDf.from_records([ref_tn_loc_record], RefTnLoc)
 
     step = CreateSyntheticJunctionsStep(
         filtered_tnjc2s=filtered_tnjc2s,
@@ -59,7 +23,7 @@ def test_creates_junctions_fasta(tiny_genome, sample_candidate, sample_tn_loc, t
     step.run()
 
     # Check that junctions.fasta was created
-    junctions_file = tmp_path / sample_candidate.analysis_dir / "junctions.fasta"
+    junctions_file = tmp_path / filtered_tnjc2_record.analysis_dir / "junctions.fasta"
     assert junctions_file.exists()
 
     # Check that it contains 7 junction sequences
@@ -69,27 +33,14 @@ def test_creates_junctions_fasta(tiny_genome, sample_candidate, sample_tn_loc, t
         assert content.count(">") == 7
 
 
-def test_handles_missing_tn(tiny_genome, sample_candidate, tmp_path):
+def test_handles_missing_tn(tiny_genome, filtered_tnjc2_record, tmp_path):
     """Should skip candidates with missing TN."""
-    # Create candidate with non-existent TN ID
-    candidate_no_tn = FilteredTnJc2(
-        jc_num_L=1, jc_num_R=2,
-        scaf="tiny",
-        pos_scaf_L=200, pos_scaf_R=300,
-        pos_tn_L=10, pos_tn_R=20,
-        dir_scaf_L=Orientation.FORWARD, dir_scaf_R=Orientation.REVERSE,
-        dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
-        tn_ids=[999], tn_orientations=[Orientation.FORWARD],
-        span_origin=False,
-        amplicon_length=100, complementary_length=900,
-        ref_name="tiny", iso_name="sample1",
-        amplicon_coverage=2.0,
-        scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
-        iso_amplicon_coverage=Coverage(mean=2.0, median=2.0, mode=2.0),
-        iso_scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
-        copy_number=2.0, amplicon_coverage_mode=2.0,
-        raw_event=RawEvent.FLANKED,
-        shared_tn_ids=[999], chosen_tn_id=999,
+    candidate_no_tn = FilteredTnJc2.from_other(
+        filtered_tnjc2_record,
+        tn_ids=[999],
+        tn_orientations=[Orientation.FORWARD],
+        shared_tn_ids=[999],
+        chosen_tn_id=999,
         analysis_dir="jc_200_300_999_L150",
     )
 
