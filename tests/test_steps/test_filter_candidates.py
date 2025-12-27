@@ -14,10 +14,10 @@ def sample_classified_tnjc2(tmp_path):
     records = [
         ClassifiedTnJc2(
             jc_num_L=1, jc_num_R=2,
-            scaf_chr="chr1",
-            pos_chr_L=100, pos_chr_R=200,
+            scaf="chr1",
+            pos_scaf_L=100, pos_scaf_R=200,
             pos_tn_L=10, pos_tn_R=20,
-            dir_chr_L=Orientation.FORWARD, dir_chr_R=Orientation.REVERSE,
+            dir_scaf_L=Orientation.FORWARD, dir_scaf_R=Orientation.REVERSE,
             dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
             tn_ids=[1], tn_orientations=[Orientation.FORWARD],
             span_origin=False,
@@ -30,10 +30,10 @@ def sample_classified_tnjc2(tmp_path):
         ),
         ClassifiedTnJc2(
             jc_num_L=3, jc_num_R=4,
-            scaf_chr="chr1",
-            pos_chr_L=300, pos_chr_R=320,
+            scaf="chr1",
+            pos_scaf_L=300, pos_scaf_R=320,
             pos_tn_L=30, pos_tn_R=40,
-            dir_chr_L=Orientation.FORWARD, dir_chr_R=Orientation.REVERSE,
+            dir_scaf_L=Orientation.FORWARD, dir_scaf_R=Orientation.REVERSE,
             dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
             tn_ids=[2], tn_orientations=[Orientation.FORWARD],
             span_origin=False,

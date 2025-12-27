@@ -13,10 +13,10 @@ def sample_analyzed(tmp_path):
     """Create a sample AnalyzedTnJc2."""
     return AnalyzedTnJc2(
         jc_num_L=1, jc_num_R=2,
-        scaf_chr="tiny",
-        pos_chr_L=200, pos_chr_R=300,
+        scaf="tiny",
+        pos_scaf_L=200, pos_scaf_R=300,
         pos_tn_L=10, pos_tn_R=20,
-        dir_chr_L=Orientation.FORWARD, dir_chr_R=Orientation.REVERSE,
+        dir_scaf_L=Orientation.FORWARD, dir_scaf_R=Orientation.REVERSE,
         dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
         tn_ids=[1], tn_orientations=[Orientation.FORWARD],
         span_origin=False,

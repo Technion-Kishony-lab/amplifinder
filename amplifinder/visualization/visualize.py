@@ -45,8 +45,8 @@ def plot_candidate_coverage(
     # Calculate plot range
     amplicon_length = candidate.amplicon_length
     flank = int(amplicon_length * flank_fraction)
-    plot_start = max(1, candidate.pos_chr_L - flank)
-    plot_end = min(genome_length, candidate.pos_chr_R + flank)
+    plot_start = max(1, candidate.pos_scaf_L - flank)
+    plot_end = min(genome_length, candidate.pos_scaf_R + flank)
     
     # Handle origin spanning
     if candidate.span_origin:
@@ -75,17 +75,17 @@ def plot_candidate_coverage(
         ax.plot(positions, anc_plot_cov, 'gray', linewidth=1.5, label='Ancestor', alpha=0.7)
     
     # Add amplicon boundaries (dashed red lines)
-    ax.axvline(candidate.pos_chr_L, color='red', linestyle='--', linewidth=2, alpha=0.7)
-    ax.axvline(candidate.pos_chr_R, color='red', linestyle='--', linewidth=2, alpha=0.7)
+    ax.axvline(candidate.pos_scaf_L, color='red', linestyle='--', linewidth=2, alpha=0.7)
+    ax.axvline(candidate.pos_scaf_R, color='red', linestyle='--', linewidth=2, alpha=0.7)
     
     # Shade amplicon region
-    ax.axvspan(candidate.pos_chr_L, candidate.pos_chr_R, alpha=0.2, color='red', label='Amplicon')
+    ax.axvspan(candidate.pos_scaf_L, candidate.pos_scaf_R, alpha=0.2, color='red', label='Amplicon')
     
     # Formatting
     copy_num = candidate.copy_number if (hasattr(candidate, 'copy_number') and candidate.copy_number is not None) else 0.0
     title = (
         f"{candidate.raw_event.value} | "
-        f"{candidate.pos_chr_L}-{candidate.pos_chr_R} | "
+        f"{candidate.pos_scaf_L}-{candidate.pos_scaf_R} | "
         f"copy_number: {copy_num:.1f}x"
     )
     ax.set_title(title, fontsize=12, fontweight='bold')

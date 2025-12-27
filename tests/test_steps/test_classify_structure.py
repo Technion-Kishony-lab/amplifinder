@@ -14,10 +14,10 @@ def sample_covered_tnjc2(tmp_path):
     records = [
         CoveredTnJc2(
             jc_num_L=1, jc_num_R=2,
-            scaf_chr="chr1",
-            pos_chr_L=100, pos_chr_R=200,
+            scaf="chr1",
+            pos_scaf_L=100, pos_scaf_R=200,
             pos_tn_L=10, pos_tn_R=20,
-            dir_chr_L=Orientation.FORWARD, dir_chr_R=Orientation.REVERSE,
+            dir_scaf_L=Orientation.FORWARD, dir_scaf_R=Orientation.REVERSE,
             dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
             tn_ids=[1], tn_orientations=[Orientation.FORWARD],
             span_origin=False,
@@ -28,10 +28,10 @@ def sample_covered_tnjc2(tmp_path):
         ),
         CoveredTnJc2(
             jc_num_L=0, jc_num_R=0,  # reference junctions
-            scaf_chr="chr1",
-            pos_chr_L=300, pos_chr_R=400,
+            scaf="chr1",
+            pos_scaf_L=300, pos_scaf_R=400,
             pos_tn_L=30, pos_tn_R=40,
-            dir_chr_L=Orientation.FORWARD, dir_chr_R=Orientation.REVERSE,
+            dir_scaf_L=Orientation.FORWARD, dir_scaf_R=Orientation.REVERSE,
             dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
             tn_ids=[2], tn_orientations=[Orientation.FORWARD],
             span_origin=False,
@@ -77,10 +77,10 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, tmp_path):
     # Create a short amplicon
     short_record = CoveredTnJc2(
         jc_num_L=3, jc_num_R=4,
-        scaf_chr="chr1",
-        pos_chr_L=500, pos_chr_R=520,
+        scaf="chr1",
+        pos_scaf_L=500, pos_scaf_R=520,
         pos_tn_L=50, pos_tn_R=60,
-        dir_chr_L=Orientation.FORWARD, dir_chr_R=Orientation.REVERSE,
+        dir_scaf_L=Orientation.FORWARD, dir_scaf_R=Orientation.REVERSE,
         dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
         tn_ids=[1], tn_orientations=[Orientation.FORWARD],
         span_origin=False,
