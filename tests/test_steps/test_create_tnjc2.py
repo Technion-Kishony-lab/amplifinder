@@ -111,9 +111,9 @@ def test_output_has_correct_columns(tnjc2_step):
     raw_tnjc2s = tnjc2_step.run()
 
     expected_cols = {
-        "jc_num_L", "jc_num_R", "scaf_chr",
-        "pos_chr_L", "pos_chr_R", "pos_tn_L", "pos_tn_R",
-        "dir_chr_L", "dir_chr_R", "dir_tn_L", "dir_tn_R",
+        "jc_num_L", "jc_num_R", "scaf",
+        "pos_scaf_L", "pos_scaf_R", "pos_tn_L", "pos_tn_R",
+        "dir_scaf_L", "dir_scaf_R", "dir_tn_L", "dir_tn_R",
         "tn_ids", "tn_orientations", "span_origin",
         "amplicon_length", "complementary_length",
     }
