@@ -41,7 +41,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
             trim_jc_flanking: Trim junction edges to avoid misalignment
             force: Force re-run
         """
-        self.jc_df = junctions
+        self.junctions = junctions
         self.ref_tn_end_seqs = ref_tn_end_seqs
         self.genome = genome
         self.max_dist_to_tn = max_dist_to_tn
@@ -59,7 +59,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         self.ref_seqs = self.genome.scaffold_sequences
         tnjc_records = []
 
-        for jc in self.jc_df:
+        for jc in self.junctions:
             # Get junction flanking sequences
             seq1 = self._get_junction_seq(jc, side=1)
             seq2 = self._get_junction_seq(jc, side=2)

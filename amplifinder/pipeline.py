@@ -74,7 +74,7 @@ class Pipeline:
 
         # Run isolate pipeline
         tn_loc = self._locate_tns_in_reference(genome)
-        ref_tn_jc, ref_tn_end_seqs = self._create_reference_tn_junctions(tn_loc, genome, iso_output)
+        ref_tn_jc, ref_tn_end_seqs = self._create_ref_tn_junctions(tn_loc, genome, iso_output)
         breseq_jc = self._run_breseq(genome, iso_output)
         tnjcs = self._create_tnjc(breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output)
         raw_tnjc2s = self._create_tnjc2(tnjcs, genome, iso_output)
@@ -208,7 +208,7 @@ class Pipeline:
         assert tn_loc is not None
         return tn_loc
 
-    def _create_reference_tn_junctions(
+    def _create_ref_tn_junctions(
         self, ref_tn_locs: RecordTypedDf[RefTnLoc], genome: Genome, iso_output: Path
     ) -> Tuple[RecordTypedDf[RefTnJunction], RecordTypedDf[SeqRefTnSide]]:
         """Step 3: Create reference junctions and TN end sequences."""

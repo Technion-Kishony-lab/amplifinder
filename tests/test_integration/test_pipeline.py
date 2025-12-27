@@ -41,9 +41,9 @@ class TestPipeline(Pipeline):
         print(f"Step 2: Python={len(result)} TNs")
         return result
 
-    def _create_reference_tn_junctions(self, tn_loc, genome, iso_output):
+    def _create_ref_tn_junctions(self, tn_loc, genome, iso_output):
         """Step 3: Create reference TN junctions - compare with MATLAB."""
-        result = super()._create_reference_tn_junctions(tn_loc, genome, iso_output)
+        result = super()._create_ref_tn_junctions(tn_loc, genome, iso_output)
         ref_tn_jc, ref_tn_end_seqs = result
         print(f"Step 3: Python={len(ref_tn_jc)} ref junctions")
         return result
