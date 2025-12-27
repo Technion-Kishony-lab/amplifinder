@@ -86,10 +86,10 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
         if self.genome.genbank_path is None:
             info("No GenBank file provided - skipping GenBank TN annotation")
             return None
-        records = find_tn_elements(self.genome.genbank_path, self.genome.name)
-        tn_loc = RecordTypedDf.from_records(records, RefTnLoc)
-        info(f"Found {len(tn_loc)} TN elements in GenBank annotations")
-        return tn_loc
+        ref_tn_locs = find_tn_elements(self.genome.gb_records)
+        ref_tn_locs = RecordTypedDf.from_records(ref_tn_locs, RefTnLoc)
+        info(f"Found {len(ref_tn_locs)} TN elements in GenBank annotations")
+        return ref_tn_locs
 
 
 # Locate TNs using ISfinder database
@@ -124,7 +124,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
 
     def _calculate_output(self) -> RecordTypedDf[RefTnLoc]:
         """Run BLAST and parse results."""
-        ensure_dir(self.output_dir)
+        ensure_dir(self.blast_output.parent)
 
         # Create BLAST DB if needed (with lock to prevent parallel creation)
         with locked_resource(self.isdb_path, "blast_db", timeout=300):
@@ -147,16 +147,13 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
 
     def _parse_blast(self) -> RecordTypedDf[RefTnLoc]:
         """Parse BLAST output and convert to TN locations."""
-        blast_df = parse_blast_csv(self.blast_output)
+        blast_hits = parse_blast_csv(self.blast_output)
 
         tn_lengths = read_fasta_lengths(self.isdb_path)
-        df = blast_df.df.copy()
+        df = blast_hits.df
 
         # Remove duplicate alignments (keep first by qstart, qend)
         df = df.drop_duplicates(subset=["qstart", "qend"], keep="first")
-
-        if df.empty:
-            return RecordTypedDf.empty(RefTnLoc)
 
         # Add subject length
         df["subject_length"] = df["subject"].map(tn_lengths).fillna(0).astype(int)
@@ -172,10 +169,12 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         is_complement = (df["sstart"] > df["send"]).values
 
         # Ensure LocLeft < LocRight
+        # qstart and qend are 1-based from BLAST output
         loc_left = df[["qstart", "qend"]].min(axis=1).values
         loc_right = df[["qstart", "qend"]].max(axis=1).values
 
         # Build tn_loc table
+        # loc_left and loc_right are stored as 1-based inclusive (matching BLAST coordinates)
         return RecordTypedDf(pd.DataFrame({
             "tn_id": range(1, len(df) + 1),
             "tn_name": df["subject"].values,

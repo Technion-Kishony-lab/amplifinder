@@ -1,44 +1,48 @@
 """GenBank parsing utilities using BioPython."""
 
+from __future__ import annotations
+
 import re
-from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 
-from Bio import SeqIO
 from Bio.SeqFeature import SeqFeature
+from Bio.SeqRecord import SeqRecord
 
-from amplifinder.data_types.record_types import RefTnLoc
+from amplifinder.data_types.record_types import RefTnLoc, TnId
 
 
-def find_tn_elements(genbank_path: Path, ref_name: str) -> List[RefTnLoc]:
+def find_tn_elements(gb_records: List[SeqRecord]) -> List[RefTnLoc]:
     """Find TN elements from GenBank annotations.
 
     Looks for mobile_element features with 'insertion sequence' in the type.
     """
-    record = SeqIO.read(genbank_path, "genbank")
+    results = []
+    tn_id: TnId = 0
 
-    records = []
-    id_counter = 0
+    for record in gb_records:
+        scaf_name = record.name
+        for feature in record.features:
+            tn_name = _extract_tn_name_from_feature(feature)
+            if tn_name is None:
+                continue
 
-    for feature in record.features:
-        tn_name = _extract_tn_name_from_feature(feature)
-        if tn_name is None:
-            # Not a TN element
-            continue
+            location = feature.location
+            assert location.start >= 0 and location.end >= 0
+            assert location.start < location.end
+            tn_id += 1
+            # BioPython locations are 0-based (start) and 0-based exclusive end
+            # Convert to 1-based inclusive for consistency with BLAST coordinates
+            results.append(RefTnLoc(
+                tn_id=tn_id,
+                tn_name=tn_name,
+                tn_scaf=scaf_name,
+                loc_left=int(location.start) + 1,  # Convert 0-based to 1-based inclusive
+                loc_right=int(location.end),       # BioPython end is exclusive, stored as 1-based inclusive
+                complement=location.strand == -1,
+                join=hasattr(location, 'parts') and len(location.parts) > 1,
+            ))
 
-        location = feature.location
-        id_counter += 1
-        records.append(RefTnLoc(
-            tn_id=id_counter,
-            tn_name=tn_name,
-            tn_scaf=ref_name,
-            loc_left=int(location.start) + 1,  # BioPython is 0-based
-            loc_right=int(location.end),
-            complement=location.strand == -1,
-            join=hasattr(location, 'parts') and len(location.parts) > 1,
-        ))
-
-    return records
+    return results
 
 
 def _extract_tn_name_from_feature(feature: SeqFeature) -> Optional[str]:
