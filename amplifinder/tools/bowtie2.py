@@ -5,7 +5,8 @@ from typing import Optional
 
 from amplifinder.logger import info
 from amplifinder.env import SAMTOOLS_PATH, BOWTIE2_PATH
-from amplifinder.utils.tools import get_tool_path, run_command, ensure_parent_dir
+from amplifinder.utils.run_utils import get_tool_path, run_command
+from amplifinder.utils.file_utils import ensure_parent_dir
 
 
 def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:

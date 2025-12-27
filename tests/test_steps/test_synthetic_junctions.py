@@ -6,7 +6,7 @@ from amplifinder.steps import CreateSyntheticJunctionsStep
 from amplifinder.data_types import (
     RecordTypedDf, FilteredTnJc2, RefTnLoc, RawEvent, Orientation, Coverage,
 )
-from amplifinder.utils.tools import ensure_parent_dir
+from amplifinder.utils.file_utils import ensure_parent_dir
 
 
 @pytest.fixture

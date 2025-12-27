@@ -4,7 +4,7 @@ import pytest
 from pathlib import Path
 from amplifinder.steps import AlignReadsToJunctionsStep
 from amplifinder.data_types import RecordTypedDf, FilteredTnJc2, RawEvent, Orientation, Coverage
-from amplifinder.utils.tools import ensure_parent_dir
+from amplifinder.utils.file_utils import ensure_parent_dir
 
 
 @pytest.fixture

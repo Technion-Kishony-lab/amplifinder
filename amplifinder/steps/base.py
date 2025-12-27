@@ -7,7 +7,7 @@ import shutil
 
 from amplifinder.logger import info, debug
 from amplifinder.utils.file_lock import locked_operation, get_step_lock_path
-from amplifinder.utils.tools import remove_file_or_dir, ensure_dir
+from amplifinder.utils.file_utils import remove_file_or_dir, ensure_dir
 from amplifinder.data_types.typed_df import RecordTypedDf
 from amplifinder.data_types.records import Record
 from amplifinder.steps.io_naming import default_path

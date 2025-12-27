@@ -3,7 +3,7 @@
 import pytest
 
 from amplifinder.steps import GetRefGenomeStep
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir
 
 
 @pytest.mark.integration

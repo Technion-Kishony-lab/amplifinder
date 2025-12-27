@@ -11,7 +11,7 @@ from amplifinder.data_types import (
     CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.logger import info
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.utils.fasta import get_read_length
 from amplifinder.steps import (
     InitializingStep,
@@ -33,7 +33,7 @@ from amplifinder.steps import (
     ExportTnJc2Step,
 )
 from amplifinder.data import get_builtin_isfinder_db_path
-from amplifinder.utils.tn_loc import compare_tn_locations
+from amplifinder.steps.locate_tns import compare_tn_locations
 
 
 @dataclass

@@ -8,7 +8,7 @@ from amplifinder.steps import CalcTnJc2AmpliconCoverageStep
 from amplifinder.data_types import (
     RecordTypedDf, RawTnJc2, Genome, Orientation,
 )
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir
 
 
 @pytest.fixture

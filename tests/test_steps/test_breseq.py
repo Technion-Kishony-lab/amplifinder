@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import patch
 
 from amplifinder.steps import BreseqStep
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir
 from tests.conftest import FIXTURES_DIR
 
 

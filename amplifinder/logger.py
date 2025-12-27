@@ -46,7 +46,7 @@ def setup_logger(
 
     # File handler (if path provided)
     if log_path is not None:
-        from amplifinder.utils.tools import ensure_parent_dir
+        from amplifinder.utils.file_utils import ensure_parent_dir
         log_path = ensure_parent_dir(log_path)
 
         file_handler = logging.FileHandler(log_path, mode="a")

@@ -2,7 +2,7 @@
 
 import pandas as pd
 
-from amplifinder.utils.tn_loc import compare_tn_locations
+from amplifinder.steps.locate_tns import compare_tn_locations
 from amplifinder.data_types import RecordTypedDf, RefTnLoc
 
 

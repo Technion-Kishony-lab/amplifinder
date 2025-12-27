@@ -6,9 +6,8 @@ from amplifinder.utils.fasta import (
     get_read_length_stats,
     get_read_length,
     ReadLengthStats,
+    reverse_complement,
 )
-from amplifinder.utils.genbank import find_tn_elements
-from amplifinder.utils.tn_loc import compare_tn_locations
 from amplifinder.utils.file_lock import (
     locked_operation,
     locked_resource,
@@ -16,23 +15,25 @@ from amplifinder.utils.file_lock import (
     get_resource_lock_path,
     DEFAULT_LOCK_TIMEOUT,
 )
-from amplifinder.utils.tools import (
+from amplifinder.utils.run_utils import (
     find_tool,
     get_tool_path,
     run_command,
+)
+from amplifinder.utils.file_utils import (
     ensure_dir,
     ensure_parent_dir,
     remove_file_or_dir,
 )
 
 __all__ = [
+    # FASTA utilities
     "read_fasta_lengths",
     "read_fastq_lengths",
     "get_read_length_stats",
     "get_read_length",
     "ReadLengthStats",
-    "find_tn_elements",
-    "compare_tn_locations",
+    "reverse_complement",
     # File locking utilities
     "locked_operation",
     "locked_resource",

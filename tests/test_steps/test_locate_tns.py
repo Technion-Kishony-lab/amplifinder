@@ -5,7 +5,7 @@ import pytest
 
 from amplifinder.steps import LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep
 from amplifinder.data_types import RecordTypedDf
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir
 from tests.env import RUN_BLAST_TESTS
 
 

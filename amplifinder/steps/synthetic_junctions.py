@@ -8,7 +8,7 @@ from amplifinder.data_types import (
 )
 from amplifinder.steps.base import Step
 from amplifinder.utils.fasta import reverse_complement
-from amplifinder.utils.tools import ensure_parent_dir
+from amplifinder.utils.file_utils import ensure_parent_dir
 
 
 def create_synthetic_junctions(

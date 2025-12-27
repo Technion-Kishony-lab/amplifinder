@@ -9,12 +9,12 @@ from abc import abstractmethod
 
 from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
 from amplifinder.utils.fasta import read_fasta_lengths
-from amplifinder.utils.genbank import find_tn_elements
 from amplifinder.utils.file_lock import locked_resource
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, RefTnLoc, Genome
 from amplifinder.steps.base import Step
+from amplifinder.steps.locate_tns.find_tn_in_genbank import find_tn_elements
 
 
 # Base class for TN location steps

@@ -6,7 +6,7 @@ from typing import Any, Optional, Tuple
 import json
 import yaml
 
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir
 
 
 # Default configuration values (from config.txt)

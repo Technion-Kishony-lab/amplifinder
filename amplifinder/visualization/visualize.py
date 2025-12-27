@@ -14,8 +14,8 @@ except ImportError:
 from amplifinder.data_types import AnalyzedTnJc2, RecordTypedDf
 from amplifinder.config import load_config_from_run
 from amplifinder.tools.breseq import load_breseq_coverage
-from amplifinder.utils.coverage import get_coverage_in_range
-from amplifinder.utils.tools import ensure_parent_dir
+from amplifinder.steps.amplicon_coverage import get_coverage_in_range
+from amplifinder.utils.file_utils import ensure_parent_dir
 from amplifinder.logger import info, warning
 
 

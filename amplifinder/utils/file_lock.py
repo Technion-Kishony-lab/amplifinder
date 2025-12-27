@@ -26,7 +26,7 @@ def locked_operation(
     lock_path: Path,
     timeout: int = DEFAULT_LOCK_TIMEOUT,
     description: str = "operation",
-) -> Generator[None, None, None]:
+    ):
     """Folder-based lock using atomic mkdir()."""
     lock_path = Path(lock_path)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
@@ -89,7 +89,7 @@ def locked_resource(
     resource_path: Path,
     resource_type: str,
     timeout: int = DEFAULT_LOCK_TIMEOUT,
-) -> Generator[None, None, None]:
+    ):
     """Lock a shared resource for exclusive access."""
     lock_path = get_resource_lock_path(resource_path, resource_type)
     with locked_operation(lock_path, timeout, f"{resource_type} at {resource_path}"):

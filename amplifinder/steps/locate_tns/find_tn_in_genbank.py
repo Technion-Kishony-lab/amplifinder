@@ -1,9 +1,8 @@
-"""GenBank parsing utilities using BioPython."""
-
+"""GenBank TN element parsing."""
 from __future__ import annotations
 
 import re
-from typing import List, Optional, TYPE_CHECKING
+from typing import List, Optional
 
 from Bio.SeqFeature import SeqFeature
 from Bio.SeqRecord import SeqRecord

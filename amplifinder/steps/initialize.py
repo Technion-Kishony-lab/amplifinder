@@ -6,7 +6,7 @@ from typing import Optional, Tuple
 from amplifinder.steps.base import Step
 from amplifinder.config import Config, save_config, get_iso_run_dir, get_anc_run_dir
 from amplifinder.logger import info
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir
 
 
 class InitializingStep(Step[Tuple[Path, Optional[Path]]]):
