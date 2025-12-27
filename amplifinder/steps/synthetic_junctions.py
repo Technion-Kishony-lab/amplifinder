@@ -1,7 +1,7 @@
 """Step 10: Create synthetic junction sequences for alignment."""
 
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 
 from amplifinder.data_types import (
     RecordTypedDf, FilteredTnJc2, Genome, JunctionType, RefTnLoc,
@@ -19,7 +19,7 @@ def create_synthetic_junctions(
     read_length: int,
 ) -> dict[JunctionType, str]:
     """Create 7 synthetic junction sequences for a candidate amplicon.
-    
+
     Junction types (amplicon: ~~~>>>======>>>======>>>~~~):
     1. ~~==  left reference (chromosome-cassette)
     2. ~~>>  left IS transposition (chromosome-IS)
@@ -28,38 +28,36 @@ def create_synthetic_junctions(
     5. >>==  right of mid IS (IS-cassette)
     6. >>~~  right IS transposition (IS-chromosome)
     7. ==~~  right reference (cassette-chromosome)
-    
+
     Args:
         candidate: CandidateTnJc2 record
         chr_seq: Chromosome sequence
         tn_loc: TN location record for the chosen TN
         tn_seq: TN element sequence
         read_length: Read length for junction width
-    
+
     Returns:
         Dict mapping JunctionType to sequence string
     """
     WID = read_length * 2  # junction width
-    
+
     # Convert positions from 1-based (genomic coordinates) to 0-based (array indexing)
     # pos_scaf_L and pos_scaf_R are 1-based inclusive (from BLAST/junction positions)
     pos_L = candidate.pos_scaf_L - 1  # Convert to 0-based start
     pos_R = candidate.pos_scaf_R - 1  # Convert to 0-based start
-    
+
     # Handle origin spanning
     if candidate.span_origin:
         pos_L, pos_R = pos_R, pos_L
-    
+
     # Outside positions (flanking the amplicon)
     pos_out_L = pos_L - 1
     pos_out_R = pos_R + 1
-    
+
     # TN boundaries (convert 1-based inclusive to 0-based for array indexing)
     # loc_left and loc_right are 1-based inclusive (from BLAST/GenBank)
     tn_left = tn_loc.loc_left - 1  # Convert to 0-based start
     tn_right = tn_loc.loc_right  # 1-based inclusive -> 0-based exclusive end
-    tn_length = tn_right - tn_left
-    
     # TN orientation (from chosen TN)
     # Get orientation from candidate's tn_orientations list
     # MATLAB: IS_orientation = isjc2.chosen_IS{1}.orientation
@@ -72,9 +70,9 @@ def create_synthetic_junctions(
         except (ValueError, IndexError):
             # Fallback if chosen_tn_id not found in tn_ids
             pass
-    
+
     junctions = {}
-    
+
     # Helper to get sequence with bounds checking
     def get_seq(seq: str, start: int, end: int, circular: bool = False) -> str:
         seq_len = len(seq)
@@ -88,12 +86,12 @@ def create_synthetic_junctions(
             start = max(0, start)
             end = min(seq_len, end)
             return seq[start:end]
-    
+
     # (1) Left reference: ~~==
     seq1 = get_seq(chr_seq, pos_out_L - WID + 1, pos_out_L + 1, circular=True)
     seq2 = get_seq(chr_seq, pos_L, pos_L + WID, circular=True)
     junctions[JunctionType.LEFT_REF] = seq1 + seq2
-    
+
     # (2) Left IS transposition: ~~>>
     seq1 = get_seq(chr_seq, pos_out_L - WID + 1, pos_out_L + 1, circular=True)
     if tn_orientation == 1:
@@ -101,7 +99,7 @@ def create_synthetic_junctions(
     else:
         seq2 = reverse_complement(get_seq(tn_seq, tn_right - WID, tn_right))
     junctions[JunctionType.LEFT_IS_TRANS] = seq1 + seq2
-    
+
     # (3) Left of mid IS: ==>>
     seq1 = get_seq(chr_seq, pos_R - WID + 1, pos_R + 1, circular=True)
     if tn_orientation == 1:
@@ -109,12 +107,12 @@ def create_synthetic_junctions(
     else:
         seq2 = reverse_complement(get_seq(tn_seq, tn_right - WID, tn_right))
     junctions[JunctionType.LEFT_MID_IS] = seq1 + seq2
-    
+
     # (4) Lost IS: ====
     seq1 = get_seq(chr_seq, pos_R - WID + 1, pos_R + 1, circular=True)
     seq2 = get_seq(chr_seq, pos_L, pos_L + WID, circular=True)
     junctions[JunctionType.LOST_IS] = seq1 + seq2
-    
+
     # (5) Right of mid IS: >>==
     if tn_orientation == 1:
         seq1 = get_seq(tn_seq, tn_right - WID, tn_right)
@@ -122,7 +120,7 @@ def create_synthetic_junctions(
         seq1 = reverse_complement(get_seq(tn_seq, tn_left, tn_left + WID))
     seq2 = get_seq(chr_seq, pos_L, pos_L + WID, circular=True)
     junctions[JunctionType.RIGHT_MID_IS] = seq1 + seq2
-    
+
     # (6) Right IS transposition: >>~~
     if tn_orientation == 1:
         seq1 = get_seq(tn_seq, tn_right - WID, tn_right)
@@ -130,12 +128,12 @@ def create_synthetic_junctions(
         seq1 = reverse_complement(get_seq(tn_seq, tn_left, tn_left + WID))
     seq2 = get_seq(chr_seq, pos_out_R, pos_out_R + WID, circular=True)
     junctions[JunctionType.RIGHT_IS_TRANS] = seq1 + seq2
-    
+
     # (7) Right reference: ==~~
     seq1 = get_seq(chr_seq, pos_R - WID + 1, pos_R + 1, circular=True)
     seq2 = get_seq(chr_seq, pos_out_R, pos_out_R + WID, circular=True)
     junctions[JunctionType.RIGHT_REF] = seq1 + seq2
-    
+
     return junctions
 
 
@@ -144,13 +142,13 @@ def write_junctions_fasta(
     output_path: Path,
 ) -> None:
     """Write junction sequences to FASTA file.
-    
+
     Args:
         junctions: Dict mapping JunctionType to sequence
         output_path: Output FASTA file path
     """
     ensure_parent_dir(output_path)
-    
+
     with open(output_path, 'w') as f:
         for jtype, seq in sorted(junctions.items(), key=lambda x: x[0].value):
             f.write(f">{jtype.value}\n{seq}\n")
@@ -158,7 +156,7 @@ def write_junctions_fasta(
 
 class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
     """Create synthetic junction FASTA files for each candidate.
-    
+
     Creates 7 junction sequences per candidate for read alignment analysis.
     """
 
@@ -176,13 +174,13 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         self.tn_locs = tn_locs
         self.output_dir = Path(output_dir)
         self.read_length = read_length
-        
+
         # Output files are per-candidate analysis directories
         self.analysis_dirs = [
             output_dir / filtered_tnjc2.analysis_dir
             for filtered_tnjc2 in filtered_tnjc2s
         ]
-        
+
         super().__init__(
             input_files=[genome.fasta_path],
             output_files=[d / "junctions.fasta" for d in self.analysis_dirs],
@@ -193,27 +191,27 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         """Create synthetic junctions for each candidate."""
         # Build TN lookup
         tn_lookup = {tn.tn_id: tn for tn in self.tn_locs}
-        
+
         for filtered_tnjc2 in self.filtered_tnjc2s:
             analysis_dir = self.output_dir / filtered_tnjc2.analysis_dir
-            
+
             # Get chosen TN
             chosen_tn_id = filtered_tnjc2.chosen_tn_id
             if chosen_tn_id is None or chosen_tn_id not in tn_lookup:
                 # Skip candidates without valid chosen TN
                 continue
-            
+
             tn_loc = tn_lookup[chosen_tn_id]
-            
+
             # Get scaffold sequence
             scaffold_sequences = self.genome.scaffold_sequences
             if tn_loc.tn_scaf not in scaffold_sequences:
                 continue
             chr_seq = scaffold_sequences[tn_loc.tn_scaf]
-            
+
             # Get TN sequence (loc_left and loc_right are 1-based inclusive, convert to 0-based for slicing)
             tn_seq = chr_seq[tn_loc.loc_left - 1:tn_loc.loc_right]
-            
+
             # Create junctions
             junctions = create_synthetic_junctions(
                 candidate=filtered_tnjc2,
@@ -222,10 +220,10 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
                 tn_seq=tn_seq,
                 read_length=self.read_length,
             )
-            
+
             # Write FASTA
             write_junctions_fasta(junctions, analysis_dir / "junctions.fasta")
-        
+
         return self.filtered_tnjc2s
 
     def _save_output(self, output: RecordTypedDf[FilteredTnJc2]) -> None:
@@ -235,4 +233,3 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
     def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
         """Return candidates (junction files are side effects)."""
         return self.filtered_tnjc2s
-

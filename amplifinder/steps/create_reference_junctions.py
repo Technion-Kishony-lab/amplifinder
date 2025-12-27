@@ -42,9 +42,9 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
         self.tn_loc = tn_loc
         self.genome = genome
         self.reference_tn_out_span = reference_tn_out_span
-        
+
         output_file = output_dir / f"{source}_ref_tn_jc.csv"
-        
+
         super().__init__(
             output_file=output_file,
             input_files=[],  # tn_loc passed in memory
@@ -119,9 +119,9 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
         self.tn_loc = tn_loc
         self.genome = genome
         self.max_dist_to_tn = max_dist_to_tn
-        
+
         output_file = output_dir / f"{source}_tn_end_seqs.csv"
-        
+
         super().__init__(
             output_file=output_file,
             input_files=[],
@@ -133,39 +133,39 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
 
         ref_seqs = self.genome.scaffold_sequences
         out_span = self.max_dist_to_tn  # MATLAB: out_span = max_dist_to_IS
-        
+
         # Create mapping from tn_id to TN location
         tn_loc_map = {tn.tn_id: tn for tn in self.tn_loc}
-        
+
         records = []
 
         for jc in self.ref_tn_jc:
             if jc.scaf1 not in ref_seqs:
                 raise ValueError(f"TN scaffold {jc.scaf1} not in genome")
-            
+
             # Get TN location for this junction
             tn_id = jc.ref_tn_side.tn_id
             if tn_id not in tn_loc_map:
                 continue  # Skip if TN not found
-            
+
             tn = tn_loc_map[tn_id]
             seq = ref_seqs[jc.scaf1]
-            
+
             # Coordinate system: loc_left and loc_right are 1-based inclusive (from BLAST/GenBank)
             # MATLAB: IS_seqs_with_margins{i,1} = seq(l-out_span:r+out_span)
             # Where l=LocLeft, r=LocRight (1-based inclusive in MATLAB)
             # Python slicing: seq[l-1:r] where l-1 is 0-based start, r is 0-based exclusive end
-            l = tn.loc_left  # 1-based inclusive
-            r = tn.loc_right  # 1-based inclusive
-            
+            loc_left = tn.loc_left  # 1-based inclusive
+            loc_right = tn.loc_right  # 1-based inclusive
+
             # Create full TN sequence with margins (like MATLAB IS_seqs_with_margins)
             # Convert 1-based inclusive to 0-based for Python array slicing:
             # - Start: (l - out_span) is 1-based, convert to 0-based: (l - out_span - 1)
             # - End: (r + out_span) is 1-based inclusive, use as 0-based exclusive end
-            start = max(0, (l - out_span - 1))  # Convert 1-based to 0-based start
-            end = min(len(seq), r + out_span)  # 1-based inclusive -> 0-based exclusive end
+            start = max(0, (loc_left - out_span - 1))  # Convert 1-based to 0-based start
+            end = min(len(seq), loc_right + out_span)  # 1-based inclusive -> 0-based exclusive end
             seq_with_margins = seq[start:end]
-            
+
             # MATLAB: IS_seqs_with_margins{i,2} = seqrcomplement(seq(l-out_span:r+out_span))
             seq_with_margins_rc = reverse_complement(seq_with_margins)
 

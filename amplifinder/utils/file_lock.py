@@ -1,12 +1,11 @@
 """Folder-based locking for parallel run safety.
 
-Prevents race conditions when multiple AmpliFinder processes access 
+Prevents race conditions when multiple AmpliFinder processes access
 shared resources. Uses atomic mkdir() - no external dependencies.
 """
 
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Generator
 import time
 
 from amplifinder.logger import debug
@@ -26,11 +25,11 @@ def locked_operation(
     lock_path: Path,
     timeout: int = DEFAULT_LOCK_TIMEOUT,
     description: str = "operation",
-    ):
+):
     """Folder-based lock using atomic mkdir()."""
     lock_path = Path(lock_path)
     lock_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     deadline = time.time() + timeout
     while True:
         try:
@@ -44,7 +43,7 @@ def locked_operation(
                     f"Lock folder: {lock_path}"
                 )
             time.sleep(POLL_INTERVAL)
-    
+
     try:
         yield
     finally:
@@ -54,14 +53,14 @@ def locked_operation(
 
 def get_step_lock_path(output_file: Path, step_name: str) -> Path:
     """Get lock file path for a step based on its output file.
-    
+
     Lock files are placed in the same directory as the output,
     with a hidden name based on the step name.
-    
+
     Args:
         output_file: Primary output file of the step
         step_name: Name of the step (used in lock filename)
-        
+
     Returns:
         Path to the lock file
     """
@@ -70,11 +69,11 @@ def get_step_lock_path(output_file: Path, step_name: str) -> Path:
 
 def get_resource_lock_path(resource_path: Path, resource_type: str) -> Path:
     """Get lock file path for a shared resource.
-    
+
     Args:
         resource_path: Path to the resource (file or directory)
         resource_type: Type of resource (e.g., 'blast_db', 'genome')
-        
+
     Returns:
         Path to the lock file
     """
@@ -89,7 +88,7 @@ def locked_resource(
     resource_path: Path,
     resource_type: str,
     timeout: int = DEFAULT_LOCK_TIMEOUT,
-    ):
+):
     """Lock a shared resource for exclusive access."""
     lock_path = get_resource_lock_path(resource_path, resource_type)
     with locked_operation(lock_path, timeout, f"{resource_type} at {resource_path}"):

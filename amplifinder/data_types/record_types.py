@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from enum import Enum
 from operator import add, mul, sub, truediv
-from typing import Callable, List, NamedTuple, Optional, TypeVar
+from typing import List, NamedTuple, Optional, TypeVar
 
 from amplifinder.data_types.records import Record
 
@@ -42,7 +42,7 @@ class JunctionCoverage(NamedTuple):
 
 class ReversibleIntEnum(int, Enum):
     """Base class for int enums with opposite() method."""
-    
+
     def opposite(self):
         """Return the enum member with negated value."""
         return type(self)(-self.value)
@@ -128,7 +128,7 @@ class Junction(Record):
 
 class RefTnJunction(Junction):
     """Synthetic junction for reference TN element.
-    
+
     For RefTnJunction, side 1 is always the TN side, side 2 is the chromosome side.
     ref_tn_side indicates which TN boundary (LEFT or RIGHT) this junction represents.
     """
@@ -185,7 +185,7 @@ class RawTnJc2(Record):
 
 class CoveredTnJc2(RawTnJc2):
     """RawTnJc2 with coverage information (Step 7 output).
-    
+
     Coverage fields depend on run type:
     - anc_path=None: raw coverage only, copy_number_ratio is None
     - anc_path=set: normalized coverage, copy_number_ratio = iso/anc
@@ -194,7 +194,7 @@ class CoveredTnJc2(RawTnJc2):
     iso_scaf_coverage: Coverage
     anc_amplicon_coverage: Optional[Coverage] = None
     anc_scaf_coverage: Optional[Coverage] = None
-    copy_number: float = None  # 
+    copy_number: float = None  #
     copy_number_vs_anc: Optional[float] = None
 
 
@@ -224,7 +224,7 @@ class FilteredTnJc2(ClassifiedTnJc2):
 
 class JunctionType(int, Enum):
     """The 7 synthetic junction types.
-    
+
     Amplicon structure: ~~~>>>======>>>======>>>~~~
     (1) ~~==  left reference (chromosome-cassette)
     (2) ~~>>  left IS transposition (chromosome-IS)
@@ -252,7 +252,7 @@ class EventModifier(str, Enum):
 
 class AnalyzedTnJc2(FilteredTnJc2):
     """Candidate with junction coverage analysis (Step 12 output).
-    
+
     Junction coverage fields depend on run type:
     - anc_path=None: jc_cov only, anc_jc_cov is None
     - anc_path=set: both jc_cov and anc_jc_cov present
@@ -261,16 +261,16 @@ class AnalyzedTnJc2(FilteredTnJc2):
     jc_cov_left: List[int]      # left-side read counts per junction
     jc_cov_right: List[int]     # right-side read counts per junction
     jc_cov_spanning: List[int]  # spanning read counts per junction
-    
+
     # Ancestor junction coverage (only when anc_path is set)
     anc_jc_cov_left: Optional[List[int]] = None
     anc_jc_cov_right: Optional[List[int]] = None
     anc_jc_cov_spanning: Optional[List[int]] = None
-    
+
     # Architecture classification
     isolate_architecture: RawEvent
     ancestor_architecture: Optional[RawEvent] = None  # only when anc_path is set
-    
+
     # Final event classification
     event: str                              # full event description
     event_modifiers: List[EventModifier]    # de novo, ancestral, etc.
@@ -278,7 +278,7 @@ class AnalyzedTnJc2(FilteredTnJc2):
 
 class ExportedTnJc2(Record):
     """Export record for tnjc2_exported.csv (Step 14 output).
-    
+
     Represents the user-facing export format with renamed/combined fields.
     All fields are optional to handle cases where input data may be missing.
     """

@@ -19,6 +19,7 @@ skip_no_blast = pytest.mark.skipif(not RUN_BLAST_TESTS, reason="BLAST tests disa
 def step_factory(request, tmp_output, tiny_genome, tiny_tn_db):
     """Factory to create TN location steps - parametrized for both backends."""
     output_dir = tmp_output / "tn_loc" / tiny_genome.name
+
     def make_step(force=False):
         if request.param == "genbank":
             return LocateTNsUsingGenbankStep(
@@ -90,7 +91,7 @@ class TestLocateTNsIntegration:
     def u00096_genome(self, tmp_path):
         """Load U00096 reference (cached)."""
         from amplifinder.steps import GetRefGenomeStep
-        
+
         ref_path = ensure_dir(tmp_path / "genomesDB")
 
         step = GetRefGenomeStep(

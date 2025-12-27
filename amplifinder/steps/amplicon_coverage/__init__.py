@@ -25,4 +25,3 @@ __all__ = [
     "calc_scaffold_coverages_and_medians",
     "calc_distribution_mode",
 ]
-

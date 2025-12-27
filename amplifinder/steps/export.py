@@ -10,7 +10,7 @@ from amplifinder.logger import info
 
 class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
     """Export analyzed candidates to CSV files.
-    
+
     Creates two CSV files:
     1. tnjc2_exported.csv - All analyzed candidates
     2. candidate_amplifications.csv - Filtered candidates based on copy number thresholds
@@ -36,10 +36,10 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
         self.copy_number_threshold = copy_number_threshold
         self.del_copy_number_threshold = del_copy_number_threshold
         self.filter_amplicon_length = filter_amplicon_length
-        
+
         self.isjc2_file = output_dir / "tnjc2_exported.csv"
         self.candidates_file = output_dir / "candidate_amplifications.csv"
-        
+
         super().__init__(
             input_files=[],
             output_files=[self.isjc2_file, self.candidates_file],
@@ -64,18 +64,18 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
                 event=analyzed_tnjc2.event,
                 isolate_architecture=str(analyzed_tnjc2.isolate_architecture),
             ))
-        
+
         export_df = RecordTypedDf.from_records(export_records, ExportedTnJc2)
-        
+
         # Sort by mode_copy_number descending
         export_df = export_df.pipe(
             lambda df: df.sort_values('mode_copy_number', ascending=False)
         )
-        
+
         # Export tnjc2_exported.csv (all candidates) - to_csv handles empty DataFrames automatically
         export_df.to_csv(self.isjc2_file)
         info(f"Exported {len(export_df)} candidates to {self.isjc2_file}")
-        
+
         # Filter candidates for candidate_amplifications.csv
         filtered = export_df.pipe(
             lambda df: df[
@@ -84,11 +84,11 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
                 (df['amplicon_length'] > self.filter_amplicon_length)
             ]
         )
-        
+
         # to_csv handles empty DataFrames automatically
         filtered.to_csv(self.candidates_file)
         info(f"Exported {len(filtered)} filtered candidates to {self.candidates_file}")
-        
+
         return export_df
 
     def _save_output(self, output: RecordTypedDf[ExportedTnJc2]) -> None:

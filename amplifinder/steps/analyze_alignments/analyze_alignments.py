@@ -1,20 +1,20 @@
 """Step 12: Analyze read alignments to synthetic junctions."""
 
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 
 from amplifinder.data_types import (
-    RecordTypedDf, FilteredTnJc2, AnalyzedTnJc2, RawEvent, EventModifier,
+    RecordTypedDf, FilteredTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.steps.analyze_alignments.parse_bam import get_junction_coverage, JunctionReadCounts
+from amplifinder.steps.analyze_alignments.parse_bam import get_junction_coverage
 from amplifinder.steps.analyze_alignments.classify import classify_architecture, classify_event
 from amplifinder.logger import info
 
 
 class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
     """Analyze read alignments to classify junction architectures.
-    
+
     Analysis depends on run type:
     - has_ancestor=False: analyze isolate BAM only
     - has_ancestor=True: analyze both isolate and ancestor BAMs, compare patterns
@@ -40,7 +40,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         self.min_overlap = min_overlap
         self.min_jct_cov = min_jct_cov
         self.has_ancestor = has_ancestor
-        
+
         # Input files are the BAM files from alignment step
         input_files = []
         for filtered_tnjc2 in filtered_tnjc2s:
@@ -52,7 +52,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                     raise ValueError("anc_output_dir must be provided when has_ancestor=True")
                 anc_analysis_dir = self.anc_output_dir / filtered_tnjc2.analysis_dir
                 input_files.append(anc_analysis_dir / "iso.sorted.bam")
-        
+
         super().__init__(
             output_dir=output_dir,
             input_files=input_files,
@@ -64,18 +64,18 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         analyzed_records = []
         for filtered_tnjc2 in self.filtered_tnjc2s:
             analysis_dir = self.output_dir / filtered_tnjc2.analysis_dir
-            
+
             # Get isolate junction coverage
             iso_bam = analysis_dir / "iso.sorted.bam"
             if not iso_bam.exists():
                 info(f"Skipping {filtered_tnjc2.analysis_dir}: no iso.sorted.bam")
                 continue
-            
+
             iso_jc_cov = get_junction_coverage(iso_bam, self.read_length, min_overlap=self.min_overlap)
-            
+
             # Classify isolate architecture
             iso_arch = classify_architecture(iso_jc_cov, self.min_jct_cov)
-            
+
             # Get ancestor junction coverage if available
             # Ancestor BAM is stored in ancestor folder as iso.sorted.bam
             anc_jc_cov = None
@@ -85,14 +85,14 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                     raise ValueError("anc_output_dir must be provided when has_ancestor=True")
                 anc_analysis_dir = self.anc_output_dir / filtered_tnjc2.analysis_dir
                 anc_bam = anc_analysis_dir / "iso.sorted.bam"
-                
+
                 if anc_bam.exists():
                     anc_jc_cov = get_junction_coverage(anc_bam, self.anc_read_length, min_overlap=self.min_overlap)
                     anc_arch = classify_architecture(anc_jc_cov, self.min_jct_cov)
-            
+
             # Classify final event
             event, modifiers = classify_event(iso_arch, anc_arch, self.min_jct_cov)
-            
+
             # Build AnalyzedTnJc2 record from candidate + new fields
             analyzed_tnjc2 = AnalyzedTnJc2.from_other(
                 filtered_tnjc2,
@@ -108,5 +108,5 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 event_modifiers=modifiers,
             )
             analyzed_records.append(analyzed_tnjc2)
-        
+
         return RecordTypedDf.from_records(analyzed_records, AnalyzedTnJc2)

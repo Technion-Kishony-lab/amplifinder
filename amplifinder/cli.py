@@ -158,7 +158,7 @@ def main(
             )
             info("Done")
             return
-        
+
         info(f"Reference: {ref_name}")
 
         # Full pipeline modes require iso_path

@@ -8,9 +8,7 @@ from pathlib import Path
 from typing import Optional, List, Dict
 
 from Bio import Entrez, SeqIO
-from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
-from Bio.SeqFeature import SeqFeature
 
 from amplifinder.logger import info
 from amplifinder.utils.file_utils import ensure_dir
@@ -22,7 +20,7 @@ Entrez.email = "amplifinder@example.com"
 @dataclass
 class Genome:
     """Reference genome - can be from GenBank, FASTA, or both.
-    
+
     Scaffold names are LOCUS names (GenBank) or sequence IDs (FASTA).
     """
 
@@ -74,7 +72,7 @@ class Genome:
     @property
     def scaffold_circularities(self) -> Dict[str, bool]:
         """Get circularity status per scaffold (from GenBank annotations).
-        
+
         Returns:
             Dict mapping scaffold name to circularity (True if circular, False if linear).
             For FASTA-only genomes with a single contig, assumes circular=True.
@@ -95,16 +93,16 @@ class Genome:
     def scaffold_sequences(self) -> Dict[str, str]:
         """Get all sequences as {scaffold_name: sequence} dict."""
         return {rec.name: str(rec.seq) for rec in self.records}
-    
+
     @property
     def scaffold_lengths(self) -> Dict[str, int]:
         """Get scaffold lengths as {scaffold_name: length} dict."""
         return {name: len(seq) for name, seq in self.scaffold_sequences.items()}
-    
+
     @property
     def scaffold_ranges(self) -> Dict[str, tuple[int, int]]:
         """Get scaffold ranges as {scaffold_name: (start, end)} dict.
-        
+
         Returns:
             Dict mapping scaffold name to (start, end) tuple of 0-based positions
             in concatenated coverage array.
