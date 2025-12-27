@@ -11,7 +11,7 @@ from amplifinder.logger import info
 
 class GetRefGenomeStep(Step[Genome]):
     """Fetch/load reference genome from NCBI or local cache.
-    
+
     Uses file locking to prevent race conditions when multiple
     parallel runs try to download the same reference genome.
     """
@@ -44,7 +44,7 @@ class GetRefGenomeStep(Step[Genome]):
 
     def _calculate_output(self) -> Genome:
         """Fetch genome from NCBI or load from cache.
-        
+
         Uses locking to prevent parallel downloads of the same genome.
         The lock is acquired around the entire fetch operation.
         """
@@ -57,14 +57,14 @@ class GetRefGenomeStep(Step[Genome]):
             if self.has_output_files():
                 info(f"{self.name}: genome already cached (verified under lock)")
                 return self.load_outputs()
-            
+
             info(f"Fetching reference genome: {self.ref_name}")
             return get_genome(self.ref_name, self.ref_path, self.ncbi)
 
     def load_outputs(self) -> Genome:
         """Load genome from cached files."""
         return get_genome(self.ref_name, self.ref_path, ncbi=False)
-    
+
     def read_outputs(self) -> Genome:
         """Alias for load_outputs (used by has_output_files validation)."""
         return self.load_outputs()

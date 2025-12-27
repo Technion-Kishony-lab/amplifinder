@@ -1,7 +1,6 @@
 """Tests for InitializingStep."""
 
 import pytest
-from pathlib import Path
 from amplifinder.steps import InitializingStep
 from amplifinder.config import Config
 
@@ -38,7 +37,7 @@ def test_creates_config_file(init_step, tmp_path):
     """Should create run_config.yaml file."""
     result = init_step.run()
     iso_run_dir, anc_run_dir = result
-    
+
     config_path = iso_run_dir / "run_config.yaml"
     assert config_path.exists()
 

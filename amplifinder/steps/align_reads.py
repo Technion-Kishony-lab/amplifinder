@@ -11,7 +11,7 @@ from amplifinder.logger import info
 
 class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
     """Align reads to synthetic junction sequences.
-    
+
     Alignment depends on run type:
     - anc_fastq_path=None: align isolate reads only → iso.sorted.bam
     - anc_fastq_path=set: align both isolate and ancestor reads → iso.sorted.bam + anc.sorted.bam
@@ -35,7 +35,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         self.threads = threads
         self.score_min = score_min
         self.num_alignments = num_alignments
-        
+
         # Build list of expected output BAM files
         output_files = []
         for filtered_tnjc2 in filtered_tnjc2s:
@@ -43,14 +43,14 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
             output_files.append(analysis_dir / "iso.sorted.bam")
             if anc_fastq_path:
                 output_files.append(analysis_dir / "anc.sorted.bam")
-        
+
         input_files = [iso_fastq_path]
         if anc_fastq_path:
             input_files.append(anc_fastq_path)
         # Junction FASTA files are inputs
         for filtered_tnjc2 in filtered_tnjc2s:
             input_files.append(output_dir / filtered_tnjc2.analysis_dir / "junctions.fasta")
-        
+
         super().__init__(
             input_files=input_files,
             output_files=output_files,
@@ -67,11 +67,11 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         for filtered_tnjc2 in self.filtered_tnjc2s:
             analysis_dir = self.output_dir / filtered_tnjc2.analysis_dir
             junctions_fasta = analysis_dir / "junctions.fasta"
-            
+
             if not junctions_fasta.exists():
                 info(f"Skipping {filtered_tnjc2.analysis_dir}: no junctions.fasta")
                 continue
-            
+
             # Align isolate reads
             iso_bam = analysis_dir / "iso.sorted.bam"
             align_reads_to_fasta(
@@ -82,7 +82,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
                 score_min=self.score_min,
                 num_alignments=self.num_alignments,
             )
-            
+
             # Align ancestor reads if provided
             if self.has_ancestor:
                 anc_bam = analysis_dir / "anc.sorted.bam"
@@ -94,7 +94,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
                     score_min=self.score_min,
                     num_alignments=self.num_alignments,
                 )
-        
+
         return self.filtered_tnjc2s
 
     def _save_output(self, output: RecordTypedDf[FilteredTnJc2]) -> None:
@@ -104,4 +104,3 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
     def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
         """Return candidates (BAM files are side effects)."""
         return self.filtered_tnjc2s
-

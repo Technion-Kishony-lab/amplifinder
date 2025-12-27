@@ -152,7 +152,7 @@ class Config:
     @property
     def iso_run_dir(self) -> Path:
         """Get the isolate run directory path.
-        
+
         Structure: {output_dir}/{ref_name}/{anc_name}/{iso_name}/
         """
         return self.output_dir / self.ref_name / self.anc_name / self.iso_name
@@ -160,7 +160,7 @@ class Config:
     @property
     def anc_run_dir(self) -> Path:
         """Get the ancestor run directory path.
-        
+
         Structure: {output_dir}/{ref_name}/{anc_name}/{anc_name}/
         """
         return self.output_dir / self.ref_name / self.anc_name / self.anc_name
@@ -179,7 +179,7 @@ class Config:
         """Save config to run_config.yaml in run directory."""
         run_dir = ensure_dir(run_dir)
         config_path = run_dir / self.RUN_CONFIG_FILENAME
-        
+
         # Convert Config to dict, handling Path objects and tuples
         config_dict = {}
         for key, value in self.__dict__.items():
@@ -189,42 +189,42 @@ class Config:
                 config_dict[key] = list(value)
             elif value is not None:
                 config_dict[key] = value
-        
+
         with open(config_path, 'w') as f:
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
-        
+
         from amplifinder.logger import info
         info(f"Saved config to: {config_path}")
 
     @classmethod
     def load_from_run(cls, run_dir: Path) -> "Config":
         """Load config from run_config.yaml in run directory.
-        
+
         Raises:
             FileNotFoundError: If run_config.yaml doesn't exist
         """
         run_dir = Path(run_dir)
         config_path = run_dir / cls.RUN_CONFIG_FILENAME
-        
+
         if not config_path.exists():
             raise FileNotFoundError(f"Config file not found: {config_path}")
-        
+
         config_dict = load_config(config_path)
-        
+
         # Convert string paths back to Path objects
-        path_fields = ['iso_path', 'anc_path', 'output_dir', 'ref_path', 
-                       'iso_breseq_path', 'anc_breseq_path', 'blastn_path', 
+        path_fields = ['iso_path', 'anc_path', 'output_dir', 'ref_path',
+                       'iso_breseq_path', 'anc_breseq_path', 'blastn_path',
                        'samtools_path', 'isdb_path']
-        for field in path_fields:
-            if field in config_dict and config_dict[field] is not None:
-                config_dict[field] = Path(config_dict[field])
-        
+        for path_field in path_fields:
+            if path_field in config_dict and config_dict[path_field] is not None:
+                config_dict[path_field] = Path(config_dict[path_field])
+
         # Convert lists back to tuples for tuple fields
         tuple_fields = ['score_min', 'mismatch_penalty']
-        for field in tuple_fields:
-            if field in config_dict and isinstance(config_dict[field], list):
-                config_dict[field] = tuple(config_dict[field])
-        
+        for tuple_field in tuple_fields:
+            if tuple_field in config_dict and isinstance(config_dict[tuple_field], list):
+                config_dict[tuple_field] = tuple(config_dict[tuple_field])
+
         return cls(**config_dict)
 
     def __post_init__(self):
@@ -335,5 +335,3 @@ def merge_config(
             merged[key] = value
 
     return merged
-
-

@@ -2,7 +2,6 @@
 
 import os
 import random
-import shutil
 from pathlib import Path
 
 import pytest
@@ -70,16 +69,16 @@ def isolate_srr25242906():
 @pytest.fixture
 def cleared_output_dir():
     """Clear entire output directory before test run.
-    
+
     Returns the cleared output_dir Path.
     """
     default_base = TEST_DATA_ROOT.parent
     base = Path(os.environ.get("AMPLIFINDER_OUTPUT_ROOT", default_base))
     test_output_root = base / "python_outputs"
     output_dir = test_output_root / "output"
-    
+
     ensure_dir(output_dir, cleanup=True)
-    
+
     return output_dir
 
 

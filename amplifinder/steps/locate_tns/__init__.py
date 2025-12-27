@@ -15,4 +15,3 @@ __all__ = [
     "find_tn_elements",
     "compare_tn_locations",
 ]
-

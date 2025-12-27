@@ -25,4 +25,3 @@ class TestGetReference:
         assert genome.genbank_path.exists()
         assert genome.fasta_path.exists()
         assert len(genome) > 4_000_000  # E. coli ~4.6M bp
-

@@ -19,4 +19,3 @@ __all__ = [
     "classify_architecture",
     "classify_event",
 ]
-

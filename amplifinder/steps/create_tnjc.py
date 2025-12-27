@@ -46,7 +46,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         self.genome = genome
         self.max_dist_to_tn = max_dist_to_tn
         self.trim_jc_flanking = trim_jc_flanking
-        
+
         super().__init__(
             output_dir=output_dir,
             input_files=[p for p in [genome.genbank_path, genome.fasta_path] if p],

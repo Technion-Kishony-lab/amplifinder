@@ -31,37 +31,37 @@ def classify_iso_vs_anc(
     min_jct_cov: int = 5,
 ) -> Tuple[str, List[EventModifier]]:
     """Classify event based on isolate vs ancestor architecture comparison.
-    
+
     Based on MATLAB classify_candidates.m
-    
+
     Args:
         iso_arch: Isolate architecture from junction analysis
         anc_arch: Ancestor architecture (None if no ancestor run)
         min_jct_cov: Minimum coverage threshold
-    
+
     Returns:
         (event_name, list_of_modifiers)
     """
     modifiers = []
-    
+
     if anc_arch is None:
         # No ancestor - can't determine de novo status
         return iso_arch.value, modifiers
-    
+
     if iso_arch == anc_arch:
         # Same architecture - ancestral
         modifiers.append(EventModifier.ANCESTRAL)
         return f"{iso_arch.value} (ancestral)", modifiers
-    
+
     # Look up transition
     transition = ISO_ANC_TRANSITIONS.get((iso_arch, anc_arch))
-    
+
     if transition is None:
         # Unrecognized transition
         return f"{iso_arch.value} (unresolved iso-anc pair)", modifiers
-    
+
     de_novo_left, de_novo_right = transition
-    
+
     event_parts = [iso_arch.value]
     if de_novo_left:
         event_parts.append("de novo left")
@@ -70,16 +70,16 @@ def classify_iso_vs_anc(
         event_parts.append("de novo right")
         if EventModifier.DE_NOVO not in modifiers:
             modifiers.append(EventModifier.DE_NOVO)
-    
+
     return " ".join(event_parts), modifiers
 
 
 class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
     """Final classification of candidates based on iso/anc comparison.
-    
+
     This step refines the event classification from AnalyzeAlignmentsStep
     by performing detailed iso vs anc pattern comparison.
-    
+
     Classification depends on run type:
     - has_ancestor=False: limited classification (no de novo detection)
     - has_ancestor=True: full iso vs anc pattern comparison
@@ -96,7 +96,7 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
         self.analyzed_tnjc2s = analyzed_tnjc2s
         self.has_ancestor = has_ancestor
         self.min_jct_cov = min_jct_cov
-        
+
         super().__init__(
             output_dir=output_dir,
             input_files=[],
@@ -106,24 +106,24 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
     def _calculate_output(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Reclassify events based on iso/anc comparison."""
         classified_records = []
-        
+
         for analyzed_tnjc2 in self.analyzed_tnjc2s:
             iso_arch = analyzed_tnjc2.isolate_architecture
             anc_arch = analyzed_tnjc2.ancestor_architecture if self.has_ancestor else None
-            
+
             # Reclassify
             event, modifiers = classify_iso_vs_anc(iso_arch, anc_arch, self.min_jct_cov)
-            
+
             # Update record with new classification
             classified = analyzed_tnjc2.model_copy(update={
                 "event": event,
                 "event_modifiers": modifiers,
             })
-            
+
             classified_records.append(classified)
-        
+
         result = RecordTypedDf.from_records(classified_records, AnalyzedTnJc2)
-        
+
         # Log summary
         if self.has_ancestor:
             ancestral = sum(1 for r in classified_records if EventModifier.ANCESTRAL in r.event_modifiers)
@@ -131,5 +131,5 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
             info(f"Classification: {ancestral} ancestral, {de_novo} de novo, {len(classified_records)} total")
         else:
             info(f"Classification: {len(classified_records)} candidates (no ancestor comparison)")
-        
+
         return result

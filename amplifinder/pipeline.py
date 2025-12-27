@@ -68,10 +68,10 @@ class Pipeline:
 
         # Load reference genome (needed for ancestor breseq and isolate pipeline)
         genome = self._load_reference()
-        
+
         # Handle ancestor breseq if needed
         self._ancestor_breseq(genome, anc_output)
-        
+
         # Run isolate pipeline
         tn_loc = self._locate_tns_in_reference(genome)
         ref_tn_jc, ref_tn_end_seqs = self._create_reference_tn_junctions(tn_loc, genome, iso_output)
@@ -86,9 +86,9 @@ class Pipeline:
         analyzed_tnjc2s = self._analyze_alignments(filtered_tnjc2s, iso_output, anc_output)
         analyzed_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
         self._export(analyzed_tnjc2s, iso_output)
-        
+
         return analyzed_tnjc2s
-    
+
     def run_breseq_only(self) -> None:
         """Run only breseq steps (ancestor and isolate), then exit."""
         iso_output, anc_output = self._initialize()
@@ -96,18 +96,18 @@ class Pipeline:
         self._ancestor_breseq(genome, anc_output)
         self._run_breseq(genome, iso_output)
         info("breseq-only mode completed")
-    
+
     def _ancestor_breseq(self, genome: Genome, anc_output: Path) -> None:
         """Ensure ancestor breseq output exists, run breseq if needed."""
         if not self.config.has_ancestor:
             return
-        
+
         # Determine breseq path (provided or default)
         if self.config.anc_breseq_path:
             anc_breseq_path = Path(self.config.anc_breseq_path)
         else:
             anc_breseq_path = anc_output / "breseq"
-                
+
         # Run breseq (BreseqStep handles caching - skips if output exists)
         BreseqStep(
             output_path=anc_breseq_path,
@@ -116,39 +116,38 @@ class Pipeline:
             docker=self.config.breseq_docker,
             threads=self.config.breseq_threads,
         ).run()
-        
+
         info("Ancestor breseq completed")
-    
+
     def _copy_junctions_to_ancestor(
         self,
         filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
         iso_output: Path,
     ) -> None:
         """Copy junction files from isolate to ancestor folder (only if not already there).
-        
+
         This allows ancestor alignments to be stored in the ancestor folder
         and shared across multiple isolate runs.
         """
         if not self.config.has_ancestor:
             return
-        
+
         anc_run_dir = self.config.anc_run_dir
-        
+
         for filtered_tnjc2 in filtered_tnjc2s:
             iso_jc_dir = iso_output / filtered_tnjc2.analysis_dir
             anc_jc_dir = anc_run_dir / filtered_tnjc2.analysis_dir
             anc_junctions = anc_jc_dir / "junctions.fasta"
-            
+
             # Only copy if not already in ancestor folder
             if anc_junctions.exists():
                 continue
-            
+
             # Copy junctions.fasta from isolate to ancestor folder
             iso_junctions = iso_jc_dir / "junctions.fasta"
             if iso_junctions.exists():
                 ensure_dir(anc_jc_dir)
                 shutil.copy2(iso_junctions, anc_junctions)
-    
 
     @property
     def ref_tn_source(self) -> str:
@@ -300,7 +299,7 @@ class Pipeline:
     ) -> RecordTypedDf[CoveredTnJc2]:
         """Step 7: Calculate amplicon coverage."""
         cfg = self.config
-        
+
         # Get ancestor breseq path if ancestor exists
         if cfg.has_ancestor:
             anc_breseq_path = cfg.get_anc_breseq_path()
@@ -308,9 +307,9 @@ class Pipeline:
         else:
             anc_breseq_path = None
             anc_name = None
-        
+
         iso_breseq_path = cfg.get_iso_breseq_path()
-        
+
         covered = CalcTnJc2AmpliconCoverageStep(
             raw_tnjc2s=raw_tnjc2s,
             genome=genome,
@@ -326,7 +325,7 @@ class Pipeline:
         ).run()
         info(f"Coverage: {len(covered)} candidates")
         return covered
-    
+
     def _classify_structure(
         self,
         covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
@@ -342,7 +341,7 @@ class Pipeline:
         ).run()
         info(f"Classification: {len(classified_tnjc2s)} candidates")
         return classified_tnjc2s
-    
+
     def _filter_candidates(
         self,
         classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
@@ -357,7 +356,7 @@ class Pipeline:
         ).run()
         info(f"Filtered: {len(filtered_tnjc2s)} candidates")
         return filtered_tnjc2s
-    
+
     def _create_synthetic_junctions(
         self,
         filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
@@ -368,7 +367,7 @@ class Pipeline:
         """Step 10: Create synthetic junction sequences."""
         if len(filtered_tnjc2s) == 0:
             return
-        
+
         CreateSyntheticJunctionsStep(
             filtered_tnjc2s=filtered_tnjc2s,
             genome=genome,
@@ -377,7 +376,7 @@ class Pipeline:
             read_length=self._get_iso_read_length(),
         ).run()
         info(f"Created synthetic junctions for {len(filtered_tnjc2s)} candidates")
-    
+
     def _align_reads(
         self,
         filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
@@ -386,9 +385,9 @@ class Pipeline:
         """Step 11: Align reads to synthetic junctions."""
         if len(filtered_tnjc2s) == 0:
             return
-        
+
         cfg = self.config
-        
+
         # Align isolate reads in isolate folder
         AlignReadsToJunctionsStep(
             candidates=filtered_tnjc2s,
@@ -398,7 +397,7 @@ class Pipeline:
             threads=cfg.breseq_threads,
         ).run()
         info(f"Aligned isolate reads for {len(filtered_tnjc2s)} candidates")
-        
+
         # If ancestor exists, copy junctions to ancestor folder (if not already there),
         # then align ancestor reads in ancestor folder
         # This allows ancestor alignments to be shared across multiple isolate runs
@@ -414,7 +413,7 @@ class Pipeline:
                 threads=cfg.breseq_threads,
             ).run()
             info(f"Aligned ancestor reads for {len(filtered_tnjc2s)} candidates")
-    
+
     def _analyze_alignments(
         self,
         filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
@@ -424,7 +423,7 @@ class Pipeline:
         """Step 12: Analyze read alignments."""
         if len(filtered_tnjc2s) == 0:
             return RecordTypedDf.empty(AnalyzedTnJc2)
-        
+
         analyzed_tnjc2s = AnalyzeTnJc2AlignmentsStep(
             candidates=filtered_tnjc2s,
             output_dir=iso_output,
@@ -437,7 +436,7 @@ class Pipeline:
         ).run()
         info(f"Analyzed: {len(analyzed_tnjc2s)} candidates")
         return analyzed_tnjc2s
-    
+
     def _classify_candidates(
         self,
         analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
@@ -446,7 +445,7 @@ class Pipeline:
         """Step 13: Final classification of candidates."""
         if len(analyzed_tnjc2s) == 0:
             return analyzed_tnjc2s
-        
+
         analyzed_tnjc2s = ClassifyTnJc2CandidatesStep(
             analyzed_tnjc2s=analyzed_tnjc2s,
             output_dir=iso_output,
@@ -455,7 +454,7 @@ class Pipeline:
         ).run()
         info(f"Final classification: {len(analyzed_tnjc2s)} candidates")
         return analyzed_tnjc2s
-    
+
     def _export(
         self,
         analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],

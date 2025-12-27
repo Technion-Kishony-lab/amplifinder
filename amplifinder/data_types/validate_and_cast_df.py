@@ -3,7 +3,7 @@ import ast
 import pandas as pd
 import numpy as np
 from enum import Enum
-from typing import Any, Type, Union, get_origin, get_args, NamedTuple
+from typing import Any, Type, Union, get_origin, get_args
 
 from pydantic import TypeAdapter
 
@@ -109,7 +109,8 @@ def validate_and_cast_df(
         base_type = _dtype.base_dtype  # Unwraps Optional[T] → T
 
         if cast:
-            if _is_compound(base_type) or _is_compound(_dtype.dtype) or _is_namedtuple(base_type) or _is_record(base_type):
+            if _is_compound(base_type) or _is_compound(
+                    _dtype.dtype) or _is_namedtuple(base_type) or _is_record(base_type):
                 # Compound types, NamedTuple, and Record: parse with Pydantic
                 # (NamedTuple/Record aren't detected as compound by get_origin, so check separately)
                 df = df.copy()

@@ -36,9 +36,9 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         """
         self.tnjcs = tnjcs
         self.genome = genome
-        
+
         # Cache scaffold properties for multi-scaffold support
-        
+
         super().__init__(
             output_dir=output_dir,
             input_files=[],
@@ -136,7 +136,8 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         # MATLAB: orientation = side_i * dir2(i), where i is L
         tn_ids = [m[0] for m in matching_tns]
         # Use dir2 of the left junction (jc_L) for orientation calculation
-        tn_orientations = [Orientation(side_i.value * jc_L.dir2.value * (-1 if switched else 1)) for _, side_i in matching_tns]
+        tn_orientations = [Orientation(side_i.value * jc_L.dir2.value * (-1 if switched else 1))
+                           for _, side_i in matching_tns]
 
         # Span origin: if left junction points left (REVERSE), amplicon spans origin
         span_origin = jc_L.dir2 == Orientation.REVERSE

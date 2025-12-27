@@ -1,7 +1,6 @@
 """Tests for ClassifyTnJc2StructureStep."""
 
 import pytest
-from pathlib import Path
 from amplifinder.steps import ClassifyTnJc2StructureStep
 from amplifinder.data_types import (
     RecordTypedDf, CoveredTnJc2, RefTnLoc, RawEvent, Orientation, Coverage,
@@ -23,7 +22,10 @@ def sample_covered_tnjc2(tmp_path):
             span_origin=False,
             amplicon_length=100, complementary_length=900,
             ref_name="U00096", iso_name="sample1",
-            amplicon_coverage=2.0, scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+            amplicon_coverage=2.0,
+            scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+            iso_amplicon_coverage=Coverage(mean=2.0, median=2.0, mode=2.0),
+            iso_scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
             copy_number=2.0, amplicon_coverage_mode=2.0,
         ),
         CoveredTnJc2(
@@ -37,7 +39,10 @@ def sample_covered_tnjc2(tmp_path):
             span_origin=False,
             amplicon_length=100, complementary_length=900,
             ref_name="U00096", iso_name="sample1",
-            amplicon_coverage=1.0, scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+            amplicon_coverage=1.0,
+            scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+            iso_amplicon_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+            iso_scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
             copy_number=1.0, amplicon_coverage_mode=1.0,
         ),
     ]
@@ -61,9 +66,9 @@ def test_classify_structure(sample_covered_tnjc2, sample_tn_locs, tmp_path):
         tn_locs=sample_tn_locs,
         output_dir=tmp_path,
     )
-    
+
     result = step.run()
-    
+
     assert len(result) == 2
     result_list = list(result)
     # First should be unflanked (no shared IS)
@@ -87,22 +92,25 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, tmp_path):
         amplicon_length=20,  # Too short
         complementary_length=980,
         ref_name="U00096", iso_name="sample1",
-        amplicon_coverage=1.0, genome_coverage=1.0,
+        amplicon_coverage=1.0,
+        iso_amplicon_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+        iso_scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+        genome_coverage=1.0,
         copy_number=1.0, amplicon_coverage_mode=1.0,
     )
-    
+
     all_records = RecordTypedDf.from_records(
         list(sample_covered_tnjc2) + [short_record],
         CoveredTnJc2
     )
-    
+
     step = ClassifyTnJc2StructureStep(
         covered_tnjc2s=all_records,
         tn_locs=sample_tn_locs,
         output_dir=tmp_path,
         min_amplicon_length=30,
     )
-    
+
     result = step.run()
     # Short amplicon should be classified as transposition
     transpositions = [r for r in result if r.raw_event == RawEvent.TRANSPOSITION]

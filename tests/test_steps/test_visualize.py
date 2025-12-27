@@ -1,7 +1,6 @@
 """Tests for visualization module."""
 
 import pytest
-from pathlib import Path
 from amplifinder.visualization import plot_candidate_coverage
 from amplifinder.data_types import AnalyzedTnJc2, RawEvent, Orientation, Coverage
 import numpy as np
@@ -21,12 +20,15 @@ def sample_candidate(tmp_path):
         span_origin=False,
         amplicon_length=100, complementary_length=900,
         ref_name="U00096", iso_name="sample1",
-        amplicon_coverage=2.0, scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+        amplicon_coverage=2.0,
+        scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+        iso_amplicon_coverage=Coverage(mean=2.0, median=2.0, mode=2.0),
+        iso_scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
         copy_number=2.0, amplicon_coverage_mode=2.0,
         raw_event=RawEvent.FLANKED,
         shared_tn_ids=[1], chosen_tn_id=1,
         analysis_dir="jc_100_200_001_L150",
-        jc_cov_left=[0]*7, jc_cov_right=[0]*7, jc_cov_spanning=[0]*7,
+        jc_cov_left=[0] * 7, jc_cov_right=[0] * 7, jc_cov_spanning=[0] * 7,
         isolate_architecture=RawEvent.FLANKED,
         ancestor_architecture=None,
         event="flanked",
@@ -40,9 +42,9 @@ def test_plot_candidate_coverage(sample_candidate, tmp_path):
     genome_length = 1000
     iso_coverage = np.random.poisson(10, genome_length).astype(float)
     anc_coverage = np.random.poisson(10, genome_length).astype(float)
-    
+
     output_path = tmp_path / "coverage_plot.png"
-    
+
     plot_candidate_coverage(
         candidate=sample_candidate,
         iso_coverage=iso_coverage,
@@ -51,5 +53,5 @@ def test_plot_candidate_coverage(sample_candidate, tmp_path):
         output_path=output_path,
         show=False,
     )
-    
+
     assert output_path.exists()
