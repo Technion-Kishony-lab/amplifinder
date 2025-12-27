@@ -229,23 +229,23 @@ class Config:
 
     def __post_init__(self):
         """Convert paths and set derived values."""
-        # Convert string paths to Path objects
-        self.iso_path = Path(self.iso_path)
-        self.output_dir = Path(self.output_dir)
-        self.ref_path = Path(self.ref_path)
+        # Convert string paths to absolute Path objects
+        self.iso_path = Path(self.iso_path).resolve()
+        self.output_dir = Path(self.output_dir).resolve()
+        self.ref_path = Path(self.ref_path).resolve()
 
         if self.anc_path is not None:
-            self.anc_path = Path(self.anc_path)
+            self.anc_path = Path(self.anc_path).resolve()
         if self.iso_breseq_path is not None:
-            self.iso_breseq_path = Path(self.iso_breseq_path)
+            self.iso_breseq_path = Path(self.iso_breseq_path).resolve()
         if self.anc_breseq_path is not None:
-            self.anc_breseq_path = Path(self.anc_breseq_path)
+            self.anc_breseq_path = Path(self.anc_breseq_path).resolve()
         if self.blastn_path is not None:
-            self.blastn_path = Path(self.blastn_path)
+            self.blastn_path = Path(self.blastn_path).resolve()
         if self.samtools_path is not None:
-            self.samtools_path = Path(self.samtools_path)
+            self.samtools_path = Path(self.samtools_path).resolve()
         if self.isdb_path is not None:
-            self.isdb_path = Path(self.isdb_path)
+            self.isdb_path = Path(self.isdb_path).resolve()
 
         # Derive names from paths if not provided
         if self.iso_name is None:
@@ -271,7 +271,7 @@ class Config:
             )
 
         # Validate: genomesDB is reserved for NCBI references
-        if str(self.ref_path) == "genomesDB" and not self.ncbi:
+        if self.ref_path.name == "genomesDB" and not self.ncbi:
             raise ValueError(
                 "genomesDB directory is reserved for NCBI references. "
                 "Choose a different --ref-path for local genomes."
