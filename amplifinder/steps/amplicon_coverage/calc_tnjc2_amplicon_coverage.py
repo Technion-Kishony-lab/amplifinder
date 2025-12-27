@@ -31,9 +31,9 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         self,
         raw_tnjc2s: RecordTypedDf[RawTnJc2],
         genome: Genome,
-        iso_breseq_path: Path,
         output_dir: Path,
         ref_name: str,
+        iso_breseq_path: Path,
         iso_name: str,
         anc_breseq_path: Optional[Path] = None,
         anc_name: Optional[str] = None,
@@ -44,8 +44,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
     ):
         self.raw_tnjc2s = raw_tnjc2s
         self.genome = genome
-        self.iso_breseq_path = Path(iso_breseq_path)
         self.ref_name = ref_name
+        self.iso_breseq_path = Path(iso_breseq_path)
         self.iso_name = iso_name
         self.anc_breseq_path = Path(anc_breseq_path) if anc_breseq_path else None
         self.anc_name = anc_name

@@ -11,7 +11,6 @@ from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
-from amplifinder.config import get_iso_run_dir
 from amplifinder.utils.file_utils import ensure_dir
 
 # =============================================================================

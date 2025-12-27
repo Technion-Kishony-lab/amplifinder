@@ -169,8 +169,7 @@ class TestPipelineStepByStep:
         """Common setup: enable verbose reporting."""
         Step.set_global_verbose(True)
         if return_run_dir:
-            from amplifinder.config import get_iso_run_dir
-            return get_iso_run_dir(config)
+            return config.iso_run_dir
         return None
     
     @staticmethod

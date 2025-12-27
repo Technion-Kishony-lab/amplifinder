@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple, Optional
 
-from amplifinder.config import Config, get_iso_run_dir, get_anc_run_dir, load_config_from_run, save_config
+from amplifinder.config import Config
 from amplifinder.data_types import (
     Genome, RecordTypedDf, RefTnLoc, RefTnJunction, SeqRefTnSide, Junction, TnJunction, RawTnJc2,
     CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2,
@@ -132,7 +132,7 @@ class Pipeline:
         if not self.config.has_ancestor:
             return
         
-        anc_run_dir = get_anc_run_dir(self.config)
+        anc_run_dir = self.config.anc_run_dir
         
         for filtered_tnjc2 in filtered_tnjc2s:
             iso_jc_dir = iso_output / filtered_tnjc2.analysis_dir
@@ -302,26 +302,21 @@ class Pipeline:
         cfg = self.config
         
         # Get ancestor breseq path if ancestor exists
-        anc_breseq_path = None
-        anc_name = None
         if cfg.has_ancestor:
-            if cfg.anc_breseq_path:
-                # User provided breseq path
-                anc_breseq_path = cfg.anc_breseq_path
-            else:
-                # Use breseq from ancestor run directory
-                anc_run_dir = get_anc_run_dir(cfg)
-                anc_breseq_path = anc_run_dir / "breseq"
+            anc_breseq_path = cfg.get_anc_breseq_path()
             anc_name = cfg.anc_name
+        else:
+            anc_breseq_path = None
+            anc_name = None
         
-        iso_breseq_path = cfg.iso_breseq_path or (iso_output / "breseq")
+        iso_breseq_path = cfg.get_iso_breseq_path()
         
         covered = CalcTnJc2AmpliconCoverageStep(
             raw_tnjc2s=raw_tnjc2s,
             genome=genome,
-            iso_breseq_path=iso_breseq_path,
             output_dir=iso_output,
             ref_name=cfg.ref_name,
+            iso_breseq_path=iso_breseq_path,
             iso_name=cfg.iso_name,
             anc_breseq_path=anc_breseq_path,
             anc_name=anc_name,
@@ -408,13 +403,12 @@ class Pipeline:
         # then align ancestor reads in ancestor folder
         # This allows ancestor alignments to be shared across multiple isolate runs
         if cfg.has_ancestor:
-            anc_run_dir = get_anc_run_dir(cfg)
             # Copy junctions first (only if not already there)
             self._copy_junctions_to_ancestor(filtered_tnjc2s, iso_output)
             # Then align ancestor reads in ancestor folder
             AlignReadsToJunctionsStep(
                 candidates=filtered_tnjc2s,
-                output_dir=anc_run_dir,
+                output_dir=cfg.anc_run_dir,
                 iso_fastq_path=cfg.anc_path,  # Ancestor reads aligned as "iso" in ancestor folder
                 anc_fastq_path=None,
                 threads=cfg.breseq_threads,
