@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from amplifinder.steps.base import Step
-from amplifinder.config import Config, save_config, get_iso_run_dir, get_anc_run_dir
+from amplifinder.config import Config
 from amplifinder.logger import info
 from amplifinder.utils.file_utils import ensure_dir
 
@@ -22,12 +22,12 @@ class InitializingStep(Step[Tuple[Path, Optional[Path]]]):
         force: Optional[bool] = None,
     ):
         self.config = config
-        self.iso_run_dir = get_iso_run_dir(config)
+        self.iso_run_dir = config.iso_run_dir
         
         # Build output_files list - include ancestor run dir if needed
         output_files = [self.iso_run_dir]
         if config.has_ancestor:
-            self.anc_run_dir = get_anc_run_dir(config)
+            self.anc_run_dir = config.anc_run_dir
             output_files.append(self.anc_run_dir)
         else:
             self.anc_run_dir = None
@@ -43,7 +43,7 @@ class InitializingStep(Step[Tuple[Path, Optional[Path]]]):
             ensure_dir(self.anc_run_dir)
         
         # Save config to run directory
-        save_config(self.config, self.iso_run_dir)
+        self.config.save(self.iso_run_dir)
         
         return self.iso_run_dir, self.anc_run_dir
 

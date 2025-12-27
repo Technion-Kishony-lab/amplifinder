@@ -12,7 +12,7 @@ except ImportError:
     MATPLOTLIB_AVAILABLE = False
 
 from amplifinder.data_types import AnalyzedTnJc2, RecordTypedDf
-from amplifinder.config import load_config_from_run
+from amplifinder.config import Config
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.steps.amplicon_coverage import get_coverage_in_range
 from amplifinder.utils.file_utils import ensure_parent_dir
@@ -128,7 +128,7 @@ def visualize_candidates(
     
     # Load config
     try:
-        config = load_config_from_run(run_dir)
+        config = Config.load_from_run(run_dir)
     except FileNotFoundError:
         raise FileNotFoundError(f"Config file not found in {run_dir}. Run pipeline first.")
     
