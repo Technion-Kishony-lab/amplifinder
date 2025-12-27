@@ -12,6 +12,8 @@ from amplifinder.tools.breseq import run_breseq, parse_breseq_output
 class BreseqStep(Step[Dict[str, pd.DataFrame]]):
     """Run breseq alignment pipeline."""
 
+    STEP_LOCK_TIMEOUT = 7200  # breseq can run for hours
+
     def __init__(
         self,
         output_path: Path,
