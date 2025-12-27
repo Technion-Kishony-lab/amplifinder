@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
+from Bio import SeqIO
 from Bio.Seq import Seq
 
 from amplifinder.logger import info, warning
@@ -33,23 +34,10 @@ def read_fasta_lengths(fasta_path: Path, max_num_reads: Optional[int] = None) ->
         Dict mapping sequence ID to length
     """
     lengths = {}
-    current_header = None
-    current_len = 0
-
-    with open(fasta_path) as f:
-        for line in f:
-            if line.startswith(">"):
-                if current_header:
-                    lengths[current_header] = current_len
-                    if max_num_reads and len(lengths) >= max_num_reads:
-                        return lengths
-                current_header = line[1:].strip().split()[0]
-                current_len = 0
-            else:
-                current_len += len(line.strip())
-        if current_header and (not max_num_reads or len(lengths) < max_num_reads):
-            lengths[current_header] = current_len
-
+    for record in SeqIO.parse(fasta_path, "fasta"):
+        lengths[record.id] = len(record.seq)
+        if max_num_reads and len(lengths) >= max_num_reads:
+            break
     return lengths
 
 
@@ -66,11 +54,10 @@ def read_fastq_lengths(fastq_path: Path, max_num_reads: Optional[int] = None) ->
     lengths = []
     opener = gzip.open if str(fastq_path).endswith('.gz') else open
     with opener(fastq_path, 'rt') as f:
-        for i, line in enumerate(f):
-            if i % 4 == 1:  # Sequence line
-                lengths.append(len(line.strip()))
-                if max_num_reads and len(lengths) >= max_num_reads:
-                    break
+        for record in SeqIO.parse(f, "fastq"):
+            lengths.append(len(record.seq))
+            if max_num_reads and len(lengths) >= max_num_reads:
+                break
     return lengths
 
 
