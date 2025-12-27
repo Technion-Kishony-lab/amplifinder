@@ -38,11 +38,6 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         self.genome = genome
         
         # Cache scaffold properties for multi-scaffold support
-        self._scaf_lengths = {rec.name: len(rec.seq) for rec in genome.records}
-        self._scaf_circular = {
-            rec.name: rec.annotations.get("topology", "linear").lower() == "circular"
-            for rec in genome.records
-        }
         
         super().__init__(
             output_dir=output_dir,
@@ -186,8 +181,8 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         raw_length = pos_R - pos_L + 1
 
         # Get scaffold-specific properties (supports multi-scaffold genomes)
-        scaf_length = self._scaf_lengths[scaf]
-        is_circular = self._scaf_circular.get(scaf, False)
+        scaf_length = self.genome.scaffold_lengths[scaf]
+        is_circular = self.genome.scaffold_circularities[scaf]
 
         if is_circular:
             if span_origin:

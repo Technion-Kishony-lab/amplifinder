@@ -24,5 +24,5 @@ class TestGetReference:
         assert genome.name == "U00096"
         assert genome.genbank_path.exists()
         assert genome.fasta_path.exists()
-        assert genome.length > 4_000_000  # E. coli ~4.6M bp
+        assert len(genome) > 4_000_000  # E. coli ~4.6M bp
 

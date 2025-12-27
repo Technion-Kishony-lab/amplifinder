@@ -56,7 +56,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
     def _calculate_output(self) -> RecordTypedDf[TnJunction]:
         """Match junctions to TN elements."""
 
-        self.ref_seqs = self.genome.sequences
+        self.ref_seqs = self.genome.scaffold_sequences
         tnjc_records = []
 
         for jc in self.jc_df:

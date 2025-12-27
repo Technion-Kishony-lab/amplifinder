@@ -146,7 +146,7 @@ class Pipeline:
             ref_path=self.config.ref_path,
             ncbi=self.config.ncbi,
         ).run()
-        info(f"Reference: {genome.name} ({genome.length:,} bp)")
+        info(f"Reference: {genome.name} ({len(genome):,} bp)")
         return genome
 
     def _locate_tns_in_reference(self, genome: Genome) -> RecordTypedDf[RefTnLoc]:
