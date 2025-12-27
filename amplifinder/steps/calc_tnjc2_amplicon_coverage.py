@@ -13,7 +13,7 @@ from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.utils.coverage import (
     get_coverage_in_range,
     calc_genome_coverage,
-    calc_copy_number_distribution,
+    calc_distribution_mode,
     get_scaffold_coverage,
     calc_coverage_stats,
 )
@@ -129,20 +129,35 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             amplicon_coverage = copy_number / anc_copy_number if anc_copy_number > 0 else None
             copy_number_ratio = amplicon_coverage
             
+            # Calculate normalized copy number
+            cp = iso_region_cov.astype(float) / iso_genome_median if iso_genome_median > 0 else iso_region_cov.astype(float)
+            anc_cp = anc_region_cov.astype(float) / anc_genome_median if anc_genome_median > 0 else anc_region_cov.astype(float)
+            with np.errstate(divide='ignore', invalid='ignore'):
+                ncp = cp / anc_cp
+            ncp[~np.isfinite(ncp)] = np.nan
+            
             # Calculate distribution mode
-            _, amplicon_coverage_mode = calc_copy_number_distribution(
-                iso_region_cov, iso_genome_median,
-                anc_region_cov, anc_genome_median,
-                self.ncp_limit1, self.ncp_limit2, self.ncp_n,
+            amplicon_coverage_mode = calc_distribution_mode(
+                ncp,
+                x_min=10**self.ncp_limit1,
+                x_max=10**self.ncp_limit2,
+                n_bins=self.ncp_n,
+                is_log=True,
             )
         else:
             # Raw coverage
             amplicon_coverage = copy_number
             
+            # Calculate raw copy number
+            ncp = iso_region_cov.astype(float) / iso_genome_median if iso_genome_median > 0 else iso_region_cov.astype(float)
+            
             # Calculate distribution mode (raw)
-            _, amplicon_coverage_mode = calc_copy_number_distribution(
-                iso_region_cov, iso_genome_median,
-                ncp_limit1=self.ncp_limit1, ncp_limit2=self.ncp_limit2, ncp_n=self.ncp_n,
+            amplicon_coverage_mode = calc_distribution_mode(
+                ncp,
+                x_min=10**self.ncp_limit1,
+                x_max=10**self.ncp_limit2,
+                n_bins=self.ncp_n,
+                is_log=True,
             )
         
         # Calculate scaffold-specific coverage statistics

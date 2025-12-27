@@ -55,16 +55,11 @@ def calc_coverage_stats(cov: np.ndarray, include_zeros: bool = False) -> Coverag
     if len(cov) == 0:
         return Coverage(mean=0.0, median=0.0, mode=0.0)
     
-    mean = float(np.mean(cov))
-    median = float(np.median(cov))
-    
-    # Mode calculation using histogram (numpy-only approach)
-    # Works for len >= 1: histogram creates appropriate bins and mode is bin midpoint
-    hist, bin_edges = np.histogram(cov, bins='auto')
-    max_bin = np.argmax(hist)
-    mode = float((bin_edges[max_bin] + bin_edges[max_bin + 1]) / 2)
-    
-    return Coverage(mean=mean, median=median, mode=mode)
+    return Coverage(
+        mean=float(np.mean(cov)), 
+        median=float(np.median(cov)), 
+        mode=calc_distribution_mode(cov, is_log=False, skip_first_bin=False)
+    )
 
 
 def calc_genome_coverage(cov: np.ndarray) -> float:
@@ -76,8 +71,7 @@ def calc_genome_coverage(cov: np.ndarray) -> float:
     Returns:
         Median coverage (excluding zeros)
     """
-    cov_nonzero = cov[cov > 0]
-    return float(np.median(cov_nonzero)) if len(cov_nonzero) > 0 else 0.0
+    return calc_coverage_stats(cov, include_zeros=False).median
 
 
 def get_scaffold_coverage(
@@ -99,57 +93,74 @@ def get_scaffold_coverage(
     return cov[start:end]
 
 
-def calc_copy_number_distribution(
-    cov: np.ndarray,
-    genome_median: float,
-    anc_cov: Optional[np.ndarray] = None,
-    anc_genome_median: Optional[float] = None,
-    ncp_limit1: float = -1,
-    ncp_limit2: float = 3,
-    ncp_n: int = 150,
-) -> tuple[np.ndarray, float]:
-    """Calculate copy number distribution and mode.
-    
-    Based on MATLAB calc_coverage_ISJC2.m
+def calc_distribution_mode(
+    x: np.ndarray,
+    x_min: Optional[float] = None,
+    x_max: Optional[float] = None,
+    n_bins: Optional[int] = None,
+    is_log: bool = True,
+    skip_first_bin: bool = True,
+) -> float:
+    """Calculate mode of distribution.
     
     Args:
-        cov: Isolate coverage in region
-        genome_median: Isolate genome median coverage
-        anc_cov: Ancestor coverage in region (optional)
-        anc_genome_median: Ancestor genome median coverage (optional)
-        ncp_limit1: Log10 lower limit for distribution
-        ncp_limit2: Log10 upper limit for distribution
-        ncp_n: Number of histogram bins
+        x: Data array
+        x_min: Minimum threshold value. If None, uses min of data
+        x_max: Maximum threshold value. If None, uses max of data
+        n_bins: Number of histogram bins. If None, uses Freedman-Diaconis rule
+        is_log: If True, work in log space (take log of x)
+        skip_first_bin: If True, skip first bin when finding mode (default: True)
     
     Returns:
-        (histogram_counts, mode_value)
+        Mode value
     """
-    # Calculate copy number
-    cp = cov.astype(float) / genome_median
+    # Remove NaN and infinite values
+    x_clean = x[np.isfinite(x)]
     
-    if anc_cov is not None and anc_genome_median is not None:
-        # Normalized copy number
-        anc_cp = anc_cov.astype(float) / anc_genome_median
-        with np.errstate(divide='ignore', invalid='ignore'):
-            ncp = cp / anc_cp
-        ncp[~np.isfinite(ncp)] = np.nan
-    else:
-        # Raw copy number
-        ncp = cp
+    if len(x_clean) == 0:
+        return np.nan
+    
+    # Set defaults from data if not provided
+    if x_min is None:
+        x_min = np.min(x_clean)
+    if x_max is None:
+        x_max = np.max(x_clean)
+    
+    # Transform to log space if needed
+    if is_log:
+        x_clean = np.log10(x_clean)
+        x_min = np.log10(x_min)
+        x_max = np.log10(x_max)
     
     # Clamp to limits
-    ncp = np.clip(ncp, 10**ncp_limit1, 10**ncp_limit2)
+    x_clamped = np.clip(x_clean, x_min, x_max)
     
-    # Build histogram
-    edges = np.logspace(ncp_limit1, ncp_limit2, ncp_n)
-    hist, _ = np.histogram(ncp[~np.isnan(ncp)], bins=edges)
+    # Auto-determine bins using Freedman-Diaconis rule if not specified
+    if n_bins is None:
+        n = len(x_clamped)
+        q75, q25 = np.percentile(x_clamped, [75, 25])
+        iqr = q75 - q25
+        if iqr > 0:
+            bin_width = 2 * iqr / (n ** (1/3))
+            n_bins = max(10, int((x_max - x_min) / bin_width))
+        else:
+            # Fallback for constant data: use square root rule
+            n_bins = max(10, min(50, int(np.sqrt(n))))
     
-    # Find mode (skip first bin to avoid deletions)
-    if len(hist) > 1:
+    # Build histogram (always linear bins after transformation)
+    edges = np.linspace(x_min, x_max, n_bins)
+    hist, _ = np.histogram(x_clamped, bins=edges)
+    
+    # Find mode
+    if skip_first_bin and len(hist) > 1:
         max_idx = np.argmax(hist[1:]) + 1  # offset by 1 since we skipped first
-        mode = np.sqrt(edges[max_idx] * edges[max_idx + 1])  # geometric mean of bin edges
     else:
-        mode = 1.0
+        max_idx = np.argmax(hist)
+    mode = (edges[max_idx] + edges[max_idx + 1]) / 2  # arithmetic mean
     
-    return hist, float(mode)
+    # Transform back from log space if needed
+    if is_log:
+        mode = 10**mode
+    
+    return float(mode)
 
