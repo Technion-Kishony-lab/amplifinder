@@ -41,9 +41,10 @@ def create_synthetic_junctions(
     """
     WID = read_length * 2  # junction width
     
-    # Positions (0-based for Python)
-    pos_L = candidate.pos_scaf_L - 1  # left junction position
-    pos_R = candidate.pos_scaf_R - 1  # right junction position
+    # Convert positions from 1-based (genomic coordinates) to 0-based (array indexing)
+    # pos_scaf_L and pos_scaf_R are 1-based inclusive (from BLAST/junction positions)
+    pos_L = candidate.pos_scaf_L - 1  # Convert to 0-based start
+    pos_R = candidate.pos_scaf_R - 1  # Convert to 0-based start
     
     # Handle origin spanning
     if candidate.span_origin:
@@ -53,9 +54,10 @@ def create_synthetic_junctions(
     pos_out_L = pos_L - 1
     pos_out_R = pos_R + 1
     
-    # TN boundaries
-    tn_left = tn_loc.loc_left - 1  # 0-based
-    tn_right = tn_loc.loc_right  # exclusive end
+    # TN boundaries (convert 1-based inclusive to 0-based for array indexing)
+    # loc_left and loc_right are 1-based inclusive (from BLAST/GenBank)
+    tn_left = tn_loc.loc_left - 1  # Convert to 0-based start
+    tn_right = tn_loc.loc_right  # 1-based inclusive -> 0-based exclusive end
     tn_length = tn_right - tn_left
     
     # TN orientation (from chosen TN)
@@ -189,9 +191,6 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
 
     def _calculate_output(self) -> RecordTypedDf[FilteredTnJc2]:
         """Create synthetic junctions for each candidate."""
-        # Load chromosome sequence
-        chr_seq = self.genome.sequence
-        
         # Build TN lookup
         tn_lookup = {tn.tn_id: tn for tn in self.tn_locs}
         
@@ -206,7 +205,13 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
             
             tn_loc = tn_lookup[chosen_tn_id]
             
-            # Get TN sequence (simplified - assumes same scaffold)
+            # Get scaffold sequence
+            scaffold_sequences = self.genome.scaffold_sequences
+            if tn_loc.tn_scaf not in scaffold_sequences:
+                continue
+            chr_seq = scaffold_sequences[tn_loc.tn_scaf]
+            
+            # Get TN sequence (loc_left and loc_right are 1-based inclusive, convert to 0-based for slicing)
             tn_seq = chr_seq[tn_loc.loc_left - 1:tn_loc.loc_right]
             
             # Create junctions

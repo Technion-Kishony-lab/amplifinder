@@ -21,135 +21,100 @@ Entrez.email = "amplifinder@example.com"
 
 @dataclass
 class Genome:
-    """Reference genome - can be from GenBank, FASTA, or both."""
+    """Reference genome - can be from GenBank, FASTA, or both.
+    
+    Scaffold names are LOCUS names (GenBank) or sequence IDs (FASTA).
+    """
 
     name: str
     genbank_path: Optional[Path] = None
     fasta_path: Optional[Path] = None
 
     # Cached records
-    _gb_record: Optional[SeqRecord] = field(default=None, repr=False, compare=False)
-    _fa_record: Optional[SeqRecord] = field(default=None, repr=False, compare=False)
+    _gb_records: Optional[List[SeqRecord]] = field(default=None, repr=False, compare=False)
+    _fa_records: Optional[List[SeqRecord]] = field(default=None, repr=False, compare=False)
 
     def __post_init__(self):
         if self.genbank_path is None and self.fasta_path is None:
             raise ValueError("At least one of genbank_path or fasta_path required")
 
-    @property
-    def genbank_record(self) -> Optional[SeqRecord]:
-        """Load and cache GenBank record."""
-        if self._gb_record is None and self.genbank_path is not None:
-            self._gb_record = SeqIO.read(self.genbank_path, "genbank")
-        return self._gb_record
+    def __len__(self) -> int:
+        """Get total genome length (sum of all scaffold lengths)."""
+        return sum(self.scaffold_lengths.values())
 
     @property
-    def fasta_record(self) -> Optional[SeqRecord]:
-        """Load and cache FASTA record."""
-        if self._fa_record is None and self.fasta_path is not None:
-            self._fa_record = SeqIO.read(self.fasta_path, "fasta")
-        return self._fa_record
+    def gb_records(self) -> Optional[List[SeqRecord]]:
+        """Load GenBank records (cached). Returns None if no genbank_path."""
+        if not self.genbank_path:
+            return None
+        if self._gb_records is None:
+            with open(self.genbank_path) as f:
+                self._gb_records = list(SeqIO.parse(f, "genbank"))
+        return self._gb_records
 
     @property
-    def seq(self) -> Seq:
-        """Get sequence from available source (validates if both exist)."""
-        gb_seq = self.genbank_record.seq if self.genbank_record else None
-        fa_seq = self.fasta_record.seq if self.fasta_record else None
-
-        if gb_seq is not None and fa_seq is not None:
-            assert str(gb_seq) == str(fa_seq), f"Sequence mismatch for {self.name}!"
-            return gb_seq
-        elif gb_seq is not None:
-            return gb_seq
-        elif fa_seq is not None:
-            return fa_seq
-        else:
-            raise ValueError(f"No sequence available for {self.name}")
-
-    @property
-    def sequence(self) -> str:
-        """Get genome sequence as string."""
-        return str(self.seq)
-
-    @property
-    def length(self) -> int:
-        """Get genome length."""
-        return len(self.seq)
-
-    @property
-    def circular(self) -> bool:
-        """Check if genome is circular (from GenBank annotations)."""
-        if self.genbank_record:
-            topology = self.genbank_record.annotations.get("topology", "linear")
-            return topology.lower() == "circular"
-        return False
-
-    def get_subsequence(self, start: int, end: int) -> str:
-        """Get subsequence (1-based coordinates, inclusive)."""
-        return str(self.seq[start - 1:end])
-
-    @property
-    def record(self) -> SeqRecord:
-        """Get primary record (GenBank preferred)."""
-        if self.genbank_record:
-            return self.genbank_record
-        if self.fasta_record:
-            return self.fasta_record
-        raise ValueError(f"No record available for {self.name}")
-
-    @property
-    def features(self) -> List[SeqFeature]:
-        """Get GenBank features (None if FASTA-only)."""
-        if self.genbank_record:
-            return self.genbank_record.features
-        return []
-
-    @property
-    def annotations(self) -> dict:
-        """Get GenBank annotations (empty dict if FASTA-only)."""
-        if self.genbank_record:
-            return self.genbank_record.annotations
-        return {}
+    def fa_records(self) -> Optional[List[SeqRecord]]:
+        """Load FASTA records (cached). Returns None if no fasta_path."""
+        if not self.fasta_path:
+            return None
+        if self._fa_records is None:
+            with open(self.fasta_path) as f:
+                self._fa_records = list(SeqIO.parse(f, "fasta"))
+        return self._fa_records
 
     @property
     def records(self) -> List[SeqRecord]:
-        """Load all records from genome file."""
-        if self.genbank_path:
-            with open(self.genbank_path) as f:
-                return list(SeqIO.parse(f, "genbank"))
-        if self.fasta_path:
-            with open(self.fasta_path) as f:
-                return list(SeqIO.parse(f, "fasta"))
-        return []
+        """Load records from genome file (GenBank preferred, FASTA fallback)."""
+        if self.gb_records is not None:
+            return self.gb_records
+        if self.fa_records is not None:
+            return self.fa_records
+        raise ValueError(f"No records available for {self.name}")
 
     @property
-    def sequences(self) -> Dict[str, str]:
-        """Get all sequences as {scaffold_name: sequence} dict.
-
-        Uses record.name (locus name) as key to match TN scaffold names.
-        """
-        return {rec.name: str(rec.seq) for rec in self.records}
-    
-    def get_scaffold_coverage_range(self, scaffold_name: str) -> tuple[int, int]:
-        """Get start and end positions (0-based) for a scaffold in concatenated coverage array.
-        
-        Args:
-            scaffold_name: Name of scaffold to find
+    def scaffold_circularities(self) -> Dict[str, bool]:
+        """Get circularity status per scaffold (from GenBank annotations).
         
         Returns:
-            (start, end) tuple of 0-based positions in concatenated array
-        
-        Raises:
-            ValueError: If scaffold not found
+            Dict mapping scaffold name to circularity (True if circular, False if linear).
+            For FASTA-only genomes with a single contig, assumes circular=True.
         """
-        cumulative = 0
-        for rec in self.records:
-            if rec.name == scaffold_name:
-                start = cumulative
-                end = cumulative + len(rec.seq)
-                return (start, end)
-            cumulative += len(rec.seq)
+        records = self.records
+        if self.genbank_path:
+            return {
+                rec.name: rec.annotations.get("topology", "linear").lower() == "circular"
+                for rec in records
+            }
+        # FASTA-only: assume circular if single contig (common for bacterial genomes)
+        # TODO: Logic for FASTA-only genomes ok?
+        if len(records) == 1:
+            return {records[0].name: True}
+        return {rec.name: False for rec in records}
+
+    @property
+    def scaffold_sequences(self) -> Dict[str, str]:
+        """Get all sequences as {scaffold_name: sequence} dict."""
+        return {rec.name: str(rec.seq) for rec in self.records}
+    
+    @property
+    def scaffold_lengths(self) -> Dict[str, int]:
+        """Get scaffold lengths as {scaffold_name: length} dict."""
+        return {name: len(seq) for name, seq in self.scaffold_sequences.items()}
+    
+    @property
+    def scaffold_ranges(self) -> Dict[str, tuple[int, int]]:
+        """Get scaffold ranges as {scaffold_name: (start, end)} dict.
         
-        raise ValueError(f"Scaffold '{scaffold_name}' not found in genome {self.name}")
+        Returns:
+            Dict mapping scaffold name to (start, end) tuple of 0-based positions
+            in concatenated coverage array.
+        """
+        ranges = {}
+        cumulative = 0
+        for scaffold_name, length in self.scaffold_lengths.items():
+            ranges[scaffold_name] = (cumulative, cumulative + length)
+            cumulative += length
+        return ranges
 
 
 class GenomeRegistry:
@@ -275,7 +240,7 @@ class GenomeRegistry:
             name=locus_name,
             genbank_path=genbank_file.resolve(),
             fasta_path=fasta_file.resolve(),
-            _gb_record=record,
+            _gb_records=[record],
         )
 
 

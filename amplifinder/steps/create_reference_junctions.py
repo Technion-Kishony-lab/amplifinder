@@ -57,9 +57,11 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
         jc_records = []
 
         for tn in self.tn_loc:
+            # loc_left and loc_right are 1-based inclusive (from BLAST/GenBank)
             tn_length = tn.loc_right - tn.loc_left + 1
 
             # Left junction: TN left boundary -> chromosome
+            # pos1 and pos2 are stored as 1-based (genomic coordinates)
             jc_records.append(RefTnJunction(
                 num=0,
                 scaf1=tn.tn_scaf, pos1=tn.loc_left, dir1=Orientation.FORWARD,
@@ -129,7 +131,7 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
     def _calculate_output(self) -> RecordTypedDf[SeqRefTnSide]:
         """Extract TN sequences with margins (matching MATLAB IS_seqs_with_margins)."""
 
-        ref_seqs = self.genome.sequences
+        ref_seqs = self.genome.scaffold_sequences
         out_span = self.max_dist_to_tn  # MATLAB: out_span = max_dist_to_IS
         
         # Create mapping from tn_id to TN location
@@ -149,18 +151,19 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
             tn = tn_loc_map[tn_id]
             seq = ref_seqs[jc.scaf1]
             
+            # Coordinate system: loc_left and loc_right are 1-based inclusive (from BLAST/GenBank)
             # MATLAB: IS_seqs_with_margins{i,1} = seq(l-out_span:r+out_span)
             # Where l=LocLeft, r=LocRight (1-based inclusive in MATLAB)
             # Python slicing: seq[l-1:r] where l-1 is 0-based start, r is 0-based exclusive end
-            # But LocRight is 1-based inclusive, so for Python we need LocRight (exclusive end)
             l = tn.loc_left  # 1-based inclusive
             r = tn.loc_right  # 1-based inclusive
             
             # Create full TN sequence with margins (like MATLAB IS_seqs_with_margins)
-            # MATLAB: seq(l-out_span:r+out_span) - 1-based inclusive
-            # Python: seq[(l-out_span-1):(r+out_span)] - 0-based, exclusive end
-            start = max(0, (l - out_span - 1))  # Convert to 0-based
-            end = min(len(seq), r + out_span)  # r is 1-based inclusive, so r+out_span is exclusive end
+            # Convert 1-based inclusive to 0-based for Python array slicing:
+            # - Start: (l - out_span) is 1-based, convert to 0-based: (l - out_span - 1)
+            # - End: (r + out_span) is 1-based inclusive, use as 0-based exclusive end
+            start = max(0, (l - out_span - 1))  # Convert 1-based to 0-based start
+            end = min(len(seq), r + out_span)  # 1-based inclusive -> 0-based exclusive end
             seq_with_margins = seq[start:end]
             
             # MATLAB: IS_seqs_with_margins{i,2} = seqrcomplement(seq(l-out_span:r+out_span))
