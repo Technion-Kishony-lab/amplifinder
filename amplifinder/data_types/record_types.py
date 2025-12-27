@@ -155,19 +155,19 @@ class RawTnJc2(Record):
     jc_num_R: int
 
     # Scaffold
-    scaf_chr: str
+    scaf: str
 
-    # Chromosome positions (left/right junction)
-    pos_chr_L: int
-    pos_chr_R: int
+    # Scafold positions (left/right junction)
+    pos_scaf_L: int
+    pos_scaf_R: int
 
     # TN positions
     pos_tn_L: int
     pos_tn_R: int
 
-    # Chromosome directions
-    dir_chr_L: Orientation
-    dir_chr_R: Orientation
+    # Scaffold directions
+    dir_scaf_L: Orientation
+    dir_scaf_R: Orientation
 
     # TN directions
     dir_tn_L: Orientation
@@ -194,7 +194,6 @@ class CoveredTnJc2(RawTnJc2):
     scaf_coverage: Coverage          # Coverage statistics of relevant scaffold
     copy_number: Optional[float] = None  # amplicon / genome (raw copy number)
     amplicon_coverage_mode: Optional[float] = None  # mode of copy number distribution
-    
 
 
 class RawEvent(str, Enum):

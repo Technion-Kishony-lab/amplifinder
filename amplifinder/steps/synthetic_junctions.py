@@ -42,8 +42,8 @@ def create_synthetic_junctions(
     WID = read_length * 2  # junction width
     
     # Positions (0-based for Python)
-    pos_L = candidate.pos_chr_L - 1  # left junction position
-    pos_R = candidate.pos_chr_R - 1  # right junction position
+    pos_L = candidate.pos_scaf_L - 1  # left junction position
+    pos_R = candidate.pos_scaf_R - 1  # right junction position
     
     # Handle origin spanning
     if candidate.span_origin:

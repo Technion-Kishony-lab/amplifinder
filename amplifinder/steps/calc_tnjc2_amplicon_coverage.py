@@ -101,8 +101,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
     ) -> CoveredTnJc2:
         """Calculate coverage for a single candidate."""
         # Get coverage in amplicon region
-        start = raw_tnjc2.pos_chr_L
-        end = raw_tnjc2.pos_chr_R
+        start = raw_tnjc2.pos_scaf_L
+        end = raw_tnjc2.pos_scaf_R
         span_origin = raw_tnjc2.span_origin
         
         iso_region_cov = get_coverage_in_range(
@@ -161,7 +161,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             )
         
         # Calculate scaffold-specific coverage statistics
-        scaf_cov = get_scaffold_coverage(iso_cov, raw_tnjc2.scaf_chr, self.genome)
+        scaf_cov = get_scaffold_coverage(iso_cov, raw_tnjc2.scaf, self.genome)
         scaf_coverage = calc_coverage_stats(scaf_cov)
         
         # Build CoveredTnJc2 from RawTnJc2 + new coverage fields

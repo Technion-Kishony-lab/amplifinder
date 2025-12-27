@@ -137,9 +137,9 @@ def test_pairs_opposing_junctions(tiny_genome, tmp_output):
 
     assert len(raw_tnjc2s) == 1
     pair = list(raw_tnjc2s)[0]
-    assert pair.scaf_chr == "tiny"
-    assert pair.pos_chr_L == 500
-    assert pair.pos_chr_R == 1000
+    assert pair.scaf == "tiny"
+    assert pair.pos_scaf_L == 500
+    assert pair.pos_scaf_R == 1000
     assert 1 in pair.tn_ids
 
 
