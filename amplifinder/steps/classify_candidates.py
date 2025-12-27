@@ -99,7 +99,6 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
         super().__init__(
             output_dir=output_dir,
-            input_files=[],
             force=force,
         )
 

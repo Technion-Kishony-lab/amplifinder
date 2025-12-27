@@ -51,7 +51,7 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
     tn_loc = locate_tns_step.run()
 
     ref_jc = CreateRefTnJcStep(
-        tn_loc=tn_loc,
+        ref_tn_locs=tn_loc,
         genome=tiny_genome,
         output_dir=tmp_output,
         source="isfinder",
@@ -59,8 +59,8 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
     ).run()
 
     ref_tn_end_seqs = CreateRefTnEndSeqsStep(
-        ref_tn_jc=ref_jc,
-        tn_loc=tn_loc,
+        ref_tn_jcs=ref_jc,
+        ref_tn_locs=tn_loc,
         genome=tiny_genome,
         output_dir=tmp_output,
         source="isfinder",

@@ -83,10 +83,11 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
 
     def _calculate_output(self) -> Optional[RecordTypedDf[RefTnLoc]]:
         """Parse GenBank file and extract TN locations."""
-        if self.genome.genbank_path is None:
+        gb_records = self.genome.gb_records
+        if gb_records is None:
             info("No GenBank file provided - skipping GenBank TN annotation")
             return None
-        ref_tn_locs = find_tn_elements(self.genome.gb_records)
+        ref_tn_locs = find_tn_elements(gb_records)
         ref_tn_locs = RecordTypedDf.from_records(ref_tn_locs, RefTnLoc)
         info(f"Found {len(ref_tn_locs)} TN elements in GenBank annotations")
         return ref_tn_locs

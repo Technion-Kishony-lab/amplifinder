@@ -41,7 +41,6 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
         self.candidates_file = output_dir / "candidate_amplifications.csv"
 
         super().__init__(
-            input_files=[],
             output_files=[self.isjc2_file, self.candidates_file],
             force=force,
         )

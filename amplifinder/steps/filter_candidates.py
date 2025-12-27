@@ -34,7 +34,6 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
 
         super().__init__(
             output_dir=output_dir,
-            input_files=[],
             force=force,
         )
 

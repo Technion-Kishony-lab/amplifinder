@@ -41,7 +41,6 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
 
         super().__init__(
             output_dir=output_dir,
-            input_files=[],
             force=force,
         )
 
