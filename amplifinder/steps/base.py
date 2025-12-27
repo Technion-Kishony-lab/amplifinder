@@ -7,7 +7,7 @@ import shutil
 
 from amplifinder.logger import info, debug
 from amplifinder.utils.file_lock import locked_operation, get_step_lock_path
-from amplifinder.utils.tools import remove_file_or_dir
+from amplifinder.utils.tools import remove_file_or_dir, ensure_dir
 from amplifinder.data_types.typed_df import RecordTypedDf
 from amplifinder.data_types.records import Record
 from amplifinder.steps.io_naming import default_path
@@ -258,6 +258,7 @@ class RecordTypedDfStep(Step[RecordTypedDf[R]], Generic[R]):
     
     def _save_output(self, output: RecordTypedDf[R]) -> None:
         """Save RecordTypedDf to CSV."""
+        ensure_dir(self.output_file.parent)
         output.to_csv(self.output_file)
     
     def load_outputs(self) -> RecordTypedDf[R]:

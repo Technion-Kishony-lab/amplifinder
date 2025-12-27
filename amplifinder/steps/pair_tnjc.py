@@ -7,7 +7,6 @@ from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
-from amplifinder.utils.tools import ensure_dir
 
 
 class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
@@ -53,7 +52,6 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
 
     def _calculate_output(self) -> RecordTypedDf[RawTnJc2]:
         """Combine junction pairs."""
-        ensure_dir(self.output_dir)
 
         # Convert to list for O(n^2) pairing
         junctions = list(self.tnjcs)
