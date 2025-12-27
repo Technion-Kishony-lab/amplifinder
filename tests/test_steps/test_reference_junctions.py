@@ -11,7 +11,7 @@ def ref_jc_step(locate_tns_step, tiny_genome, tmp_output):
     """Create reference junctions step."""
     tn_loc = locate_tns_step.run()
     return CreateRefTnJcStep(
-        tn_loc=tn_loc,
+        ref_tn_locs=tn_loc,
         genome=tiny_genome,
         output_dir=tmp_output,
         source="isfinder",
@@ -57,8 +57,8 @@ def end_seqs_step(ref_jc_step, locate_tns_step, tiny_genome, tmp_output):
     ref_jc = ref_jc_step.run()
     tn_loc = locate_tns_step.run()
     return CreateRefTnEndSeqsStep(
-        ref_tn_jc=ref_jc,
-        tn_loc=tn_loc,
+        ref_tn_jcs=ref_jc,
+        ref_tn_locs=tn_loc,
         genome=tiny_genome,
         output_dir=tmp_output,
         source="isfinder",

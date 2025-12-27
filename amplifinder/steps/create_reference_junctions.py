@@ -22,7 +22,7 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
 
     def __init__(
         self,
-        tn_loc: RecordTypedDf[RefTnLoc],
+        ref_tn_locs: RecordTypedDf[RefTnLoc],
         genome: Genome,
         output_dir: Path,
         source: str,
@@ -32,14 +32,14 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
         """Initialize step.
 
         Args:
-            tn_loc: RecordDF with TN locations
+            ref_tn_locs: RecordDF with reference TN locations
             genome: Reference genome
             output_dir: Directory to write output
             source: Source name (genbank/isfinder) for filename prefix
             reference_tn_out_span: bp outside TN for unique chromosome seq
             force: Force re-run even if output exists
         """
-        self.tn_loc = tn_loc
+        self.ref_tn_locs = ref_tn_locs
         self.genome = genome
         self.reference_tn_out_span = reference_tn_out_span
 
@@ -47,7 +47,6 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
 
         super().__init__(
             output_file=output_file,
-            input_files=[],  # tn_loc passed in memory
             force=force,
         )
 
@@ -56,7 +55,7 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
 
         jc_records = []
 
-        for tn in self.tn_loc:
+        for tn in self.ref_tn_locs:
             # loc_left and loc_right are 1-based inclusive (from BLAST/GenBank)
             tn_length = tn.loc_right - tn.loc_left + 1
 
@@ -96,8 +95,8 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
 
     def __init__(
         self,
-        ref_tn_jc: RecordTypedDf[RefTnJunction],
-        tn_loc: RecordTypedDf[RefTnLoc],
+        ref_tn_jcs: RecordTypedDf[RefTnJunction],
+        ref_tn_locs: RecordTypedDf[RefTnLoc],
         genome: Genome,
         output_dir: Path,
         source: str,
@@ -107,16 +106,16 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
         """Initialize step.
 
         Args:
-            ref_tn_jc: RecordDF with reference TN junctions (used to get tn_id and side)
-            tn_loc: RecordDF with TN locations (used to get full TN boundaries)
+            ref_tn_jcs: RecordDF with reference TN junctions (used to get tn_id and side)
+            ref_tn_locs: RecordDF with reference TN locations (used to get full TN boundaries)
             genome: Reference genome
             output_dir: Directory to write output
             source: Source name (genbank/isfinder) for filename prefix
             max_dist_to_tn: Margin around TN (out_span in MATLAB)
             force: Force re-run
         """
-        self.ref_tn_jc = ref_tn_jc
-        self.tn_loc = tn_loc
+        self.ref_tn_jcs = ref_tn_jcs
+        self.ref_tn_locs = ref_tn_locs
         self.genome = genome
         self.max_dist_to_tn = max_dist_to_tn
 
@@ -124,7 +123,6 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
 
         super().__init__(
             output_file=output_file,
-            input_files=[],
             force=force,
         )
 
@@ -135,11 +133,11 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
         out_span = self.max_dist_to_tn  # MATLAB: out_span = max_dist_to_IS
 
         # Create mapping from tn_id to TN location
-        tn_loc_map = {tn.tn_id: tn for tn in self.tn_loc}
+        tn_loc_map = {tn.tn_id: tn for tn in self.ref_tn_locs}
 
         records = []
 
-        for jc in self.ref_tn_jc:
+        for jc in self.ref_tn_jcs:
             if jc.scaf1 not in ref_seqs:
                 raise ValueError(f"TN scaffold {jc.scaf1} not in genome")
 

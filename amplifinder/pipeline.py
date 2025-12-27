@@ -209,13 +209,13 @@ class Pipeline:
         return tn_loc
 
     def _create_reference_tn_junctions(
-        self, tn_loc: RecordTypedDf[RefTnLoc], genome: Genome, iso_output: Path
+        self, ref_tn_locs: RecordTypedDf[RefTnLoc], genome: Genome, iso_output: Path
     ) -> Tuple[RecordTypedDf[RefTnJunction], RecordTypedDf[SeqRefTnSide]]:
         """Step 3: Create reference junctions and TN end sequences."""
         cfg = self.config
 
-        ref_tn_jc = CreateRefTnJcStep(
-            tn_loc=tn_loc,
+        ref_tn_jcs = CreateRefTnJcStep(
+            ref_tn_locs=ref_tn_locs,
             genome=genome,
             output_dir=iso_output,
             source=self.ref_tn_source,
@@ -223,15 +223,15 @@ class Pipeline:
         ).run()
 
         ref_tn_end_seqs = CreateRefTnEndSeqsStep(
-            ref_tn_jc=ref_tn_jc,
-            tn_loc=tn_loc,
+            ref_tn_jcs=ref_tn_jcs,
+            ref_tn_locs=ref_tn_locs,
             genome=genome,
             output_dir=iso_output,
             source=self.ref_tn_source,
             max_dist_to_tn=cfg.max_dist_to_IS,
         ).run()
 
-        return ref_tn_jc, ref_tn_end_seqs
+        return ref_tn_jcs, ref_tn_end_seqs
 
     def _run_breseq(self, genome: Genome, iso_output: Path) -> RecordTypedDf[Junction]:
         """Step 4: Run breseq on isolate to get junctions."""

@@ -207,7 +207,6 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
 
         super().__init__(
             output_dir=output_dir,
-            input_files=[],
             force=force,
         )
 
