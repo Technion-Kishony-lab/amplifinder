@@ -213,7 +213,7 @@ class Pipeline:
 
         return ref_tn_jc, ref_tn_end_seqs
 
-    def _run_breseq(self, genome: Genome, iso_output: Path) -> pd.DataFrame:
+    def _run_breseq(self, genome: Genome, iso_output: Path) -> RecordTypedDf[Junction]:
         """Step 4: Run breseq on isolate to get junctions."""
         cfg = self.config
 
@@ -225,14 +225,15 @@ class Pipeline:
             threads=cfg.breseq_threads,
         ).run()
 
-        breseq_jc = breseq_output["JC"]
-        info(f"breseq: {len(breseq_jc)} junctions")
-        return breseq_jc
+        breseq_jc_df = breseq_output["JC"]
+        breseq_jcs = RecordTypedDf(breseq_jc_df, Junction)
+        info(f"breseq: {len(breseq_jcs)} junctions")
+        return breseq_jcs
 
     def _create_tnjc(
         self,
-        breseq_jc: pd.DataFrame,
-        ref_tn_jc: RecordTypedDf[RefTnJunction],
+        breseq_jcs: RecordTypedDf[Junction],
+        ref_tn_jcs: RecordTypedDf[RefTnJunction],
         ref_tn_end_seqs: RecordTypedDf[SeqRefTnSide],
         genome: Genome,
         iso_output: Path,
@@ -241,11 +242,11 @@ class Pipeline:
         cfg = self.config
 
         # Combine breseq junctions with reference TN junctions
-        all_jc_df = pd.concat([breseq_jc, ref_tn_jc.df], ignore_index=True)
-        all_jc = RecordTypedDf(all_jc_df, Junction)
+        junctions = pd.concat([breseq_jcs.df, ref_tn_jcs.df], ignore_index=True)
+        junctions = RecordTypedDf(junctions, Junction)
 
         tnjcs = CreateTnJcStep(
-            jc_df=all_jc,
+            junctions=junctions,
             ref_tn_end_seqs=ref_tn_end_seqs,
             genome=genome,
             output_dir=iso_output,
