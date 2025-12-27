@@ -190,10 +190,12 @@ class CoveredTnJc2(RawTnJc2):
     - anc_path=None: raw coverage only, copy_number_ratio is None
     - anc_path=set: normalized coverage, copy_number_ratio = iso/anc
     """
-    amplicon_coverage: Optional[float] = None  # raw: iso_cov/genome_cov, normalized: iso_cov/anc_cov
-    scaf_coverage: Coverage          # Coverage statistics of relevant scaffold
-    copy_number: Optional[float] = None  # amplicon / genome (raw copy number)
-    amplicon_coverage_mode: Optional[float] = None  # mode of copy number distribution
+    iso_amplicon_coverage: Coverage
+    iso_scaf_coverage: Coverage
+    anc_amplicon_coverage: Optional[Coverage] = None
+    anc_scaf_coverage: Optional[Coverage] = None
+    copy_number: float = None  # 
+    copy_number_vs_anc: Optional[float] = None
 
 
 class RawEvent(str, Enum):
