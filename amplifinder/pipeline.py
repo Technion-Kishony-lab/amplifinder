@@ -437,7 +437,7 @@ class Pipeline:
             anc_output_dir=anc_output,  # Ancestor BAM files are read from here
             read_length=self._get_iso_read_length(),
             anc_read_length=self._get_anc_read_length() if self.config.has_ancestor else None,
-            req_overlap=self.config.req_overlap,
+            min_overlap=self.config.min_overlap,
             min_jct_cov=self.config.min_jct_cov,
             has_ancestor=self.config.has_ancestor,
         ).run()
