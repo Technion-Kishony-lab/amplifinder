@@ -103,7 +103,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         anc_output_dir: Optional[Path] = None,
         read_length: int = 150,
         anc_read_length: Optional[int] = None,
-        req_overlap: int = 12,
+        min_overlap: int = 12,
         min_jct_cov: int = 5,
         has_ancestor: bool = False,
         force: Optional[bool] = None,
@@ -113,7 +113,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         self.anc_output_dir = Path(anc_output_dir) if anc_output_dir else None
         self.read_length = read_length
         self.anc_read_length = anc_read_length if anc_read_length else read_length
-        self.req_overlap = req_overlap
+        self.min_overlap = min_overlap
         self.min_jct_cov = min_jct_cov
         self.has_ancestor = has_ancestor
         
@@ -137,8 +137,6 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
     def _calculate_output(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Analyze alignments for each candidate."""
-        junction_length = self.read_length * 2
-        
         analyzed_records = []
         for filtered_tnjc2 in self.filtered_tnjc2s:
             analysis_dir = self.output_dir / filtered_tnjc2.analysis_dir
@@ -149,9 +147,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 info(f"Skipping {filtered_tnjc2.analysis_dir}: no iso.sorted.bam")
                 continue
             
-            iso_jc_cov = get_junction_coverage(
-                iso_bam, junction_length, self.read_length, req_overlap=self.req_overlap
-            )
+            iso_jc_cov = get_junction_coverage(iso_bam, self.read_length, min_overlap=self.min_overlap)
             
             # Classify isolate architecture
             iso_arch = classify_architecture(iso_jc_cov, self.min_jct_cov)
@@ -167,10 +163,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 anc_bam = anc_analysis_dir / "iso.sorted.bam"
                 
                 if anc_bam.exists():
-                    anc_junction_length = self.anc_read_length * 2
-                    anc_jc_cov = get_junction_coverage(
-                        anc_bam, anc_junction_length, self.anc_read_length, req_overlap=self.req_overlap
-                    )
+                    anc_jc_cov = get_junction_coverage(anc_bam, self.anc_read_length, min_overlap=self.min_overlap)
                     anc_arch = classify_architecture(anc_jc_cov, self.min_jct_cov)
             
             # Classify final event

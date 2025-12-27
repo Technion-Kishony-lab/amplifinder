@@ -44,7 +44,7 @@ DEFAULT_CONFIG = {
     "del_copy_number_threshold": 0.3,
 
     # Alignment parameters
-    "req_overlap": 12,
+    "min_overlap": 12,
     "score_min": (0, -0.1),
     "mismatch_penalty": (5, 5),
 
@@ -124,7 +124,7 @@ class Config:
     del_copy_number_threshold: float = 0.3
 
     # Alignment parameters
-    req_overlap: int = 12
+    min_overlap: int = 12
     score_min: Tuple[float, float] = (0, -0.1)
     mismatch_penalty: Tuple[int, int] = (5, 5)
 

@@ -1,158 +1,73 @@
-"""BAM file parsing utilities using pysam."""
+"""Parsing junction coverage from BAM files."""
 
+from dataclasses import dataclass
 from pathlib import Path
-from typing import List, NamedTuple
+from typing import List
 
 import pysam
 
 
-class AlignedRead(NamedTuple):
-    """Parsed alignment information."""
-    ref_name: str      # reference name (junction ID: 1-7)
-    start: int         # 0-based start position
-    end: int           # 0-based end position (exclusive)
-    length: int        # alignment length
-    is_mapped: bool    # True if read is mapped
-    mapq: int          # mapping quality
-
-
-class JunctionReadCounts(NamedTuple):
+@dataclass
+class JunctionReadCounts:
     """Read counts at a junction."""
-    left: int      # reads on left side of junction
-    right: int     # reads on right side of junction
-    spanning: int  # reads spanning the junction
-
-
-def parse_bam_reads(bam_path: Path) -> List[AlignedRead]:
-    """Parse BAM file and extract alignment information.
-    
-    Args:
-        bam_path: Path to sorted BAM file
-    
-    Returns:
-        List of AlignedRead records
-    
-    Raises:
-        FileNotFoundError: If BAM file doesn't exist
-    """
-    
-    if not bam_path.exists():
-        raise FileNotFoundError(f"BAM file not found: {bam_path}")
-    
-    reads = []
-    with pysam.AlignmentFile(str(bam_path), "rb") as bam:
-        for read in bam.fetch():
-            if read.is_unmapped:
-                continue
-            
-            reads.append(AlignedRead(
-                ref_name=read.reference_name,
-                start=read.reference_start,
-                end=read.reference_end,
-                length=read.query_alignment_length,
-                is_mapped=not read.is_unmapped,
-                mapq=read.mapping_quality,
-            ))
-    
-    return reads
-
-
-def count_junction_reads(
-    reads: List[AlignedRead],
-    junction_length: int,
-    read_length: int,
-    req_overlap: int = 12,
-) -> dict[str, JunctionReadCounts]:
-    """Count reads at each junction position.
-    
-    Junction structure: [left_side | junction_point | right_side]
-    Junction point is at position junction_length // 2
-    
-    A read is classified as:
-    - spanning: crosses the junction point with sufficient overlap on both sides
-    - left: ends before or at the junction point
-    - right: starts at or after the junction point
-    
-    Args:
-        reads: List of aligned reads
-        junction_length: Length of synthetic junction sequence (typically 2 * read_length)
-        read_length: Read length for calculating overlap requirements
-        req_overlap: Minimum overlap on each side to count as spanning
-    
-    Returns:
-        Dict mapping junction ID (ref_name) to JunctionReadCounts
-    """
-    # Junction point is in the middle
-    junction_point = junction_length // 2
-    
-    # Group reads by reference (junction ID)
-    reads_by_ref: dict[str, List[AlignedRead]] = {}
-    for read in reads:
-        if read.ref_name not in reads_by_ref:
-            reads_by_ref[read.ref_name] = []
-        reads_by_ref[read.ref_name].append(read)
-    
-    results = {}
-    for ref_name, ref_reads in reads_by_ref.items():
-        left_count = 0
-        right_count = 0
-        spanning_count = 0
-        
-        for read in ref_reads:
-            # Check if read spans junction with sufficient overlap
-            left_overlap = junction_point - read.start
-            right_overlap = read.end - junction_point
-            
-            if left_overlap >= req_overlap and right_overlap >= req_overlap:
-                spanning_count += 1
-            elif read.end <= junction_point:
-                left_count += 1
-            elif read.start >= junction_point:
-                right_count += 1
-            else:
-                # Partial overlap - classify based on center
-                read_center = (read.start + read.end) // 2
-                if read_center < junction_point:
-                    left_count += 1
-                else:
-                    right_count += 1
-        
-        results[ref_name] = JunctionReadCounts(
-            left=left_count,
-            right=right_count,
-            spanning=spanning_count,
-        )
-    
-    return results
+    left: int = 0      # reads on left side of junction
+    right: int = 0     # reads on right side of junction
+    spanning: int = 0  # reads spanning the junction
+    other: int = 0     # reads partially overlapping the junction
 
 
 def get_junction_coverage(
     bam_path: Path,
-    junction_length: int,
     read_length: int,
-    req_overlap: int = 12,
+    read_length_tolerance: float = 0.1,
+    min_overlap: int = 12,
 ) -> List[JunctionReadCounts]:
     """Parse BAM and get coverage for all 7 junction types.
     
     Args:
         bam_path: Path to sorted BAM file
-        junction_length: Length of synthetic junction sequences
-        read_length: Read length
-        req_overlap: Minimum overlap to count as spanning
+        read_length: Read length for filtering
+        read_length_tolerance: Tolerance for read length filtering (default 0.1 = 10%)
+        min_overlap: Minimum overlap to count as spanning
     
     Returns:
         List of 7 JunctionReadCounts (indexed 0-6 for junction types 1-7)
     """
-    reads = parse_bam_reads(bam_path)
-    counts = count_junction_reads(reads, junction_length, read_length, req_overlap)
+    if not bam_path.exists():
+        raise FileNotFoundError(f"BAM file not found: {bam_path}")
     
-    # Build result list for junction types 1-7
-    result = []
-    for jc_type in range(1, 8):
-        ref_name = str(jc_type)
-        if ref_name in counts:
-            result.append(counts[ref_name])
-        else:
-            result.append(JunctionReadCounts(left=0, right=0, spanning=0))
+    read_length_factor = 1 + read_length_tolerance
+    min_len = read_length / read_length_factor
+    max_len = read_length * read_length_factor
     
-    return result
+    with pysam.AlignmentFile(str(bam_path), "rb") as bam:
+        ref_lengths = dict(zip(bam.references, bam.lengths))
+        junction_points = {name: length // 2 for name, length in ref_lengths.items()}
+        
+        # [left, right, spanning] for each junction type
+        counts = {str(jc): JunctionReadCounts() for jc in range(1, 8)}
+        
+        for read in bam.fetch():
+            if read.is_unmapped:
+                continue
+            
+            ref_name = read.reference_name
+            assert ref_name in junction_points, f"Reference name {ref_name} not found in junction points"
+            length = read.query_alignment_length
+            if not (min_len <= length <= max_len):
+                continue
+            
+            start = read.reference_start
+            end = read.reference_end
+            junction_point = junction_points[ref_name]
+            
+            if end <= junction_point:
+                counts[ref_name].left += 1      # left of the junction
+            elif start > junction_point:
+                counts[ref_name].right += 1     # right of the junction
+            elif start <= junction_point - min_overlap and end >= junction_point + min_overlap:
+                counts[ref_name].spanning += 1  # spanning the junction
+            else:
+                counts[ref_name].other += 1     # other (partial overlap)
+    
+    return list(counts.values())
