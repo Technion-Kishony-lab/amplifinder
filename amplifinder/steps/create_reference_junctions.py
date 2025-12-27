@@ -56,16 +56,14 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
         jc_records = []
 
         for tn in self.ref_tn_locs:
-            # loc_left and loc_right are 1-based inclusive (from BLAST/GenBank)
-            tn_length = tn.loc_right - tn.loc_left + 1
-
-            # Left junction: TN left boundary -> chromosome
             # pos1 and pos2 are stored as 1-based (genomic coordinates)
+            # Left junction: TN left boundary -> chromosome
             jc_records.append(RefTnJunction(
                 num=0,
                 scaf1=tn.tn_scaf, pos1=tn.loc_left, dir1=Orientation.FORWARD,
                 scaf2=tn.tn_scaf, pos2=tn.loc_left - 1, dir2=Orientation.REVERSE,
-                flanking_left=tn_length, flanking_right=self.reference_tn_out_span,
+                # TODO: left/right correct?
+                flanking_left=tn.length, flanking_right=self.reference_tn_out_span,
                 ref_tn_side=RefTnSide(tn_id=tn.tn_id, side=Side.LEFT),
             ))
 
@@ -74,7 +72,8 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
                 num=0,
                 scaf1=tn.tn_scaf, pos1=tn.loc_right, dir1=Orientation.REVERSE,
                 scaf2=tn.tn_scaf, pos2=tn.loc_right + 1, dir2=Orientation.FORWARD,
-                flanking_left=self.reference_tn_out_span, flanking_right=tn_length,
+                # TODO: left/right correct?
+                flanking_left=self.reference_tn_out_span, flanking_right=tn.length,
                 ref_tn_side=RefTnSide(tn_id=tn.tn_id, side=Side.RIGHT),
             ))
 
@@ -84,11 +83,11 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
 
 
 class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
-    """Extract TN sequences with margins for junction matching.
+    """Extract full TN + flanks per junction side.
 
-    For each TN element, creates full TN sequence with margins (IS_seqs_with_margins),
-    matching MATLAB behavior. This is the full TN element plus margins on both sides,
-    not just the end sequences.
+    For each `RefTnJunction` (side), returns the entire TN sequence with
+    `max_dist_to_tn` margin on both sides (IS_seqs_with_margins in MATLAB),
+    storing fwd and reverse-complement.
 
     Based on create_IS_end_seqs.m - creates IS_seqs_with_margins
     """
@@ -143,9 +142,6 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
 
             # Get TN location for this junction
             tn_id = jc.ref_tn_side.tn_id
-            if tn_id not in tn_loc_map:
-                continue  # Skip if TN not found
-
             tn = tn_loc_map[tn_id]
             seq = ref_seqs[jc.scaf1]
 

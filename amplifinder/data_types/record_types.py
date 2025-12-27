@@ -78,6 +78,11 @@ class RefTnLoc(Record):
     complement: bool
     join: bool
 
+    @property
+    def length(self) -> int:
+        """TN length in bp (1-based inclusive coordinates)."""
+        return self.loc_right - self.loc_left + 1
+
 
 class SeqRefTnSide(RefTnSide):
     """TN element end sequence for matching."""
