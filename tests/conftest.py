@@ -254,6 +254,110 @@ def locate_tns_step(tmp_output, tiny_genome):
     )
 
 
+# =============================================================================
+# Shared record fixtures
+# =============================================================================
+
+@pytest.fixture
+def raw_tnjc2_record():
+    """Base RawTnJc2 for step fixtures."""
+    from amplifinder.data_types import RawTnJc2, Orientation
+
+    return RawTnJc2(
+        jc_num_L=1,
+        jc_num_R=2,
+        scaf="tiny",
+        pos_scaf_L=200,
+        pos_scaf_R=300,
+        pos_tn_L=10,
+        pos_tn_R=20,
+        dir_scaf_L=Orientation.FORWARD,
+        dir_scaf_R=Orientation.REVERSE,
+        dir_tn_L=Orientation.FORWARD,
+        dir_tn_R=Orientation.REVERSE,
+        tn_ids=[1],
+        tn_orientations=[Orientation.FORWARD],
+        span_origin=False,
+        amplicon_length=100,
+        complementary_length=900,
+    )
+
+
+@pytest.fixture
+def covered_tnjc2_record(raw_tnjc2_record):
+    """RawTnJc2 with coverage fields."""
+    from amplifinder.data_types import CoveredTnJc2, Coverage
+
+    return CoveredTnJc2.from_other(
+        raw_tnjc2_record,
+        ref_name="tiny",
+        iso_name="sample1",
+        amplicon_coverage=2.0,
+        scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+        iso_amplicon_coverage=Coverage(mean=2.0, median=2.0, mode=2.0),
+        iso_scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+        copy_number=2.0,
+        amplicon_coverage_mode=2.0,
+    )
+
+
+@pytest.fixture
+def classified_tnjc2_record(covered_tnjc2_record):
+    """CoveredTnJc2 with structural classification."""
+    from amplifinder.data_types import ClassifiedTnJc2, RawEvent
+
+    return ClassifiedTnJc2.from_other(
+        covered_tnjc2_record,
+        raw_event=RawEvent.FLANKED,
+        shared_tn_ids=[1],
+        chosen_tn_id=1,
+    )
+
+
+@pytest.fixture
+def filtered_tnjc2_record(classified_tnjc2_record):
+    """FilteredTnJc2 with analysis directory."""
+    from amplifinder.data_types import FilteredTnJc2
+
+    return FilteredTnJc2.from_other(
+        classified_tnjc2_record,
+        analysis_dir="jc_200_300_001_L150",
+    )
+
+
+@pytest.fixture
+def analyzed_tnjc2_record(filtered_tnjc2_record):
+    """AnalyzedTnJc2 with junction coverage."""
+    from amplifinder.data_types import AnalyzedTnJc2, RawEvent
+
+    return AnalyzedTnJc2.from_other(
+        filtered_tnjc2_record,
+        jc_cov_left=[0] * 7,
+        jc_cov_right=[0] * 7,
+        jc_cov_spanning=[0] * 7,
+        isolate_architecture=RawEvent.FLANKED,
+        ancestor_architecture=None,
+        event="flanked",
+        event_modifiers=[],
+    )
+
+
+@pytest.fixture
+def ref_tn_loc_record():
+    """RefTnLoc base record."""
+    from amplifinder.data_types import RefTnLoc
+
+    return RefTnLoc(
+        tn_id=1,
+        tn_name="IS1",
+        tn_scaf="tiny",
+        loc_left=200,
+        loc_right=300,
+        complement=False,
+        join=False,
+    )
+
+
 def pytest_configure(config):
     """Register custom markers."""
     config.addinivalue_line(
