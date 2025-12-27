@@ -152,6 +152,7 @@ def get_read_length(
         raise ValueError("Either fastq_dir or provided_length must be specified")
 
     stats = get_read_length_stats(fastq_dir, sample_size)
+    info(f"Auto-detected read length: {stats.max_length} (mean={stats.mean_length:.1f}, uniform={stats.is_uniform})")
     if not stats.is_uniform:
         warning("Read length is not uniform - may affect junction coverage accuracy")
     return stats.max_length

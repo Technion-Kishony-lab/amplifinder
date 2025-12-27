@@ -12,6 +12,7 @@ from amplifinder.data_types import (
 )
 from amplifinder.logger import info
 from amplifinder.utils.tools import ensure_dir
+from amplifinder.utils.fasta import get_read_length
 from amplifinder.steps import (
     InitializingStep,
     GetRefGenomeStep,
@@ -40,6 +41,26 @@ class Pipeline:
     """AmpliFinder pipeline with phased execution."""
 
     config: Config
+    _iso_read_length: Optional[int] = None
+    _anc_read_length: Optional[int] = None
+
+    def _get_iso_read_length(self) -> int:
+        """Get isolate read length from config or auto-detect from FASTQ."""
+        if self._iso_read_length is None:
+            self._iso_read_length = get_read_length(
+                fastq_dir=self.config.iso_path,
+                provided_length=self.config.iso_read_length,
+            )
+        return self._iso_read_length
+
+    def _get_anc_read_length(self) -> int:
+        """Get ancestor read length from config or auto-detect from FASTQ."""
+        if self._anc_read_length is None:
+            self._anc_read_length = get_read_length(
+                fastq_dir=self.config.anc_path,
+                provided_length=self.config.anc_read_length,
+            )
+        return self._anc_read_length
 
     def run(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Run full pipeline, return analyzed candidates."""
@@ -353,15 +374,12 @@ class Pipeline:
         if len(filtered_tnjc2s) == 0:
             return
         
-        # Always create junction files for isolate candidates
-        read_length = self.config.iso_read_length or 150
-        
         CreateSyntheticJunctionsStep(
             filtered_tnjc2s=filtered_tnjc2s,
             genome=genome,
             tn_locs=tn_loc,
             output_dir=iso_output,
-            read_length=read_length,
+            read_length=self._get_iso_read_length(),
         ).run()
         info(f"Created synthetic junctions for {len(filtered_tnjc2s)} candidates")
     
@@ -417,7 +435,8 @@ class Pipeline:
             candidates=filtered_tnjc2s,
             output_dir=iso_output,
             anc_output_dir=anc_output,  # Ancestor BAM files are read from here
-            read_length=self.config.iso_read_length or 150,
+            read_length=self._get_iso_read_length(),
+            anc_read_length=self._get_anc_read_length() if self.config.has_ancestor else None,
             req_overlap=self.config.req_overlap,
             min_jct_cov=self.config.min_jct_cov,
             has_ancestor=self.config.has_ancestor,
