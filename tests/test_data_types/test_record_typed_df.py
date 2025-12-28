@@ -116,3 +116,47 @@ def test_list_int_type_validation(tmp_path):
     # This should raise ValidationError - list contains string, not int
     with pytest.raises(ValidationError, match=r"Input should be a valid integer"):
         parse_compound(["not_an_int"], List[int])
+
+
+def test_save_load_with_index(sample_records, tmp_path):
+    """Test round-trip save/load with custom index (from dict)."""
+    csv_path = tmp_path / "test_indexed.csv"
+
+    # Create from dict with custom keys
+    records_dict = {
+        "key1": sample_records[0],
+        "key2": sample_records[1],
+    }
+    df = RecordTypedDf.from_dict(records_dict, SampleRecord)
+    
+    # Verify index before save
+    assert list(df.keys()) == ["key1", "key2"]
+    assert df["key1"].name == "a"
+    assert df["key2"].name == "b"
+    
+    # Save (should auto-save index since it's meaningful)
+    df.to_csv(csv_path)
+    
+    # Load with index
+    df2 = RecordTypedDf.from_csv(csv_path, SampleRecord, index_col=0)
+    
+    # Verify index is preserved
+    assert list(df2.keys()) == ["key1", "key2"]
+    assert len(df2) == 2
+    
+    # Verify records match
+    assert df2["key1"].name == "a"
+    assert df2["key1"].count == 1
+    assert df2["key1"].color == Color.RED
+    
+    assert df2["key2"].name == "b"
+    assert df2["key2"].count == 2
+    assert df2["key2"].color == Color.BLUE
+    
+    # Verify items() works
+    items = list(df2.items())
+    assert len(items) == 2
+    assert items[0][0] == "key1"
+    assert items[0][1].name == "a"
+    assert items[1][0] == "key2"
+    assert items[1][1].name == "b"
