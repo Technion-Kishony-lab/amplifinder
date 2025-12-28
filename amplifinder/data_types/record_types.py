@@ -61,12 +61,22 @@ class Orientation(ReversibleIntEnum):
     BOTH = 0
 
 
+### Reference TN element sides ###
+
 class RefTnSide(Record):
     """A reference TN element side (with optional distance for matches)."""
     tn_id: TnId
     side: Side
     distance: Optional[int] = None  # None for reference junctions
 
+
+class SeqRefTnSide(RefTnSide):
+    """TN element end sequence for matching."""
+    offset: int         # offset of the inward-seq start from the TN boundary (>0 for inward, <0 for outward)
+    seq_inward: str     # sequence inward from chromosome into TN
+
+
+### Reference TN elements ###
 
 class RefTnLoc(Record):
     """Reference TN element location in the genome."""
@@ -115,11 +125,8 @@ class RefTnLoc(Record):
             ),
         )
 
-class SeqRefTnSide(RefTnSide):
-    """TN element end sequence for matching."""
-    offset: int         # offset of the inward-seq start from the TN boundary (>0 for inward, <0 for outward)
-    seq_inward: str     # sequence inward from chromosome into TN
 
+### BLAST hits ###
 
 class BlastHit(Record):
     """BLAST alignment hit record."""
@@ -136,6 +143,8 @@ class BlastHit(Record):
     evalue: float
     bitscore: float
 
+
+### Junctions ###
 
 JunctionT = TypeVar("JunctionT", bound="Junction")
 
@@ -185,6 +194,8 @@ class TnJunction(Junction):
     ref_tn_sides: List[RefTnSide]  # Reference TN matches: [(tn_id, side, distance?), ...]
     switched: bool                 # True if BRESEQ sides were swapped (to normalize to TN on side 1)
 
+
+### Paired TN junctions ###
 
 class RawTnJc2(Record):
     """Paired TN junctions (candidate amplicon).
