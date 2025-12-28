@@ -53,13 +53,22 @@ class TypedDF:
     def __len__(self) -> int:
         return len(self.df)
 
+    def _has_meaningful_index(self) -> bool:
+        """Check if DataFrame has a meaningful (non-default) index."""
+        idx = self.df.index
+        # Default RangeIndex starting at 0 is not meaningful
+        if isinstance(idx, pd.RangeIndex) and idx.start == 0 and idx.step == 1:
+            return False
+        # Any other index (named, custom values, etc.) is meaningful
+        return True
+
     def assert_matches(self, df: Optional[pd.DataFrame] = None, check_missing=True, check_extra=True) -> None:
         """Assert DataFrame matches schema exactly."""
         df = df if df is not None else self.df
         validate_and_cast_df(df, self.schema, check_missing=check_missing, check_extra=check_extra, cast=False)
 
-    def to_csv(self, path: Path) -> None:
-        """Save DataFrame to CSV. Handles empty DataFrames by creating file with headers only."""
+    def to_csv(self, path: Path, index: Optional[bool] = None) -> None:
+        """Save DataFrame to CSV. Auto-detects meaningful indices if index=None."""
         from amplifinder.data_types.validate_and_cast_df import _is_optional
         
         df = self.df.copy()
@@ -81,21 +90,25 @@ class TypedDF:
             if df[col].dtype == object:
                 df[col] = df[col].apply(_serialize_for_csv)
         
-        df.to_csv(path, index=False, header=self.headers)
+        # Auto-detect if index should be saved
+        if index is None:
+            index = self._has_meaningful_index()
+        
+        df.to_csv(path, index=index, header=self.headers)
 
     @staticmethod
-    def _read_csv_df(path: Path, schema: Schema, headers: bool) -> pd.DataFrame:
+    def _read_csv_df(path: Path, schema: Schema, headers: bool, index_col: Optional[int] = None) -> pd.DataFrame:
         """Read CSV and validate against schema."""
         path = Path(path)
         if headers:
-            df = pd.read_csv(path)
+            df = pd.read_csv(path, index_col=index_col)
         else:
-            df = pd.read_csv(path, header=None, names=schema.column_names)
+            df = pd.read_csv(path, header=None, names=schema.column_names, index_col=index_col)
         return validate_and_cast_df(df, schema, check_missing=True, check_extra=True, cast=True)
 
     @classmethod
-    def from_csv(cls: Type[SelfTypedDF], path: Path, schema: Schema, headers: bool = True) -> SelfTypedDF:
-        df = cls._read_csv_df(path, schema, headers)
+    def from_csv(cls: Type[SelfTypedDF], path: Path, schema: Schema, headers: bool = True, index_col: Optional[int] = None) -> SelfTypedDF:
+        df = cls._read_csv_df(path, schema, headers, index_col=index_col)
         return cls(df, schema, headers)
 
     @classmethod
@@ -114,10 +127,32 @@ class TypedDF:
             return self
         return self._construct(new_df)
 
+    def _row_to_dict(self, row: pd.Series) -> Dict[str, Any]:
+        """Convert pandas Series row to cleaned dict (NaN → None)."""
+        return {k: _clean_nan(v) for k, v in row.items()}
+
+    def __getitem__(self, key: Any) -> Dict[str, Any]:
+        """Access row by index key as dict."""
+        row_series = self.df.loc[key]
+        return self._row_to_dict(row_series)
+
+    def items(self) -> Iterator[tuple[Any, Dict[str, Any]]]:
+        """Iterate (key, row_dict) pairs."""
+        for key, row_series in self.df.iterrows():
+            yield key, self._row_to_dict(row_series)
+
+    def keys(self) -> Iterator[Any]:
+        """Iterate index keys."""
+        return iter(self.df.index)
+
+    def values(self) -> Iterator[Dict[str, Any]]:
+        """Iterate rows as dicts (same as __iter__)."""
+        return iter(self)
+
     def __iter__(self) -> Iterator[Dict[str, Any]]:
         """Iterate rows as dicts with NaN → None."""
         for _, row in self.df.iterrows():
-            yield {k: _clean_nan(v) for k, v in row.items()}
+            yield self._row_to_dict(row)
 
 
 class RecordTypedDf(TypedDF, Generic[T]):
@@ -143,14 +178,35 @@ class RecordTypedDf(TypedDF, Generic[T]):
         return cls(pd.DataFrame(data), record_type)
 
     @classmethod
+    def from_dict(cls: Type[SelfRecordTypedDF], records_dict: Dict[Any, T], record_type: Type[T]) -> SelfRecordTypedDF:
+        """Create RecordTypedDf from dict[Any:Record] with keys as DataFrame index."""
+        schema = record_type.schema()
+        if not records_dict:
+            return cls(pd.DataFrame(columns=schema.column_names), record_type)
+        data = [r.model_dump() for r in records_dict.values()]
+        df = pd.DataFrame(data, index=list(records_dict.keys()))
+        return cls(df, record_type)
+
+    @classmethod
     def from_csv(cls: Type[SelfRecordTypedDF], path: Path, record_type: Type[T],
-                 headers: bool = True) -> SelfRecordTypedDF:
-        df = cls._read_csv_df(path, record_type.schema(), headers)
+                 headers: bool = True, index_col: Optional[int] = None) -> SelfRecordTypedDF:
+        """Load from CSV. If index_col=0, reads first column as index. None means no index."""
+        df = cls._read_csv_df(path, record_type.schema(), headers, index_col=index_col)
         return cls(df, record_type, headers)
 
     @classmethod
     def empty(cls: Type[SelfRecordTypedDF], record_type: Type[T], headers: bool = True) -> SelfRecordTypedDF:
         return cls(pd.DataFrame(columns=record_type.schema().column_names), record_type, headers)
+
+    def __getitem__(self, key: Any) -> T:
+        """Access record by index key."""
+        row_dict = super().__getitem__(key)
+        return self._record_type.model_validate(row_dict)
+
+    def items(self) -> Iterator[tuple[Any, T]]:
+        """Iterate (key, record) pairs."""
+        for key, row_dict in super().items():
+            yield key, self._record_type.model_validate(row_dict)
 
     def __iter__(self) -> Iterator[T]:
         for row in super().__iter__():
