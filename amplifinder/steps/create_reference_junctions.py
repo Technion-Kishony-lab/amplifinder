@@ -3,11 +3,12 @@
 from pathlib import Path
 from typing import Optional
 
+from Bio.Seq import reverse_complement
+
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, RefTnLoc, SeqRefTnSide, RefTnJunction, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
-from amplifinder.utils.fasta import reverse_complement
 
 
 class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):

@@ -3,8 +3,9 @@
 from pathlib import Path
 from typing import Optional, List
 
+from Bio.Seq import reverse_complement
+
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.utils.fasta import reverse_complement
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, Junction, SeqRefTnSide, RefTnSide, TnJunction, Orientation
 from amplifinder.data_types.genome import Genome
