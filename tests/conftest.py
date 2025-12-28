@@ -286,16 +286,16 @@ def raw_tnjc2_record():
 @pytest.fixture
 def covered_tnjc2_record(raw_tnjc2_record):
     """RawTnJc2 with coverage fields."""
-    from amplifinder.data_types import CoveredTnJc2, Coverage
+    from amplifinder.data_types import CoveredTnJc2, Average
 
     return CoveredTnJc2.from_other(
         raw_tnjc2_record,
         ref_name="tiny",
         iso_name="sample1",
         amplicon_coverage=2.0,
-        scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
-        iso_amplicon_coverage=Coverage(mean=2.0, median=2.0, mode=2.0),
-        iso_scaf_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+        scaf_coverage=Average(mean=1.0, median=1.0, mode=1.0),
+        iso_amplicon_coverage=Average(mean=2.0, median=2.0, mode=2.0),
+        iso_scaf_coverage=Average(mean=1.0, median=1.0, mode=1.0),
         copy_number=2.0,
         amplicon_coverage_mode=2.0,
     )

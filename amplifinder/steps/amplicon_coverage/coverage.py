@@ -5,7 +5,7 @@ from typing import Optional, List, Dict, TYPE_CHECKING
 
 import numpy as np
 
-from amplifinder.data_types import Coverage
+from amplifinder.data_types import Average
 from amplifinder.steps.amplicon_coverage.statistics import calc_distribution_mode
 
 if TYPE_CHECKING:
@@ -65,7 +65,7 @@ def get_coverage_in_range(
     return np.concatenate([cov[start - 1:], cov[:end]])
 
 
-def calc_coverage_stats(cov: np.ndarray, include_zeros: bool = False) -> Coverage:
+def calc_coverage_stats(cov: np.ndarray, include_zeros: bool = False) -> Average:
     """Calculate mean, median and mode of coverage array.
 
     Args:
@@ -73,15 +73,15 @@ def calc_coverage_stats(cov: np.ndarray, include_zeros: bool = False) -> Coverag
         include_zeros: If False (default), exclude zero values from statistics
 
     Returns:
-        Coverage namedtuple with mean, median, mode
+        Average namedtuple with mean, median, mode
     """
     if not include_zeros:
         cov = cov[cov > 0]
 
     if len(cov) == 0:
-        return Coverage(mean=0.0, median=0.0, mode=0.0)
+        return Average(mean=0.0, median=0.0, mode=0.0)
 
-    return Coverage(
+    return Average(
         mean=float(np.mean(cov)),
         median=float(np.median(cov)),
         mode=calc_distribution_mode(cov, is_log=False, skip_first_bin=False)

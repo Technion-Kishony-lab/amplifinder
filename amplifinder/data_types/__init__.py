@@ -6,7 +6,7 @@ from amplifinder.data_types.records import Column, Schema, Record
 from amplifinder.data_types.record_types import (
     Side, Orientation,
     RefTnLoc, SeqRefTnSide, BlastHit, Junction, RefTnJunction, TnJunction, RawTnJc2, RefTnSide,
-    Coverage, JunctionCoverage, CoveredTnJc2, RawEvent, ClassifiedTnJc2,
+    Average, JunctionCoverage, CoveredTnJc2, RawEvent, ClassifiedTnJc2,
     FilteredTnJc2, JunctionType, EventModifier, AnalyzedTnJc2, ExportedTnJc2,
 )
 
@@ -30,7 +30,7 @@ __all__ = [
     "GenomeRegistry",
     "get_genome",
     # Coverage types
-    "Coverage",
+    "Average",
     "JunctionCoverage",
     "CoveredTnJc2",
     "RawEvent",
