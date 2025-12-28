@@ -14,21 +14,21 @@ def toy_genome(tmp_path) -> Genome:
     return Genome(name="toy", fasta_path=fasta)
 
 
-def test_get_forward_sequence_in_range(toy_genome):
+def test_get_forward_sequence_in_range(toy_genome: Genome):
     assert toy_genome.get_fowrard_sequence_in_range("toy", 3, 8) == "cdefgh"
 
 
-def test_get_forward_sequence_in_range_circular(toy_genome):
+def test_get_forward_sequence_in_range_circular(toy_genome: Genome):
     assert toy_genome.get_fowrard_sequence_in_range("toy", 25, 2) == "yzab"
 
 
-def test_get_sequence_in_range_reverse(toy_genome):
+def test_get_sequence_in_range_reverse(toy_genome: Genome):
     result = toy_genome.get_sequence_in_range("toy", 10, 5, Orientation.REVERSE)
     print(reverse_complement("efghij"))
     assert result == reverse_complement("efghij")
 
 
-def test_junction_sequences(toy_genome):
+def test_junction_sequences(toy_genome: Genome):
     jc = Junction(
         num=0,
         scaf1="toy",
@@ -41,10 +41,10 @@ def test_junction_sequences(toy_genome):
         flanking_right=5,
     )
 
-    side1 = toy_genome.get_junction_side_sequence(jc, 1)
-    side2 = toy_genome.get_junction_side_sequence(jc, 2)
+    arm1 = toy_genome.get_junction_arm_sequence(jc, 1)
+    arm2 = toy_genome.get_junction_arm_sequence(jc, 2)
 
-    assert side1 == reverse_complement("efghij")
-    assert side2 == "klmnop"
-    assert toy_genome.get_junction_sequence(jc) == "efghijklmnop"
-
+    assert arm1 == reverse_complement("efghij")
+    assert arm2 == "klmnop"
+    assert toy_genome.get_junction_sequence_arm1_to_arm2(jc) == "efghijklmnop"
+    assert toy_genome.get_junction_sequence_arm2_to_arm1(jc) == reverse_complement("efghijklmnop")
