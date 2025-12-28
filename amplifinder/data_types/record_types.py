@@ -83,6 +83,37 @@ class RefTnLoc(Record):
         """TN length in bp (1-based inclusive coordinates)."""
         return self.loc_right - self.loc_left + 1
 
+    def get_sides(self) -> tuple[RefTnSide, RefTnSide]:
+        """Get left and right sides of the TN."""
+        return (
+            RefTnSide(tn_id=self.tn_id, side=Side.LEFT),
+            RefTnSide(tn_id=self.tn_id, side=Side.RIGHT),
+        )
+
+    def get_junctions(self, out_span: int, in_span: Optional[int] = None) -> tuple[RefTnJunction, RefTnJunction]:
+        """Get left and right junctions of the TN.
+        
+        Junction numbering: negative values for reference junctions (breseq uses positive).
+        Left: -tn_id * 2 (even negative), Right: -tn_id * 2 - 1 (odd negative).
+        """
+        if in_span is None:
+            in_span = self.length
+        return (
+            RefTnJunction(
+                num=-self.tn_id * 2,  # Left: even negative
+                scaf1=self.tn_scaf, pos1=self.loc_left, dir1=Orientation.FORWARD,
+                scaf2=self.tn_scaf, pos2=self.loc_left - 1, dir2=Orientation.REVERSE,
+                flanking_left=in_span, flanking_right=out_span,
+                ref_tn_side=RefTnSide(tn_id=self.tn_id, side=Side.LEFT),
+            ),
+            RefTnJunction(
+                num=-self.tn_id * 2 - 1,  # Right: odd negative
+                scaf1=self.tn_scaf, pos1=self.loc_right, dir1=Orientation.REVERSE,
+                scaf2=self.tn_scaf, pos2=self.loc_right + 1, dir2=Orientation.FORWARD,
+                flanking_left=in_span, flanking_right=out_span,
+                ref_tn_side=RefTnSide(tn_id=self.tn_id, side=Side.RIGHT),
+            ),
+        )
 
 class SeqRefTnSide(RefTnSide):
     """TN element end sequence for matching."""
@@ -112,7 +143,7 @@ JunctionT = TypeVar("JunctionT", bound="Junction")
 
 class Junction(Record):
     """Base junction record with shared positional fields."""
-    num: int  # Junction identifier: breseq junction number, or 0 for reference junctions
+    num: int  # Junction identifier: breseq junction number (positive), or negative for reference junctions
     scaf1: str
     pos1: int
     dir1: Orientation
