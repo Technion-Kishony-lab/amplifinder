@@ -12,7 +12,7 @@ from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDf, RefTnLoc, Genome
+from amplifinder.data_types import Orientation, RecordTypedDf, RefTnLoc, Genome
 from amplifinder.steps.base import Step
 from amplifinder.steps.locate_tns.find_tn_in_genbank import find_tn_elements
 
@@ -168,6 +168,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
 
         # Detect strand: sstart > send means reverse complement
         is_complement = (df["sstart"] > df["send"]).values
+        orientations = [Orientation.REVERSE if comp else Orientation.FORWARD for comp in is_complement]
 
         # Ensure LocLeft < LocRight
         # qstart and qend are 1-based from BLAST output
@@ -182,6 +183,6 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
             "tn_scaf": df["query"].values,
             "loc_left": loc_left,
             "loc_right": loc_right,
-            "complement": is_complement,
+            "orientation": orientations,
             "join": False,
         }), RefTnLoc)

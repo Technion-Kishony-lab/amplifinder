@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from amplifinder.steps import LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep
-from amplifinder.data_types import RecordTypedDf
+from amplifinder.data_types import Orientation, RecordTypedDf
 from amplifinder.utils.file_utils import ensure_dir
 from tests.env import RUN_BLAST_TESTS
 
@@ -57,7 +57,7 @@ def test_extracts_tn_elements(locate_tns_step):
         "tn_scaf": ["tiny", "tiny"],
         "loc_left": [501, 1601],
         "loc_right": [1200, 2200],
-        "complement": [False, True],
+        "orientation": [Orientation.FORWARD, Orientation.REVERSE],
         "join": [False, False],
     })
     pd.testing.assert_frame_equal(tn_loc.df, expected)
