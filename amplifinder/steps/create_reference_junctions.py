@@ -43,13 +43,8 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
         self.ref_tn_locs = ref_tn_locs
         self.genome = genome
         self.reference_tn_out_span = reference_tn_out_span
-
         output_file = output_dir / f"{source}_ref_tn_jc.csv"
-
-        super().__init__(
-            output_file=output_file,
-            force=force,
-        )
+        super().__init__(output_file=output_file, force=force)
 
     def _calculate_output(self) -> RecordTypedDf[RefTnJunction]:
         """Create synthetic junction records from TN locations."""
@@ -63,7 +58,6 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
                 num=0,
                 scaf1=tn.tn_scaf, pos1=tn.loc_left, dir1=Orientation.FORWARD,
                 scaf2=tn.tn_scaf, pos2=tn.loc_left - 1, dir2=Orientation.REVERSE,
-                # TODO: left/right correct?
                 flanking_left=tn.length, flanking_right=self.reference_tn_out_span,
                 ref_tn_side=RefTnSide(tn_id=tn.tn_id, side=Side.LEFT),
             ))
@@ -73,8 +67,7 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
                 num=0,
                 scaf1=tn.tn_scaf, pos1=tn.loc_right, dir1=Orientation.REVERSE,
                 scaf2=tn.tn_scaf, pos2=tn.loc_right + 1, dir2=Orientation.FORWARD,
-                # TODO: left/right correct?
-                flanking_left=self.reference_tn_out_span, flanking_right=tn.length,
+                flanking_left=tn.length, flanking_right=self.reference_tn_out_span,
                 ref_tn_side=RefTnSide(tn_id=tn.tn_id, side=Side.RIGHT),
             ))
 
@@ -96,80 +89,34 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
     def __init__(
         self,
         ref_tn_jcs: RecordTypedDf[RefTnJunction],
-        ref_tn_locs: RecordTypedDf[RefTnLoc],
         genome: Genome,
         output_dir: Path,
         source: str,
-        max_dist_to_tn: int,
         force: Optional[bool] = None,
     ):
         """Initialize step.
 
         Args:
             ref_tn_jcs: RecordDF with reference TN junctions (used to get tn_id and side)
-            ref_tn_locs: RecordDF with reference TN locations (used to get full TN boundaries)
             genome: Reference genome
             output_dir: Directory to write output
             source: Source name (genbank/isfinder) for filename prefix
-            max_dist_to_tn: Margin around TN (out_span in MATLAB)
             force: Force re-run
         """
         self.ref_tn_jcs = ref_tn_jcs
-        self.ref_tn_locs = ref_tn_locs
         self.genome = genome
-        self.max_dist_to_tn = max_dist_to_tn
-
         output_file = output_dir / f"{source}_tn_end_seqs.csv"
-
-        super().__init__(
-            output_file=output_file,
-            force=force,
-        )
+        super().__init__(output_file=output_file, force=force)
 
     def _calculate_output(self) -> RecordTypedDf[SeqRefTnSide]:
         """Extract TN sequences with margins (matching MATLAB IS_seqs_with_margins)."""
+        seq_ref_tn_sides = [SeqRefTnSide.from_other(
+            jc.ref_tn_side,
+            offset=-jc.flanking_right,
+            seq_inward=reverse_complement(self.genome.get_junction_sequence(jc)),
+            seq_inward_rc=self.genome.get_junction_sequence(jc),
+        ) for jc in self.ref_tn_jcs]
 
-        ref_seqs = self.genome.scaffold_sequences
-        out_span = self.max_dist_to_tn  # MATLAB: out_span = max_dist_to_IS
-
-        # Create mapping from tn_id to TN location
-        tn_loc_map = {tn.tn_id: tn for tn in self.ref_tn_locs}
-
-        records = []
-
-        for jc in self.ref_tn_jcs:
-            if jc.scaf1 not in ref_seqs:
-                raise ValueError(f"TN scaffold {jc.scaf1} not in genome")
-
-            # Get TN location for this junction
-            tn_id = jc.ref_tn_side.tn_id
-            tn = tn_loc_map[tn_id]
-            seq = ref_seqs[jc.scaf1]
-
-            # Coordinate system: loc_left and loc_right are 1-based inclusive (from BLAST/GenBank)
-            # MATLAB: IS_seqs_with_margins{i,1} = seq(l-out_span:r+out_span)
-            # Where l=LocLeft, r=LocRight (1-based inclusive in MATLAB)
-            # Python slicing: seq[l-1:r] where l-1 is 0-based start, r is 0-based exclusive end
-            loc_left = tn.loc_left  # 1-based inclusive
-            loc_right = tn.loc_right  # 1-based inclusive
-
-            # Create full TN sequence with margins (like MATLAB IS_seqs_with_margins)
-            # Convert 1-based inclusive to 0-based for Python array slicing:
-            # - Start: (l - out_span) is 1-based, convert to 0-based: (l - out_span - 1)
-            # - End: (r + out_span) is 1-based inclusive, use as 0-based exclusive end
-            start = max(0, (loc_left - out_span - 1))  # Convert 1-based to 0-based start
-            end = min(len(seq), loc_right + out_span)  # 1-based inclusive -> 0-based exclusive end
-            seq_with_margins = seq[start:end]
-
-            # MATLAB: IS_seqs_with_margins{i,2} = seqrcomplement(seq(l-out_span:r+out_span))
-            seq_with_margins_rc = reverse_complement(seq_with_margins)
-
-            records.append(SeqRefTnSide.from_other(
-                jc.ref_tn_side,
-                seq_fwd=seq_with_margins,
-                seq_rc=seq_with_margins_rc,
-            ))
-
-        result = RecordTypedDf.from_records(records, SeqRefTnSide)
-        info(f"Created {len(records)} TN sequences with margins")
-        return result
+        seq_ref_tn_sides = RecordTypedDf.from_records(seq_ref_tn_sides, SeqRefTnSide)
+        info(f"Created {len(seq_ref_tn_sides)} TN sequences with margins")
+        return seq_ref_tn_sides

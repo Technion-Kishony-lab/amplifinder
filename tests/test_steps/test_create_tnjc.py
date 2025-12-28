@@ -59,7 +59,7 @@ def tnjc_step(mock_junctions, ref_tn_end_seqs, tiny_genome, tmp_output):
     """Create TnJc step."""
     return CreateTnJcStep(
         junctions=mock_junctions,
-        ref_tn_end_seqs=ref_tn_end_seqs,
+        seq_ref_tn_sides=ref_tn_end_seqs,
         genome=tiny_genome,
         output_dir=tmp_output,
         max_dist_to_tn=20,

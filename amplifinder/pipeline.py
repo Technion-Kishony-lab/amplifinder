@@ -224,11 +224,9 @@ class Pipeline:
 
         ref_tn_end_seqs = CreateRefTnEndSeqsStep(
             ref_tn_jcs=ref_tn_jcs,
-            ref_tn_locs=ref_tn_locs,
             genome=genome,
             output_dir=iso_output,
             source=self.ref_tn_source,
-            max_dist_to_tn=cfg.max_dist_to_IS,
         ).run()
 
         return ref_tn_jcs, ref_tn_end_seqs
@@ -267,7 +265,7 @@ class Pipeline:
 
         tnjcs = CreateTnJcStep(
             junctions=junctions,
-            ref_tn_end_seqs=ref_tn_end_seqs,
+            seq_ref_tn_sides=ref_tn_end_seqs,
             genome=genome,
             output_dir=iso_output,
             max_dist_to_tn=cfg.max_dist_to_IS,
