@@ -86,8 +86,9 @@ class RefTnLoc(Record):
 
 class SeqRefTnSide(RefTnSide):
     """TN element end sequence for matching."""
-    seq_fwd: str    # forward sequence
-    seq_rc: str     # reverse complement
+    offset: int         # offset of the inward-seq start from the TN boundary (>0 for inward, <0 for outward)
+    seq_inward: str     # sequence inward from chromosome into TN
+    seq_inward_rc: str  # Reverse complement of the inward sequence
 
 
 class BlastHit(Record):
@@ -130,6 +131,15 @@ class Junction(Record):
             "flanking_left": self.flanking_right, "flanking_right": self.flanking_left,
         })
 
+    def get_scaf_pos_dir_flank(self, side: int) -> tuple[str, int, Orientation, int]:
+        """Get scaffold, position, direction, and flanking length for a side."""
+        return (
+            self.scaf1 if side == 1 else self.scaf2, 
+            self.pos1 if side == 1 else self.pos2, 
+            self.dir1 if side == 1 else self.dir2, 
+            self.flanking_left if side == 1 else self.flanking_right
+            )
+
 
 class RefTnJunction(Junction):
     """Synthetic junction for reference TN element.
@@ -143,7 +153,7 @@ class RefTnJunction(Junction):
 class TnJunction(Junction):
     """Junction matched to TN element(s)."""
     ref_tn_sides: List[RefTnSide]  # Reference TN matches: [(tn_id, side, distance?), ...]
-    switched: bool                 # True if sides were swapped to normalize
+    switched: bool                 # True if BRESEQ sides were swapped (to normalize to TN on side 1)
 
 
 class RawTnJc2(Record):

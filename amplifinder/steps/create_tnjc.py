@@ -3,8 +3,6 @@
 from pathlib import Path
 from typing import Optional, List
 
-from Bio.Seq import reverse_complement
-
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, Junction, SeqRefTnSide, RefTnSide, TnJunction, Orientation
@@ -24,7 +22,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
     def __init__(
         self,
         junctions: RecordTypedDf[Junction],
-        ref_tn_end_seqs: RecordTypedDf[SeqRefTnSide],
+        seq_ref_tn_sides: RecordTypedDf[SeqRefTnSide],
         genome: Genome,
         output_dir: Path,
         max_dist_to_tn: int,
@@ -43,7 +41,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
             force: Force re-run
         """
         self.junctions = junctions
-        self.ref_tn_end_seqs = ref_tn_end_seqs
+        self.seq_ref_tn_sides = seq_ref_tn_sides
         self.genome = genome
         self.max_dist_to_tn = max_dist_to_tn
         self.trim_jc_flanking = trim_jc_flanking
@@ -61,13 +59,9 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         tnjc_records = []
 
         for jc in self.junctions:
-            # Get junction flanking sequences
-            seq1 = self._get_junction_seq(jc, side=1)
-            seq2 = self._get_junction_seq(jc, side=2)
-
             # Match against TN sequences
-            matches1 = self._find_tn_matches(seq1)
-            matches2 = self._find_tn_matches(seq2)
+            matches1 = self._find_ref_tn_sides_matches(jc, 1)
+            matches2 = self._find_ref_tn_sides_matches(jc, 2)
 
             is_side1_tn = len(matches1) > 0
             is_side2_tn = len(matches2) > 0
@@ -92,55 +86,27 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         info(f"Found {len(tnjcs)} TN-associated junctions (TnJc)")
         return tnjcs
 
-    def _get_junction_seq(self, jc: Junction, side: int) -> str:
+    def _get_junction_side_seq(self, jc: Junction, side: int) -> str:
         """Extract sequence at junction side."""
-        scaf = jc.scaf1 if side == 1 else jc.scaf2
-        pos = jc.pos1 if side == 1 else jc.pos2
-        direction = jc.dir1 if side == 1 else jc.dir2
-        flank_len = jc.flanking_left if side == 1 else jc.flanking_right
+        seq = self.genome.get_junction_side_sequence(jc, side)
+        if self.trim_jc_flanking == 0:
+            return seq
+        return seq[:-self.trim_jc_flanking]
 
-        if scaf not in self.ref_seqs:
-            return ""
-
-        ref_seq = self.ref_seqs[scaf]
-        pos = pos - 1  # 0-based
-        flank_len = flank_len - self.trim_jc_flanking - 1
-
-        if flank_len <= 0:
-            flank_len = 20
-
-        if direction == Orientation.FORWARD:
-            start = pos
-            end = min(len(ref_seq), pos + flank_len)
-            seq = ref_seq[start:end]
-        else:
-            start = max(0, pos - flank_len)
-            end = pos + 1
-            seq = ref_seq[start:end]
-            seq = reverse_complement(seq)
-
-        return seq
-
-    def _find_tn_matches(self, jc_seq: str) -> List[RefTnSide]:
-        """Find TN elements matching a junction sequence."""
-        if not jc_seq:
-            return []
-
+    def _find_ref_tn_sides_matches(self, jc: Junction, side: int) -> List[RefTnSide]:
+        """Find TN elements matching a junction side sequence."""
+        jc_side_seq = self._get_junction_side_seq(jc, side)
         matches = []
-        threshold = self.max_dist_to_tn * 2
 
-        for tn in self.ref_tn_end_seqs:
-            # Check forward
-            pos_fwd = tn.seq_fwd.find(jc_seq)
-            if pos_fwd >= 0 and pos_fwd < threshold:
-                dist = pos_fwd - self.max_dist_to_tn
-                matches.append(RefTnSide.from_other(tn, distance=dist))
-                continue
+        for tn_side in self.seq_ref_tn_sides:
+            # Check inward sequence (towards TN)
+            pos = tn_side.seq_inward.find(jc_side_seq)
+            if pos >= 0:
+                distance = pos + tn_side.offset
+                if distance <= self.max_dist_to_tn:
+                    matches.append(RefTnSide.from_other(tn_side, distance=distance))
+                    continue
 
-            # Check reverse complement
-            pos_rc = tn.seq_rc.find(jc_seq)
-            if pos_rc >= 0 and pos_rc < threshold:
-                dist = pos_rc - self.max_dist_to_tn
-                matches.append(RefTnSide.from_other(tn, distance=dist))
+            # TODO: Do we need to also check outward sequence (away from TN)?
 
         return matches
