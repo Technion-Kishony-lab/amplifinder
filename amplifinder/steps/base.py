@@ -118,10 +118,10 @@ class Step(ABC, Generic[T]):
         # Verbose reporting
         if self.global_verbose:
             if self.output_files:
-                output_str = ", ".join(str(p) for p in self.output_files)
-                info(f"{self.name}: running (outputs: {output_str})")
+                output_str = ", ".join(str(p.name) for p in self.output_files)
             else:
-                info(f"{self.name}: running (no file outputs)")
+                output_str = "none"
+            header = f"{self.name} (outputs: {output_str})"
 
         # Check inputs exist
         if missing_input := self.missing_input_files():
@@ -129,11 +129,12 @@ class Step(ABC, Generic[T]):
 
         # Fast path: check if can skip without lock (common case)
         if not self.force and self.has_output_files():
-            info(f"{self.name}: skipped (outputs exist)")
+            info(f"{header}: skipped (outputs exist)")
             return self.load_outputs()
 
         # Steps without file outputs or not saving don't need locking
         if not self.is_saving:
+            info(f"{header}: running...")
             return self._run_unlocked()
 
         # Acquire lock and re-check (TOCTOU fix)
@@ -141,9 +142,10 @@ class Step(ABC, Generic[T]):
         with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
             # Re-check under lock: another process may have created output
             if not self.force and self.has_output_files():
-                info(f"{self.name}: skipped (outputs exist, verified under lock)")
+                info(f"{header}: skipped (outputs exist, verified under lock)")
                 return self.load_outputs()
 
+            info(f"{header}: running (under lock)")
             return self._run_unlocked()
 
     def _run_unlocked(self) -> T:
@@ -152,7 +154,6 @@ class Step(ABC, Generic[T]):
         self._clean_outputs()
 
         # Run
-        info(f"{self.name}: running...")
         self.run_count += 1
         output = self._calculate_output()
 

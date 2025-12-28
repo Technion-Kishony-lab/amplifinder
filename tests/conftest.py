@@ -72,8 +72,7 @@ def cleared_output_dir():
 
     Returns the cleared output_dir Path.
     """
-    default_base = TEST_DATA_ROOT.parent
-    base = Path(os.environ.get("AMPLIFINDER_OUTPUT_ROOT", default_base))
+    base = Path(__file__).parent / "test_outputs" / "integration_runs"
     test_output_root = base / "python_outputs"
     output_dir = test_output_root / "output"
 
