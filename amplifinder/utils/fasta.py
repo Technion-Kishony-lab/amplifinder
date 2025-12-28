@@ -11,18 +11,6 @@ from Bio.Seq import Seq
 from amplifinder.logger import info, warning
 
 
-def reverse_complement(seq: str) -> str:
-    """Return the reverse complement of a DNA sequence.
-
-    Args:
-        seq: DNA sequence string
-
-    Returns:
-        Reverse complement sequence
-    """
-    return str(Seq(seq).reverse_complement())
-
-
 def read_fasta_lengths(fasta_path: Path, max_num_reads: Optional[int] = None) -> Dict[str, int]:
     """Read FASTA file and return sequence lengths.
 
