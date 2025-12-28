@@ -3,7 +3,7 @@
 import pytest
 from amplifinder.steps import ClassifyTnJc2StructureStep
 from amplifinder.data_types import (
-    RecordTypedDf, CoveredTnJc2, RefTnLoc, RawEvent, Coverage,
+    RecordTypedDf, CoveredTnJc2, RefTnLoc, RawEvent, Average,
 )
 
 
@@ -20,7 +20,7 @@ def sample_covered_tnjc2(covered_tnjc2_record):
         ref_name="U00096",
         iso_name="sample1",
         amplicon_coverage=2.0,
-        iso_amplicon_coverage=Coverage(mean=2.0, median=2.0, mode=2.0),
+        iso_amplicon_coverage=Average(mean=2.0, median=2.0, mode=2.0),
         copy_number=2.0,
         amplicon_coverage_mode=2.0,
     )
@@ -38,7 +38,7 @@ def sample_covered_tnjc2(covered_tnjc2_record):
         ref_name="U00096",
         iso_name="sample1",
         amplicon_coverage=1.0,
-        iso_amplicon_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+        iso_amplicon_coverage=Average(mean=1.0, median=1.0, mode=1.0),
         copy_number=1.0,
         amplicon_coverage_mode=1.0,
     )
@@ -90,7 +90,7 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_r
         ref_name="U00096",
         iso_name="sample1",
         amplicon_coverage=1.0,
-        iso_amplicon_coverage=Coverage(mean=1.0, median=1.0, mode=1.0),
+        iso_amplicon_coverage=Average(mean=1.0, median=1.0, mode=1.0),
         copy_number=1.0,
         amplicon_coverage_mode=1.0,
     )

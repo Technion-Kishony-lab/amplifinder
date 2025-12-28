@@ -18,8 +18,8 @@ NAMES_TO_OPERATORS = {
 }
 
 
-# Coverage types
-class Coverage(NamedTuple):
+# Average types
+class Average(NamedTuple):
     """Coverage statistics for a genomic region."""
     mean: float
     median: float
@@ -28,9 +28,9 @@ class Coverage(NamedTuple):
 
 # add operator methods
 for op_name, op in NAMES_TO_OPERATORS.items():
-    def wrapper(self, other: Coverage) -> Coverage:
-        return Coverage(op(self.mean, other.mean), op(self.median, other.median), op(self.mode, other.mode))
-    setattr(Coverage, op_name, wrapper)
+    def wrapper(self, other: Average) -> Average:
+        return Average(op(self.mean, other.mean), op(self.median, other.median), op(self.mode, other.mode))
+    setattr(Average, op_name, wrapper)
 
 
 class JunctionCoverage(NamedTuple):
@@ -205,10 +205,10 @@ class CoveredTnJc2(RawTnJc2):
     - anc_path=None: raw coverage only, copy_number_ratio is None
     - anc_path=set: normalized coverage, copy_number_ratio = iso/anc
     """
-    iso_amplicon_coverage: Coverage
-    iso_scaf_coverage: Coverage
-    anc_amplicon_coverage: Optional[Coverage] = None
-    anc_scaf_coverage: Optional[Coverage] = None
+    iso_amplicon_coverage: Average
+    iso_scaf_coverage: Average
+    anc_amplicon_coverage: Optional[Average] = None
+    anc_scaf_coverage: Optional[Average] = None
     copy_number: float = None  #
     copy_number_vs_anc: Optional[float] = None
 
