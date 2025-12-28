@@ -32,10 +32,10 @@ def setup_logger(
     # Clear existing handlers
     logger.handlers.clear()
 
-    # Format: TYPE: message | timestamp
+    # Format: timestamp TYPE: message
     formatter = logging.Formatter(
-        "%(levelname)s: %(message)s | %(asctime)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
+        "%(asctime)s %(levelname)s: %(message)s",
+        datefmt="%H:%M:%S",
     )
 
     # Console handler (stdout)
