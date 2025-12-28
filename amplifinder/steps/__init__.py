@@ -5,7 +5,7 @@ from amplifinder.steps.initialize import InitializingStep
 from amplifinder.steps.get_reference import GetRefGenomeStep
 from amplifinder.steps.locate_tns import LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep
 from amplifinder.steps.run_breseq import BreseqStep
-from amplifinder.steps.create_reference_junctions import CreateRefTnJcStep, CreateRefTnEndSeqsStep
+from amplifinder.steps.create_reference_junctions import CreateRefTnJcStep
 from amplifinder.steps.create_tnjc import CreateTnJcStep
 from amplifinder.steps.pair_tnjc import PairTnJcToRawTnJc2Step
 from amplifinder.steps.classify_structure import ClassifyTnJc2StructureStep
@@ -25,7 +25,6 @@ __all__ = [
     "LocateTNsUsingISfinderStep",
     "BreseqStep",
     "CreateRefTnJcStep",
-    "CreateRefTnEndSeqsStep",
     "CreateTnJcStep",
     "PairTnJcToRawTnJc2Step",
     "CalcTnJc2AmpliconCoverageStep",

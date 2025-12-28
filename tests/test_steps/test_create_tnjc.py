@@ -2,28 +2,21 @@
 
 import pytest
 
-from amplifinder.steps import CreateRefTnJcStep, CreateRefTnEndSeqsStep, CreateTnJcStep
+from amplifinder.steps import CreateRefTnJcStep, CreateTnJcStep
 from amplifinder.data_types import RecordTypedDf, Junction
 
 
 @pytest.fixture
-def ref_tn_end_seqs(locate_tns_step, tiny_genome, tmp_output):
-    """Create TN end sequences."""
+def ref_tnjcs(locate_tns_step, tiny_genome, tmp_output):
+    """Create reference TN junctions."""
     tn_loc = locate_tns_step.run()
 
-    ref_jc = CreateRefTnJcStep(
+    return CreateRefTnJcStep(
         ref_tn_locs=tn_loc,
         genome=tiny_genome,
         output_dir=tmp_output,
         source="isfinder",
         reference_tn_out_span=50,
-    ).run()
-
-    return CreateRefTnEndSeqsStep(
-        ref_tn_jcs=ref_jc,
-        genome=tiny_genome,
-        output_dir=tmp_output,
-        source="isfinder",
     ).run()
 
 
@@ -53,11 +46,11 @@ def mock_junctions(locate_tns_step, tiny_genome, tmp_output):
 
 
 @pytest.fixture
-def tnjc_step(mock_junctions, ref_tn_end_seqs, tiny_genome, tmp_output):
+def tnjc_step(mock_junctions, ref_tnjcs, tiny_genome, tmp_output):
     """Create TnJc step."""
     return CreateTnJcStep(
         junctions=mock_junctions,
-        seq_ref_tn_sides=ref_tn_end_seqs,
+        ref_tnjcs=ref_tnjcs,
         genome=tiny_genome,
         output_dir=tmp_output,
         max_dist_to_tn=20,
@@ -78,7 +71,7 @@ def test_output_has_correct_columns(tnjc_step):
     tnjcs = tnjc_step.run()
 
     expected_cols = {"num", "scaf1", "pos1", "dir1", "scaf2", "pos2", "dir2",
-                     "flanking_left", "flanking_right", "ref_tn_sides", "switched"}
+                     "flanking_left", "flanking_right", "ref_tn_sides", "swapped"}
     assert expected_cols.issubset(set(tnjcs.df.columns))
 
 

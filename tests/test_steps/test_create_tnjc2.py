@@ -5,7 +5,6 @@ from typing import List
 
 from amplifinder.steps import (
     CreateRefTnJcStep,
-    CreateRefTnEndSeqsStep,
     CreateTnJcStep,
     PairTnJcToRawTnJc2Step,
 )
@@ -31,7 +30,7 @@ def make_tnjc(
         scaf2=scaf, pos2=pos2, dir2=dir2,
         flanking_left=50, flanking_right=50,
         ref_tn_sides=[RefTnSide(tn_id=tn_id, side=tn_side, distance=0)],
-        switched=False,
+        swapped=False,
     )
 
 
@@ -58,13 +57,6 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
         reference_tn_out_span=50,
     ).run()
 
-    ref_tn_end_seqs = CreateRefTnEndSeqsStep(
-        ref_tn_jcs=ref_jc,
-        genome=tiny_genome,
-        output_dir=tmp_output,
-        source="isfinder",
-    ).run()
-
     # Convert to base Junction type
     junctions = [
         Junction(
@@ -78,7 +70,7 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
 
     return CreateTnJcStep(
         junctions=mock_junctions,
-        seq_ref_tn_sides=ref_tn_end_seqs,
+        ref_tnjcs=ref_jc,
         genome=tiny_genome,
         output_dir=tmp_output,
         max_dist_to_tn=20,

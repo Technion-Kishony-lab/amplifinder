@@ -38,17 +38,17 @@ xxx[]  array
    │           │           └────────────┬───────────┘         │              │
    │           │                        ▼                     │              │
    │           │             ┌── RefTnJunction[]              │              │
-   │           │             │          │                     │              │
-   │           ▼             │          ▼                     ▼              │
-   │     ┌───────────┐       │       ┌───────────────────────────┐           │
-   │────►│ 4. Breseq │       │       │ 3b. CreateRefTnEndSeqs    │           │
-   │     └─────┬─────┘       │       └──────────────┬────────────┘           │
-   │           ▼             │                      ▼                        │
-   │        breseq JC        │                  SeqRefTnSide[]               │
-   │      + coverage         ▼                      │                        │
-   │            └─────┬──────┘                      ▼                        │
-   │                  ▼            ┌───────────────────┐                     │
-   │               all Jc ────────►│  5. CreateTnJc    │                     │
+   │           │             │                                │              │
+   │           ▼             │                                │              │
+   │     ┌───────────┐       │                                │              │
+   │────►│ 4. Breseq │       │                                │              │
+   │     └─────┬─────┘       │                                │              │
+   │           ▼             │                                │              │
+   │        breseq JC        │                                │              │
+   │      + coverage         ▼                                │              │
+   │            └─────┬──────┘                                │              │
+   │                  ▼            ┌───────────────────┐      │              │
+   │               all Jc ────────►│  5. CreateTnJc    │◄─────┘              │
    │                               └─────────┬─────────┘                     │
    │                                         ▼                               │
    │                                    TnJunction[]                         │
@@ -166,10 +166,6 @@ RefTnSide(Record)
 ├── side: Side
 └── distance: Optional[int]
 
-SeqRefTnSide(RefTnSide)
-├── seq_fwd: str
-└── seq_rc: str
-
 BlastHit(Record)
 ├── query: str
 ├── subject: str
@@ -203,7 +199,7 @@ RefTnJunction(Junction)  # Reference TN junction
 
 TnJunction(Junction)  # Junction matched to TN element(s)
 ├── ref_tn_sides: List[RefTnSide]
-└── switched: bool
+└── swapped: bool
 ```
 
 **Amplicon Candidate Records (Pipeline Flow):**
@@ -345,9 +341,9 @@ Naming convention:
     ├── genbank_tn_loc.csv        # TN parsed from GenBank annotations (always)
     ├── isfinder_blast.txt        # BLAST output (always)
     ├── isfinder_tn_loc.csv       # TN parsed from BLAST results (always)
-    ├── genbank_ref_tn_jc.csv     # reference TN junctions (selected source only)
+    ├── genbank_ref_tnjc.csv      # reference TN junctions (selected source only)
     ├── genbank_tn_end_seqs.csv   # TN boundary sequences (selected source only)
-    ├── isfinder_ref_tn_jc.csv    # reference TN junctions (selected source only)
+    ├── isfinder_ref_tnjc.csv     # reference TN junctions (selected source only)
     └── isfinder_tn_end_seqs.csv  # TN boundary sequences (selected source only)
 ```
 
@@ -371,9 +367,8 @@ Organized by: reference → ancestor → isolate
         │ # Isolate runs (normalized coverage: iso/anc ratio)
         ├── {iso_name_1}/               # isolate 1 vs this ancestor
         │   ├── breseq/
-        │   ├── tn_jc.csv
-        │   ├── tn_jc2.csv
-        │   ├── tn_jc2_*.csv
+        │   ├── tnjc.csv
+        │   ├── tnjc2_*.csv
         │   ├── run_config.yaml
         │   ├── ISJC2.csv
         │   ├── candidate_amplifications.csv
@@ -430,7 +425,6 @@ Organized by: reference → ancestor → isolate
 | 2 | `LocateTNsUsingGenbankStep` | Finds TN from GenBank annotations | `findISinRef.m` |
 | 2 | `LocateTNsUsingISfinderStep` | Finds TN via BLAST to ISfinder DB | `ISfinder.m` |
 | 3 | `CreateRefTnJcStep` | Creates junctions for ref TN | `create_JC_of_reference_IS.m` |
-| 3 | `CreateRefTnEndSeqsStep` | TN flanking sequences for matching | `create_IS_end_seqs.m` |
 | 4 | `BreseqStep` | Runs breseq on FASTQ + reference | `run_breseq.m` |
 | 5 | `CreateTnJcStep` | Matches breseq JC to TN elements | `assign_potential_ISs.m` |
 | 6 | `CreateTnJc2Step` | Pairs junctions into TnJc2 | `combine_ISJC_pairs.m`, `calculate_amplicon_length.m` |
