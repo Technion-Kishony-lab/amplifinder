@@ -158,11 +158,11 @@ class Junction(Record):
     scaf2: str
     pos2: int
     dir2: Orientation
-    flanking_left: int   # Length of sequence flanking side 1 (used for sequence extraction)
-    flanking_right: int  # Length of sequence flanking side 2 (used for sequence extraction)
+    flanking_left: int   # Length of sequence flanking arm 1 (used for sequence extraction)
+    flanking_right: int  # Length of sequence flanking arm 2 (used for sequence extraction)
 
     def switch_sides(self: JunctionT) -> JunctionT:
-        """Return new junction with side 1 and side 2 swapped."""
+        """Return new junction with arm 1 and arm 2 swapped."""
         return self.model_copy(update={
             "scaf1": self.scaf2, "scaf2": self.scaf1,
             "pos1": self.pos2, "pos2": self.pos1,
@@ -170,20 +170,20 @@ class Junction(Record):
             "flanking_left": self.flanking_right, "flanking_right": self.flanking_left,
         })
 
-    def get_scaf_pos_dir_flank(self, side: int) -> tuple[str, int, Orientation, int]:
-        """Get scaffold, position, direction, and flanking length for a side."""
+    def get_scaf_pos_dir_flank(self, arm: int) -> tuple[str, int, Orientation, int]:
+        """Get scaffold, position, direction, and flanking length for an arm."""
         return (
-            self.scaf1 if side == 1 else self.scaf2, 
-            self.pos1 if side == 1 else self.pos2, 
-            self.dir1 if side == 1 else self.dir2, 
-            self.flanking_left if side == 1 else self.flanking_right
+            self.scaf1 if arm == 1 else self.scaf2, 
+            self.pos1 if arm == 1 else self.pos2, 
+            self.dir1 if arm == 1 else self.dir2, 
+            self.flanking_left if arm == 1 else self.flanking_right
             )
 
 
 class RefTnJunction(Junction):
     """Synthetic junction for reference TN element.
 
-    For RefTnJunction, side 1 is always the TN side, side 2 is the chromosome side.
+    For RefTnJunction, arm 1 is always the TN side, arm 2 is the chromosome side.
     ref_tn_side indicates which TN boundary (LEFT or RIGHT) this junction represents.
     """
     ref_tn_side: RefTnSide
@@ -192,7 +192,7 @@ class RefTnJunction(Junction):
 class TnJunction(Junction):
     """Junction matched to TN element(s)."""
     ref_tn_sides: List[RefTnSide]  # Reference TN matches: [(tn_id, side, distance?), ...]
-    switched: bool                 # True if BRESEQ sides were swapped (to normalize to TN on side 1)
+    switched: bool                 # True if BRESEQ arms were swapped (to normalize to TN on arm 1)
 
 
 ### Paired TN junctions ###

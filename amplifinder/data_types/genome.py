@@ -139,14 +139,14 @@ class Genome:
         else:
             return reverse_complement(self.get_fowrard_sequence_in_range(scaf, end, start))
 
-    def get_junction_side_sequence(self, jc: Junction, side: int) -> str:
-        """Get sequence for a junction side."""
-        scaf, pos, direction, flank_len = jc.get_scaf_pos_dir_flank(side)
+    def get_junction_arm_sequence(self, jc: Junction, arm: int) -> str:
+        """Get sequence for a junction arm."""
+        scaf, pos, direction, flank_len = jc.get_scaf_pos_dir_flank(arm)
         return self.get_sequence_in_range(scaf, pos, pos + flank_len * direction, direction)
 
     def get_junction_sequence(self, jc: Junction) -> str:
         """Get sequence for a junction."""
-        return reverse_complement(self.get_junction_side_sequence(jc, 1)) + self.get_junction_side_sequence(jc, 2)
+        return reverse_complement(self.get_junction_arm_sequence(jc, 1)) + self.get_junction_arm_sequence(jc, 2)
 
 class GenomeRegistry:
     """Registry for fetching and caching genomes.

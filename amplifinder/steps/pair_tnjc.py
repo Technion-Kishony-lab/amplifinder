@@ -69,7 +69,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
                 jc_i = junctions[i]
                 jc_j = junctions[j]
 
-                # (a1) Same scaffold for chromosome side (side 2)
+                # (a1) Same scaffold for chromosome arm (arm 2)
                 if jc_i.scaf2 != jc_j.scaf2:
                     continue
 

@@ -48,15 +48,15 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
 
     def _calculate_output(self) -> RecordTypedDf[RefTnJunction]:
         """Create synthetic junction records from TN locations."""
-        tnjcs = []
+        ref_tn_jcs = []
         for tn in self.ref_tn_locs:
             left_jc, right_jc = tn.get_junctions(self.reference_tn_out_span)
-            tnjcs.append(left_jc)
-            tnjcs.append(right_jc)
+            ref_tn_jcs.append(left_jc)
+            ref_tn_jcs.append(right_jc)
 
-        tnjcs = RecordTypedDf.from_records(tnjcs, RefTnJunction)
-        info(f"Created {len(tnjcs)} reference TN junctions")
-        return tnjcs
+        ref_tn_jcs = RecordTypedDf.from_records(ref_tn_jcs, RefTnJunction)
+        info(f"Created {len(ref_tn_jcs)} reference TN junctions")
+        return ref_tn_jcs
 
 
 class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):

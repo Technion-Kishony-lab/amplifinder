@@ -63,15 +63,15 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
             matches1 = self._find_ref_tn_sides_matches(jc, 1)
             matches2 = self._find_ref_tn_sides_matches(jc, 2)
 
-            is_side1_tn = len(matches1) > 0
-            is_side2_tn = len(matches2) > 0
+            is_arm1_tn = len(matches1) > 0
+            is_arm2_tn = len(matches2) > 0
 
-            # Skip if neither side matches a TN
-            if not is_side1_tn and not is_side2_tn:
+            # Skip if neither arm matches a TN
+            if not is_arm1_tn and not is_arm2_tn:
                 continue
 
-            # Normalize: side 1 should be the TN side
-            switched = not is_side1_tn and is_side2_tn
+            # Normalize: arm 1 should be the TN side
+            switched = not is_arm1_tn and is_arm2_tn
             if switched:
                 matches = matches2
                 jc = jc.switch_sides()
@@ -86,21 +86,21 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         info(f"Found {len(tnjcs)} TN-associated junctions (TnJc)")
         return tnjcs
 
-    def _get_junction_side_seq(self, jc: Junction, side: int) -> str:
-        """Extract sequence at junction side."""
-        seq = self.genome.get_junction_side_sequence(jc, side)
+    def _get_junction_arm_seq(self, jc: Junction, arm: int) -> str:
+        """Extract sequence at junction arm."""
+        seq = self.genome.get_junction_arm_sequence(jc, arm)
         if self.trim_jc_flanking == 0:
             return seq
         return seq[:-self.trim_jc_flanking]
 
-    def _find_ref_tn_sides_matches(self, jc: Junction, side: int) -> List[RefTnSide]:
-        """Find TN elements matching a junction side sequence."""
-        jc_side_seq = self._get_junction_side_seq(jc, side)
+    def _find_ref_tn_sides_matches(self, jc: Junction, arm: int) -> List[RefTnSide]:
+        """Find TN elements matching a junction arm sequence."""
+        jc_arm_seq = self._get_junction_arm_seq(jc, arm)
         matches = []
 
         for tn_side in self.seq_ref_tn_sides:
             # Check inward sequence (towards TN)
-            pos = tn_side.seq_inward.find(jc_side_seq)
+            pos = tn_side.seq_inward.find(jc_arm_seq)
             if pos >= 0:
                 distance = pos + tn_side.offset
                 if distance <= self.max_dist_to_tn:
