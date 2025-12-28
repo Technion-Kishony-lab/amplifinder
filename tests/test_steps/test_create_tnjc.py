@@ -21,11 +21,9 @@ def ref_tn_end_seqs(locate_tns_step, tiny_genome, tmp_output):
 
     return CreateRefTnEndSeqsStep(
         ref_tn_jcs=ref_jc,
-        ref_tn_locs=tn_loc,
         genome=tiny_genome,
         output_dir=tmp_output,
         source="isfinder",
-        max_dist_to_tn=20,
     ).run()
 
 
