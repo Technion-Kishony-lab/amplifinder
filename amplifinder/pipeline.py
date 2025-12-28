@@ -7,7 +7,7 @@ from typing import Tuple, Optional
 
 from amplifinder.config import Config
 from amplifinder.data_types import (
-    Genome, RecordTypedDf, RefTnLoc, RefTnJunction, SeqRefTnSide, Junction, TnJunction, RawTnJc2,
+    Genome, RecordTypedDf, RefTnLoc, RefTnJunction, Junction, TnJunction, RawTnJc2,
     CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.logger import info
@@ -20,7 +20,6 @@ from amplifinder.steps import (
     LocateTNsUsingGenbankStep,
     BreseqStep,
     CreateRefTnJcStep,
-    CreateRefTnEndSeqsStep,
     CreateTnJcStep,
     PairTnJcToRawTnJc2Step,
     CalcTnJc2AmpliconCoverageStep,
@@ -74,9 +73,9 @@ class Pipeline:
 
         # Run isolate pipeline
         tn_loc = self._locate_tns_in_reference(genome)
-        ref_tn_jc, ref_tn_end_seqs = self._create_ref_tn_junctions(tn_loc, genome, iso_output)
+        ref_tnjc = self._create_ref_tn_junctions(tn_loc, genome, iso_output)
         breseq_jc = self._run_breseq(genome, iso_output)
-        tnjcs = self._create_tnjc(breseq_jc, ref_tn_jc, ref_tn_end_seqs, genome, iso_output)
+        tnjcs = self._create_tnjc(breseq_jc, ref_tnjc, genome, iso_output)
         raw_tnjc2s = self._create_tnjc2(tnjcs, genome, iso_output)
         covered_tnjc2s = self._calc_amplicon_coverage(raw_tnjc2s, genome, iso_output)
         classified_tnjc2s = self._classify_structure(covered_tnjc2s, tn_loc, iso_output)
@@ -210,11 +209,11 @@ class Pipeline:
 
     def _create_ref_tn_junctions(
         self, ref_tn_locs: RecordTypedDf[RefTnLoc], genome: Genome, iso_output: Path
-    ) -> Tuple[RecordTypedDf[RefTnJunction], RecordTypedDf[SeqRefTnSide]]:
-        """Step 3: Create reference junctions and TN end sequences."""
+    ) -> RecordTypedDf[RefTnJunction]:
+        """Step 3: Create reference junctions."""
         cfg = self.config
 
-        ref_tn_jcs = CreateRefTnJcStep(
+        ref_tnjcs = CreateRefTnJcStep(
             ref_tn_locs=ref_tn_locs,
             genome=genome,
             output_dir=iso_output,
@@ -222,14 +221,7 @@ class Pipeline:
             reference_tn_out_span=cfg.reference_IS_out_span,
         ).run()
 
-        ref_tn_end_seqs = CreateRefTnEndSeqsStep(
-            ref_tn_jcs=ref_tn_jcs,
-            genome=genome,
-            output_dir=iso_output,
-            source=self.ref_tn_source,
-        ).run()
-
-        return ref_tn_jcs, ref_tn_end_seqs
+        return ref_tnjcs
 
     def _run_breseq(self, genome: Genome, iso_output: Path) -> RecordTypedDf[Junction]:
         """Step 4: Run breseq on isolate to get junctions."""
@@ -251,8 +243,7 @@ class Pipeline:
     def _create_tnjc(
         self,
         breseq_jcs: RecordTypedDf[Junction],
-        ref_tn_jcs: RecordTypedDf[RefTnJunction],
-        ref_tn_end_seqs: RecordTypedDf[SeqRefTnSide],
+        ref_tnjcs: RecordTypedDf[RefTnJunction],
         genome: Genome,
         iso_output: Path,
     ) -> RecordTypedDf[TnJunction]:
@@ -260,12 +251,12 @@ class Pipeline:
         cfg = self.config
 
         # Combine breseq junctions with reference TN junctions
-        junctions = pd.concat([breseq_jcs.df, ref_tn_jcs.df], ignore_index=True)
+        junctions = pd.concat([breseq_jcs.df, ref_tnjcs.df], ignore_index=True)
         junctions = RecordTypedDf(junctions, Junction)
 
         tnjcs = CreateTnJcStep(
             junctions=junctions,
-            seq_ref_tn_sides=ref_tn_end_seqs,
+            ref_tnjcs=ref_tnjcs,
             genome=genome,
             output_dir=iso_output,
             max_dist_to_tn=cfg.max_dist_to_IS,

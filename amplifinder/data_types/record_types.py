@@ -70,12 +70,6 @@ class RefTnSide(Record):
     distance: Optional[int] = None  # None for reference junctions
 
 
-class SeqRefTnSide(RefTnSide):
-    """TN element end sequence for matching."""
-    offset: int         # offset of the inward-seq start from the TN boundary (>0 for inward, <0 for outward)
-    seq_inward: str     # sequence inward from chromosome into TN
-
-
 ### Reference TN elements ###
 
 class RefTnLoc(Record):
@@ -108,20 +102,21 @@ class RefTnLoc(Record):
         """
         if in_span is None:
             in_span = self.length
+        side_left, side_right = self.get_sides()
         return (
             RefTnJunction(
                 num=-self.tn_id * 2,  # Left: even negative
                 scaf1=self.tn_scaf, pos1=self.loc_left, dir1=Orientation.FORWARD,
                 scaf2=self.tn_scaf, pos2=self.loc_left - 1, dir2=Orientation.REVERSE,
                 flanking_left=in_span, flanking_right=out_span,
-                ref_tn_side=RefTnSide(tn_id=self.tn_id, side=Side.LEFT),
+                ref_tn_side=side_left,
             ),
             RefTnJunction(
                 num=-self.tn_id * 2 - 1,  # Right: odd negative
                 scaf1=self.tn_scaf, pos1=self.loc_right, dir1=Orientation.REVERSE,
                 scaf2=self.tn_scaf, pos2=self.loc_right + 1, dir2=Orientation.FORWARD,
                 flanking_left=in_span, flanking_right=out_span,
-                ref_tn_side=RefTnSide(tn_id=self.tn_id, side=Side.RIGHT),
+                ref_tn_side=side_right,
             ),
         )
 
@@ -161,7 +156,7 @@ class Junction(Record):
     flanking_left: int   # Length of sequence flanking arm 1 (used for sequence extraction)
     flanking_right: int  # Length of sequence flanking arm 2 (used for sequence extraction)
 
-    def switch_sides(self: JunctionT) -> JunctionT:
+    def swap_sides(self: JunctionT) -> JunctionT:
         """Return new junction with arm 1 and arm 2 swapped."""
         return self.model_copy(update={
             "scaf1": self.scaf2, "scaf2": self.scaf1,
@@ -186,13 +181,24 @@ class RefTnJunction(Junction):
     For RefTnJunction, arm 1 is always the TN side, arm 2 is the chromosome side.
     ref_tn_side indicates which TN boundary (LEFT or RIGHT) this junction represents.
     """
+
+    #   chr      TN       chr
+    # ~~~~~~~|>>>>>>>>>|~~~~~~~    ref_tn_side.side == Side.LEFT
+    #        |------>              arm1, flanking_left (into TN)
+    #     <--|                     arm2, flanking_right (out of TN)
+
+    #   chr      TN       chr
+    # ~~~~~~~|>>>>>>>>>|~~~~~~~    ref_tn_side.side == Side.RIGHT
+    #           <------|           arm1, flanking_left (into TN)
+    #                  |-->        arm2, flanking_right (out of TN)
+
     ref_tn_side: RefTnSide
 
 
 class TnJunction(Junction):
     """Junction matched to TN element(s)."""
     ref_tn_sides: List[RefTnSide]  # Reference TN matches: [(tn_id, side, distance?), ...]
-    switched: bool                 # True if BRESEQ arms were swapped (to normalize to TN on arm 1)
+    swapped: bool                 # True if BRESEQ arms were swapped (to normalize to TN on arm 1)
 
 
 ### Paired TN junctions ###

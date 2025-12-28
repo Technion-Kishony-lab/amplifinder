@@ -5,7 +5,8 @@ from typing import Optional, List
 
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDf, Junction, SeqRefTnSide, RefTnSide, TnJunction, Orientation
+from amplifinder.data_types import RecordTypedDf, Junction, RefTnSide, TnJunction, Orientation, RefTnJunction
+from Bio.Seq import reverse_complement
 from amplifinder.data_types.genome import Genome
 
 
@@ -22,7 +23,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
     def __init__(
         self,
         junctions: RecordTypedDf[Junction],
-        seq_ref_tn_sides: RecordTypedDf[SeqRefTnSide],
+        ref_tnjcs: RecordTypedDf[RefTnJunction],
         genome: Genome,
         output_dir: Path,
         max_dist_to_tn: int,
@@ -32,8 +33,8 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         """Initialize step.
 
         Args:
-            jc_df: All junctions (breseq + reference TN junctions combined)
-            ref_tn_end_seqs: Precomputed TN end sequences (from CreateRefTnEndSeqsStep)
+            junctions: All junctions (breseq + reference TN junctions combined)
+            ref_tnjcs: Reference TN junctions (used to get sequences on-the-fly)
             genome: Reference genome (for junction sequence extraction)
             output_dir: Directory to write output
             max_dist_to_tn: Maximum distance from junction to TN boundary
@@ -41,10 +42,11 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
             force: Force re-run
         """
         self.junctions = junctions
-        self.seq_ref_tn_sides = seq_ref_tn_sides
+        self.ref_tnjcs = ref_tnjcs
         self.genome = genome
         self.max_dist_to_tn = max_dist_to_tn
         self.trim_jc_flanking = trim_jc_flanking
+        self._ref_tn_seqs: Optional[dict[RefTnJunction, tuple[str, int]]] = None
 
         super().__init__(
             output_dir=output_dir,
@@ -55,13 +57,14 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
     def _calculate_output(self) -> RecordTypedDf[TnJunction]:
         """Match junctions to TN elements."""
 
-        self.ref_seqs = self.genome.scaffold_sequences
-        tnjc_records = []
+        self._precompute_ref_tnjcs_sequences()
+        
+        tnjcs = []
 
         for jc in self.junctions:
             # Match against TN sequences
-            matches1 = self._find_ref_tn_sides_matches(jc, 1)
-            matches2 = self._find_ref_tn_sides_matches(jc, 2)
+            matches1 = self._find_ref_tn_sides_matches(jc, arm=1)
+            matches2 = self._find_ref_tn_sides_matches(jc, arm=2)
 
             is_arm1_tn = len(matches1) > 0
             is_arm2_tn = len(matches2) > 0
@@ -71,20 +74,28 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
                 continue
 
             # Normalize: arm 1 should be the TN side
-            switched = not is_arm1_tn and is_arm2_tn
-            if switched:
+            swapped = not is_arm1_tn and is_arm2_tn
+            if swapped:
                 matches = matches2
-                jc = jc.switch_sides()
+                jc = jc.swap_sides()
             else:
                 matches = matches1
 
-            tnjc_records.append(TnJunction.from_other(jc, ref_tn_sides=matches, switched=switched))
+            tnjcs.append(TnJunction.from_other(jc, ref_tn_sides=matches, swapped=swapped))
 
-        tnjcs = RecordTypedDf.from_records(tnjc_records, TnJunction)
+        tnjcs = RecordTypedDf.from_records(tnjcs, TnJunction)
         tnjcs = tnjcs.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
 
         info(f"Found {len(tnjcs)} TN-associated junctions (TnJc)")
         return tnjcs
+
+    def _precompute_ref_tnjcs_sequences(self) -> None:
+        """Pre-compute sequences for all reference TN junctions (cache to avoid recomputing)."""
+        self._ref_tn_seqs = {}
+        for ref_jc in self.ref_tnjcs:
+            seq_inward = self.genome.get_junction_sequence_arm2_to_arm1(ref_jc)
+            offset = -ref_jc.flanking_right
+            self._ref_tn_seqs[ref_jc] = (seq_inward, offset)
 
     def _get_junction_arm_seq(self, jc: Junction, arm: int) -> str:
         """Extract sequence at junction arm."""
@@ -98,15 +109,15 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         jc_arm_seq = self._get_junction_arm_seq(jc, arm)
         matches = []
 
-        for tn_side in self.seq_ref_tn_sides:
+        for ref_jc in self.ref_tnjcs:
+            # Use pre-computed sequence (cached in _calculate_output)
+            seq_inward, offset = self._ref_tn_seqs[ref_jc]
+
             # Check inward sequence (towards TN)
-            pos = tn_side.seq_inward.find(jc_arm_seq)
+            pos = seq_inward.find(jc_arm_seq)
             if pos >= 0:
-                distance = pos + tn_side.offset
+                distance = pos + offset
                 if distance <= self.max_dist_to_tn:
-                    matches.append(RefTnSide.from_other(tn_side, distance=distance))
+                    matches.append(RefTnSide.from_other(ref_jc.ref_tn_side, distance=distance))
                     continue
-
-            # TODO: Do we need to also check outward sequence (away from TN)?
-
         return matches

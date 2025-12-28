@@ -11,8 +11,8 @@ from amplifinder.data_types.records import Record
 
 
 DEFAULT_FILENAMES: Dict[Type[Record], str] = {
-    RefTnJunction: "ref_tn_jc.csv",
-    TnJunction: "tn_jc.csv",
+    RefTnJunction: "ref_tnjc.csv",
+    TnJunction: "tnjc.csv",
     RawTnJc2: "tnjc2_raw.csv",
     CoveredTnJc2: "tnjc2_covered.csv",
     ClassifiedTnJc2: "tnjc2_classified.csv",

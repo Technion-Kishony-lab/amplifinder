@@ -10,10 +10,11 @@ try:
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
 
-from amplifinder.data_types import AnalyzedTnJc2, RecordTypedDf
+from amplifinder.data_types import AnalyzedTnJc2, ClassifiedTnJc2, RecordTypedDf
 from amplifinder.config import Config
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.steps.amplicon_coverage import get_coverage_in_range
+from amplifinder.steps.io_naming import default_path
 from amplifinder.utils.file_utils import ensure_parent_dir
 from amplifinder.logger import info, warning
 
@@ -133,9 +134,9 @@ def visualize_candidates(
         raise FileNotFoundError(f"Config file not found in {run_dir}. Run pipeline first.")
 
     # Load analyzed candidates
-    analyzed_file = run_dir / "tn_jc2_classified.csv"
+    analyzed_file = default_path(run_dir, AnalyzedTnJc2)
     if not analyzed_file.exists():
-        analyzed_file = run_dir / "tn_jc2_analyzed.csv"
+        analyzed_file = default_path(run_dir, ClassifiedTnJc2)
 
     if not analyzed_file.exists():
         raise FileNotFoundError(f"Analyzed candidates file not found in {run_dir}")

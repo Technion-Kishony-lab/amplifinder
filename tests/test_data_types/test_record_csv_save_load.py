@@ -116,7 +116,7 @@ def make_tn_junction() -> TnJunction:
         flanking_left=50,
         flanking_right=50,
         ref_tn_sides=[RefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
-        switched=False,
+        swapped=False,
     )
 
 
@@ -133,7 +133,7 @@ def make_raw_tnjc2() -> RawTnJc2:
         flanking_left=50,
         flanking_right=50,
         ref_tn_sides=[RefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
-        switched=False,
+        swapped=False,
     )
     tnjc_b = TnJunction(
         num=2,
@@ -146,7 +146,7 @@ def make_raw_tnjc2() -> RawTnJc2:
         flanking_left=50,
         flanking_right=50,
         ref_tn_sides=[RefTnSide(tn_id=1, side=Side.RIGHT, distance=0)],
-        switched=False,
+        swapped=False,
     )
     return RawTnJc2(
         tnjc_a=tnjc_a,

@@ -110,7 +110,7 @@ Record
     └── TnJunction(Junction)
         ├── [inherits all Junction fields]
         ├── ref_tn_sides: List[RefTnSide]
-        └── switched: bool
+        └── swapped: bool
 ```
 
 #### TN Junction Pair (Amplicon) Records

@@ -125,8 +125,8 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         Normalizes so that L (left) junction has lower chromosome position.
         """
         # Determine which is left/right based on position
-        switched = jc_i.pos2 > jc_j.pos2
-        if switched:
+        swapped = jc_i.pos2 > jc_j.pos2
+        if swapped:
             jc_L, jc_R = jc_j, jc_i
         else:
             jc_L, jc_R = jc_i, jc_j
@@ -135,7 +135,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         # MATLAB: orientation = side_i * dir2(i), where i is L
         tn_ids = [m[0] for m in matching_tns]
         # Use dir2 of the left junction (jc_L) for orientation calculation
-        tn_orientations = [Orientation(side_i.value * jc_L.dir2.value * (-1 if switched else 1))
+        tn_orientations = [Orientation(side_i.value * jc_L.dir2.value * (-1 if swapped else 1))
                            for _, side_i in matching_tns]
 
         # Span origin: if left junction points left (REVERSE), amplicon spans origin

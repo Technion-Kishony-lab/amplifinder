@@ -1,8 +1,8 @@
-"""Tests for CreateRefTnJcStep and CreateRefTnEndSeqsStep."""
+"""Tests for CreateRefTnJcStep."""
 
 import pytest
 
-from amplifinder.steps import CreateRefTnJcStep, CreateRefTnEndSeqsStep
+from amplifinder.steps import CreateRefTnJcStep
 from amplifinder.data_types import RecordTypedDf, Side
 
 
@@ -49,24 +49,3 @@ def test_skips_if_exists(ref_jc_step):
     assert ref_jc_step.run_count == 1  # didn't run again
 
 
-# --- CreateRefTnEndSeqsStep ---
-
-@pytest.fixture
-def end_seqs_step(ref_jc_step, locate_tns_step, tiny_genome, tmp_output):
-    """Create TN end sequences step."""
-    ref_jc = ref_jc_step.run()
-    return CreateRefTnEndSeqsStep(
-        ref_tn_jcs=ref_jc,
-        genome=tiny_genome,
-        output_dir=tmp_output,
-        source="isfinder",
-    )
-
-
-def test_creates_end_sequences(end_seqs_step):
-    """Should create end sequences for each junction."""
-    end_seqs = end_seqs_step.run()
-
-    assert isinstance(end_seqs, RecordTypedDf)
-    assert len(end_seqs.df) == 4  # 4 junctions
-    assert all(len(seq.seq_inward) > 0 for seq in end_seqs)

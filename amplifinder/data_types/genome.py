@@ -144,9 +144,14 @@ class Genome:
         scaf, pos, direction, flank_len = jc.get_scaf_pos_dir_flank(arm)
         return self.get_sequence_in_range(scaf, pos, pos + flank_len * direction, direction)
 
-    def get_junction_sequence(self, jc: Junction) -> str:
-        """Get sequence for a junction."""
+    def get_junction_sequence_arm1_to_arm2(self, jc: Junction) -> str:
+        """Get sequence for a junction from arm 1 to arm 2."""
         return reverse_complement(self.get_junction_arm_sequence(jc, 1)) + self.get_junction_arm_sequence(jc, 2)
+
+    def get_junction_sequence_arm2_to_arm1(self, jc: Junction) -> str:
+        """Get sequence for a junction from arm 2 to arm 1."""
+        return reverse_complement(self.get_junction_arm_sequence(jc, 2)) + self.get_junction_arm_sequence(jc, 1)
+
 
 class GenomeRegistry:
     """Registry for fetching and caching genomes.

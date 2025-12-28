@@ -118,14 +118,14 @@ output/
     └── {anc_name}/                # ancestor group
         ├── {anc_name}/            # ancestor run
         │   ├── breseq/
-        │   ├── tn_jc.csv
-        │   ├── tn_jc2.csv
+        │   ├── tnjc.csv
+        │   ├── tnjc2_*.csv
         │   └── jc_*/              # per-candidate directories
         │
         └── {iso_name}/            # isolate run
             ├── breseq/
-            ├── tn_jc.csv
-            ├── tn_jc2.csv
+            ├── tnjc.csv
+            ├── tnjc2_*.csv
             ├── ISJC2.csv
             ├── candidate_amplifications.csv
             ├── run_config.yaml
