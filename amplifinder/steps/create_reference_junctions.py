@@ -48,32 +48,15 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
 
     def _calculate_output(self) -> RecordTypedDf[RefTnJunction]:
         """Create synthetic junction records from TN locations."""
-
-        jc_records = []
-
+        tnjcs = []
         for tn in self.ref_tn_locs:
-            # pos1 and pos2 are stored as 1-based (genomic coordinates)
-            # Left junction: TN left boundary -> chromosome
-            jc_records.append(RefTnJunction(
-                num=0,
-                scaf1=tn.tn_scaf, pos1=tn.loc_left, dir1=Orientation.FORWARD,
-                scaf2=tn.tn_scaf, pos2=tn.loc_left - 1, dir2=Orientation.REVERSE,
-                flanking_left=tn.length, flanking_right=self.reference_tn_out_span,
-                ref_tn_side=RefTnSide(tn_id=tn.tn_id, side=Side.LEFT),
-            ))
+            left_jc, right_jc = tn.get_junctions(self.reference_tn_out_span)
+            tnjcs.append(left_jc)
+            tnjcs.append(right_jc)
 
-            # Right junction: TN right boundary -> chromosome
-            jc_records.append(RefTnJunction(
-                num=0,
-                scaf1=tn.tn_scaf, pos1=tn.loc_right, dir1=Orientation.REVERSE,
-                scaf2=tn.tn_scaf, pos2=tn.loc_right + 1, dir2=Orientation.FORWARD,
-                flanking_left=tn.length, flanking_right=self.reference_tn_out_span,
-                ref_tn_side=RefTnSide(tn_id=tn.tn_id, side=Side.RIGHT),
-            ))
-
-        result = RecordTypedDf.from_records(jc_records, RefTnJunction)
-        info(f"Created {len(jc_records)} reference TN junctions")
-        return result
+        tnjcs = RecordTypedDf.from_records(tnjcs, RefTnJunction)
+        info(f"Created {len(tnjcs)} reference TN junctions")
+        return tnjcs
 
 
 class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):

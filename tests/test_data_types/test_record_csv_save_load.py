@@ -91,7 +91,7 @@ def make_junction(num: int = 1) -> Junction:
 def make_ref_tn_junction() -> RefTnJunction:
     """Create sample RefTnJunction."""
     return RefTnJunction(
-        num=0,
+        num=-2,  # tn_id=1, LEFT -> -1*2 = -2
         scaf1="chr1",
         pos1=100,
         dir1=Orientation.FORWARD,
