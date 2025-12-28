@@ -85,7 +85,7 @@ class RefTnLoc(Record):
     tn_scaf: str
     loc_left: int
     loc_right: int
-    complement: bool
+    orientation: Orientation
     join: bool
 
     @property

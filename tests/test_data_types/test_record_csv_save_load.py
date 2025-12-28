@@ -38,7 +38,7 @@ def make_ref_tn_loc(tn_id: int = 1) -> RefTnLoc:
         tn_scaf="chr1",
         loc_left=100,
         loc_right=200,
-        complement=False,
+        orientation=Orientation.FORWARD,
         join=False,
     )
 

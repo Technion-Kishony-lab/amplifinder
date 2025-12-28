@@ -3,7 +3,7 @@
 import pandas as pd
 
 from amplifinder.steps.locate_tns import compare_tn_locations
-from amplifinder.data_types import RecordTypedDf, RefTnLoc
+from amplifinder.data_types import Orientation, RecordTypedDf, RefTnLoc
 
 
 def make_tn_loc(records: list[dict]) -> RecordTypedDf[RefTnLoc]:
@@ -16,7 +16,7 @@ def make_tn_loc(records: list[dict]) -> RecordTypedDf[RefTnLoc]:
         "tn_scaf": [r.get("tn_scaf", "chr1") for r in records],
         "loc_left": [r["loc_left"] for r in records],
         "loc_right": [r["loc_right"] for r in records],
-        "complement": [r.get("complement", False) for r in records],
+        "orientation": [Orientation.REVERSE if r.get("complement", False) else Orientation.FORWARD for r in records],
         "join": [r.get("join", False) for r in records],
     }), RefTnLoc)
 

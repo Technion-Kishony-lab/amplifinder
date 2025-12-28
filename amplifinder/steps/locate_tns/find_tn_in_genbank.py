@@ -7,7 +7,7 @@ from typing import List, Optional
 from Bio.SeqFeature import SeqFeature
 from Bio.SeqRecord import SeqRecord
 
-from amplifinder.data_types.record_types import RefTnLoc, TnId
+from amplifinder.data_types.record_types import Orientation, RefTnLoc, TnId
 
 
 def find_tn_elements(gb_records: List[SeqRecord]) -> List[RefTnLoc]:
@@ -37,7 +37,7 @@ def find_tn_elements(gb_records: List[SeqRecord]) -> List[RefTnLoc]:
                 tn_scaf=scaf_name,
                 loc_left=int(location.start) + 1,  # Convert 0-based to 1-based inclusive
                 loc_right=int(location.end),       # BioPython end is exclusive, stored as 1-based inclusive
-                complement=location.strand == -1,
+                orientation=Orientation.REVERSE if location.strand == -1 else Orientation.FORWARD,
                 join=hasattr(location, 'parts') and len(location.parts) > 1,
             ))
 
