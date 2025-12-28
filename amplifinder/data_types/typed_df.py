@@ -5,7 +5,7 @@ import pandas as pd
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Type, TypeVar
+from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Type, TypeVar, get_origin, get_args
 
 from amplifinder.data_types.records import Record, Schema
 from amplifinder.data_types.validate_and_cast_df import validate_and_cast_df
@@ -60,10 +60,27 @@ class TypedDF:
 
     def to_csv(self, path: Path) -> None:
         """Save DataFrame to CSV. Handles empty DataFrames by creating file with headers only."""
+        from amplifinder.data_types.validate_and_cast_df import _is_optional
+        
         df = self.df.copy()
+        
+        # Convert Optional[int] columns to Int64 to preserve integer format in CSV
+        dtypes = self.schema.dtypes
+        for col in df.columns:
+            if col in dtypes:
+                col_dtype = dtypes[col].dtype
+                # Check if it's Optional[int]
+                if _is_optional(col_dtype):
+                    inner_type = next((a for a in get_args(col_dtype) if a is not type(None)), None)
+                    if inner_type is int:
+                        # Convert to Int64 (nullable integer) to preserve integer format
+                        df[col] = df[col].astype("Int64")
+        
+        # Serialize object columns (enums, Records, etc.)
         for col in df.columns:
             if df[col].dtype == object:
                 df[col] = df[col].apply(_serialize_for_csv)
+        
         df.to_csv(path, index=False, header=self.headers)
 
     @staticmethod
