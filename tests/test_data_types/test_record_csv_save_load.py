@@ -51,7 +51,6 @@ def make_seq_ref_tn_side(tn_id: int = 1) -> SeqRefTnSide:
         distance=0,
         offset=10,
         seq_inward="ATCGATCGAT",
-        seq_inward_rc="CGATCGATCG",
     )
 
 

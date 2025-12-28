@@ -97,7 +97,6 @@ class CreateRefTnEndSeqsStep(RecordTypedDfStep[SeqRefTnSide]):
             jc.ref_tn_side,
             offset=-jc.flanking_right,
             seq_inward=reverse_complement(self.genome.get_junction_sequence(jc)),
-            seq_inward_rc=self.genome.get_junction_sequence(jc),
         ) for jc in self.ref_tn_jcs]
 
         seq_ref_tn_sides = RecordTypedDf.from_records(seq_ref_tn_sides, SeqRefTnSide)

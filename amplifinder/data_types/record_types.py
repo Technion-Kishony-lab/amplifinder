@@ -119,7 +119,6 @@ class SeqRefTnSide(RefTnSide):
     """TN element end sequence for matching."""
     offset: int         # offset of the inward-seq start from the TN boundary (>0 for inward, <0 for outward)
     seq_inward: str     # sequence inward from chromosome into TN
-    seq_inward_rc: str  # Reverse complement of the inward sequence
 
 
 class BlastHit(Record):
