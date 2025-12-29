@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, RefTnLoc, RefTnJunction, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
 
@@ -53,5 +52,5 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
             ref_tnjcs.append(right_jc)
 
         ref_tnjcs = RecordTypedDf.from_records(ref_tnjcs, RefTnJunction)
-        info(f"Created {len(ref_tnjcs)} reference TN junctions")
+        self.log(f"Created {len(ref_tnjcs)} reference TN junctions")
         return ref_tnjcs

@@ -255,10 +255,13 @@ def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
 
     # Convert to DataFrames
     results = {}
+    name_width = max(len(n) for n in records) if records else 0
     for name, recs in records.items():
         df = pd.DataFrame(recs) if recs else pd.DataFrame()
         results[name] = df
-        info(f"  {name}: {len(df)} records")
+        name_col = name.ljust(max(8, name_width))
+        count_col = str(len(df)).rjust(4)
+        info(f"  {name_col}: {count_col} records")
 
     return results
 

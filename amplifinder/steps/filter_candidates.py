@@ -7,7 +7,6 @@ from amplifinder.data_types import (
     RecordTypedDf, ClassifiedTnJc2, FilteredTnJc2,
 )
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.logger import info
 
 
 class FilterTnJc2CandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
@@ -66,6 +65,6 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
             candidate_records.append(candidate)
 
         result = RecordTypedDf.from_records(candidate_records, FilteredTnJc2)
-        info(f"Filtered to {len(result)} candidates (from {len(self.classified_tnjc2s)} classified)")
+        self.log(f"Filtered to {len(result)} candidates (from {len(self.classified_tnjc2s)} classified)")
 
         return result

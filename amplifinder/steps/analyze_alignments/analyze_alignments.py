@@ -9,7 +9,6 @@ from amplifinder.data_types import (
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.steps.analyze_alignments.parse_bam import get_junction_coverage
 from amplifinder.steps.analyze_alignments.classify import classify_architecture, classify_event
-from amplifinder.logger import info
 
 
 class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
@@ -68,7 +67,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             # Get isolate junction coverage
             iso_bam = analysis_dir / "iso.sorted.bam"
             if not iso_bam.exists():
-                info(f"Skipping {filtered_tnjc2.analysis_dir}: no iso.sorted.bam")
+                self.log(f"Skipping {filtered_tnjc2.analysis_dir}: no iso.sorted.bam")
                 continue
 
             iso_jc_cov = get_junction_coverage(iso_bam, self.read_length, min_overlap=self.min_overlap)

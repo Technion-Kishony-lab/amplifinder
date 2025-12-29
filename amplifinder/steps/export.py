@@ -5,7 +5,6 @@ from typing import Optional
 
 from amplifinder.data_types import RecordTypedDf, AnalyzedTnJc2, ExportedTnJc2
 from amplifinder.steps.base import Step
-from amplifinder.logger import info
 
 
 class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
@@ -73,7 +72,7 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
 
         # Export tnjc2_exported.csv (all candidates) - to_csv handles empty DataFrames automatically
         export_df.to_csv(self.isjc2_file)
-        info(f"Exported {len(export_df)} candidates to {self.isjc2_file}")
+        self.log(f"Exported {len(export_df)} candidates to {self.isjc2_file}")
 
         # Filter candidates for candidate_amplifications.csv
         filtered = export_df.pipe(
@@ -86,7 +85,7 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
 
         # to_csv handles empty DataFrames automatically
         filtered.to_csv(self.candidates_file)
-        info(f"Exported {len(filtered)} filtered candidates to {self.candidates_file}")
+        self.log(f"Exported {len(filtered)} filtered candidates to {self.candidates_file}")
 
         return export_df
 

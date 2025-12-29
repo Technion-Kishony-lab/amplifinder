@@ -165,7 +165,6 @@ class Pipeline:
             ref_path=self.config.ref_path,
             ncbi=self.config.ncbi,
         ).run()
-        info(f"Reference: {genome.name} ({len(genome):,} bp)")
         return genome
 
     def _locate_tns_in_reference(self, genome: Genome) -> RecordTypedDf[RefTnLoc]:
@@ -262,7 +261,6 @@ class Pipeline:
             max_dist_to_tn=cfg.max_dist_to_IS,
             trim_jc_flanking=cfg.trim_jc_flanking,
         ).run()
-        info(f"TnJc: {len(tnjcs)} TN-associated junctions")
         return tnjcs
 
     def _create_tnjc2(
@@ -328,7 +326,6 @@ class Pipeline:
             output_dir=iso_output,
             min_amplicon_length=self.config.min_amplicon_length,
         ).run()
-        info(f"Classification: {len(classified_tnjc2s)} candidates")
         return classified_tnjc2s
 
     def _filter_candidates(
@@ -343,7 +340,6 @@ class Pipeline:
             min_amplicon_length=self.config.min_amplicon_length,
             max_amplicon_length=self.config.max_amplicon_length,
         ).run()
-        info(f"Filtered: {len(filtered_tnjc2s)} candidates")
         return filtered_tnjc2s
 
     def _create_synthetic_junctions(
@@ -364,7 +360,6 @@ class Pipeline:
             output_dir=iso_output,
             read_length=self._get_iso_read_length(),
         ).run()
-        info(f"Created synthetic junctions for {len(filtered_tnjc2s)} candidates")
 
     def _align_reads(
         self,
@@ -379,13 +374,12 @@ class Pipeline:
 
         # Align isolate reads in isolate folder
         AlignReadsToJunctionsStep(
-            candidates=filtered_tnjc2s,
+            filtered_tnjc2s=filtered_tnjc2s,
             output_dir=iso_output,
             iso_fastq_path=cfg.iso_path,
             anc_fastq_path=None,  # Only align isolate reads here
             threads=cfg.breseq_threads,
         ).run()
-        info(f"Aligned isolate reads for {len(filtered_tnjc2s)} candidates")
 
         # If ancestor exists, copy junctions to ancestor folder (if not already there),
         # then align ancestor reads in ancestor folder
@@ -395,13 +389,12 @@ class Pipeline:
             self._copy_junctions_to_ancestor(filtered_tnjc2s, iso_output)
             # Then align ancestor reads in ancestor folder
             AlignReadsToJunctionsStep(
-                candidates=filtered_tnjc2s,
+                filtered_tnjc2s=filtered_tnjc2s,
                 output_dir=cfg.anc_run_dir,
                 iso_fastq_path=cfg.anc_path,  # Ancestor reads aligned as "iso" in ancestor folder
                 anc_fastq_path=None,
                 threads=cfg.breseq_threads,
             ).run()
-            info(f"Aligned ancestor reads for {len(filtered_tnjc2s)} candidates")
 
     def _analyze_alignments(
         self,
@@ -423,7 +416,6 @@ class Pipeline:
             min_jct_cov=self.config.min_jct_cov,
             has_ancestor=self.config.has_ancestor,
         ).run()
-        info(f"Analyzed: {len(analyzed_tnjc2s)} candidates")
         return analyzed_tnjc2s
 
     def _classify_candidates(
@@ -441,7 +433,6 @@ class Pipeline:
             has_ancestor=self.config.has_ancestor,
             min_jct_cov=self.config.min_jct_cov,
         ).run()
-        info(f"Final classification: {len(analyzed_tnjc2s)} candidates")
         return analyzed_tnjc2s
 
     def _export(
@@ -460,7 +451,6 @@ class Pipeline:
             del_copy_number_threshold=self.config.del_copy_number_threshold,
             filter_amplicon_length=self.config.filter_amplicon_length,
         ).run()
-        info("Exported results to CSV")
 
 
 def run_pipeline(config: Config) -> RecordTypedDf[AnalyzedTnJc2]:

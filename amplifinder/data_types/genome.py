@@ -190,13 +190,19 @@ class GenomeRegistry:
         # Try to load from cache
         genome = self._load_cached(ref_name)
         if genome:
+            info(f"Reference {ref_name} loaded from cache")
             return genome
 
         # Fetch from NCBI
         if ncbi:
+            info(f"Fetching {ref_name} from NCBI...")
             return self._fetch_from_ncbi(ref_name)
 
         raise FileNotFoundError(f"Genome {ref_name} not found in {self.ref_path}")
+
+    def exists(self, ref_name: str) -> bool:
+        """Return True if genome is cached locally."""
+        return self._load_cached(ref_name) is not None
 
     def _load_cached(self, ref_name: str) -> Optional[Genome]:
         """Try to load genome from cache (GenBank or FASTA)."""
@@ -210,7 +216,6 @@ class GenomeRegistry:
         has_fasta = fasta_file.exists()
 
         if has_genbank or has_fasta:
-            info(f"Reference {ref_name} loaded from cache")
             # Ensure mapping file exists
             if not self._mapping_file(ref_name).exists():
                 self._write_mapping(ref_name, locus_name)
@@ -282,5 +287,9 @@ class GenomeRegistry:
 
 def get_genome(ref_name: str, ref_path: Path, ncbi: bool = True) -> Genome:
     """Get genome by name (convenience wrapper for GenomeRegistry)."""
-    registry = GenomeRegistry(ref_path)
-    return registry.get(ref_name, ncbi=ncbi)
+    return GenomeRegistry(ref_path).get(ref_name, ncbi=ncbi)
+
+
+def exists_genome(ref_name: str, ref_path: Path) -> bool:
+    """Return True if genome is cached locally."""
+    return GenomeRegistry(ref_path).exists(ref_name)

@@ -9,6 +9,11 @@ from amplifinder.utils.run_utils import get_tool_path, run_command
 from amplifinder.utils.file_utils import ensure_parent_dir
 
 
+def _folder_label(path: Path) -> str:
+    """Return the parent folder name for concise logging."""
+    return Path(path).parent.name
+
+
 def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
     """Build bowtie2 index from FASTA file.
 
@@ -36,7 +41,7 @@ def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
     ]
 
     run_command(cmd, check=True, capture_output=True, text=True)
-    info(f"Built bowtie2 index: {index_prefix}")
+    info(f"Built bowtie2 index: {_folder_label(index_prefix)}")
 
 
 def run_bowtie2_align(
@@ -108,7 +113,7 @@ def run_bowtie2_align(
         cmd.append("--local")
 
     run_command(cmd, check=True, capture_output=True, text=True)
-    info(f"Aligned reads to: {output_sam}")
+    info(f"Aligned reads to: {_folder_label(output_sam)}")
 
 
 def sam_to_sorted_bam(
@@ -149,7 +154,7 @@ def sam_to_sorted_bam(
 
     run_command(cmd_index, check=True, capture_output=True, text=True)
 
-    info(f"Created sorted BAM: {bam_path}")
+    info(f"Created sorted BAM: {_folder_label(bam_path)}")
 
 
 def align_reads_to_fasta(
@@ -176,7 +181,7 @@ def align_reads_to_fasta(
     """
     # Skip if output already exists
     if output_bam.exists() and (output_bam.parent / f"{output_bam.name}.bai").exists():
-        info(f"BAM file already exists: {output_bam}, skipping alignment")
+        info(f"BAM file already exists: {_folder_label(output_bam)}, skipping alignment")
         return
 
     # Paths
