@@ -5,7 +5,11 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple, TypeVar
+
+import numpy as np
+
+T = TypeVar('T', str, np.ndarray)
 
 from Bio import Entrez, SeqIO
 from Bio.Seq import reverse_complement
@@ -17,6 +21,53 @@ from amplifinder.utils.file_utils import ensure_dir
 
 # Set email for NCBI Entrez (required)
 Entrez.email = "amplifinder@example.com"
+
+
+def _normalize_range(start: int, end: int, length: int, is_circular: bool) -> Tuple[int, int, bool]:
+    """Normalize coordinates for range extraction (1-based inclusive).
+
+    Args:
+        start: Start position (1-based, inclusive)
+        end: End position (1-based, inclusive)
+        length: Length of sequence/array
+        is_circular: Whether sequence is circular
+
+    Returns:
+        Tuple of (normalized_start, normalized_end, spans_origin)
+        All values are 1-based inclusive.
+    """
+    if not is_circular:
+        return start, end, False
+    # Normalize using modulo arithmetic
+    start_norm = (start - 1) % length + 1
+    end_norm = (end - 1) % length + 1
+    spans_origin = start_norm > end_norm
+    return start_norm, end_norm, spans_origin
+
+
+def _get_range(seq, start: int, end: int, is_circular: bool):
+    """Get range from sequence-like object with coordinate normalization.
+
+    Args:
+        seq: Sequence (string) or array (numpy array)
+        start: Start position (1-based, inclusive)
+        end: End position (1-based, inclusive)
+        is_circular: Whether sequence is circular
+
+    Returns:
+        Extracted range (same type as input)
+    """
+    start_norm, end_norm, spans_origin = _normalize_range(
+        start, end, len(seq), is_circular
+    )
+    if not spans_origin:
+        return seq[start_norm - 1:end_norm]
+    else:
+        # Handle origin spanning: concatenate start-to-end and origin-to-end
+        if isinstance(seq, np.ndarray):
+            return np.concatenate([seq[start_norm - 1:], seq[:end_norm]])
+        else:
+            return seq[start_norm - 1:] + seq[:end_norm]
 
 
 @dataclass
@@ -117,20 +168,31 @@ class Genome:
         return ranges
 
     def get_fowrard_sequence_in_range(self, scaf: str, start: int, end: int) -> str:
-        """
-        Get sequence in a range. 1-based inclusive.
+        """Get sequence in a range. 1-based inclusive.
+
         Uses modulo arithmetic to handle circular genome.
         """
-        scaf_circular = self.scaffold_circularities[scaf]
         scaf_seq = self.scaffold_sequences[scaf]
-        if not scaf_circular:
-            return scaf_seq[start - 1:end]
-        start = (start - 1) % len(scaf_seq) + 1
-        end = (end - 1) % len(scaf_seq) + 1
-        if start <= end:
-            return scaf_seq[start - 1:end]
-        else:
-            return scaf_seq[start - 1:] + scaf_seq[:end]
+        return self.slice_in_range(scaf, scaf_seq, start, end)
+
+    def slice_in_range(self, scaf: str, seq: T, start: int, end: int) -> T:
+        """Slice in range [start, end] (1-based, inclusive). Returns same type as input.
+
+        Args:
+            scaf: Scaffold name
+            seq: Sequence string or coverage array for the scaffold (0-based indexing)
+            start: Start position (1-based, inclusive)
+            end: End position (1-based, inclusive)
+
+        Returns:
+            Sliced sequence or coverage array in the specified range
+
+        Note:
+            Consistent coordinate handling with get_fowrard_sequence_in_range().
+            Also works with string sequences (used internally).
+        """
+        scaf_circular = self.scaffold_circularities[scaf]
+        return _get_range(seq, start, end, scaf_circular)
 
     def get_sequence_in_range(self, scaf: str, start: int, end: int, direction: Orientation) -> str:
         """Get sequence in a range."""
