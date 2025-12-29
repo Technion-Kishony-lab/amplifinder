@@ -152,7 +152,7 @@ class Step(ABC, Generic[T]):
             return self._run_unlocked()
 
         # Acquire lock and re-check (TOCTOU fix)
-        lock_target = self.output_files[0]
+        lock_target = self._get_lock_target()
         with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
             # Re-check under lock: another process may have created output
             if not self.force and self.has_output_files():
@@ -160,6 +160,10 @@ class Step(ABC, Generic[T]):
                 return self.load_outputs()
             self.log("running (under lock)", extra=header_extra)
             return self._run_unlocked()
+
+    def _get_lock_target(self) -> Path:
+        """Path used for step lock; override to customize lock scope."""
+        return self.output_files[0]
 
     def _run_unlocked(self) -> T:
         """Execute step logic (assumes lock is held or not needed)."""
