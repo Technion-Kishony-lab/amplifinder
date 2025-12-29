@@ -243,7 +243,6 @@ class GenomeRegistry:
 
     def _fetch_from_ncbi(self, ref_name: str) -> Genome:
         """Fetch genome from NCBI and cache locally."""
-        info(f"Fetching {ref_name} from NCBI...")
         ensure_dir(self.genbank_dir)
 
         # Download GenBank

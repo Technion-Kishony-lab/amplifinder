@@ -11,6 +11,7 @@ from amplifinder.data_types import (
     CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.logger import info
+from amplifinder.steps.run_breseq import AncBreseqStep
 from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.utils.fasta import get_read_length
 from amplifinder.steps import (
@@ -108,15 +109,13 @@ class Pipeline:
             anc_breseq_path = anc_output / "breseq"
 
         # Run breseq (BreseqStep handles caching - skips if output exists)
-        BreseqStep(
+        AncBreseqStep(
             output_path=anc_breseq_path,
             fastq_path=self.config.anc_path,
             ref_file=genome.genbank_path or genome.fasta_path,
             docker=self.config.breseq_docker,
             threads=self.config.breseq_threads,
         ).run()
-
-        info("Ancestor breseq completed")
 
     def _copy_junctions_to_ancestor(
         self,
@@ -275,7 +274,6 @@ class Pipeline:
             genome=genome,
             output_dir=iso_output,
         ).run()
-        info(f"RawTnJc2: {len(raw_tnjc2s)} junction pairs")
         return raw_tnjc2s
 
     def _calc_amplicon_coverage(

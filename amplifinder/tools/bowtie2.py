@@ -14,6 +14,11 @@ def _folder_label(path: Path) -> str:
     return Path(path).parent.name
 
 
+def _info(msg: str, path: Path) -> None:
+    """Log a message with the parent folder name."""
+    info(f"{msg:>25} {_folder_label(path)}")
+
+
 def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
     """Build bowtie2 index from FASTA file.
 
@@ -41,7 +46,7 @@ def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
     ]
 
     run_command(cmd, check=True, capture_output=True, text=True)
-    info(f"Built bowtie2 index: {_folder_label(index_prefix)}")
+    _info("Built bowtie2 index", index_prefix)
 
 
 def run_bowtie2_align(
@@ -113,7 +118,7 @@ def run_bowtie2_align(
         cmd.append("--local")
 
     run_command(cmd, check=True, capture_output=True, text=True)
-    info(f"Aligned reads to: {_folder_label(output_sam)}")
+    _info("Aligned reads to", output_sam)
 
 
 def sam_to_sorted_bam(
@@ -154,7 +159,7 @@ def sam_to_sorted_bam(
 
     run_command(cmd_index, check=True, capture_output=True, text=True)
 
-    info(f"Created sorted BAM: {_folder_label(bam_path)}")
+    _info("Created sorted BAM", bam_path)
 
 
 def align_reads_to_fasta(
@@ -181,7 +186,7 @@ def align_reads_to_fasta(
     """
     # Skip if output already exists
     if output_bam.exists() and (output_bam.parent / f"{output_bam.name}.bai").exists():
-        info(f"BAM file already exists: {_folder_label(output_bam)}, skipping alignment")
+        _info("BAM exists, skipping alignment", output_bam)
         return
 
     # Paths
