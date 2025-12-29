@@ -334,8 +334,54 @@ def load_breseq_coverage(breseq_path: Path, ref_name: str) -> np.ndarray:
     if not cov_file.exists():
         raise FileNotFoundError(f"Coverage file not found: {cov_file}")
 
-    df = pd.read_csv(cov_file, sep="\t", usecols=["unique_top_cov", "unique_bot_cov"])
-    return (df["unique_top_cov"] + df["unique_bot_cov"]).values
+    fast = _load_cov_pyarrow(cov_file)
+    if fast is not None:
+        return fast
+
+    warning(f"Falling back to pandas for coverage load: {cov_file}")
+    df = pd.read_csv(
+        cov_file,
+        sep="\t",
+        usecols=["unique_top_cov", "unique_bot_cov"],
+        dtype={"unique_top_cov": np.int32, "unique_bot_cov": np.int32},
+        engine="c",
+        memory_map=True,
+    )
+    return (df["unique_top_cov"] + df["unique_bot_cov"]).to_numpy()
+
+
+def _load_cov_pyarrow(cov_file: Path) -> Optional[np.ndarray]:
+    """Fast-path coverage load using pyarrow if available."""
+    try:
+        import pyarrow as pa  # type: ignore
+        import pyarrow.csv as pacsv  # type: ignore
+        import pyarrow.compute as pc  # type: ignore
+    except ImportError:
+        return None
+
+    cols = ["unique_top_cov", "unique_bot_cov"]
+    try:
+        table = pacsv.read_csv(
+            cov_file,
+            read_options=pacsv.ReadOptions(use_threads=True),
+            parse_options=pacsv.ParseOptions(delimiter="\t"),
+            convert_options=pacsv.ConvertOptions(
+                include_columns=cols,
+                column_types={
+                    "unique_top_cov": pa.int32(),
+                    "unique_bot_cov": pa.int32(),
+                },
+            ),
+        )
+    except pa.ArrowKeyError:
+        return None
+
+    for col in cols:
+        if col not in table.column_names:
+            return None
+
+    summed = pc.add(table["unique_top_cov"], table["unique_bot_cov"])
+    return summed.to_numpy()
 
 
 def get_breseq_summary(breseq_path: Path) -> Dict[str, Any]:
