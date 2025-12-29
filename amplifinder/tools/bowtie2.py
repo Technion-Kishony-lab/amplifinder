@@ -7,16 +7,12 @@ from amplifinder.logger import info
 from amplifinder.env import SAMTOOLS_PATH, BOWTIE2_PATH
 from amplifinder.utils.run_utils import get_tool_path, run_command
 from amplifinder.utils.file_utils import ensure_parent_dir
+from amplifinder.utils.timing import print_timer
 
 
 def _folder_label(path: Path) -> str:
     """Return the parent folder name for concise logging."""
     return Path(path).parent.name
-
-
-def _info(msg: str, path: Path) -> None:
-    """Log a message with the parent folder name."""
-    info(f"{msg:>25} {_folder_label(path)}")
 
 
 def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
@@ -46,7 +42,6 @@ def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
     ]
 
     run_command(cmd, check=True, capture_output=True, text=True)
-    _info("Built bowtie2 index", index_prefix)
 
 
 def run_bowtie2_align(
@@ -118,7 +113,6 @@ def run_bowtie2_align(
         cmd.append("--local")
 
     run_command(cmd, check=True, capture_output=True, text=True)
-    _info("Aligned reads to", output_sam)
 
 
 def sam_to_sorted_bam(
@@ -159,8 +153,6 @@ def sam_to_sorted_bam(
 
     run_command(cmd_index, check=True, capture_output=True, text=True)
 
-    _info("Created sorted BAM", bam_path)
-
 
 def align_reads_to_fasta(
     ref_fasta: Path,
@@ -186,8 +178,13 @@ def align_reads_to_fasta(
     """
     # Skip if output already exists
     if output_bam.exists() and (output_bam.parent / f"{output_bam.name}.bai").exists():
-        _info("BAM exists, skipping alignment", output_bam)
         return
+
+    # Get junction name from output path
+    junction_name = _folder_label(output_bam)
+    
+    # Start printing the junction name
+    print(f"junction '{junction_name}':  ", end="", flush=True)
 
     # Paths
     work_dir = output_bam.parent
@@ -195,21 +192,25 @@ def align_reads_to_fasta(
     sam_path = work_dir / "alignments.sam"
 
     # Build index
-    run_bowtie2_build(ref_fasta, index_prefix)
+    with print_timer("Building bowtie2 index ... ", end_msg=", "):
+        run_bowtie2_build(ref_fasta, index_prefix)
 
     # Align
-    run_bowtie2_align(
-        index_prefix=index_prefix,
-        fastq_path=fastq_path,
-        output_sam=sam_path,
-        score_min=score_min,
-        num_alignments=num_alignments,
-        threads=threads,
-        local=local,
-    )
+    with print_timer("Aligning reads ... ", end_msg=", "):
+        run_bowtie2_align(
+            index_prefix=index_prefix,
+            fastq_path=fastq_path,
+            output_sam=sam_path,
+            score_min=score_min,
+            num_alignments=num_alignments,
+            threads=threads,
+            local=local,
+        )
 
     # Convert to sorted BAM
-    sam_to_sorted_bam(sam_path, output_bam, threads=threads)
+    with print_timer("Creating sorted BAM ... "):
+        sam_to_sorted_bam(sam_path, output_bam, threads=threads)
+    print()  # Newline after final step
 
     # Cleanup
     if not keep_sam:

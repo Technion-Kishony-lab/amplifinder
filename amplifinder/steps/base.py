@@ -7,7 +7,7 @@ from typing import Generic, List, Optional, TypeVar, get_args, get_origin, Type
 from amplifinder.logger import info
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import remove_file_or_dir, ensure_dir
-from amplifinder.utils.timing import timer as _timer
+from amplifinder.utils.timing import print_timer as _print_timer
 from amplifinder.data_types.typed_df import RecordTypedDf
 from amplifinder.data_types.records import Record
 from amplifinder.steps.io_naming import default_path
@@ -73,9 +73,14 @@ class Step(ABC, Generic[T]):
             return
         info(msg, extra=extra)
 
-    def timer(self, msg: Optional[str] = None, extra: Optional[dict[str, str]] = None):
+    def print(self, msg: str, end: str = "\n") -> None:
+        """Step-aware print that respects global verbosity."""
+        if self.global_verbose:
+            print(msg, end=end)
+
+    def print_timer(self, start_msg: str, end_msg: Optional[str] = None, time_format: str = "{:.1f} sec"):
         """Context manager for timing code blocks that respects verbose flag."""
-        return _timer(msg, log=self.global_verbose, extra=extra)
+        return _print_timer(start_msg, end_msg=end_msg, time_format=time_format, should_log=self.global_verbose)
 
     def _output_labels(self) -> list[str]:
         """Human-readable labels for outputs (override for custom logging)."""
@@ -151,13 +156,13 @@ class Step(ABC, Generic[T]):
         # Fast path: check if can skip without lock (common case)
         if not self.force and self.has_output_files():
             self.log("skipping (loading exisitng outputs)", extra=header_extra)
-            with self.timer(f"{self.name} load outputs"):
+            with self.print_timer(f"loading {self.name} outputs ..."):
                 return self.load_outputs()
 
         # Steps without file outputs or not saving don't need locking
         if not self.is_saving:
             self.log("running...", extra=header_extra)
-            with self.timer(f"{self.name} run"):
+            with self.print_timer(f"running {self.name} ..."):
                 return self._run_unlocked()
 
         # Acquire lock and re-check (TOCTOU fix)
@@ -166,10 +171,10 @@ class Step(ABC, Generic[T]):
             # Re-check under lock: another process may have created output
             if not self.force and self.has_output_files():
                 self.log("skipped (outputs exist, verified under lock)", extra=header_extra)
-                with self.timer(f"{self.name} load outputs"):
+                with self.print_timer(f"loading {self.name} outputs ..."):
                     return self.load_outputs()
             self.log("running (under lock)", extra=header_extra)
-            with self.timer(f"{self.name} run"):
+            with self.print_timer(f"running {self.name} ..."):
                 return self._run_unlocked()
 
     def _get_lock_target(self) -> Path:
