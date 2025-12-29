@@ -35,7 +35,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "black", "ruff", "mypy"]
+dev = ["pytest", "pytest-cov", "black", "ruff", "mypy", "line_profiler>=4.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
