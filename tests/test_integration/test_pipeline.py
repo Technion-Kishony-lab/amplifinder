@@ -15,6 +15,7 @@ REQUIRE_MATLAB_FILES = True
 
 class TestPipeline(Pipeline):
     """Pipeline subclass for testing with step-by-step MATLAB comparisons."""
+    __test__ = False  # avoid pytest collection warning for helper class
 
     def __init__(self, config, matlab_output_dir):
         super().__init__(config)
@@ -38,32 +39,27 @@ class TestPipeline(Pipeline):
     def _locate_tns_in_reference(self, genome):
         """Step 2: Locate TN elements - compare with MATLAB."""
         result = super()._locate_tns_in_reference(genome)
-        print(f"Step 2: Python={len(result)} TNs")
         return result
 
     def _create_ref_tn_junctions(self, tn_loc, genome, iso_output):
         """Step 3: Create reference TN junctions - compare with MATLAB."""
         result = super()._create_ref_tn_junctions(tn_loc, genome, iso_output)
         ref_tnjc = result
-        print(f"Step 3: Python={len(ref_tnjc)} ref junctions")
         return result
 
     def _run_breseq(self, genome, iso_output):
         """Step 4: Parse breseq - compare with MATLAB."""
         result = super()._run_breseq(genome, iso_output)
-        print(f"Step 4: Python={len(result)} junctions")
         return result
 
     def _create_tnjc(self, breseq_jc, ref_tnjc, genome, iso_output):
         """Step 5: Match junctions to TN elements."""
         result = super()._create_tnjc(breseq_jc, ref_tnjc, genome, iso_output)
-        print(f"Step 5: Python={len(result)} TN-associated junctions")
         return result
 
     def _create_tnjc2(self, tnjc, genome, iso_output):
         """Step 6: Combine junction pairs."""
         result = super()._create_tnjc2(tnjc, genome, iso_output)
-        print(f"Step 6: Python={len(result)} junction pairs")
         return result
 
     def _calc_coverage(self, tnjc2, genome, iso_output):
