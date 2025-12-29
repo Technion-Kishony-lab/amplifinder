@@ -7,7 +7,6 @@ from amplifinder.data_types import (
     RecordTypedDf, AnalyzedTnJc2, RawEvent, EventModifier,
 )
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.logger import info
 
 
 # Iso/Anc pattern transition rules (from MATLAB classify_candidates.m)
@@ -127,8 +126,8 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
         if self.has_ancestor:
             ancestral = sum(1 for r in classified_records if EventModifier.ANCESTRAL in r.event_modifiers)
             de_novo = sum(1 for r in classified_records if EventModifier.DE_NOVO in r.event_modifiers)
-            info(f"Classification: {ancestral} ancestral, {de_novo} de novo, {len(classified_records)} total")
+            self.log(f"Classification: {ancestral} ancestral, {de_novo} de novo, {len(classified_records)} total")
         else:
-            info(f"Classification: {len(classified_records)} candidates (no ancestor comparison)")
+            self.log(f"Classification: {len(classified_records)} candidates (no ancestor comparison)")
 
         return result

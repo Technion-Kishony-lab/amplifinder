@@ -7,7 +7,6 @@ from amplifinder.data_types import (
     RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc,
 )
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.logger import info
 
 
 def classify_structure(
@@ -217,9 +216,11 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
             min_amplicon_length=self.min_amplicon_length,
         )
 
-        info(f"Classification: {len([r for r in classified if r.raw_event == RawEvent.FLANKED])} flanked, "
-             f"{len([r for r in classified if r.raw_event == RawEvent.UNFLANKED])} unflanked, "
-             f"{len([r for r in classified if r.raw_event == RawEvent.HEMI_FLANKED_LEFT])} hemi-left, "
-             f"{len([r for r in classified if r.raw_event == RawEvent.HEMI_FLANKED_RIGHT])} hemi-right")
+        self.log(
+            f"Classification: {len([r for r in classified if r.raw_event == RawEvent.FLANKED])} flanked, "
+            f"{len([r for r in classified if r.raw_event == RawEvent.UNFLANKED])} unflanked, "
+            f"{len([r for r in classified if r.raw_event == RawEvent.HEMI_FLANKED_LEFT])} hemi-left, "
+            f"{len([r for r in classified if r.raw_event == RawEvent.HEMI_FLANKED_RIGHT])} hemi-right"
+        )
 
         return classified

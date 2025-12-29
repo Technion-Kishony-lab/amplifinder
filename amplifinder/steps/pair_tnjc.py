@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, RefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
 
@@ -53,7 +52,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
 
         raw_tnjc2s = RecordTypedDf.from_records(pairs, RawTnJc2)
 
-        info(f"Found {len(raw_tnjc2s)} junction pairs (RawTnJc2)")
+        self.log(f"Found {len(raw_tnjc2s)} junction pairs (RawTnJc2)")
         return raw_tnjc2s
 
     def _pair_junctions(self, junctions: List[TnJunction]) -> List[RawTnJc2]:

@@ -54,6 +54,26 @@ class Step(ABC, Generic[T]):
         self._force = force
         self.run_count = 0
 
+    def _get_header(self) -> dict[str, str]:
+        """Build logger extras with optional header color."""
+        header = self.name
+        if self.global_verbose and self.output_files is not None:
+            labels = self._output_labels()
+            output_str = ", ".join(labels) if labels else "none"
+            header = f"{self.name} (outputs: {output_str})"
+        header_color = f"\033[36m{header}\033[0m"
+        return {"header": f"{header} ", "header_color": f"{header_color} "}
+
+    def log(self, msg: str, *, verbose_only: bool = True, extra: Optional[dict[str, str]] = None) -> None:
+        """Step-aware info log that honors global verbosity."""
+        if verbose_only and not self.global_verbose:
+            return
+        info(msg, extra=extra)
+
+    def _output_labels(self) -> list[str]:
+        """Human-readable labels for outputs (override for custom logging)."""
+        return [str(p.name) for p in self.output_files]
+
     @property
     def name(self) -> str:
         """Step name (class name by default)."""
@@ -115,13 +135,7 @@ class Step(ABC, Generic[T]):
         4. Execute if still needed
         5. Release lock
         """
-        # Verbose reporting
-        if self.global_verbose:
-            if self.output_files:
-                output_str = ", ".join(str(p.name) for p in self.output_files)
-            else:
-                output_str = "none"
-            header = f"{self.name} (outputs: {output_str})"
+        header_extra = self._get_header()
 
         # Check inputs exist
         if missing_input := self.missing_input_files():
@@ -129,12 +143,12 @@ class Step(ABC, Generic[T]):
 
         # Fast path: check if can skip without lock (common case)
         if not self.force and self.has_output_files():
-            info(f"{header}: skipped (outputs exist)")
+            self.log("skipped (outputs exist)", extra=header_extra)
             return self.load_outputs()
 
         # Steps without file outputs or not saving don't need locking
         if not self.is_saving:
-            info(f"{header}: running...")
+            self.log("running...", extra=header_extra)
             return self._run_unlocked()
 
         # Acquire lock and re-check (TOCTOU fix)
@@ -142,10 +156,9 @@ class Step(ABC, Generic[T]):
         with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
             # Re-check under lock: another process may have created output
             if not self.force and self.has_output_files():
-                info(f"{header}: skipped (outputs exist, verified under lock)")
+                self.log("skipped (outputs exist, verified under lock)", extra=header_extra)
                 return self.load_outputs()
-
-            info(f"{header}: running (under lock)")
+            self.log("running (under lock)", extra=header_extra)
             return self._run_unlocked()
 
     def _run_unlocked(self) -> T:

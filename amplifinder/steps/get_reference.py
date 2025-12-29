@@ -4,9 +4,8 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.steps.base import Step
-from amplifinder.data_types.genome import Genome, get_genome
+from amplifinder.data_types.genome import Genome, get_genome, exists_genome
 from amplifinder.utils.file_lock import locked_resource
-from amplifinder.logger import info
 
 
 class GetRefGenomeStep(Step[Genome]):
@@ -36,11 +35,7 @@ class GetRefGenomeStep(Step[Genome]):
         """Check if output exists and is valid."""
         if not super().has_output_files():
             return False
-        try:
-            self.read_outputs()
-            return True
-        except FileNotFoundError:
-            return False
+        return exists_genome(self.ref_name, self.ref_path)
 
     def _calculate_output(self) -> Genome:
         """Fetch genome from NCBI or load from cache.
@@ -55,10 +50,10 @@ class GetRefGenomeStep(Step[Genome]):
         with locked_resource(self.ref_path, f"genome_{self.ref_name}", timeout=600):
             # Re-check if genome exists (another process may have downloaded it)
             if self.has_output_files():
-                info(f"{self.name}: genome already cached (verified under lock)")
+                self.log(f"{self.name}: genome already cached (verified under lock)")
                 return self.load_outputs()
 
-            info(f"Fetching reference genome: {self.ref_name}")
+            self.log(f"Fetching reference genome: {self.ref_name}")
             return get_genome(self.ref_name, self.ref_path, self.ncbi)
 
     def load_outputs(self) -> Genome:

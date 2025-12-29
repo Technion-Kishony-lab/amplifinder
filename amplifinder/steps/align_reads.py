@@ -6,7 +6,6 @@ from typing import Optional
 from amplifinder.data_types import RecordTypedDf, FilteredTnJc2
 from amplifinder.steps.base import Step
 from amplifinder.tools.bowtie2 import align_reads_to_fasta
-from amplifinder.logger import info
 
 
 class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
@@ -57,6 +56,16 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
             force=force,
         )
 
+    def _output_labels(self) -> list[str]:
+        """Use analysis directory names for logging instead of file names."""
+        labels: list[str] = []
+        if self.output_files:
+            for path in self.output_files:
+                parent_name = path.parent.name
+                if parent_name not in labels:
+                    labels.append(parent_name)
+        return labels
+
     @property
     def has_ancestor(self) -> bool:
         """True if ancestor reads should be aligned."""
@@ -69,7 +78,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
             junctions_fasta = analysis_dir / "junctions.fasta"
 
             if not junctions_fasta.exists():
-                info(f"Skipping {filtered_tnjc2.analysis_dir}: no junctions.fasta")
+                self.log(f"Skipping {filtered_tnjc2.analysis_dir}: no junctions.fasta")
                 continue
 
             # Align isolate reads

@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Optional, List
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.logger import info
 from amplifinder.data_types import RecordTypedDf, Junction, RefTnSide, TnJunction, Orientation, RefTnJunction
 from Bio.Seq import reverse_complement
 from amplifinder.data_types.genome import Genome
@@ -86,7 +85,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         tnjcs = RecordTypedDf.from_records(tnjcs, TnJunction)
         tnjcs = tnjcs.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
 
-        info(f"Found {len(tnjcs)} TN-associated junctions (TnJc)")
+        self.log(f"Found {len(tnjcs)} TN-associated junctions (TnJc)")
         return tnjcs
 
     def _precompute_ref_tnjcs_sequences(self) -> None:
