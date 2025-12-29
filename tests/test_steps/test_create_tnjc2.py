@@ -103,9 +103,9 @@ def test_output_has_correct_columns(tnjc2_step):
     expected_cols = {
         "jc_num_L", "jc_num_R", "scaf",
         "pos_scaf_L", "pos_scaf_R", "pos_tn_L", "pos_tn_R",
-        "dir_scaf_L", "dir_scaf_R", "dir_tn_L", "dir_tn_R",
+        "dir_tn_L", "dir_tn_R",
         "tn_ids", "tn_orientations", "span_origin",
-        "amplicon_length", "complementary_length",
+        "amplicon_length",
     }
     assert expected_cols.issubset(set(raw_tnjc2s.df.columns))
 

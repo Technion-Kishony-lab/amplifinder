@@ -9,7 +9,7 @@ from amplifinder.data_types import (
     RefTnSide, RefTnLoc, SeqRefTnSide, BlastHit,
     Junction, RefTnJunction, TnJunction,
     RawTnJc2, CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2, ExportedTnJc2,
-    Side, Orientation, Average, RawEvent, EventModifier,
+    Side, Orientation, RawEvent, EventModifier,
 )
 
 
@@ -155,7 +155,6 @@ def make_raw_tnjc2() -> RawTnJc2:
         tn_orientations=[Orientation.FORWARD],
         span_origin=False,
         amplicon_length=201,
-        complementary_length=799,
     )
 
 
@@ -164,8 +163,8 @@ def make_covered_tnjc2() -> CoveredTnJc2:
     raw = make_raw_tnjc2()
     return CoveredTnJc2.from_other(
         raw,
-        iso_amplicon_coverage=Average(mean=2.0, median=2.0, mode=2.0),
-        iso_scaf_coverage=Average(mean=1.0, median=1.0, mode=1.0),
+        iso_amplicon_coverage=2.0,
+        iso_scaf_coverage=1.0,
         anc_amplicon_coverage=None,
         anc_scaf_coverage=None,
         copy_number=2.0,

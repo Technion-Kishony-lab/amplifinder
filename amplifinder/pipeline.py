@@ -11,7 +11,6 @@ from amplifinder.data_types import (
     CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.logger import info
-from amplifinder.steps.run_breseq import AncBreseqStep
 from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.utils.fasta import get_read_length
 from amplifinder.steps import (
@@ -19,7 +18,7 @@ from amplifinder.steps import (
     GetRefGenomeStep,
     LocateTNsUsingISfinderStep,
     LocateTNsUsingGenbankStep,
-    BreseqStep,
+    BreseqStep, AncBreseqStep,
     CreateRefTnJcStep,
     CreateTnJcStep,
     PairTnJcToRawTnJc2Step,
@@ -27,7 +26,7 @@ from amplifinder.steps import (
     ClassifyTnJc2StructureStep,
     FilterTnJc2CandidatesStep,
     CreateSyntheticJunctionsStep,
-    AlignReadsToJunctionsStep,
+    AlignReadsToJunctionsStep, AncAlignReadsToJunctionsStep,
     AnalyzeTnJc2AlignmentsStep,
     ClassifyTnJc2CandidatesStep,
     ExportTnJc2Step,
@@ -307,6 +306,7 @@ class Pipeline:
             ncp_min=cfg.ncp_min,
             ncp_max=cfg.ncp_max,
             ncp_n=cfg.ncp_n,
+            average_method=cfg.average_method,
         ).run()
         info(f"Coverage: {len(covered)} candidates")
         return covered

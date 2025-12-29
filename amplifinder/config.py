@@ -6,6 +6,7 @@ from typing import Any, Optional, Tuple, ClassVar
 import json
 import yaml
 
+from amplifinder.data_types import AverageMethod
 from amplifinder.utils.file_utils import ensure_dir
 
 
@@ -38,6 +39,7 @@ DEFAULT_CONFIG = {
     "ncp_min": 0.1,
     "ncp_max": 1000.0,
     "ncp_n": 150,
+    "average_method": "median",  # 'median', 'mode', or 'mean' (converted to AverageMethod enum)
 
     # Copy number thresholds
     "copy_number_threshold": 1.5,
@@ -120,6 +122,7 @@ class Config:
     ncp_min: float = 0.1
     ncp_max: float = 1000.0
     ncp_n: int = 150
+    average_method: AverageMethod = AverageMethod.MEDIAN
 
     # Copy number thresholds
     copy_number_threshold: float = 1.5
@@ -276,6 +279,16 @@ class Config:
                 "genomesDB directory is reserved for NCBI references. "
                 "Choose a different --ref-path for local genomes."
             )
+
+        # Validate: average_method (convert string to enum if needed)
+        if isinstance(self.average_method, str):
+            try:
+                self.average_method = AverageMethod(self.average_method)
+            except ValueError:
+                valid_options = ", ".join(f"'{m.value}'" for m in AverageMethod)
+                raise ValueError(
+                    f"average_method must be one of {valid_options}, got: {self.average_method}"
+                )
 
 
 def load_config(config_path: Path) -> dict[str, Any]:

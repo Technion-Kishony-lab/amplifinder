@@ -141,9 +141,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         span_origin = jc_L.dir2 == Orientation.REVERSE
 
         # Calculate amplicon length
-        amplicon_length, complementary_length = self._calculate_amplicon_length(
-            jc_L.pos2, jc_R.pos2, jc_L.scaf2, span_origin
-        )
+        amplicon_length = self.genome.calc_length_between_scaf_points(jc_L.scaf2, jc_L.pos2, jc_R.pos2, span_origin)
 
         return RawTnJc2(
             jc_num_L=jc_L.num,
@@ -153,55 +151,10 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
             pos_scaf_R=jc_R.pos2,
             pos_tn_L=jc_L.pos1,
             pos_tn_R=jc_R.pos1,
-            dir_scaf_L=jc_L.dir2,
-            dir_scaf_R=jc_R.dir2,
             dir_tn_L=jc_L.dir1,
             dir_tn_R=jc_R.dir1,
             tn_ids=tn_ids,
             tn_orientations=tn_orientations,
             span_origin=span_origin,
             amplicon_length=amplicon_length,
-            complementary_length=complementary_length,
         )
-
-    def _calculate_amplicon_length(
-        self,
-        pos_L: int,
-        pos_R: int,
-        scaf: str,
-        span_origin: bool,
-    ) -> Tuple[int, int]:
-        """Calculate amplicon and complementary lengths.
-
-        Based on MATLAB calculate_amplicon_length.m
-        Handles circular genomes and origin-spanning amplicons.
-        """
-        # Basic length between positions
-        raw_length = pos_R - pos_L + 1
-
-        # Get scaffold-specific properties (supports multi-scaffold genomes)
-        scaf_length = self.genome.scaffold_lengths[scaf]
-        is_circular = self.genome.scaffold_circularities[scaf]
-
-        if is_circular:
-            if span_origin:
-                # Amplicon spans origin: actual amplicon is the complement
-                amplicon_length = scaf_length - raw_length
-                complementary_length = raw_length
-            else:
-                # Normal case
-                amplicon_length = raw_length
-                complementary_length = scaf_length - raw_length
-        else:
-            # Linear chromosome
-            if span_origin:
-                # Can't span origin on linear - mark as infinite
-                amplicon_length = float("inf")
-                complementary_length = raw_length
-            else:
-                amplicon_length = raw_length
-                complementary_length = float("inf")
-
-        amp = int(amplicon_length) if amplicon_length != float("inf") else -1
-        comp = int(complementary_length) if complementary_length != float("inf") else -1
-        return amp, comp

@@ -10,27 +10,6 @@ from amplifinder.data_types.records import Record
 
 TnId = int
 
-NAMES_TO_OPERATORS = {
-    "__truediv__": truediv,
-    "__mul__": mul,
-    "__add__": add,
-    "__sub__": sub,
-}
-
-
-# Average types
-class Average(NamedTuple):
-    """Coverage statistics for a genomic region."""
-    mean: float
-    median: float
-    mode: float
-
-
-# add operator methods
-for op_name, op in NAMES_TO_OPERATORS.items():
-    def wrapper(self, other: Average) -> Average:
-        return Average(op(self.mean, other.mean), op(self.median, other.median), op(self.mode, other.mode))
-    setattr(Average, op_name, wrapper)
 
 
 class JunctionCoverage(NamedTuple):
@@ -59,6 +38,13 @@ class Orientation(ReversibleIntEnum):
     FORWARD = 1
     REVERSE = -1
     BOTH = 0
+
+
+class AverageMethod(str, Enum):
+    """Method for calculating average coverage statistics."""
+    MEDIAN = "median"
+    MODE = "mode"
+    MEAN = "mean"
 
 
 ### Reference TN element sides ###
@@ -227,10 +213,6 @@ class RawTnJc2(Record):
     pos_tn_L: int
     pos_tn_R: int
 
-    # Scaffold directions
-    dir_scaf_L: Orientation
-    dir_scaf_R: Orientation
-
     # TN directions
     dir_tn_L: Orientation
     dir_tn_R: Orientation
@@ -238,11 +220,12 @@ class RawTnJc2(Record):
     # TN info
     tn_ids: List[int]              # matching TN element IDs
     tn_orientations: List[Orientation]  # one per tn_id
-    span_origin: bool        # True if amplicon spans circular origin
+    span_origin: bool       # True if amplicon spans circular origin.
+                            # Directions: dir_scaf_L-dir_scaf_R are always opposite.
+                            #             dir_scaf_R, dir_tn_R = (FORWARD, REVERSE) if span_origin else (REVERSE, FORWARD)
 
     # Computed fields
     amplicon_length: int
-    complementary_length: int
 
 
 class CoveredTnJc2(RawTnJc2):
@@ -252,12 +235,14 @@ class CoveredTnJc2(RawTnJc2):
     - anc_path=None: raw coverage only, copy_number_ratio is None
     - anc_path=set: normalized coverage, copy_number_ratio = iso/anc
     """
-    iso_amplicon_coverage: Average
-    iso_scaf_coverage: Average
-    anc_amplicon_coverage: Optional[Average] = None
-    anc_scaf_coverage: Optional[Average] = None
+    iso_amplicon_coverage: float
+    iso_scaf_coverage: float
+    anc_amplicon_coverage: Optional[float] = None
+    anc_scaf_coverage: Optional[float] = None
     copy_number: float = None  #
     copy_number_vs_anc: Optional[float] = None
+    amplicon_coverage: Optional[float] = None  # Normalized coverage (iso/anc) or raw copy_number
+    amplicon_coverage_mode: Optional[float] = None  # Mode of coverage distribution
 
 
 class RawEvent(str, Enum):

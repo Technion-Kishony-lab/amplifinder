@@ -3,7 +3,7 @@
 import pytest
 from amplifinder.steps import FilterTnJc2CandidatesStep
 from amplifinder.data_types import (
-    RecordTypedDf, ClassifiedTnJc2, RawEvent, Average,
+    RecordTypedDf, ClassifiedTnJc2, RawEvent,
 )
 
 
@@ -18,13 +18,10 @@ def sample_classified_tnjc2(classified_tnjc2_record):
         pos_tn_L=10,
         pos_tn_R=20,
         amplicon_length=100,
-        complementary_length=900,
         ref_name="U00096",
         iso_name="sample1",
-        amplicon_coverage=2.0,
-        iso_amplicon_coverage=Average(mean=2.0, median=2.0, mode=2.0),
+        iso_amplicon_coverage=2.0,
         copy_number=2.0,
-        amplicon_coverage_mode=2.0,
         raw_event=RawEvent.FLANKED,
         shared_tn_ids=[1],
         chosen_tn_id=1,
@@ -41,11 +38,8 @@ def sample_classified_tnjc2(classified_tnjc2_record):
         pos_tn_R=40,
         tn_ids=[2],
         amplicon_length=20,  # Too short
-        complementary_length=980,
-        amplicon_coverage=1.0,
-        iso_amplicon_coverage=Average(mean=1.0, median=1.0, mode=1.0),
+        iso_amplicon_coverage=1.0,
         copy_number=1.0,
-        amplicon_coverage_mode=1.0,
         raw_event=RawEvent.UNFLANKED,
         shared_tn_ids=[2],
         chosen_tn_id=2,

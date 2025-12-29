@@ -20,7 +20,6 @@ def sample_tnjc2(raw_tnjc2_record):
         pos_tn_L=10,
         pos_tn_R=20,
         amplicon_length=100,
-        complementary_length=900,
     )
 
     second = RawTnJc2.from_other(
@@ -34,7 +33,6 @@ def sample_tnjc2(raw_tnjc2_record):
         pos_tn_R=40,
         tn_ids=[2],
         amplicon_length=20,  # Too short
-        complementary_length=980,
     )
 
     return RecordTypedDf.from_records([first, second], RawTnJc2)

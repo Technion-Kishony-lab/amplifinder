@@ -1,11 +1,11 @@
 """Coverage analysis utilities."""
 from __future__ import annotations
 
-from typing import Optional, List, Dict, TYPE_CHECKING
+from typing import Optional, List, Dict, TYPE_CHECKING, Union
 
 import numpy as np
 
-from amplifinder.data_types import Average
+from amplifinder.data_types import AverageMethod
 from amplifinder.steps.amplicon_coverage.statistics import calc_distribution_mode
 
 if TYPE_CHECKING:
@@ -34,110 +34,76 @@ def get_scaffold_coverage(
     return cov[start:end]
 
 
-def get_coverage_in_range(
-    cov: np.ndarray,
-    start: int,
-    end: int,
-    span_origin: bool = False,
-    genome_length: Optional[int] = None,
-) -> np.ndarray:
-    """Get coverage values in range [start, end] (1-based, inclusive).
-
-    Args:
-        cov: Full coverage array (0-based indexing)
-        start: Start position (1-based, inclusive) - converted to 0-based internally
-        end: End position (1-based, inclusive) - converted to 0-based exclusive internally
-        span_origin: If True, region spans circular genome origin
-        genome_length: Required if span_origin=True
-
-    Returns:
-        Coverage values in the specified range
-
-    Note:
-        This function accepts 1-based genomic coordinates (matching BLAST/GenBank)
-        and converts them to 0-based array indices internally.
-    """
-    if not span_origin:
-        return cov[start - 1:end]
-    if genome_length is None:
-        genome_length = len(cov)
-    # Region spans origin: concatenate end-to-origin and origin-to-start
-    return np.concatenate([cov[start - 1:], cov[:end]])
-
-
-def calc_coverage_stats(cov: np.ndarray, include_zeros: bool = False) -> Average:
-    """Calculate mean, median and mode of coverage array.
+def calc_coverage_stats(cov: np.ndarray, average_method: Union[AverageMethod, str] = AverageMethod.MEDIAN, include_zeros: bool = False) -> float:
+    """Calculate coverage statistic based on average_method.
 
     Args:
         cov: Coverage values
+        average_method: Method to use (AverageMethod enum or string)
         include_zeros: If False (default), exclude zero values from statistics
 
     Returns:
-        Average namedtuple with mean, median, mode
+        Coverage statistic value (float)
     """
     if not include_zeros:
         cov = cov[cov > 0]
 
     if len(cov) == 0:
-        return Average(mean=0.0, median=0.0, mode=0.0)
+        return 0.0
 
-    return Average(
-        mean=float(np.mean(cov)),
-        median=float(np.median(cov)),
-        mode=calc_distribution_mode(cov, is_log=False, skip_first_bin=False)
-    )
+    # Convert string to enum if needed
+    if isinstance(average_method, str):
+        average_method = AverageMethod(average_method)
 
-
-def calc_median_coverage(cov: np.ndarray) -> float:
-    """Calculate median coverage for normalization (excluding zeros).
-
-    Args:
-        cov: Coverage array (can be genome-wide, scaffold-specific, or any region)
-
-    Returns:
-        Median coverage (excluding zeros)
-    """
-    return calc_coverage_stats(cov, include_zeros=False).median
+    if average_method == AverageMethod.MEAN:
+        return float(np.mean(cov))
+    elif average_method == AverageMethod.MEDIAN:
+        return float(np.median(cov))
+    elif average_method == AverageMethod.MODE:
+        return calc_distribution_mode(cov, is_log=False, skip_first_bin=False)
+    else:
+        raise ValueError(f"Invalid average_method: {average_method}")
 
 
-def calc_scaffold_coverage_median(
-    cov: np.ndarray,
-    scaffold_name: str,
-    genome: Genome,
-) -> float:
-    """Calculate median coverage for a specific scaffold.
+def mean_positive(cov: np.ndarray) -> float:
+    """Calculate mean of positive values in coverage array.
+
+    Efficiently computes mean of values > 0.
 
     Args:
-        cov: Full genome coverage array (concatenated by scaffold order)
-        scaffold_name: Name of scaffold to extract
-        genome: Genome object with scaffold information
+        cov: Coverage values
 
     Returns:
-        Median coverage for the scaffold (excluding zeros)
+        Mean of positive values, or 0.0 if no positive values exist
     """
-    scaf_cov = get_scaffold_coverage(cov, scaffold_name, genome)
-    return calc_median_coverage(scaf_cov)
+    mask = cov > 0
+    n_positive = np.sum(mask)
+    if n_positive == 0:
+        return 0.0
+    return float(cov.sum() / n_positive)
 
 
-def calc_scaffold_coverages_and_medians(
+def calc_scaffold_coverages_and_stats(
     cov: np.ndarray,
     scaffold_names: List[str],
     genome: Genome,
+    average_method: Union[AverageMethod, str] = AverageMethod.MEDIAN,
 ) -> tuple[Dict[str, np.ndarray], Dict[str, float]]:
-    """Calculate coverage arrays and medians for multiple scaffolds.
+    """Calculate coverage arrays and statistics for multiple scaffolds.
 
     Args:
         cov: Full genome coverage array (concatenated by scaffold order)
         scaffold_names: List of scaffold names to process
         genome: Genome object with scaffold information
+        average_method: Method to use ('median', 'mode', or 'mean')
 
     Returns:
-        Tuple of (scaffold_coverage_arrays, scaffold_medians) dictionaries
+        Tuple of (scaffold_coverage_arrays, scaffold_stats) dictionaries
     """
     scaf_covs = {}
-    scaf_medians = {}
+    scaf_stats = {}
     for scaf in scaffold_names:
         scaf_cov = get_scaffold_coverage(cov, scaf, genome)
         scaf_covs[scaf] = scaf_cov
-        scaf_medians[scaf] = calc_median_coverage(scaf_cov)
-    return scaf_covs, scaf_medians
+        scaf_stats[scaf] = calc_coverage_stats(scaf_cov, average_method=average_method)
+    return scaf_covs, scaf_stats
