@@ -31,6 +31,8 @@ class Step(ABC, Generic[T]):
     global_force: bool = False
     # Global verbose flag (applies to all steps)
     global_verbose: bool = False
+    # Global profile flag (applies to all steps)
+    should_profile: bool = False
     # Should save output flag (False = do not save output)
     should_save: bool = True
 
@@ -181,7 +183,30 @@ class Step(ABC, Generic[T]):
 
         # Run
         self.run_count += 1
-        output = self._calculate_output()
+        
+        if self.should_profile:
+            try:
+                from line_profiler import LineProfiler
+            except ImportError:
+                raise ImportError(
+                    "line_profiler is required for profiling. "
+                    "Install it with: pip install 'amplifinder[dev]' or pip install line_profiler"
+                )
+            
+            lp = LineProfiler()
+            # Add functions specified by subclass
+            for func in self._get_profiler_functions():
+                lp.add_function(func)
+            # Profile _calculate_output itself
+            lp.add_function(self._calculate_output)
+            
+            # Run with profiler
+            output = lp.runcall(self._calculate_output)
+            
+            # Save and print stats
+            self._save_profiler_stats(lp)
+        else:
+            output = self._calculate_output()
 
         # Save output (only if output_files defined and should_save is True)
         if self.is_saving:
@@ -205,6 +230,43 @@ class Step(ABC, Generic[T]):
     def set_global_verbose(cls, verbose: bool) -> None:
         """Set global verbose flag for all steps."""
         cls.global_verbose = verbose
+
+    @classmethod
+    def set_global_profile(cls, profile: bool) -> None:
+        """Set global profile flag for all steps."""
+        cls.should_profile = profile
+
+    def _get_profiler_functions(self) -> list:
+        """Override in subclass to specify functions to profile.
+        
+        Returns:
+            List of functions to add to the line profiler.
+        """
+        return []
+
+    def _save_profiler_stats(self, lp) -> None:
+        """Save and optionally print line profiler statistics.
+        
+        Args:
+            lp: LineProfiler instance with collected stats.
+        """
+        from io import StringIO
+        
+        # Save stats to file
+        if self.output_files:
+            stats_file = self.output_files[0].parent / "line_profiler_stats.lprof"
+            lp.dump_stats(str(stats_file))
+            self.log(f"Line profiler stats saved to {stats_file}", verbose_only=False)
+        
+        # Print stats if verbose
+        if self.global_verbose:
+            output_stream = StringIO()
+            lp.print_stats(stream=output_stream, stripzeros=True)
+            stats_text = output_stream.getvalue()
+            if stats_text.strip():
+                self.log("Line profiler stats:")
+                for line in stats_text.strip().split('\n'):
+                    self.log(f"  {line}")
 
 
 R = TypeVar("R", bound=Record)
