@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.data_types import RecordTypedDf, AnalyzedTnJc2, ExportedTnJc2
+from amplifinder.data_types import RecordTypedDf, AnalyzedTnJc2, ExportedTnJc2, Orientation
 from amplifinder.steps.base import Step
 
 
@@ -54,7 +54,7 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
                 Reference=self.ref_name,
                 Ancestor=self.anc_name,
                 Positions_in_chromosome=f"{analyzed_tnjc2.pos_scaf_L}-{analyzed_tnjc2.pos_scaf_R}",
-                Direction_in_chromosome=f"{analyzed_tnjc2.dir_scaf_L}/{analyzed_tnjc2.dir_scaf_R}",
+                Direction_in_chromosome=f"{Orientation.REVERSE if analyzed_tnjc2.span_origin else Orientation.FORWARD}/{Orientation.FORWARD if analyzed_tnjc2.span_origin else Orientation.REVERSE}",
                 amplicon_length=analyzed_tnjc2.amplicon_length,
                 IS_element=','.join(map(str, analyzed_tnjc2.tn_ids)) if analyzed_tnjc2.tn_ids else None,
                 median_copy_number=analyzed_tnjc2.amplicon_coverage,

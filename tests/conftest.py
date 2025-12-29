@@ -269,33 +269,27 @@ def raw_tnjc2_record():
         pos_scaf_R=300,
         pos_tn_L=10,
         pos_tn_R=20,
-        dir_scaf_L=Orientation.FORWARD,
-        dir_scaf_R=Orientation.REVERSE,
         dir_tn_L=Orientation.FORWARD,
         dir_tn_R=Orientation.REVERSE,
         tn_ids=[1],
         tn_orientations=[Orientation.FORWARD],
         span_origin=False,
         amplicon_length=100,
-        complementary_length=900,
     )
 
 
 @pytest.fixture
 def covered_tnjc2_record(raw_tnjc2_record):
     """RawTnJc2 with coverage fields."""
-    from amplifinder.data_types import CoveredTnJc2, Average
+    from amplifinder.data_types import CoveredTnJc2
 
     return CoveredTnJc2.from_other(
         raw_tnjc2_record,
         ref_name="tiny",
         iso_name="sample1",
-        amplicon_coverage=2.0,
-        scaf_coverage=Average(mean=1.0, median=1.0, mode=1.0),
-        iso_amplicon_coverage=Average(mean=2.0, median=2.0, mode=2.0),
-        iso_scaf_coverage=Average(mean=1.0, median=1.0, mode=1.0),
+        iso_amplicon_coverage=2.0,
+        iso_scaf_coverage=1.0,
         copy_number=2.0,
-        amplicon_coverage_mode=2.0,
     )
 
 

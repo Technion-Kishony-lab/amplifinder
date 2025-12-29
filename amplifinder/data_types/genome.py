@@ -191,6 +191,7 @@ class Genome:
             Consistent coordinate handling with get_fowrard_sequence_in_range().
             Also works with string sequences (used internally).
         """
+        assert len(seq) == self.scaffold_lengths[scaf]
         scaf_circular = self.scaffold_circularities[scaf]
         return _get_range(seq, start, end, scaf_circular)
 
@@ -213,6 +214,38 @@ class Genome:
     def get_junction_sequence_arm2_to_arm1(self, jc: Junction) -> str:
         """Get sequence for a junction from arm 2 to arm 1."""
         return reverse_complement(self.get_junction_arm_sequence(jc, 2)) + self.get_junction_arm_sequence(jc, 1)
+
+    def calc_length_between_scaf_points(self, scaf: str, start: int, end: int, span_origin: bool) -> int:
+        """Calculate length between two scaffold points.
+
+        Handles circular genomes and origin-spanning amplicons.
+        Args:
+            scaf: Scaffold name
+            start: Start position (1-based, inclusive)
+            end: End position (1-based, inclusive)
+            span_origin: True if span crosses circular origin
+
+        Returns:
+            Length between points, or -1 if invalid (spanning origin on linear scaffold)
+        """
+        # Basic length between positions
+        raw_length = end - start + 1
+
+        # Get scaffold-specific properties
+        scaf_length = self.scaffold_lengths[scaf]
+        is_circular = self.scaffold_circularities[scaf]
+
+        if not span_origin:
+            # Normal case: return raw length
+            return raw_length
+        
+        # Spanning origin
+        if is_circular:
+            # Amplicon spans origin: actual amplicon is the complement
+            return scaf_length - raw_length
+        else:
+            # Can't span origin on linear - return -1
+            return -1
 
 
 class GenomeRegistry:

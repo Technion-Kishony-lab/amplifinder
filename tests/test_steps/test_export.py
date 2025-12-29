@@ -3,7 +3,7 @@
 import pytest
 from amplifinder.steps import ExportTnJc2Step
 from amplifinder.data_types import (
-    RecordTypedDf, AnalyzedTnJc2, RawEvent, Average,
+    RecordTypedDf, AnalyzedTnJc2, RawEvent,
 )
 
 
@@ -18,13 +18,10 @@ def sample_analyzed(analyzed_tnjc2_record):
         pos_tn_L=10,
         pos_tn_R=20,
         amplicon_length=150,
-        complementary_length=850,
         ref_name="U00096",
         iso_name="sample1",
-        amplicon_coverage=2.5,
-        iso_amplicon_coverage=Average(mean=2.5, median=2.5, mode=2.5),
+        iso_amplicon_coverage=2.5,
         copy_number=2.5,
-        amplicon_coverage_mode=2.5,
         raw_event=RawEvent.FLANKED,
         shared_tn_ids=[1],
         chosen_tn_id=1,
@@ -44,11 +41,8 @@ def sample_analyzed(analyzed_tnjc2_record):
         pos_tn_R=40,
         tn_ids=[2],
         amplicon_length=50,
-        complementary_length=950,
-        amplicon_coverage=0.2,
-        iso_amplicon_coverage=Average(mean=0.2, median=0.2, mode=0.2),
+        iso_amplicon_coverage=0.2,
         copy_number=0.2,
-        amplicon_coverage_mode=0.2,
         raw_event=RawEvent.UNFLANKED,
         shared_tn_ids=[2],
         chosen_tn_id=2,

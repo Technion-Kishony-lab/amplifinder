@@ -10,20 +10,21 @@ try:
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
 
-from amplifinder.data_types import AnalyzedTnJc2, ClassifiedTnJc2, RecordTypedDf
+from amplifinder.data_types import AnalyzedTnJc2, ClassifiedTnJc2, RecordTypedDf, Genome
 from amplifinder.config import Config
 from amplifinder.tools.breseq import load_breseq_coverage
-from amplifinder.steps.amplicon_coverage import get_coverage_in_range
+from amplifinder.steps.amplicon_coverage import get_scaffold_coverage
 from amplifinder.steps.io_naming import default_path
 from amplifinder.utils.file_utils import ensure_parent_dir
 from amplifinder.logger import info, warning
+from amplifinder.data_types.genome import get_genome
 
 
 def plot_candidate_coverage(
     candidate: AnalyzedTnJc2,
     iso_coverage: np.ndarray,
     anc_coverage: Optional[np.ndarray],
-    genome_length: int,
+    genome: Genome,
     output_path: Optional[Path] = None,
     flank_fraction: float = 0.2,
     show: bool = True,
@@ -32,9 +33,9 @@ def plot_candidate_coverage(
 
     Args:
         candidate: Analyzed candidate record
-        iso_coverage: Full isolate coverage array
-        anc_coverage: Full ancestor coverage array (optional)
-        genome_length: Genome length for circular handling
+        iso_coverage: Full isolate coverage array (concatenated by scaffold)
+        anc_coverage: Full ancestor coverage array (optional, concatenated by scaffold)
+        genome: Genome object for scaffold information
         output_path: Path to save plot (optional)
         flank_fraction: Fraction of amplicon length to show as flanking region
         show: Whether to display plot interactively
@@ -42,28 +43,27 @@ def plot_candidate_coverage(
     if not MATPLOTLIB_AVAILABLE:
         raise ImportError("matplotlib is required for visualization. Install with: pip install matplotlib")
 
-    # Calculate plot range
+    # Extract scaffold-specific coverage
+    iso_scaf_cov = get_scaffold_coverage(iso_coverage, candidate.scaf, genome)
+    scaf_length = len(iso_scaf_cov)
+
+    # Calculate plot range (scaffold-relative, 1-based)
     amplicon_length = candidate.amplicon_length
     flank = int(amplicon_length * flank_fraction)
     plot_start = max(1, candidate.pos_scaf_L - flank)
-    plot_end = min(genome_length, candidate.pos_scaf_R + flank)
+    plot_end = min(scaf_length, candidate.pos_scaf_R + flank)
 
-    # Handle origin spanning
-    if candidate.span_origin:
-        # For origin-spanning, we need to handle circular coordinates
-        # Simplified: just plot the visible range
-        pass
-
-    # Get coverage in plot range
-    iso_plot_cov = get_coverage_in_range(
-        iso_coverage, plot_start, plot_end, candidate.span_origin, genome_length
+    # Get coverage in plot range using Genome method
+    iso_plot_cov = genome.slice_in_range(
+        candidate.scaf, iso_scaf_cov, plot_start, plot_end
     )
     positions = np.arange(plot_start, plot_start + len(iso_plot_cov))
 
     anc_plot_cov = None
     if anc_coverage is not None:
-        anc_plot_cov = get_coverage_in_range(
-            anc_coverage, plot_start, plot_end, candidate.span_origin, genome_length
+        anc_scaf_cov = get_scaffold_coverage(anc_coverage, candidate.scaf, genome)
+        anc_plot_cov = genome.slice_in_range(
+            candidate.scaf, anc_scaf_cov, plot_start, plot_end
         )
 
     # Create plot
@@ -148,6 +148,9 @@ def visualize_candidates(
         warning("No candidates to visualize")
         return
 
+    # Load genome
+    genome = get_genome(config.ref_name, config.ref_path, ncbi=False)
+
     # Load coverage data
     iso_breseq_path = config.iso_breseq_path or (run_dir / "breseq")
     iso_coverage = load_breseq_coverage(iso_breseq_path, config.ref_name)
@@ -160,9 +163,6 @@ def visualize_candidates(
         except FileNotFoundError:
             warning(f"Ancestor coverage not found at {anc_breseq_path}")
 
-    # Get genome length (simplified - would need to load genome)
-    genome_length = len(iso_coverage)
-
     # Visualize each candidate
     if save_plots:
         # Save all plots to files
@@ -173,7 +173,7 @@ def visualize_candidates(
                 candidate=analyzed_tnjc2,
                 iso_coverage=iso_coverage,
                 anc_coverage=anc_coverage,
-                genome_length=genome_length,
+                genome=genome,
                 output_path=plot_path,
                 flank_fraction=flank_fraction,
                 show=False,
@@ -182,7 +182,7 @@ def visualize_candidates(
     elif interactive:
         # Interactive mode with navigation
         _interactive_visualization(
-            analyzed_tnjc2s, iso_coverage, anc_coverage, genome_length, flank_fraction
+            analyzed_tnjc2s, iso_coverage, anc_coverage, genome, flank_fraction
         )
     else:
         # Show all plots sequentially
@@ -191,7 +191,7 @@ def visualize_candidates(
                 candidate=analyzed_tnjc2,
                 iso_coverage=iso_coverage,
                 anc_coverage=anc_coverage,
-                genome_length=genome_length,
+                genome=genome,
                 flank_fraction=flank_fraction,
                 show=True,
             )
@@ -201,7 +201,7 @@ def _interactive_visualization(
     analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
     iso_coverage: np.ndarray,
     anc_coverage: Optional[np.ndarray],
-    genome_length: int,
+    genome: Genome,
     flank_fraction: float,
 ) -> None:
     """Interactive visualization with navigation buttons."""
@@ -223,7 +223,7 @@ def _interactive_visualization(
             candidate=analyzed_tnjc2,
             iso_coverage=iso_coverage,
             anc_coverage=anc_coverage,
-            genome_length=genome_length,
+            genome=genome,
             flank_fraction=flank_fraction,
             show=False,
         )
