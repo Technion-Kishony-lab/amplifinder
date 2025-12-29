@@ -35,8 +35,8 @@ DEFAULT_CONFIG = {
     "filter_amplicon_length": 100,
 
     # Coverage parameters
-    "ncp_limit1": -1,
-    "ncp_limit2": 3,
+    "ncp_min": 0.1,
+    "ncp_max": 1000.0,
     "ncp_n": 150,
 
     # Copy number thresholds
@@ -117,8 +117,8 @@ class Config:
     filter_amplicon_length: int = 100
 
     # Coverage parameters
-    ncp_limit1: int = -1
-    ncp_limit2: int = 3
+    ncp_min: float = 0.1
+    ncp_max: float = 1000.0
     ncp_n: int = 150
 
     # Copy number thresholds
