@@ -160,8 +160,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             # Calculate distribution mode
             amplicon_coverage_mode = calc_distribution_mode(
                 ncp,
-                x_min=10**self.ncp_limit1,
-                x_max=10**self.ncp_limit2,
+                x_min=self.ncp_min,
+                x_max=self.ncp_max,
                 n_bins=self.ncp_n,
                 is_log=True,
             )
@@ -176,8 +176,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             # Calculate distribution mode (raw)
             amplicon_coverage_mode = calc_distribution_mode(
                 ncp,
-                x_min=10**self.ncp_limit1,
-                x_max=10**self.ncp_limit2,
+                x_min=self.ncp_min,
+                x_max=self.ncp_max,
                 n_bins=self.ncp_n,
                 is_log=True,
             )

@@ -304,8 +304,8 @@ class Pipeline:
             iso_name=cfg.iso_name,
             anc_breseq_path=anc_breseq_path,
             anc_name=anc_name,
-            ncp_limit1=cfg.ncp_limit1,
-            ncp_limit2=cfg.ncp_limit2,
+            ncp_min=cfg.ncp_min,
+            ncp_max=cfg.ncp_max,
             ncp_n=cfg.ncp_n,
         ).run()
         info(f"Coverage: {len(covered)} candidates")
@@ -386,7 +386,7 @@ class Pipeline:
             # Copy junctions first (only if not already there)
             self._copy_junctions_to_ancestor(filtered_tnjc2s, iso_output)
             # Then align ancestor reads in ancestor folder
-            AlignReadsToJunctionsStep(
+            AncAlignReadsToJunctionsStep(
                 filtered_tnjc2s=filtered_tnjc2s,
                 output_dir=cfg.anc_run_dir,
                 iso_fastq_path=cfg.anc_path,  # Ancestor reads aligned as "iso" in ancestor folder
@@ -405,7 +405,7 @@ class Pipeline:
             return RecordTypedDf.empty(AnalyzedTnJc2)
 
         analyzed_tnjc2s = AnalyzeTnJc2AlignmentsStep(
-            candidates=filtered_tnjc2s,
+            filtered_tnjc2s=filtered_tnjc2s,
             output_dir=iso_output,
             anc_output_dir=anc_output,  # Ancestor BAM files are read from here
             read_length=self._get_iso_read_length(),
