@@ -113,3 +113,8 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
     def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
         """Return candidates (BAM files are side effects)."""
         return self.filtered_tnjc2s
+
+
+class AncAlignReadsToJunctionsStep(AlignReadsToJunctionsStep):
+    """Align ancestor reads to synthetic junctions."""
+    pass
