@@ -49,6 +49,10 @@ class BreseqStep(Step[Dict[str, pd.DataFrame]]):
             force=force,
         )
 
+    def _output_labels(self) -> list[str]:
+        """Human-readable labels for outputs."""
+        return [str(self.output_path.name)]
+
     def _calculate_output(self) -> Dict[str, pd.DataFrame]:
         """Run breseq and return parsed output."""
         run_breseq(
@@ -67,3 +71,8 @@ class BreseqStep(Step[Dict[str, pd.DataFrame]]):
             Dict with keys: JC, SNP, MOB, DEL, UN
         """
         return parse_breseq_output(self.output_path)
+
+
+class AncBreseqStep(BreseqStep):
+    """Run breseq alignment pipeline for ancestor."""
+    pass
