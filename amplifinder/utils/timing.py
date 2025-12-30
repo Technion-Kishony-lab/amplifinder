@@ -80,4 +80,4 @@ def print_timer(start_msg: str, end_msg: Optional[str] = None, time_format: str 
             if use_log:
                 info(msg)
             else:
-                print(msg, flush=True)
+                print(msg, flush=True, end="")
