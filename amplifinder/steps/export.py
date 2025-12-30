@@ -62,8 +62,8 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
                 Direction_in_chromosome=f"{Orientation.REVERSE if span_origin else Orientation.FORWARD}/{Orientation.FORWARD if span_origin else Orientation.REVERSE}",
                 amplicon_length=analyzed_tnjc2.amplicon_length,
                 IS_element=','.join(map(str, analyzed_tnjc2.tn_ids)) if analyzed_tnjc2.tn_ids else None,
-                median_copy_number=analyzed_tnjc2.amplicon_coverage,
-                mode_copy_number=analyzed_tnjc2.amplicon_coverage_mode,
+                median_copy_number=analyzed_tnjc2.copy_number,
+                mode_copy_number=analyzed_tnjc2.copy_number,
                 event=analyzed_tnjc2.event,
                 isolate_architecture=str(analyzed_tnjc2.isolate_architecture),
             ))
