@@ -192,11 +192,11 @@ def align_reads_to_fasta(
     sam_path = work_dir / "alignments.sam"
 
     # Build index
-    with print_timer("Building bowtie2 index ... ", end_msg=", "):
+    with print_timer("Building index... ", end_msg=", ", seperate_prints=True):
         run_bowtie2_build(ref_fasta, index_prefix)
 
     # Align
-    with print_timer("Aligning reads ... ", end_msg=", "):
+    with print_timer("Aligning... ", end_msg=", ", seperate_prints=True):
         run_bowtie2_align(
             index_prefix=index_prefix,
             fastq_path=fastq_path,
@@ -208,7 +208,7 @@ def align_reads_to_fasta(
         )
 
     # Convert to sorted BAM
-    with print_timer("Creating sorted BAM ... "):
+    with print_timer("Creating BAM... ", end_msg="", seperate_prints=True):
         sam_to_sorted_bam(sam_path, output_bam, threads=threads)
     print()  # Newline after final step
 

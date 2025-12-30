@@ -57,16 +57,6 @@ class Step(ABC, Generic[T]):
         self._force = force
         self.run_count = 0
 
-    def _get_header(self) -> dict[str, str]:
-        """Build logger extras with optional header color."""
-        header = self.name
-        if self.global_verbose and self.output_files is not None:
-            labels = self._output_labels()
-            output_str = ", ".join(labels) if labels else "none"
-            header = f"{self.name} (outputs: {output_str})"
-        header_color = f"\033[36m{header}\033[0m"
-        return {"header": f"{header} ", "header_color": f"{header_color} "}
-
     def log(self, msg: str, *, verbose_only: bool = True, extra: Optional[dict[str, str]] = None) -> None:
         """Step-aware info log that honors global verbosity."""
         if verbose_only and not self.global_verbose:
@@ -78,7 +68,7 @@ class Step(ABC, Generic[T]):
         if self.global_verbose:
             print(msg, end=end)
 
-    def print_timer(self, start_msg: str, end_msg: Optional[str] = None, time_format: str = "{:.1f} sec", seperate_prints: bool = False, use_log: bool = False):
+    def print_timer(self, start_msg: str, end_msg: Optional[str] = None, time_format: str = "{:7.1f} sec", seperate_prints: bool = False, use_log: bool = False):
         """Context manager for timing code blocks that respects verbose flag."""
         return _print_timer(start_msg, end_msg=end_msg, time_format=time_format, should_log=self.global_verbose, seperate_prints=seperate_prints, use_log=use_log)
 
@@ -111,12 +101,6 @@ class Step(ABC, Generic[T]):
     def report_output_message(self, output: T, *, from_cache: bool) -> Optional[str]:
         """Message to report after producing/loading output. Override per step."""
         return None
-
-    def _report_output(self, output: T, *, from_cache: bool) -> None:
-        """Log output summary if provided by report_output_message."""
-        msg = self.report_output_message(output, from_cache=from_cache)
-        if msg:
-            self.log(msg, verbose_only=False)
 
     def _save_output(self, output: T) -> None:
         """Save output to files. Override in subclass to save to files."""
@@ -180,9 +164,23 @@ class Step(ABC, Generic[T]):
 
     def _execute_and_report(self, log_msg: str, from_cache: bool) -> T:
         """Run an action with optional log and standardized output reporting."""
-        self.log(log_msg, extra=self._get_header())
+        step_name = self.name
+        step_name_color = f"\033[36m{step_name}\033[0m"
+        
+        labels = self._output_labels() if self.output_files else []
+        output_str = ", ".join(labels) if labels else "none"
+        
+        # Format: step_name (left), output_str at pos 40, log_msg right-aligned to 100
+        remaining = 117 - 40 - len(log_msg)
+        formatted = f"{step_name_color:<40s}{output_str:<{remaining}s}{log_msg}"
+        self.log(formatted)
+
         output = self.load_outputs() if from_cache else self._run_unlocked()
-        self._report_output(output, from_cache=from_cache)
+
+        msg = self.report_output_message(output, from_cache=from_cache)
+        if msg:
+            self.log(msg, verbose_only=False)
+
         return output
 
     def _get_lock_target(self) -> Path:
