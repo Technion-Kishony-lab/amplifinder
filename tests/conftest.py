@@ -262,18 +262,17 @@ def raw_tnjc2_record():
     from amplifinder.data_types import RawTnJc2, Orientation
 
     return RawTnJc2(
-        jc_num_L=1,
-        jc_num_R=2,
+        jc_num_S=1,
+        jc_num_E=2,
         scaf="tiny",
-        pos_scaf_L=200,
-        pos_scaf_R=300,
-        pos_tn_L=10,
-        pos_tn_R=20,
-        dir_tn_L=Orientation.FORWARD,
-        dir_tn_R=Orientation.REVERSE,
+        start=200,
+        end=300,
+        pos_tn_S=10,
+        pos_tn_E=20,
+        dir_tn_S=Orientation.FORWARD,
+        dir_tn_E=Orientation.REVERSE,
         tn_ids=[1],
         tn_orientations=[Orientation.FORWARD],
-        span_origin=False,
         amplicon_length=100,
     )
 

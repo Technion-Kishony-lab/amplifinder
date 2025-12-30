@@ -126,9 +126,9 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
     ) -> CoveredTnJc2:
         """Calculate coverage for a single candidate."""
         # Get coverage in amplicon region (using scaffold-relative positions)
-        # pos_scaf_L and pos_scaf_R are 1-based inclusive (from BLAST/junction positions)
-        start = raw_tnjc2.pos_scaf_L  # 1-based inclusive
-        end = raw_tnjc2.pos_scaf_R  # 1-based inclusive
+        # start and end are 1-based inclusive (from BLAST/junction positions)
+        start = raw_tnjc2.start  # 1-based inclusive
+        end = raw_tnjc2.end  # 1-based inclusive
 
         scaf_obj = self.genome.get_seq_scaffold(raw_tnjc2.scaf)
         iso_region_cov = scaf_obj.slice(start, end, iso_scaf_cov)

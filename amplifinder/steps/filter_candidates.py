@@ -49,8 +49,8 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
             # Generate analysis directory name
             # Format: jc_{start}_{end}_{tn_id:03d}_L{read_len}
             # Note: read_len defaults to 150 if not provided in config
-            start = classified.pos_scaf_L
-            end = classified.pos_scaf_R
+            start = classified.start
+            end = classified.end
             tn_id = classified.chosen_tn_id or (i + 1)
             # Default read length (can be overridden by config in pipeline)
             read_len = 150

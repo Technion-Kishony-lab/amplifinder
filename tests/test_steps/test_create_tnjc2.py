@@ -101,10 +101,10 @@ def test_output_has_correct_columns(tnjc2_step):
     raw_tnjc2s = tnjc2_step.run()
 
     expected_cols = {
-        "jc_num_L", "jc_num_R", "scaf",
-        "pos_scaf_L", "pos_scaf_R", "pos_tn_L", "pos_tn_R",
-        "dir_tn_L", "dir_tn_R",
-        "tn_ids", "tn_orientations", "span_origin",
+        "jc_num_S", "jc_num_E", "scaf",
+        "start", "end", "pos_tn_S", "pos_tn_E",
+        "dir_tn_S", "dir_tn_E",
+        "tn_ids", "tn_orientations",
         "amplicon_length",
     }
     assert expected_cols.issubset(set(raw_tnjc2s.df.columns))
@@ -128,8 +128,8 @@ def test_pairs_opposing_junctions(tiny_genome, tmp_output):
     assert len(raw_tnjc2s) == 1
     pair = list(raw_tnjc2s)[0]
     assert pair.scaf == "tiny"
-    assert pair.pos_scaf_L == 500
-    assert pair.pos_scaf_R == 1000
+    assert pair.start == 500
+    assert pair.end == 1000
     assert 1 in pair.tn_ids
 
 
@@ -183,4 +183,5 @@ def test_handles_span_origin(tiny_genome, tmp_output):
     ], tiny_genome, tmp_output)
 
     pair = list(raw_tnjc2s)[0]
-    assert pair.span_origin is True
+    seg_scaf = pair.get_segment_scaffold(tiny_genome)
+    assert seg_scaf.span_origin is True

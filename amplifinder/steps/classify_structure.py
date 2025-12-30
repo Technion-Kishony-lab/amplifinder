@@ -4,13 +4,18 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import (
-    RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc,
+    RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc, Genome,
 )
 from amplifinder.steps.base import RecordTypedDfStep
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from amplifinder.data_types.genome import Genome
 
 
 def classify_structure(
     covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
+    genome: 'Genome',
     min_amplicon_length: int = 30,
 ) -> RecordTypedDf[ClassifiedTnJc2]:
     """Classify junction pairs based on TN relationships.
@@ -47,13 +52,13 @@ def classify_structure(
         # Reference: both junctions are reference (jc_num == 0) and match same TN
         # Simplified: check if both jc_num are 0 (reference junctions)
         # In practice, we'd need to check if they match the same reference TN location
-        ref_left = tnjc2.jc_num_L == 0
-        ref_right = tnjc2.jc_num_R == 0
+        ref_start = tnjc2.jc_num_S == 0
+        ref_end = tnjc2.jc_num_E == 0
 
         # Check if both match same TN ID (simplified check)
         same_tn = len(tnjc2.tn_ids) > 0 and all(tid == tnjc2.tn_ids[0] for tid in tnjc2.tn_ids)
 
-        is_ref = ref_left and ref_right and same_tn
+        is_ref = ref_start and ref_end and same_tn
         is_reference.append(is_ref)
 
         # Transposition: short amplicon, not reference
@@ -77,42 +82,42 @@ def classify_structure(
         if not is_single_locus[i]:
             continue
 
-        # Check left junction
-        matches_left = []
+        # Check start junction
+        matches_start = []
         for j, tnjc2_j in enumerate(covered_tnjc2s):
             if i == j or not is_single_locus[j]:
                 continue
 
-            # Check if left junction matches
-            if tnjc2_i.jc_num_L == tnjc2_j.jc_num_L or tnjc2_i.jc_num_L == tnjc2_j.jc_num_R:
+            # Check if start junction matches
+            if tnjc2_i.jc_num_S == tnjc2_j.jc_num_S or tnjc2_i.jc_num_S == tnjc2_j.jc_num_E:
                 # Find shared TN IDs
                 shared = [tid for tid in tnjc2_i.tn_ids if tid in tnjc2_j.tn_ids]
                 if shared:
-                    matches_left.append((j, shared))
+                    matches_start.append((j, shared))
 
-        if len(matches_left) > 1:
+        if len(matches_start) > 1:
             multiple_single_locus[i] = True
-        elif len(matches_left) == 1:
-            _, shared = matches_left[0]
+        elif len(matches_start) == 1:
+            _, shared = matches_start[0]
             shared_tn_ids_left[i] = shared
 
-        # Check right junction
-        matches_right = []
+        # Check end junction
+        matches_end = []
         for j, tnjc2_j in enumerate(covered_tnjc2s):
             if i == j or not is_single_locus[j]:
                 continue
 
-            # Check if right junction matches
-            if tnjc2_i.jc_num_R == tnjc2_j.jc_num_L or tnjc2_i.jc_num_R == tnjc2_j.jc_num_R:
+            # Check if end junction matches
+            if tnjc2_i.jc_num_E == tnjc2_j.jc_num_S or tnjc2_i.jc_num_E == tnjc2_j.jc_num_E:
                 # Find shared TN IDs
                 shared = [tid for tid in tnjc2_i.tn_ids if tid in tnjc2_j.tn_ids]
                 if shared:
-                    matches_right.append((j, shared))
+                    matches_end.append((j, shared))
 
-        if len(matches_right) > 1:
+        if len(matches_end) > 1:
             multiple_single_locus[i] = True
-        elif len(matches_right) == 1:
-            _, shared = matches_right[0]
+        elif len(matches_end) == 1:
+            _, shared = matches_end[0]
             shared_tn_ids_right[i] = shared
 
         # Find TN IDs shared by both sides
@@ -138,7 +143,9 @@ def classify_structure(
             has_right = len(shared_tn_ids_right[i]) > 0
 
             # Account for origin spanning
-            if tnjc2.span_origin:
+            seg_scaf = tnjc2.get_segment_scaffold(genome)
+            span_origin = seg_scaf.span_origin
+            if span_origin:
                 # When spanning origin, left/right are swapped
                 if has_right:
                     raw_event = RawEvent.HEMI_FLANKED_LEFT
@@ -195,12 +202,14 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
     def __init__(
         self,
         covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
+        genome: Genome,
         tn_locs: RecordTypedDf[RefTnLoc],
         output_dir: Path,
         min_amplicon_length: int = 30,
         force: Optional[bool] = None,
     ):
         self.covered_tnjc2s = covered_tnjc2s
+        self.genome = genome
         self.tn_locs = tn_locs
         self.min_amplicon_length = min_amplicon_length
 
@@ -213,6 +222,7 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
         """Classify junction pairs."""
         classified = classify_structure(
             self.covered_tnjc2s,
+            genome=self.genome,
             min_amplicon_length=self.min_amplicon_length,
         )
 

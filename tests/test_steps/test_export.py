@@ -13,10 +13,10 @@ def sample_analyzed(analyzed_tnjc2_record):
     first = AnalyzedTnJc2.from_other(
         analyzed_tnjc2_record,
         scaf="chr1",
-        pos_scaf_L=100,
-        pos_scaf_R=200,
-        pos_tn_L=10,
-        pos_tn_R=20,
+        start=100,
+        end=200,
+        pos_tn_S=10,
+        pos_tn_E=20,
         amplicon_length=150,
         ref_name="U00096",
         iso_name="sample1",
@@ -32,13 +32,13 @@ def sample_analyzed(analyzed_tnjc2_record):
 
     second = AnalyzedTnJc2.from_other(
         analyzed_tnjc2_record,
-        jc_num_L=3,
-        jc_num_R=4,
+        jc_num_S=3,
+        jc_num_E=4,
         scaf="chr1",
-        pos_scaf_L=300,
-        pos_scaf_R=400,
-        pos_tn_L=30,
-        pos_tn_R=40,
+        start=300,
+        end=400,
+        pos_tn_S=30,
+        pos_tn_E=40,
         tn_ids=[2],
         amplicon_length=50,
         iso_amplicon_coverage=0.2,
@@ -54,10 +54,11 @@ def sample_analyzed(analyzed_tnjc2_record):
     return RecordTypedDf.from_records([first, second], AnalyzedTnJc2)
 
 
-def test_export_creates_files(sample_analyzed, tmp_path):
+def test_export_creates_files(sample_analyzed, tmp_path, tiny_genome):
     """Should create tnjc2_exported.csv and candidate_amplifications.csv."""
     step = ExportTnJc2Step(
         analyzed_tnjc2s=sample_analyzed,
+        genome=tiny_genome,
         output_dir=tmp_path,
         ref_name="U00096",
         iso_name="sample1",
