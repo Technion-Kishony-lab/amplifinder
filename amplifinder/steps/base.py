@@ -78,9 +78,9 @@ class Step(ABC, Generic[T]):
         if self.global_verbose:
             print(msg, end=end)
 
-    def print_timer(self, start_msg: str, end_msg: Optional[str] = None, time_format: str = "{:.1f} sec"):
+    def print_timer(self, start_msg: str, end_msg: Optional[str] = None, time_format: str = "{:.1f} sec", seperate_prints: bool = False, use_log: bool = False):
         """Context manager for timing code blocks that respects verbose flag."""
-        return _print_timer(start_msg, end_msg=end_msg, time_format=time_format, should_log=self.global_verbose)
+        return _print_timer(start_msg, end_msg=end_msg, time_format=time_format, should_log=self.global_verbose, seperate_prints=seperate_prints, use_log=use_log)
 
     def _output_labels(self) -> list[str]:
         """Human-readable labels for outputs (override for custom logging)."""
@@ -107,6 +107,16 @@ class Step(ABC, Generic[T]):
     def _calculate_output(self) -> T:
         """Execute the step logic. Override in subclass."""
         pass
+
+    def report_output_message(self, output: T, *, from_cache: bool) -> Optional[str]:
+        """Message to report after producing/loading output. Override per step."""
+        return None
+
+    def _report_output(self, output: T, *, from_cache: bool) -> None:
+        """Log output summary if provided by report_output_message."""
+        msg = self.report_output_message(output, from_cache=from_cache)
+        if msg:
+            self.log(msg, verbose_only=False)
 
     def _save_output(self, output: T) -> None:
         """Save output to files. Override in subclass to save to files."""
@@ -147,35 +157,33 @@ class Step(ABC, Generic[T]):
         4. Execute if still needed
         5. Release lock
         """
-        header_extra = self._get_header()
-
         # Check inputs exist
         if missing_input := self.missing_input_files():
             raise FileNotFoundError(f"{self.name}: missing inputs: {missing_input}")
 
-        # Fast path: check if can skip without lock (common case)
-        if not self.force and self.has_output_files():
-            self.log("skipping (loading exisitng outputs)", extra=header_extra)
-            with self.print_timer(f"loading {self.name} outputs ..."):
-                return self.load_outputs()
-
-        # Steps without file outputs or not saving don't need locking
-        if not self.is_saving:
-            self.log("running...", extra=header_extra)
-            with self.print_timer(f"running {self.name} ..."):
-                return self._run_unlocked()
-
-        # Acquire lock and re-check (TOCTOU fix)
-        lock_target = self._get_lock_target()
-        with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
-            # Re-check under lock: another process may have created output
+        with self.print_timer(f"{self.name} ended (total time: ", use_log=True, end_msg=")\n" + 120 * "=" + "\n"):
+            # Fast path: check if can skip without lock (common case)
             if not self.force and self.has_output_files():
-                self.log("skipped (outputs exist, verified under lock)", extra=header_extra)
-                with self.print_timer(f"loading {self.name} outputs ..."):
-                    return self.load_outputs()
-            self.log("running (under lock)", extra=header_extra)
-            with self.print_timer(f"running {self.name} ..."):
-                return self._run_unlocked()
+                return self._execute_and_report("skipping (loading exisitng outputs)", True)
+
+            # Steps without file outputs or not saving don't need locking
+            if not self.is_saving:
+                return self._execute_and_report("running...", False)
+
+            # Acquire lock and re-check (TOCTOU fix)
+            lock_target = self._get_lock_target()
+            with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
+                # Re-check under lock: another process may have created output
+                if not self.force and self.has_output_files():
+                    return self._execute_and_report("skipped (outputs exist, verified under lock)", True)
+                return self._execute_and_report("running (under lock)", False)
+
+    def _execute_and_report(self, log_msg: str, from_cache: bool) -> T:
+        """Run an action with optional log and standardized output reporting."""
+        self.log(log_msg, extra=self._get_header())
+        output = self.load_outputs() if from_cache else self._run_unlocked()
+        self._report_output(output, from_cache=from_cache)
+        return output
 
     def _get_lock_target(self) -> Path:
         """Path used for step lock; override to customize lock scope."""
@@ -362,3 +370,7 @@ class RecordTypedDfStep(Step[RecordTypedDf[R]], Generic[R]):
         """Load RecordTypedDf from CSV."""
         record_type = self._get_record_cls()
         return RecordTypedDf.from_csv(self.output_file, record_type)
+
+    def report_output_message(self, output: RecordTypedDf[R], *, from_cache: bool) -> Optional[str]:
+        """Uniform record count logging for RecordTypedDf steps."""
+        return f"{self.name}: {len(output)} records."

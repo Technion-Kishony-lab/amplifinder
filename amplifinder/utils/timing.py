@@ -44,7 +44,8 @@ def timer(msg: Optional[str] = None, log: bool = True, extra: Optional[dict[str,
 
 
 @contextmanager
-def print_timer(start_msg: str, end_msg: Optional[str] = None, time_format: str = "{:.1f} sec", should_log: bool = True):
+def print_timer(start_msg: str, end_msg: Optional[str] = None, time_format: str = "{:.1f} sec",
+                should_log: bool = True, seperate_prints: bool = False, use_log: bool = False):
     """Context manager that prints start message, runs code, then prints time.
     
     Args:
@@ -52,14 +53,19 @@ def print_timer(start_msg: str, end_msg: Optional[str] = None, time_format: str 
         end_msg: Message to print after (default: time only)
         time_format: Format string for time (default: "{:.1f} sec")
         should_log: If False, don't print anything (default: True)
-    
+        seperated_prints: If True, print start message and end message separately
+        use_log: If True, use logger.info instead of print
     Example:
         with print_timer("Building index ... ", end_msg=", "):
             build_index()
         # Output: "Building index ... (12.3 sec), "
     """
-    if should_log:
-        print(start_msg, end="", flush=True)
+    end_msg = end_msg or ""
+    if should_log and seperate_prints:
+        if use_log:
+            info(start_msg)
+        else:
+            print(start_msg, end="", flush=True)
     result = TimerResult()
     start = perf_counter()
     try:
@@ -68,8 +74,10 @@ def print_timer(start_msg: str, end_msg: Optional[str] = None, time_format: str 
         elapsed = perf_counter() - start
         result.elapsed = elapsed
         if should_log:
+            prefix = "" if seperate_prints else start_msg
             time_str = time_format.format(elapsed)
-            if end_msg is not None:
-                print(f"({time_str}){end_msg}", end="", flush=True)
+            msg = f"{prefix}{time_str}{end_msg}"
+            if use_log:
+                info(msg)
             else:
-                print(f"({time_str})", end="", flush=True)
+                print(msg, flush=True)
