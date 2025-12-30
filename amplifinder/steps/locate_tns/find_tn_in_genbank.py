@@ -7,7 +7,8 @@ from typing import List, Optional
 from Bio.SeqFeature import SeqFeature
 from Bio.SeqRecord import SeqRecord
 
-from amplifinder.data_types.record_types import Orientation, RefTnLoc, TnId
+from amplifinder.data_types.enums import Orientation
+from amplifinder.data_types.record_types import RefTnLoc, TnId
 
 
 def find_tn_elements(gb_records: List[SeqRecord]) -> List[RefTnLoc]:

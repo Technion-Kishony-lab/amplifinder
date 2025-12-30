@@ -44,7 +44,7 @@ from typing import TypeVar
 
 from Bio.Seq import reverse_complement
 
-from amplifinder.data_types.record_types import Orientation
+from amplifinder.data_types.enums import Orientation
 
 T = TypeVar('T', str, np.ndarray)
 

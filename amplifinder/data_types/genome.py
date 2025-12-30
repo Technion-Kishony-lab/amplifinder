@@ -17,7 +17,8 @@ from Bio import Entrez, SeqIO
 from Bio.Seq import reverse_complement
 from Bio.SeqRecord import SeqRecord
 
-from amplifinder.data_types.record_types import Junction, Orientation
+from amplifinder.data_types.enums import Orientation
+from amplifinder.data_types.record_types import Junction
 from amplifinder.logger import info
 from amplifinder.utils.file_utils import ensure_dir
 
