@@ -112,6 +112,8 @@ class Record(BaseModel):
 
     model_config = ConfigDict(extra='allow')
 
+    NAME: ClassVar[str] = "records"  # Display name for logging
+
     # Class variable to track if extra fields allowed (for schema generation)
     ALLOW_EXTRA: ClassVar[bool] = True
 

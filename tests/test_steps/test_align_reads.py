@@ -14,7 +14,7 @@ def test_step_initialization(filtered_tnjc2_record, tmp_path):
     fastq_file.write_text("@read1\nACGT\n+\nIIII\n")
 
     # Create dummy junctions.fasta
-    junctions_file = tmp_path / filtered_tnjc2_record.analysis_dir / "junctions.fasta"
+    junctions_file = tmp_path / "junctions" / filtered_tnjc2_record.analysis_dir / "junctions.fasta"
     ensure_parent_dir(junctions_file)
     junctions_file.write_text(">1\nACGTACGT\n")
 

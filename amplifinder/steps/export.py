@@ -76,13 +76,13 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
         )
 
         # Export tnjc2_exported.csv (all candidates) - to_csv handles empty DataFrames automatically
-        export_df.to_csv(self.isjc2_file)
+        export_df.to_csv(self.isjc2_file, index=False)
 
         # Filter candidates for candidate_amplifications.csv
         filtered = self._filter_export_df(export_df)
 
         # to_csv handles empty DataFrames automatically
-        filtered.to_csv(self.candidates_file)
+        filtered.to_csv(self.candidates_file, index=False)
 
         return export_df
 

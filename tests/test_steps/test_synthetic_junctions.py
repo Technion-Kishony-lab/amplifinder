@@ -23,7 +23,7 @@ def test_creates_junctions_fasta(tiny_genome, filtered_tnjc2_record, ref_tn_loc_
     step.run()
 
     # Check that junctions.fasta was created
-    junctions_file = tmp_path / filtered_tnjc2_record.analysis_dir / "junctions.fasta"
+    junctions_file = tmp_path / "junctions" / filtered_tnjc2_record.analysis_dir / "junctions.fasta"
     assert junctions_file.exists()
 
     # Check that it contains 7 junction sequences
@@ -48,7 +48,7 @@ def test_handles_missing_tn(tiny_genome, filtered_tnjc2_record, tmp_path):
     tn_locs = RecordTypedDf.from_records([], RefTnLoc)  # Empty TN list
 
     # Create empty junctions.fasta to satisfy step output requirements
-    junctions_file = tmp_path / candidate_no_tn.analysis_dir / "junctions.fasta"
+    junctions_file = tmp_path / "junctions" / candidate_no_tn.analysis_dir / "junctions.fasta"
     ensure_parent_dir(junctions_file)
     junctions_file.write_text("")
 

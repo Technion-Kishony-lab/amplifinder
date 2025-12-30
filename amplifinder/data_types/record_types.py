@@ -1,7 +1,7 @@
 """Record type definitions for AmpliFinder."""
 from __future__ import annotations
 
-from typing import List, NamedTuple, Optional, TypeVar, TYPE_CHECKING
+from typing import ClassVar, List, NamedTuple, Optional, TypeVar, TYPE_CHECKING
 from enum import Enum
 
 from amplifinder.data_types.records import Record
@@ -32,6 +32,7 @@ if TYPE_CHECKING:
 
 class RefTnSide(Record):
     """A reference TN element side (with optional distance for matches)."""
+    NAME: ClassVar[str] = "Reference TN sides"
     tn_id: TnId
     side: Side
     distance: Optional[int] = None  # None for reference junctions
@@ -41,6 +42,7 @@ class RefTnSide(Record):
 
 class RefTnLoc(Record):
     """Reference TN element location in the genome."""
+    NAME: ClassVar[str] = "TN elements"
     tn_id: TnId
     tn_name: str
     tn_scaf: str
@@ -92,6 +94,7 @@ class RefTnLoc(Record):
 
 class BlastHit(Record):
     """BLAST alignment hit record."""
+    NAME: ClassVar[str] = "BLAST hits"
     query: str
     subject: str
     percent_identical: float
@@ -113,6 +116,7 @@ JunctionT = TypeVar("JunctionT", bound="Junction")
 
 class Junction(Record):
     """Base junction record with shared positional fields."""
+    NAME: ClassVar[str] = "Junctions"
     num: int  # Junction identifier: breseq junction number (positive), or negative for reference junctions
     scaf1: str
     pos1: int
@@ -148,6 +152,7 @@ class RefTnJunction(Junction):
     For RefTnJunction, arm 1 is always the TN side, arm 2 is the chromosome side.
     ref_tn_side indicates which TN boundary (LEFT or RIGHT) this junction represents.
     """
+    NAME: ClassVar[str] = "Reference TN junctions"
 
     #   chr      TN       chr
     # ~~~~~~~|>>>>>>>>>|~~~~~~~    ref_tn_side.side == Side.LEFT
@@ -164,6 +169,7 @@ class RefTnJunction(Junction):
 
 class TnJunction(Junction):
     """Junction matched to TN element(s)."""
+    NAME: ClassVar[str] = "TN-associated junctions"
     ref_tn_sides: List[RefTnSide]  # Reference TN matches: [(tn_id, side, distance?), ...]
     swapped: bool                 # True if BRESEQ arms were swapped (to normalize to TN on arm 1)
 
@@ -184,6 +190,7 @@ class RawTnJc2(Record):
     modified from combine_ISJC_pairs.m
 
     """
+    NAME: ClassVar[str] = "Junction Pairs"
     # Junction IDs
     jc_num_S: int  # Junction number of the 'start' junction
     jc_num_E: int  # Junction number of the 'end' junction
@@ -237,6 +244,7 @@ class CoveredTnJc2(RawTnJc2):
     - anc_path=None: scaffold-normalized only
     - anc_path=set: scaffold-normalized then ancestor-normalized
     """
+    NAME: ClassVar[str] = "Covered Junction Pairs"
     iso_scaf_avg: float
     iso_amplicon_avg: float
     anc_scaf_avg: Optional[float] = None
@@ -283,6 +291,7 @@ class RawEvent(str, Enum):
 
 class ClassifiedTnJc2(CoveredTnJc2):
     """CoveredTnJc2 with structural classification (Step 8 output)."""
+    NAME: ClassVar[str] = "Classified Amplicons"
     raw_event: RawEvent
     shared_tn_ids: List[int]        # TN IDs shared by both junctions
     chosen_tn_id: Optional[int]     # selected TN for analysis
@@ -290,6 +299,7 @@ class ClassifiedTnJc2(CoveredTnJc2):
 
 class FilteredTnJc2(ClassifiedTnJc2):
     """Filtered candidate for detailed analysis (Step 9 output)."""
+    NAME: ClassVar[str] = "Filtered Amplicons"
     analysis_dir: str  # "tn_jc2_001", "tn_jc2_002", etc.
 
 
@@ -328,6 +338,7 @@ class AnalyzedTnJc2(FilteredTnJc2):
     - anc_path=None: jc_cov only, anc_jc_cov is None
     - anc_path=set: both jc_cov and anc_jc_cov present
     """
+    NAME: ClassVar[str] = "Analyzed Amplicons"
     # Junction coverage (7 elements, one per JunctionType)
     jc_cov_left: List[int]      # left-side read counts per junction
     jc_cov_right: List[int]     # right-side read counts per junction
@@ -353,6 +364,7 @@ class ExportedTnJc2(Record):
     Represents the user-facing export format with renamed/combined fields.
     All fields are optional to handle cases where input data may be missing.
     """
+    NAME: ClassVar[str] = "Exported Amplicons"
     isolate: Optional[str] = None
     Reference: Optional[str] = None
     Positions_in_chromosome: Optional[str] = None

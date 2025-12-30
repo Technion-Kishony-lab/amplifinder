@@ -161,7 +161,7 @@ class Step(ABC, Generic[T]):
         if missing_input := self.missing_input_files():
             raise FileNotFoundError(f"{self.name}: missing inputs: {missing_input}")
 
-        with self.print_timer(f"{self.name} ended (total time: ", use_log=True, end_msg=")\n" + 120 * "=" + "\n"):
+        with self.print_timer(f"=" * 90 + " ", use_log=True, end_msg=" =====\n"):
             # Fast path: check if can skip without lock (common case)
             if not self.force and self.has_output_files():
                 return self._execute_and_report("skipping (loading exisitng outputs)", True)
@@ -368,9 +368,11 @@ class RecordTypedDfStep(Step[RecordTypedDf[R]], Generic[R]):
 
     def load_outputs(self) -> RecordTypedDf[R]:
         """Load RecordTypedDf from CSV."""
-        record_type = self._get_record_cls()
-        return RecordTypedDf.from_csv(self.output_file, record_type)
+        record_cls = self._get_record_cls()
+        return RecordTypedDf.from_csv(self.output_file, record_cls)
 
     def report_output_message(self, output: RecordTypedDf[R], *, from_cache: bool) -> Optional[str]:
         """Uniform record count logging for RecordTypedDf steps."""
-        return f"{self.name}: {len(output)} records."
+        record_cls = self._get_record_cls()
+        prefix = 'Loaded' if from_cache else 'Created'
+        return f"{prefix} {len(output)} {record_cls.NAME}."

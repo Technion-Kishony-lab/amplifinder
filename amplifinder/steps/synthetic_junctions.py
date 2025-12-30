@@ -177,7 +177,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
 
         # Output files are per-candidate analysis directories
         self.analysis_dirs = [
-            output_dir / filtered_tnjc2.analysis_dir
+            output_dir / "junctions" / filtered_tnjc2.analysis_dir
             for filtered_tnjc2 in filtered_tnjc2s
         ]
 
@@ -193,7 +193,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         tn_lookup = {tn.tn_id: tn for tn in self.tn_locs}
 
         for filtered_tnjc2 in self.filtered_tnjc2s:
-            analysis_dir = self.output_dir / filtered_tnjc2.analysis_dir
+            analysis_dir = self.output_dir / "junctions" / filtered_tnjc2.analysis_dir
 
             # Get chosen TN
             chosen_tn_id = filtered_tnjc2.chosen_tn_id
@@ -231,6 +231,13 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
     def _save_output(self, output: RecordTypedDf[FilteredTnJc2]) -> None:
         """Output already saved in _calculate_output."""
         pass
+
+    def _output_labels(self) -> list[str]:
+        """Summarize outputs as count."""
+        if self.output_files:
+            n = len(self.filtered_tnjc2s)
+            return [f"{n} junctions"]
+        return []
 
     def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
         """Return candidates (junction files are side effects)."""

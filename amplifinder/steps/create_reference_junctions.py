@@ -53,6 +53,3 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
 
         ref_tnjcs = RecordTypedDf.from_records(ref_tnjcs, RefTnJunction)
         return ref_tnjcs
-
-    def report_output_message(self, output: RecordTypedDf[RefTnJunction], *, from_cache: bool) -> Optional[str]:
-        return f"Created {len(output)} reference TN junctions"

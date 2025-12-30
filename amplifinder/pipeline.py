@@ -63,6 +63,8 @@ class Pipeline:
 
     def run(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Run full pipeline, return analyzed candidates."""
+
+        info(f"Running AmpliFinder pipeline, reference: {self.config.ref_name}, isolate: {self.config.iso_name}, ancestor: {self.config.anc_name}\n")
         iso_output, anc_output = self._initialize()
 
         # Load reference genome (needed for ancestor breseq and isolate pipeline)
@@ -132,8 +134,8 @@ class Pipeline:
         anc_run_dir = self.config.anc_run_dir
 
         for filtered_tnjc2 in filtered_tnjc2s:
-            iso_jc_dir = iso_output / filtered_tnjc2.analysis_dir
-            anc_jc_dir = anc_run_dir / filtered_tnjc2.analysis_dir
+            iso_jc_dir = iso_output / "junctions" / filtered_tnjc2.analysis_dir
+            anc_jc_dir = anc_run_dir / "junctions" / filtered_tnjc2.analysis_dir
             anc_junctions = anc_jc_dir / "junctions.fasta"
 
             # Only copy if not already in ancestor folder
