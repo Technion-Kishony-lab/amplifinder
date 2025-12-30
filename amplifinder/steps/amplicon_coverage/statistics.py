@@ -11,7 +11,6 @@ def calc_distribution_mode(
     x_max: Optional[float] = None,
     n_bins: Optional[int] = None,
     is_log: bool = True,
-    skip_first_bin: bool = True,
 ) -> float:
     """Calculate mode of distribution.
 
@@ -40,9 +39,9 @@ def calc_distribution_mode(
 
     # Transform to log space if needed
     if is_log:
-        x_clean = np.log10(x_clean)
-        x_min = np.log10(x_min)
-        x_max = np.log10(x_max)
+        x_clean = np.log(x_clean)
+        x_min = np.log(x_min)
+        x_max = np.log(x_max)
 
     # Clamp to limits
     x_clamped = np.clip(x_clean, x_min, x_max)
@@ -64,14 +63,11 @@ def calc_distribution_mode(
     hist, _ = np.histogram(x_clamped, bins=edges)
 
     # Find mode
-    if skip_first_bin and len(hist) > 1:
-        max_idx = np.argmax(hist[1:]) + 1  # offset by 1 since we skipped first
-    else:
-        max_idx = np.argmax(hist)
+    max_idx = np.argmax(hist)
     mode = (edges[max_idx] + edges[max_idx + 1]) / 2  # arithmetic mean
 
     # Transform back from log space if needed
     if is_log:
-        mode = 10**mode
+        mode = np.exp(mode)
 
     return float(mode)

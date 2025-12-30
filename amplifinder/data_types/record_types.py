@@ -6,8 +6,10 @@ from operator import add, mul, sub, truediv
 from typing import List, NamedTuple, Optional, TypeVar, TYPE_CHECKING
 
 from amplifinder.data_types.records import Record
-from amplifinder.data_types.scaffold import SegmentScaffold
-from amplifinder.data_types.genome import Genome
+
+if TYPE_CHECKING:
+    from amplifinder.data_types.genome import Genome
+    from amplifinder.data_types.scaffold import SegmentScaffold
 
 
 TnId = int
@@ -254,17 +256,39 @@ class CoveredTnJc2(RawTnJc2):
     """RawTnJc2 with coverage information (Step 7 output).
 
     Coverage fields depend on run type:
-    - anc_path=None: raw coverage only, copy_number_ratio is None
-    - anc_path=set: normalized coverage, copy_number_ratio = iso/anc
+    - anc_path=None: scaffold-normalized only
+    - anc_path=set: scaffold-normalized then ancestor-normalized
     """
-    iso_amplicon_coverage: float
-    iso_scaf_coverage: float
-    anc_amplicon_coverage: Optional[float] = None
-    anc_scaf_coverage: Optional[float] = None
-    copy_number: float = None  #
-    copy_number_vs_anc: Optional[float] = None
-    amplicon_coverage: Optional[float] = None  # Normalized coverage (iso/anc) or raw copy_number
-    amplicon_coverage_mode: Optional[float] = None  # Mode of coverage distribution
+    iso_scaf_avg: float
+    iso_amplicon_avg: float
+    anc_scaf_avg: Optional[float] = None
+    anc_amplicon_avg: Optional[float] = None
+    avg_norm_cov: Optional[float] = None  # Position-by-position ancestor-normalized average
+
+    @property
+    def iso_scaf_norm_copy_number(self) -> float:
+        """Isolate copy number (scaffold-normalized)."""
+        return self.iso_amplicon_avg / self.iso_scaf_avg
+
+    @property
+    def anc_scaf_norm_copy_number(self) -> Optional[float]:
+        """Ancestor copy number (scaffold-normalized)."""
+        if self.anc_amplicon_avg is None or self.anc_scaf_avg is None:
+            return None
+        return self.anc_amplicon_avg / self.anc_scaf_avg
+
+    @property
+    def scaf_norm_copy_number_ratio(self) -> Optional[float]:
+        """Ratio of scaffold-normalized copy numbers (iso/anc)."""
+        anc_cn = self.anc_scaf_norm_copy_number
+        if anc_cn is None:
+            return None
+        return self.iso_scaf_norm_copy_number / anc_cn
+
+    @property
+    def copy_number(self) -> float:
+        """Final copy number: ancestor-normalized if available, else scaffold-normalized."""
+        return self.avg_norm_cov if self.avg_norm_cov is not None else self.iso_scaf_norm_copy_number
 
 
 class RawEvent(str, Enum):

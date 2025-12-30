@@ -34,56 +34,31 @@ def get_scaffold_coverage(
     return cov[start:end]
 
 
-def calc_coverage_stats(cov: np.ndarray, average_method: Union[AverageMethod, str] = AverageMethod.MEDIAN, include_zeros: bool = False) -> float:
+def calc_average(cov: np.ndarray, average_method: AverageMethod = AverageMethod.MEDIAN) -> float:
     """Calculate coverage statistic based on average_method.
 
     Args:
         cov: Coverage values
         average_method: Method to use (AverageMethod enum or string)
-        include_zeros: If False (default), exclude zero values from statistics
+        exclude_zeros: If False (default), include zero values in statistics
 
     Returns:
         Coverage statistic value (float)
     """
-    if not include_zeros:
-        cov = cov[cov > 0]
-
     if len(cov) == 0:
-        return 0.0
-
-    # Convert string to enum if needed
-    if isinstance(average_method, str):
-        average_method = AverageMethod(average_method)
+        return np.nan
 
     if average_method == AverageMethod.MEAN:
         return float(np.mean(cov))
     elif average_method == AverageMethod.MEDIAN:
         return float(np.median(cov))
     elif average_method == AverageMethod.MODE:
-        return calc_distribution_mode(cov, is_log=False, skip_first_bin=False)
+        return calc_distribution_mode(cov, is_log=True)
     else:
         raise ValueError(f"Invalid average_method: {average_method}")
 
 
-def mean_positive(cov: np.ndarray) -> float:
-    """Calculate mean of positive values in coverage array.
-
-    Efficiently computes mean of values > 0.
-
-    Args:
-        cov: Coverage values
-
-    Returns:
-        Mean of positive values, or 0.0 if no positive values exist
-    """
-    mask = cov > 0
-    n_positive = np.sum(mask)
-    if n_positive == 0:
-        return 0.0
-    return float(cov.sum() / n_positive)
-
-
-def calc_scaffold_coverages_and_stats(
+def calc_scaffold_coverages_and_averages(
     cov: np.ndarray,
     scaffold_names: List[str],
     genome: Genome,
@@ -105,5 +80,5 @@ def calc_scaffold_coverages_and_stats(
     for scaf in scaffold_names:
         scaf_cov = get_scaffold_coverage(cov, scaf, genome)
         scaf_covs[scaf] = scaf_cov
-        scaf_stats[scaf] = calc_coverage_stats(scaf_cov, average_method=average_method)
+        scaf_stats[scaf] = calc_average(scaf_cov, average_method=average_method)
     return scaf_covs, scaf_stats

@@ -6,12 +6,12 @@ from typing import Optional
 import numpy as np
 
 from amplifinder.data_types import RecordTypedDf, RawTnJc2, CoveredTnJc2, Genome, AverageMethod
-from amplifinder.data_types.scaffold import SeqScaffold
+from amplifinder.data_types.scaffold import SeqScaffold, SegmentScaffold
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.utils import start_timer, end_timer
 
-from .coverage import get_scaffold_coverage, calc_coverage_stats, calc_scaffold_coverages_and_stats, mean_positive
+from .coverage import get_scaffold_coverage, calc_average, calc_scaffold_coverages_and_averages
 from .statistics import calc_distribution_mode
 
 
@@ -70,8 +70,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         """Functions to profile when profiling is enabled."""
         return [
             get_scaffold_coverage,
-            calc_coverage_stats,
-            calc_scaffold_coverages_and_stats,
+            calc_average,
+            calc_scaffold_coverages_and_averages,
             calc_distribution_mode,
             self._calc_candidate_coverage,
         ]
@@ -86,29 +86,29 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         with self.print_timer(f"loading iso coverage from {self.iso_breseq_path} ..."):
             iso_cov = load_breseq_coverage(self.iso_breseq_path, self.genome.name)
         with self.print_timer(f"calculating iso scaffold stats ({len(unique_scaffolds)} scaffolds) ..."):
-            iso_scaf_covs, iso_scaf_stats = calc_scaffold_coverages_and_stats(iso_cov, unique_scaffolds, self.genome, self.average_method)
+            iso_scaf_covs, iso_scaf_avgs = calc_scaffold_coverages_and_averages(iso_cov, unique_scaffolds, self.genome, self.average_method)
 
         # Load ancestor coverage if provided
         if self.has_ancestor:
             with self.print_timer(f"loading anc coverage from {self.anc_breseq_path} ..."):
                 anc_cov = load_breseq_coverage(self.anc_breseq_path, self.genome.name)
             with self.print_timer(f"calculating anc scaffold stats ({len(unique_scaffolds)} scaffolds) ..."):
-                anc_scaf_covs, anc_scaf_stats = calc_scaffold_coverages_and_stats(anc_cov, unique_scaffolds, self.genome, self.average_method)
+                anc_scaf_covs, anc_scaf_avgs = calc_scaffold_coverages_and_averages(anc_cov, unique_scaffolds, self.genome, self.average_method)
         else:
             anc_cov = None
             anc_scaf_covs = {}
-            anc_scaf_stats = {}
+            anc_scaf_avgs = {}
 
-        # Process each candidate
-        with self.print_timer("Calculating coverage for each candidate..."):
+        # Process each raw_tnjc2s
+        with self.print_timer("Calculating coverage for each raw_tnjc2 ..."):
             covered_records = []
             for raw_tnjc2 in self.raw_tnjc2s:
                 covered = self._calc_candidate_coverage(
                     raw_tnjc2,
                     iso_scaf_covs[raw_tnjc2.scaf],
-                    iso_scaf_stats[raw_tnjc2.scaf],
+                    iso_scaf_avgs[raw_tnjc2.scaf],
                     anc_scaf_covs[raw_tnjc2.scaf] if self.has_ancestor else None,
-                    anc_scaf_stats[raw_tnjc2.scaf] if self.has_ancestor else None,
+                    anc_scaf_avgs[raw_tnjc2.scaf] if self.has_ancestor else None,
                 )
                 covered_records.append(covered)
                 self.print(".", end="")
@@ -116,77 +116,52 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         df = RecordTypedDf.from_records(covered_records, CoveredTnJc2)
         return df
 
+    def calc_average(self, coverage: np.ndarray) -> float:
+        """Calculate average coverage."""
+        return calc_average(coverage, average_method=self.average_method)
+
     def _calc_candidate_coverage(
         self,
         raw_tnjc2: RawTnJc2,
         iso_scaf_cov: np.ndarray,
-        iso_scaf_stat: float,
+        iso_scaf_avg: float,
         anc_scaf_cov: Optional[np.ndarray],
-        anc_scaf_stat: Optional[float],
+        anc_scaf_avg: Optional[float],
     ) -> CoveredTnJc2:
         """Calculate coverage for a single candidate."""
-        # Get coverage in amplicon region (using scaffold-relative positions)
-        # start and end are 1-based inclusive (from BLAST/junction positions)
-        start = raw_tnjc2.start  # 1-based inclusive
-        end = raw_tnjc2.end  # 1-based inclusive
+        # Get segment scaffold for this amplicon
+        seg_scaf = raw_tnjc2.get_segment_scaffold(self.genome)
 
-        scaf_obj = self.genome.get_seq_scaffold(raw_tnjc2.scaf)
-        iso_region_cov = scaf_obj.slice(start, end, iso_scaf_cov)
-
-        # Calculate raw copy number using scaffold-specific statistic
-        iso_mean_cov = mean_positive(iso_region_cov)
-        copy_number = iso_mean_cov / iso_scaf_stat if iso_scaf_stat > 0 else 0.0
-
-        amplicon_coverage = None
-        copy_number_ratio = None
-        amplicon_coverage_mode = None
-        anc_region_cov = None
-
-        if self.has_ancestor and anc_scaf_cov is not None and anc_scaf_stat is not None:
-            # Get ancestor coverage in same region (using scaffold-relative positions)
-            anc_region_cov = scaf_obj.slice(start, end, anc_scaf_cov)
-
-            anc_mean_cov = mean_positive(anc_region_cov)
-            anc_copy_number = anc_mean_cov / anc_scaf_stat if anc_scaf_stat > 0 else 0.0
-
-            # Normalized coverage = iso/anc
-            amplicon_coverage = copy_number / anc_copy_number if anc_copy_number > 0 else None
-            copy_number_ratio = amplicon_coverage
-
-            # Calculate normalized copy number using scaffold-specific statistics
-            cp = iso_region_cov.astype(float) / iso_scaf_stat if iso_scaf_stat > 0 else iso_region_cov.astype(float)
-            anc_cp = anc_region_cov.astype(float) / anc_scaf_stat if anc_scaf_stat > 0 else anc_region_cov.astype(float)
-            with np.errstate(divide='ignore', invalid='ignore'):
-                ncp = cp / anc_cp
-            ncp[~np.isfinite(ncp)] = np.nan
-
-            # Calculate distribution mode
-            amplicon_coverage_mode = calc_distribution_mode(ncp, x_min=self.ncp_min, x_max=self.ncp_max, n_bins=self.ncp_n, is_log=True)
+        iso_amplicon_cov = seg_scaf.slice(seq=iso_scaf_cov)
+        
+        # Remove zero coverage regions
+        if self.has_ancestor:
+            # we mask by the ancestor coverage. 
+            # if the iso_cov=0 and anc_cov>0 it is meaningful (a deletion)
+            mask = anc_amplicon_cov > 0  
         else:
-            # Raw coverage
-            amplicon_coverage = copy_number
+            mask = iso_amplicon_cov > 0
 
-            # Calculate raw copy number using scaffold-specific statistic
-            ncp = iso_region_cov.astype(float) / iso_scaf_stat if iso_scaf_stat > 0 else iso_region_cov.astype(float)
+        iso_amplicon_cov = iso_amplicon_cov[mask]
+        iso_amplicon_avg = self.calc_average(iso_amplicon_cov)
 
-            # Calculate distribution mode (raw)
-            amplicon_coverage_mode = calc_distribution_mode(ncp, x_min=self.ncp_min, x_max=self.ncp_max, n_bins=self.ncp_n, is_log=True)
-
-        # Calculate coverage statistics
-        iso_amplicon_cov_stats = calc_coverage_stats(iso_region_cov, average_method=self.average_method)
-        scaf_coverage = iso_scaf_stat
-        anc_amplicon_cov_stats = (calc_coverage_stats(anc_region_cov, average_method=self.average_method) if anc_region_cov is not None else None)
-        anc_scaf_cov_stats = anc_scaf_stat if self.has_ancestor else None
+        # Calculate isolate amplicon coverage and copy number
+        if self.has_ancestor:
+            anc_amplicon_cov = seg_scaf.slice(seq=anc_scaf_cov)
+            anc_amplicon_cov = anc_amplicon_cov[mask]
+            anc_amplicon_avg = self.calc_average(anc_amplicon_cov)
+            norm_cov = (iso_amplicon_cov / anc_amplicon_cov) / (iso_scaf_avg / anc_scaf_avg)
+            avg_norm_cov = self.calc_average(norm_cov)
+        else:
+            avg_norm_cov = iso_amplicon_avg / iso_scaf_avg
+            anc_amplicon_avg = None
 
         # Build CoveredTnJc2 from RawTnJc2 + new coverage fields
         return CoveredTnJc2.from_other(
             raw_tnjc2,
-            iso_amplicon_coverage=iso_amplicon_cov_stats,
-            iso_scaf_coverage=scaf_coverage,
-            anc_amplicon_coverage=anc_amplicon_cov_stats,
-            anc_scaf_coverage=anc_scaf_cov_stats,
-            copy_number=copy_number,
-            copy_number_vs_anc=copy_number_ratio,
-            amplicon_coverage=amplicon_coverage,
-            amplicon_coverage_mode=amplicon_coverage_mode,
+            iso_scaf_avg=iso_scaf_avg,
+            iso_amplicon_avg=iso_amplicon_avg,
+            anc_scaf_avg=anc_scaf_avg,
+            anc_amplicon_avg=anc_amplicon_avg,
+            avg_norm_cov=avg_norm_cov,
         )

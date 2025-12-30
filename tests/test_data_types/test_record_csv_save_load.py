@@ -6,7 +6,7 @@ from typing import List
 
 from amplifinder.data_types import (
     RecordTypedDf,
-    RefTnSide, RefTnLoc, SeqRefTnSide, BlastHit,
+    RefTnSide, RefTnLoc, BlastHit,
     Junction, RefTnJunction, TnJunction,
     RawTnJc2, CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2, ExportedTnJc2,
     Side, Orientation, RawEvent, EventModifier,
@@ -40,17 +40,6 @@ def make_ref_tn_loc(tn_id: int = 1) -> RefTnLoc:
         loc_right=200,
         orientation=Orientation.FORWARD,
         join=False,
-    )
-
-
-def make_seq_ref_tn_side(tn_id: int = 1) -> SeqRefTnSide:
-    """Create sample SeqRefTnSide."""
-    return SeqRefTnSide(
-        tn_id=tn_id,
-        side=Side.LEFT,
-        distance=0,
-        offset=10,
-        seq_inward="ATCGATCGAT",
     )
 
 
@@ -236,7 +225,6 @@ def make_exported_tnjc2() -> ExportedTnJc2:
 @pytest.mark.parametrize("record_type,make_func", [
     ("RefTnSide", lambda: [make_ref_tn_side(), make_ref_tn_side(2, Side.RIGHT, 5), make_ref_tn_side(3, Side.LEFT, None)]),
     ("RefTnLoc", lambda: [make_ref_tn_loc(), make_ref_tn_loc(2)]),
-    ("SeqRefTnSide", lambda: [make_seq_ref_tn_side(), make_seq_ref_tn_side(2)]),
     ("BlastHit", lambda: [make_blast_hit()]),
     ("Junction", lambda: [make_junction(1), make_junction(2)]),
     ("RefTnJunction", lambda: [make_ref_tn_junction()]),
@@ -254,7 +242,6 @@ def test_record_csv_save_load(record_type, make_func):
     record_classes = {
         "RefTnSide": RefTnSide,
         "RefTnLoc": RefTnLoc,
-        "SeqRefTnSide": SeqRefTnSide,
         "BlastHit": BlastHit,
         "Junction": Junction,
         "RefTnJunction": RefTnJunction,
