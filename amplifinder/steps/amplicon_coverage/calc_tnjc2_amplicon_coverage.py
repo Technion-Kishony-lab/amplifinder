@@ -6,6 +6,7 @@ from typing import Optional
 import numpy as np
 
 from amplifinder.data_types import RecordTypedDf, RawTnJc2, CoveredTnJc2, Genome, AverageMethod
+from amplifinder.data_types.scaffold import SeqScaffold
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.utils import start_timer, end_timer
@@ -129,7 +130,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         start = raw_tnjc2.pos_scaf_L  # 1-based inclusive
         end = raw_tnjc2.pos_scaf_R  # 1-based inclusive
 
-        iso_region_cov = self.genome.slice_in_range(raw_tnjc2.scaf, iso_scaf_cov, start, end)
+        scaf_obj = self.genome.get_seq_scaffold(raw_tnjc2.scaf)
+        iso_region_cov = scaf_obj.slice(start, end, iso_scaf_cov)
 
         # Calculate raw copy number using scaffold-specific statistic
         iso_mean_cov = mean_positive(iso_region_cov)
@@ -142,7 +144,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
 
         if self.has_ancestor and anc_scaf_cov is not None and anc_scaf_stat is not None:
             # Get ancestor coverage in same region (using scaffold-relative positions)
-            anc_region_cov = self.genome.slice_in_range(raw_tnjc2.scaf, anc_scaf_cov, start, end)
+            anc_region_cov = scaf_obj.slice(start, end, anc_scaf_cov)
 
             anc_mean_cov = mean_positive(anc_region_cov)
             anc_copy_number = anc_mean_cov / anc_scaf_stat if anc_scaf_stat > 0 else 0.0

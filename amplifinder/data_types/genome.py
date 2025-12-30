@@ -9,6 +9,8 @@ from typing import Optional, List, Dict, Tuple, TypeVar
 
 import numpy as np
 
+from amplifinder.data_types.scaffold import Scaffold, SeqScaffold
+
 T = TypeVar('T', str, np.ndarray)
 
 from Bio import Entrez, SeqIO
@@ -21,53 +23,6 @@ from amplifinder.utils.file_utils import ensure_dir
 
 # Set email for NCBI Entrez (required)
 Entrez.email = "amplifinder@example.com"
-
-
-def _normalize_range(start: int, end: int, length: int, is_circular: bool) -> Tuple[int, int, bool]:
-    """Normalize coordinates for range extraction (1-based inclusive).
-
-    Args:
-        start: Start position (1-based, inclusive)
-        end: End position (1-based, inclusive)
-        length: Length of sequence/array
-        is_circular: Whether sequence is circular
-
-    Returns:
-        Tuple of (normalized_start, normalized_end, spans_origin)
-        All values are 1-based inclusive.
-    """
-    if not is_circular:
-        return start, end, False
-    # Normalize using modulo arithmetic
-    start_norm = (start - 1) % length + 1
-    end_norm = (end - 1) % length + 1
-    spans_origin = start_norm > end_norm
-    return start_norm, end_norm, spans_origin
-
-
-def _get_range(seq, start: int, end: int, is_circular: bool):
-    """Get range from sequence-like object with coordinate normalization.
-
-    Args:
-        seq: Sequence (string) or array (numpy array)
-        start: Start position (1-based, inclusive)
-        end: End position (1-based, inclusive)
-        is_circular: Whether sequence is circular
-
-    Returns:
-        Extracted range (same type as input)
-    """
-    start_norm, end_norm, spans_origin = _normalize_range(
-        start, end, len(seq), is_circular
-    )
-    if not spans_origin:
-        return seq[start_norm - 1:end_norm]
-    else:
-        # Handle origin spanning: concatenate start-to-end and origin-to-end
-        if isinstance(seq, np.ndarray):
-            return np.concatenate([seq[start_norm - 1:], seq[:end_norm]])
-        else:
-            return seq[start_norm - 1:] + seq[:end_norm]
 
 
 @dataclass
@@ -84,6 +39,7 @@ class Genome:
     # Cached records
     _gb_records: Optional[List[SeqRecord]] = field(default=None, repr=False, compare=False)
     _fa_records: Optional[List[SeqRecord]] = field(default=None, repr=False, compare=False)
+    _scaffolds: Optional[Dict[str, SeqScaffold]] = field(default=None, repr=False, compare=False)
 
     def __post_init__(self):
         if self.genbank_path is None and self.fasta_path is None:
@@ -91,7 +47,7 @@ class Genome:
 
     def __len__(self) -> int:
         """Get total genome length (sum of all scaffold lengths)."""
-        return sum(self.scaffold_lengths.values())
+        return sum(len(scaf) for scaf in self.scaffolds.values())
 
     @property
     def gb_records(self) -> Optional[List[SeqRecord]]:
@@ -123,34 +79,24 @@ class Genome:
         raise ValueError(f"No records available for {self.name}")
 
     @property
-    def scaffold_circularities(self) -> Dict[str, bool]:
-        """Get circularity status per scaffold (from GenBank annotations).
-
-        Returns:
-            Dict mapping scaffold name to circularity (True if circular, False if linear).
-            For FASTA-only genomes with a single contig, assumes circular=True.
-        """
-        records = self.records
-        if self.genbank_path:
-            return {
-                rec.name: rec.annotations.get("topology", "linear").lower() == "circular"
+    def scaffolds(self) -> Dict[str, SeqScaffold]:
+        """Get scaffold objects keyed by name."""
+        if self._scaffolds is None:
+            records = self.records
+            if self.genbank_path:
+                circularities = {
+                    rec.name: rec.annotations.get("topology", "linear").lower() == "circular"
+                    for rec in records
+                }
+            elif len(records) == 1:
+                circularities = {records[0].name: True}
+            else:
+                circularities = {rec.name: False for rec in records}
+            self._scaffolds = {
+                rec.name: SeqScaffold(seq=str(rec.seq), is_circular=circularities[rec.name])
                 for rec in records
             }
-        # FASTA-only: assume circular if single contig (common for bacterial genomes)
-        # TODO: Logic for FASTA-only genomes ok?
-        if len(records) == 1:
-            return {records[0].name: True}
-        return {rec.name: False for rec in records}
-
-    @property
-    def scaffold_sequences(self) -> Dict[str, str]:
-        """Get all sequences as {scaffold_name: sequence} dict."""
-        return {rec.name: str(rec.seq) for rec in self.records}
-
-    @property
-    def scaffold_lengths(self) -> Dict[str, int]:
-        """Get scaffold lengths as {scaffold_name: length} dict."""
-        return {name: len(seq) for name, seq in self.scaffold_sequences.items()}
+        return self._scaffolds
 
     @property
     def scaffold_ranges(self) -> Dict[str, tuple[int, int]]:
@@ -162,50 +108,25 @@ class Genome:
         """
         ranges = {}
         cumulative = 0
-        for scaffold_name, length in self.scaffold_lengths.items():
-            ranges[scaffold_name] = (cumulative, cumulative + length)
-            cumulative += length
+        for scaffold_name, scaf in self.scaffolds.items():
+            ranges[scaffold_name] = (cumulative, cumulative + len(scaf))
+            cumulative += len(scaf)
         return ranges
 
-    def get_fowrard_sequence_in_range(self, scaf: str, start: int, end: int) -> str:
-        """Get sequence in a range. 1-based inclusive.
-
-        Uses modulo arithmetic to handle circular genome.
-        """
-        scaf_seq = self.scaffold_sequences[scaf]
-        return self.slice_in_range(scaf, scaf_seq, start, end)
+    def get_seq_scaffold(self, scaf: str) -> SeqScaffold:
+        """Get scaffold by name."""
+        return self.scaffolds[scaf]
 
     def slice_in_range(self, scaf: str, seq: T, start: int, end: int) -> T:
-        """Slice in range [start, end] (1-based, inclusive). Returns same type as input.
-
-        Args:
-            scaf: Scaffold name
-            seq: Sequence string or coverage array for the scaffold (0-based indexing)
-            start: Start position (1-based, inclusive)
-            end: End position (1-based, inclusive)
-
-        Returns:
-            Sliced sequence or coverage array in the specified range
-
-        Note:
-            Consistent coordinate handling with get_fowrard_sequence_in_range().
-            Also works with string sequences (used internally).
-        """
-        assert len(seq) == self.scaffold_lengths[scaf]
-        scaf_circular = self.scaffold_circularities[scaf]
-        return _get_range(seq, start, end, scaf_circular)
-
-    def get_sequence_in_range(self, scaf: str, start: int, end: int, direction: Orientation) -> str:
-        """Get sequence in a range."""
-        if direction == Orientation.FORWARD:
-            return self.get_fowrard_sequence_in_range(scaf, start, end)
-        else:
-            return reverse_complement(self.get_fowrard_sequence_in_range(scaf, end, start))
+        """Slice arbitrary scaffold-aligned sequence (string or ndarray)."""
+        scaf_obj = self.get_seq_scaffold(scaf)
+        return scaf_obj.slice(start, end, seq)
 
     def get_junction_arm_sequence(self, jc: Junction, arm: int) -> str:
         """Get sequence for a junction arm."""
         scaf, pos, direction, flank_len = jc.get_scaf_pos_dir_flank(arm)
-        return self.get_sequence_in_range(scaf, pos, pos + flank_len * direction, direction)
+        scaf_obj = self.get_seq_scaffold(scaf)
+        return scaf_obj.slice(pos, pos + flank_len * direction, direction=direction)
 
     def get_junction_sequence_arm1_to_arm2(self, jc: Junction) -> str:
         """Get sequence for a junction from arm 1 to arm 2."""
@@ -215,7 +136,7 @@ class Genome:
         """Get sequence for a junction from arm 2 to arm 1."""
         return reverse_complement(self.get_junction_arm_sequence(jc, 2)) + self.get_junction_arm_sequence(jc, 1)
 
-    def calc_length_between_scaf_points(self, scaf: str, start: int, end: int, span_origin: bool) -> int:
+    def calc_length_between_scaf_points(self, scaf: str, start: int, end: int) -> int:
         """Calculate length between two scaffold points.
 
         Handles circular genomes and origin-spanning amplicons.
@@ -228,24 +149,11 @@ class Genome:
         Returns:
             Length between points, or -1 if invalid (spanning origin on linear scaffold)
         """
-        # Basic length between positions
-        raw_length = end - start + 1
-
-        # Get scaffold-specific properties
-        scaf_length = self.scaffold_lengths[scaf]
-        is_circular = self.scaffold_circularities[scaf]
-
-        if not span_origin:
-            # Normal case: return raw length
-            return raw_length
-        
-        # Spanning origin
-        if is_circular:
-            # Amplicon spans origin: actual amplicon is the complement
-            return scaf_length - raw_length
-        else:
-            # Can't span origin on linear - return -1
-            return -1
+        scaf_obj = self.get_seq_scaffold(scaf)
+        return Scaffold(
+            is_circular=scaf_obj.is_circular,
+            length=scaf_obj.length,
+        ).get_segment_length(start, end)
 
 
 class GenomeRegistry:

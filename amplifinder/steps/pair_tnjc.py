@@ -137,11 +137,8 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         tn_orientations = [Orientation(side_i.value * jc_L.dir2.value * (-1 if swapped else 1))
                            for _, side_i in matching_tns]
 
-        # Span origin: if left junction points left (REVERSE), amplicon spans origin
-        span_origin = jc_L.dir2 == Orientation.REVERSE
-
         # Calculate amplicon length
-        amplicon_length = self.genome.calc_length_between_scaf_points(jc_L.scaf2, jc_L.pos2, jc_R.pos2, span_origin)
+        amplicon_length = self.genome.calc_length_between_scaf_points(jc_L.scaf2, jc_L.pos2, jc_R.pos2)
 
         return RawTnJc2(
             jc_num_L=jc_L.num,
@@ -155,6 +152,6 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
             dir_tn_R=jc_R.dir1,
             tn_ids=tn_ids,
             tn_orientations=tn_orientations,
-            span_origin=span_origin,
+            span_origin=jc_L.dir2 == Orientation.REVERSE,
             amplicon_length=amplicon_length,
         )

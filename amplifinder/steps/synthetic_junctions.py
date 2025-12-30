@@ -205,10 +205,11 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
             tn_loc = tn_lookup[chosen_tn_id]
 
             # Get scaffold sequence
-            scaffold_sequences = self.genome.scaffold_sequences
-            if tn_loc.tn_scaf not in scaffold_sequences:
+            try:
+                scaf = self.genome.get_seq_scaffold(tn_loc.tn_scaf)
+            except KeyError:
                 continue
-            chr_seq = scaffold_sequences[tn_loc.tn_scaf]
+            chr_seq = scaf.seq
 
             # Get TN sequence (loc_left and loc_right are 1-based inclusive, convert to 0-based for slicing)
             tn_seq = chr_seq[tn_loc.loc_left - 1:tn_loc.loc_right]
