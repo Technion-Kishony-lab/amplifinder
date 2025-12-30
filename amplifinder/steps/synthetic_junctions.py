@@ -18,6 +18,7 @@ def create_synthetic_junctions(
     tn_loc: RefTnLoc,
     tn_seq: str,
     read_length: int,
+    genome: 'Genome',
 ) -> dict[JunctionType, str]:
     """Create 7 synthetic junction sequences for a candidate amplicon.
 
@@ -43,13 +44,11 @@ def create_synthetic_junctions(
     WID = read_length * 2  # junction width
 
     # Convert positions from 1-based (genomic coordinates) to 0-based (array indexing)
-    # pos_scaf_L and pos_scaf_R are 1-based inclusive (from BLAST/junction positions)
-    pos_L = candidate.pos_scaf_L - 1  # Convert to 0-based start
-    pos_R = candidate.pos_scaf_R - 1  # Convert to 0-based start
-
-    # Handle origin spanning
-    if candidate.span_origin:
-        pos_L, pos_R = pos_R, pos_L
+    # start and end are 1-based inclusive (from BLAST/junction positions)
+    # Get segment scaffold to access normalized left/right positions
+    seg_scaf = candidate.get_segment_scaffold(genome)
+    pos_L = seg_scaf.left - 1  # Convert to 0-based start
+    pos_R = seg_scaf.right - 1  # Convert to 0-based start
 
     # Outside positions (flanking the amplicon)
     pos_out_L = pos_L - 1
@@ -221,6 +220,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
                 tn_loc=tn_loc,
                 tn_seq=tn_seq,
                 read_length=self.read_length,
+                genome=self.genome,
             )
 
             # Write FASTA

@@ -78,13 +78,13 @@ class Pipeline:
         tnjcs = self._create_tnjc(breseq_jc, ref_tnjc, genome, iso_output)
         raw_tnjc2s = self._create_tnjc2(tnjcs, genome, iso_output)
         covered_tnjc2s = self._calc_amplicon_coverage(raw_tnjc2s, genome, iso_output)
-        classified_tnjc2s = self._classify_structure(covered_tnjc2s, tn_loc, iso_output)
+        classified_tnjc2s = self._classify_structure(covered_tnjc2s, genome, tn_loc, iso_output)
         filtered_tnjc2s = self._filter_candidates(classified_tnjc2s, iso_output)
         self._create_synthetic_junctions(filtered_tnjc2s, genome, tn_loc, iso_output)
         self._align_reads(filtered_tnjc2s, iso_output)
         analyzed_tnjc2s = self._analyze_alignments(filtered_tnjc2s, iso_output, anc_output)
         analyzed_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
-        self._export(analyzed_tnjc2s, iso_output)
+        self._export(analyzed_tnjc2s, genome, iso_output)
 
         return analyzed_tnjc2s
 
@@ -314,12 +314,14 @@ class Pipeline:
     def _classify_structure(
         self,
         covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
+        genome: Genome,
         tn_loc: RecordTypedDf[RefTnLoc],
         iso_output: Path,
     ) -> RecordTypedDf[ClassifiedTnJc2]:
         """Step 8: Classify junction pair structures."""
         classified_tnjc2s = ClassifyTnJc2StructureStep(
             covered_tnjc2s=covered_tnjc2s,
+            genome=genome,
             tn_locs=tn_loc,
             output_dir=iso_output,
             min_amplicon_length=self.config.min_amplicon_length,
@@ -436,11 +438,13 @@ class Pipeline:
     def _export(
         self,
         analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
+        genome: Genome,
         iso_output: Path,
     ) -> None:
         """Step 14: Export results to CSV."""
         ExportTnJc2Step(
             analyzed_tnjc2s=analyzed_tnjc2s,
+            genome=genome,
             output_dir=iso_output,
             ref_name=self.config.ref_name,
             iso_name=self.config.iso_name,

@@ -35,13 +35,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         """
         self.tnjcs = tnjcs
         self.genome = genome
-
-        # Cache scaffold properties for multi-scaffold support
-
-        super().__init__(
-            output_dir=output_dir,
-            force=force,
-        )
+        super().__init__(output_dir=output_dir, force=force)
 
     def _calculate_output(self) -> RecordTypedDf[RawTnJc2]:
         """Combine junction pairs."""
@@ -59,7 +53,11 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         """Find all valid junction pairs.
 
         Based on MATLAB combine_ISJC_pairs.m
+
+        junctions: List[TnJunction] are all junctions that are matched to TN elements.
+        NOTE: in all junctions, arm 2 is the chromosome arm
         """
+
         pairs = []
         n = len(junctions)
 
@@ -89,27 +87,26 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
 
     def _find_matching_tns(
         self,
-        matches_i: List[RefTnSide],
-        matches_j: List[RefTnSide],
+        i_ref_tn_sides: List[RefTnSide],
+        j_ref_tn_sides: List[RefTnSide],
     ) -> List[Tuple[int, Side]]:
         """Find TN elements that match both junctions on different sides.
 
-        Returns list of (tn_id, side_i) tuples where side_i is the TN side
-        that junction i connects to.
+        Returns list of (tn_id, side_i) tuples where side_i is the TN side that junction i connects to.
         """
         result = []
 
-        for mi in matches_i:
-            for mj in matches_j:
+        for i_tn_side in i_ref_tn_sides:
+            for j_tn_side in j_ref_tn_sides:
                 # Same TN ID
-                if mi.tn_id != mj.tn_id:
+                if i_tn_side.tn_id != j_tn_side.tn_id:
                     continue
 
                 # Different sides (left vs right)
-                if mi.side == mj.side:
+                if i_tn_side.side == j_tn_side.side:
                     continue
 
-                result.append((mi.tn_id, mi.side))
+                result.append((i_tn_side.tn_id, i_tn_side.side))
 
         return result
 
@@ -121,37 +118,38 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
     ) -> RawTnJc2:
         """Create a junction pair record.
 
-        Normalizes so that L (left) junction has lower chromosome position.
+        Assigns start/end based on forward strand direction:
+        - Start (S): junction where forward strand starts (dir2 == FORWARD)
+        - End (E): junction where forward strand ends (dir2 == REVERSE)
         """
-        # Determine which is left/right based on position
-        swapped = jc_i.pos2 > jc_j.pos2
-        if swapped:
-            jc_L, jc_R = jc_j, jc_i
+        # Determine start/end based on forward strand direction
+        if jc_i.dir2 == Orientation.FORWARD:
+            jc_S = jc_i
+            jc_E = jc_j
+            swapped = False
         else:
-            jc_L, jc_R = jc_i, jc_j
+            jc_S = jc_j
+            jc_E = jc_i
+            swapped = True
 
         # Extract TN IDs and compute orientations
-        # MATLAB: orientation = side_i * dir2(i), where i is L
         tn_ids = [m[0] for m in matching_tns]
-        # Use dir2 of the left junction (jc_L) for orientation calculation
-        tn_orientations = [Orientation(side_i.value * jc_L.dir2.value * (-1 if swapped else 1))
+        tn_orientations = [Orientation(side_i.value * jc_i.dir2.value * (-1 if swapped else 1))
                            for _, side_i in matching_tns]
 
-        # Calculate amplicon length
-        amplicon_length = self.genome.calc_length_between_scaf_points(jc_L.scaf2, jc_L.pos2, jc_R.pos2)
-
-        return RawTnJc2(
-            jc_num_L=jc_L.num,
-            jc_num_R=jc_R.num,
-            scaf=jc_L.scaf2,
-            pos_scaf_L=jc_L.pos2,
-            pos_scaf_R=jc_R.pos2,
-            pos_tn_L=jc_L.pos1,
-            pos_tn_R=jc_R.pos1,
-            dir_tn_L=jc_L.dir1,
-            dir_tn_R=jc_R.dir1,
+        # Create RawTnJc2 with placeholder amplicon_length, then compute it
+        pair = RawTnJc2(
+            jc_num_S=jc_S.num,
+            jc_num_E=jc_E.num,
+            scaf=jc_S.scaf2,
+            start=jc_S.pos2,
+            end=jc_E.pos2,
+            pos_tn_S=jc_S.pos1,
+            pos_tn_E=jc_E.pos1,
+            dir_tn_S=jc_S.dir1,
+            dir_tn_E=jc_E.dir1,
             tn_ids=tn_ids,
             tn_orientations=tn_orientations,
-            span_origin=jc_L.dir2 == Orientation.REVERSE,
-            amplicon_length=amplicon_length,
         )
+        pair.compute_and_store_amplicon_length(self.genome)
+        return pair

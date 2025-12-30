@@ -3,9 +3,11 @@ from __future__ import annotations
 
 from enum import Enum
 from operator import add, mul, sub, truediv
-from typing import List, NamedTuple, Optional, TypeVar
+from typing import List, NamedTuple, Optional, TypeVar, TYPE_CHECKING
 
 from amplifinder.data_types.records import Record
+from amplifinder.data_types.scaffold import SegmentScaffold
+from amplifinder.data_types.genome import Genome
 
 
 TnId = int
@@ -196,36 +198,56 @@ class RawTnJc2(Record):
     - Are on the same scaffold facing opposite directions
     - Match the same TN element on different sides (left/right)
 
-    Based on MATLAB combine_ISJC_pairs.m
+    # nomenclature:
+    # start (S): the junction from which we start the amplicon segment going on the forward strand
+    # end (E):   the junction at which we end the amplicon segment when we go on the forward strand
+
+    modified from combine_ISJC_pairs.m
+
     """
     # Junction IDs
-    jc_num_L: int
-    jc_num_R: int
+    jc_num_S: int  # Junction number of the 'start' junction
+    jc_num_E: int  # Junction number of the 'end' junction
 
     # Scaffold
     scaf: str
 
-    # Scafold positions (left/right junction)
-    pos_scaf_L: int
-    pos_scaf_R: int
+    # Scaffold positions (start/end of amplicon segment on the forward strand)
+    start: int
+    end: int
 
     # TN positions
-    pos_tn_L: int
-    pos_tn_R: int
+    pos_tn_S: int  # TN position of the 'start' junction
+    pos_tn_E: int  # TN position of the 'end' junction
 
     # TN directions
-    dir_tn_L: Orientation
-    dir_tn_R: Orientation
+    dir_tn_S: Orientation  # TN direction of the 'start' junction
+    dir_tn_E: Orientation  # TN direction of the 'end' junction
 
     # TN info
     tn_ids: List[int]              # matching TN element IDs
     tn_orientations: List[Orientation]  # one per tn_id
-    span_origin: bool       # True if amplicon spans circular origin.
-                            # Directions: dir_scaf_L-dir_scaf_R are always opposite.
-                            #             dir_scaf_R, dir_tn_R = (FORWARD, REVERSE) if span_origin else (REVERSE, FORWARD)
 
     # Computed fields
-    amplicon_length: int
+    amplicon_length: int = None  # None until computed
+
+    def compute_and_store_amplicon_length(self, genome: Genome):
+        """Compute amplicon length using the genome."""
+        self.amplicon_length = self.get_segment_scaffold(genome).segment_length
+
+    def get_segment_scaffold(self, genome: Genome) -> SegmentScaffold:
+        """Get SegmentScaffold for this amplicon segment.
+        
+        Returns a SegmentScaffold with start/end positions that provides
+        properties: left, right, span_origin, segment_length.
+        """
+        scaf_obj = genome.get_seq_scaffold(self.scaf)
+        return SegmentScaffold(
+            is_circular=scaf_obj.is_circular,
+            length=scaf_obj.length,
+            start=self.start,
+            end=self.end,
+        )
 
 
 class CoveredTnJc2(RawTnJc2):

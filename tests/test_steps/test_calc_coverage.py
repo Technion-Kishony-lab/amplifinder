@@ -15,22 +15,22 @@ def sample_tnjc2(raw_tnjc2_record):
     first = RawTnJc2.from_other(
         raw_tnjc2_record,
         scaf="chr1",
-        pos_scaf_L=100,
-        pos_scaf_R=200,
-        pos_tn_L=10,
-        pos_tn_R=20,
+        start=100,
+        end=200,
+        pos_tn_S=10,
+        pos_tn_E=20,
         amplicon_length=100,
     )
 
     second = RawTnJc2.from_other(
         raw_tnjc2_record,
-        jc_num_L=3,
-        jc_num_R=4,
+        jc_num_S=3,
+        jc_num_E=4,
         scaf="chr1",
-        pos_scaf_L=300,
-        pos_scaf_R=320,
-        pos_tn_L=30,
-        pos_tn_R=40,
+        start=300,
+        end=320,
+        pos_tn_S=30,
+        pos_tn_E=40,
         tn_ids=[2],
         amplicon_length=20,  # Too short
     )

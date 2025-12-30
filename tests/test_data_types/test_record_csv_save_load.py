@@ -149,11 +149,17 @@ def make_raw_tnjc2() -> RawTnJc2:
         swapped=False,
     )
     return RawTnJc2(
-        tnjc_a=tnjc_a,
-        tnjc_b=tnjc_b,
+        jc_num_S=1,
+        jc_num_E=2,
+        scaf="chr1",
+        start=200,
+        end=400,
+        pos_tn_S=100,
+        pos_tn_E=300,
+        dir_tn_S=Orientation.FORWARD,
+        dir_tn_E=Orientation.REVERSE,
         tn_ids=[1],
         tn_orientations=[Orientation.FORWARD],
-        span_origin=False,
         amplicon_length=201,
     )
 

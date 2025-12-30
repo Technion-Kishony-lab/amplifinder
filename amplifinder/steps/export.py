@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.data_types import RecordTypedDf, AnalyzedTnJc2, ExportedTnJc2, Orientation
+from amplifinder.data_types import RecordTypedDf, AnalyzedTnJc2, ExportedTnJc2, Orientation, Genome
 from amplifinder.steps.base import Step
 
 
@@ -18,6 +18,7 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
     def __init__(
         self,
         analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
+        genome: Genome,
         output_dir: Path,
         ref_name: str,
         iso_name: str,
@@ -28,6 +29,7 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
         force: Optional[bool] = None,
     ):
         self.analyzed_tnjc2s = analyzed_tnjc2s
+        self.genome = genome
         self.output_dir = Path(output_dir)
         self.ref_name = ref_name
         self.iso_name = iso_name
@@ -49,12 +51,15 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
         # Build export records by iterating over typed records
         export_records = []
         for analyzed_tnjc2 in self.analyzed_tnjc2s:
+            # Get span_origin from segment scaffold
+            seg_scaf = analyzed_tnjc2.get_segment_scaffold(self.genome)
+            span_origin = seg_scaf.span_origin
             export_records.append(ExportedTnJc2(
                 isolate=self.iso_name,
                 Reference=self.ref_name,
                 Ancestor=self.anc_name,
-                Positions_in_chromosome=f"{analyzed_tnjc2.pos_scaf_L}-{analyzed_tnjc2.pos_scaf_R}",
-                Direction_in_chromosome=f"{Orientation.REVERSE if analyzed_tnjc2.span_origin else Orientation.FORWARD}/{Orientation.FORWARD if analyzed_tnjc2.span_origin else Orientation.REVERSE}",
+                Positions_in_chromosome=f"{analyzed_tnjc2.start}-{analyzed_tnjc2.end}",
+                Direction_in_chromosome=f"{Orientation.REVERSE if span_origin else Orientation.FORWARD}/{Orientation.FORWARD if span_origin else Orientation.REVERSE}",
                 amplicon_length=analyzed_tnjc2.amplicon_length,
                 IS_element=','.join(map(str, analyzed_tnjc2.tn_ids)) if analyzed_tnjc2.tn_ids else None,
                 median_copy_number=analyzed_tnjc2.amplicon_coverage,
