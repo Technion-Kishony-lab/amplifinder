@@ -92,7 +92,7 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
     def report_output_message(self, output: Optional[RecordTypedDf[RefTnLoc]], *, from_cache: bool) -> Optional[str]:
         if output is None:
             return "No GenBank file provided - skipping GenBank TN annotation."
-        return f"GenBank: found {len(output)} TN elements."
+        return f"GenBank: found {len(output)} TN elements"
 
 
 # Locate TNs using ISfinder database
@@ -148,7 +148,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         return tn_loc
 
     def report_output_message(self, output: RecordTypedDf[RefTnLoc], *, from_cache: bool) -> Optional[str]:
-        return f"Found {len(output)} TN elements via ISfinder"
+        return f"ISfinder: found {len(output)} TN elements"
 
     def _parse_blast(self) -> RecordTypedDf[RefTnLoc]:
         """Parse BLAST output and convert to TN locations."""

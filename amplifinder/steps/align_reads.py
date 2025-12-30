@@ -38,7 +38,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         # Build list of expected output BAM files
         output_files = []
         for filtered_tnjc2 in filtered_tnjc2s:
-            analysis_dir = output_dir / filtered_tnjc2.analysis_dir
+            analysis_dir = output_dir / "junctions" / filtered_tnjc2.analysis_dir
             output_files.append(analysis_dir / "iso.sorted.bam")
             if anc_fastq_path:
                 output_files.append(analysis_dir / "anc.sorted.bam")
@@ -48,7 +48,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
             input_files.append(anc_fastq_path)
         # Junction FASTA files are inputs
         for filtered_tnjc2 in filtered_tnjc2s:
-            input_files.append(output_dir / filtered_tnjc2.analysis_dir / "junctions.fasta")
+            input_files.append(output_dir / "junctions" / filtered_tnjc2.analysis_dir / "junctions.fasta")
 
         super().__init__(
             input_files=input_files,
@@ -57,14 +57,11 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         )
 
     def _output_labels(self) -> list[str]:
-        """Use analysis directory names for logging instead of file names."""
-        labels: list[str] = []
+        """Summarize outputs as count."""
         if self.output_files:
-            for path in self.output_files:
-                parent_name = path.parent.name
-                if parent_name not in labels:
-                    labels.append(parent_name)
-        return labels
+            n = len(self.filtered_tnjc2s)
+            return [f"{n} junctions"]
+        return []
 
     @property
     def has_ancestor(self) -> bool:
@@ -74,7 +71,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
     def _calculate_output(self) -> RecordTypedDf[FilteredTnJc2]:
         """Align reads to synthetic junctions for each candidate."""
         for filtered_tnjc2 in self.filtered_tnjc2s:
-            analysis_dir = self.output_dir / filtered_tnjc2.analysis_dir
+            analysis_dir = self.output_dir / "junctions" / filtered_tnjc2.analysis_dir
             junctions_fasta = analysis_dir / "junctions.fasta"
 
             if not junctions_fasta.exists():

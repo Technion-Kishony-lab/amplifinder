@@ -77,7 +77,7 @@ class BreseqStep(Step[Dict[str, pd.DataFrame]]):
         jc_df = output.get("JC")
         if jc_df is None:
             return None
-        return f"breseq: {len(jc_df)} junctions."
+        return f"Found total of {len(jc_df)} breseq junctions"
 
 
 class AncBreseqStep(BreseqStep):

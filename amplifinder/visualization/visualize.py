@@ -165,7 +165,7 @@ def visualize_candidates(
     if save_plots:
         # Save all plots to files
         for analyzed_tnjc2 in analyzed_tnjc2s:
-            plot_path = run_dir / analyzed_tnjc2.analysis_dir / "coverage_plot.png"
+            plot_path = run_dir / "junctions" / analyzed_tnjc2.analysis_dir / "coverage_plot.png"
             ensure_parent_dir(plot_path)
             plot_candidate_coverage(
                 candidate=analyzed_tnjc2,

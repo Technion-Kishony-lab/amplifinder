@@ -10,7 +10,7 @@ def test_step_initialization(filtered_tnjc2_record, tmp_path):
     filtered_tnjc2s = RecordTypedDf.from_records([filtered_tnjc2_record], FilteredTnJc2)
 
     # Create dummy BAM file (empty, just for initialization test)
-    bam_file = tmp_path / filtered_tnjc2_record.analysis_dir / "iso.sorted.bam"
+    bam_file = tmp_path / "junctions" / filtered_tnjc2_record.analysis_dir / "iso.sorted.bam"
     ensure_parent_dir(bam_file)
     bam_file.write_text("dummy")
 

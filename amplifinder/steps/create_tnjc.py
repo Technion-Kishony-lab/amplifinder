@@ -88,9 +88,6 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
 
         return tnjcs
 
-    def report_output_message(self, output: RecordTypedDf[TnJunction], *, from_cache: bool) -> Optional[str]:
-        return f"Found {len(output)} TN-associated junctions (TnJc)"
-
     def _precompute_ref_tnjcs_sequences(self) -> None:
         """Pre-compute sequences for all reference TN junctions (cache to avoid recomputing)."""
         self._ref_tn_seqs = []
