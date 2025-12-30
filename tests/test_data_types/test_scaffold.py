@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from amplifinder.data_types.record_types import Orientation
+from amplifinder.data_types.enums import Orientation
 from amplifinder.data_types.scaffold import Scaffold, SeqScaffold, SegmentScaffold, SeqSegmentScaffold
 
 

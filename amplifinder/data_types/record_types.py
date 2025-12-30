@@ -1,19 +1,17 @@
 """Record type definitions for AmpliFinder."""
 from __future__ import annotations
 
-from enum import Enum
-from operator import add, mul, sub, truediv
 from typing import List, NamedTuple, Optional, TypeVar, TYPE_CHECKING
+from enum import Enum
 
 from amplifinder.data_types.records import Record
+from amplifinder.data_types.enums import Side, Orientation, AverageMethod
 
 if TYPE_CHECKING:
     from amplifinder.data_types.genome import Genome
     from amplifinder.data_types.scaffold import SegmentScaffold
 
-
 TnId = int
-
 
 
 class JunctionCoverage(NamedTuple):
@@ -23,32 +21,11 @@ class JunctionCoverage(NamedTuple):
     right: int     # reads starting at junction
 
 
-class ReversibleIntEnum(int, Enum):
-    """Base class for int enums with opposite() method."""
+# Import after enums are separated to avoid circular import
+from amplifinder.data_types.scaffold import SegmentScaffold
 
-    def opposite(self):
-        """Return the enum member with negated value."""
-        return type(self)(-self.value)
-
-
-class Side(ReversibleIntEnum):
-    """Side of a TN element (left or right)."""
-    LEFT = -1
-    RIGHT = 1
-
-
-class Orientation(ReversibleIntEnum):
-    """Orientation relative to reference (forward, reverse, or both/mixed)."""
-    FORWARD = 1
-    REVERSE = -1
-    BOTH = 0
-
-
-class AverageMethod(str, Enum):
-    """Method for calculating average coverage statistics."""
-    MEDIAN = "median"
-    MODE = "mode"
-    MEAN = "mean"
+if TYPE_CHECKING:
+    from amplifinder.data_types.genome import Genome
 
 
 ### Reference TN element sides ###
@@ -243,6 +220,7 @@ class RawTnJc2(Record):
         Returns a SegmentScaffold with start/end positions that provides
         properties: left, right, span_origin, segment_length.
         """
+        from amplifinder.data_types.genome import Genome
         scaf_obj = genome.get_seq_scaffold(self.scaf)
         return SegmentScaffold(
             is_circular=scaf_obj.is_circular,
