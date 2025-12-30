@@ -5,8 +5,8 @@ from amplifinder.steps.amplicon_coverage.calc_tnjc2_amplicon_coverage import (
 )
 from amplifinder.steps.amplicon_coverage.coverage import (
     get_scaffold_coverage,
-    calc_coverage_stats,
-    calc_scaffold_coverages_and_stats,
+    calc_average,
+    calc_scaffold_coverages_and_averages,
 )
 from amplifinder.steps.amplicon_coverage.statistics import (
     calc_distribution_mode,
@@ -15,7 +15,7 @@ from amplifinder.steps.amplicon_coverage.statistics import (
 __all__ = [
     "CalcTnJc2AmpliconCoverageStep",
     "get_scaffold_coverage",
-    "calc_coverage_stats",
-    "calc_scaffold_coverages_and_stats",
+    "calc_average",
+    "calc_scaffold_coverages_and_averages",
     "calc_distribution_mode",
 ]
