@@ -177,11 +177,6 @@ class Pipeline:
             output_dir=tn_loc_dir,
         ).run()
 
-        if tn_loc_genbank is not None:
-            info(f"GenBank: found {len(tn_loc_genbank)} TN elements")
-        else:
-            info("No GenBank file provided - skipping GenBank TN annotation")
-
         # 2b: ISfinder database
         tn_loc_isfinder = LocateTNsUsingISfinderStep(
             genome=genome,
@@ -191,11 +186,9 @@ class Pipeline:
             critical_coverage=cfg.isfinder_critical_coverage,
         ).run()
 
-        info(f"ISfinder: found {len(tn_loc_isfinder)} TN elements")
-
         # Compare sources
-        if tn_loc_genbank is not None:
-            compare_tn_locations(tn_loc_genbank, tn_loc_isfinder)
+        # if tn_loc_genbank is not None:
+        #     compare_tn_locations(tn_loc_genbank, tn_loc_isfinder)
 
         # Select source
         if tn_loc_genbank is None and not cfg.use_isfinder:
@@ -234,7 +227,6 @@ class Pipeline:
 
         breseq_jc_df = breseq_output["JC"]
         breseq_jcs = RecordTypedDf(breseq_jc_df, Junction)
-        info(f"breseq: {len(breseq_jcs)} junctions")
         return breseq_jcs
 
     def _create_tnjc(
@@ -308,7 +300,6 @@ class Pipeline:
             ncp_n=cfg.ncp_n,
             average_method=cfg.average_method,
         ).run()
-        info(f"Coverage: {len(covered)} candidates")
         return covered
 
     def _classify_structure(

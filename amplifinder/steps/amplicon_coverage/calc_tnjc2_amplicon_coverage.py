@@ -138,6 +138,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         if self.has_ancestor:
             # we mask by the ancestor coverage. 
             # if the iso_cov=0 and anc_cov>0 it is meaningful (a deletion)
+            anc_amplicon_cov = seg_scaf.slice(seq=anc_scaf_cov)
             mask = anc_amplicon_cov > 0  
         else:
             mask = iso_amplicon_cov > 0
@@ -147,7 +148,6 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
 
         # Calculate isolate amplicon coverage and copy number
         if self.has_ancestor:
-            anc_amplicon_cov = seg_scaf.slice(seq=anc_scaf_cov)
             anc_amplicon_cov = anc_amplicon_cov[mask]
             anc_amplicon_avg = self.calc_average(anc_amplicon_cov)
             norm_cov = (iso_amplicon_cov / anc_amplicon_cov) / (iso_scaf_avg / anc_scaf_avg)

@@ -262,7 +262,6 @@ class TestPipelineStepByStep:
         run_dir = self._setup_pipeline(config, return_run_dir=True)
 
         print("\n=== Testing Isolate Pipeline (with ancestor) ===")
-        print("Note: Ancestor pipeline will run automatically if needed")
         pipeline = TestPipeline(config, matlab_output_dir)
         result = pipeline.run()  # Will run ancestor automatically if needed
 
