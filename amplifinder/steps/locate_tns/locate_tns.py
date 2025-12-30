@@ -84,12 +84,15 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
         """Parse GenBank file and extract TN locations."""
         gb_records = self.genome.gb_records
         if gb_records is None:
-            self.log("No GenBank file provided - skipping GenBank TN annotation.")
             return None
         ref_tn_locs = find_tn_elements(gb_records)
         ref_tn_locs = RecordTypedDf.from_records(ref_tn_locs, RefTnLoc)
-        self.log(f"GenBank: found {len(ref_tn_locs)} TN elements.")
         return ref_tn_locs
+
+    def report_output_message(self, output: Optional[RecordTypedDf[RefTnLoc]], *, from_cache: bool) -> Optional[str]:
+        if output is None:
+            return "No GenBank file provided - skipping GenBank TN annotation."
+        return f"GenBank: found {len(output)} TN elements."
 
 
 # Locate TNs using ISfinder database
@@ -142,8 +145,10 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
 
         # Parse BLAST results
         tn_loc = self._parse_blast()
-        self.log(f"ISfinder: found {len(tn_loc)} TN elements.")
         return tn_loc
+
+    def report_output_message(self, output: RecordTypedDf[RefTnLoc], *, from_cache: bool) -> Optional[str]:
+        return f"Found {len(output)} TN elements via ISfinder"
 
     def _parse_blast(self) -> RecordTypedDf[RefTnLoc]:
         """Parse BLAST output and convert to TN locations."""

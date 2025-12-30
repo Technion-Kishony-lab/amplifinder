@@ -77,20 +77,12 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
 
         # Export tnjc2_exported.csv (all candidates) - to_csv handles empty DataFrames automatically
         export_df.to_csv(self.isjc2_file)
-        self.log(f"Exported {len(export_df)} candidates to {self.isjc2_file}")
 
         # Filter candidates for candidate_amplifications.csv
-        filtered = export_df.pipe(
-            lambda df: df[
-                ((df['mode_copy_number'] > self.copy_number_threshold) |
-                 (df['mode_copy_number'] < self.del_copy_number_threshold)) &
-                (df['amplicon_length'] > self.filter_amplicon_length)
-            ]
-        )
+        filtered = self._filter_export_df(export_df)
 
         # to_csv handles empty DataFrames automatically
         filtered.to_csv(self.candidates_file)
-        self.log(f"Exported {len(filtered)} filtered candidates to {self.candidates_file}")
 
         return export_df
 
@@ -101,3 +93,19 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
     def load_outputs(self) -> RecordTypedDf[ExportedTnJc2]:
         """Load exported TnJc2 data."""
         return RecordTypedDf.from_csv(self.isjc2_file, ExportedTnJc2)
+
+    def report_output_message(self, output: RecordTypedDf[ExportedTnJc2], *, from_cache: bool) -> Optional[str]:
+        filtered_len = len(self._filter_export_df(output))
+        return (
+            f"Exported {len(output)} candidates to {self.isjc2_file}; "
+            f"{filtered_len} filtered candidates to {self.candidates_file}"
+        )
+
+    def _filter_export_df(self, df: RecordTypedDf[ExportedTnJc2]) -> RecordTypedDf[ExportedTnJc2]:
+        return df.pipe(
+            lambda d: d[
+                ((d['mode_copy_number'] > self.copy_number_threshold) |
+                 (d['mode_copy_number'] < self.del_copy_number_threshold)) &
+                (d['amplicon_length'] > self.filter_amplicon_length)
+            ]
+        )

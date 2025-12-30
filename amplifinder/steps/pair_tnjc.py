@@ -46,8 +46,10 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
 
         raw_tnjc2s = RecordTypedDf.from_records(pairs, RawTnJc2)
 
-        self.log(f"Found {len(raw_tnjc2s)} junction pairs (RawTnJc2)")
         return raw_tnjc2s
+
+    def report_output_message(self, output: RecordTypedDf[RawTnJc2], *, from_cache: bool) -> Optional[str]:
+        return f"Found {len(output)} junction pairs (RawTnJc2)"
 
     def _pair_junctions(self, junctions: List[TnJunction]) -> List[RawTnJc2]:
         """Find all valid junction pairs.

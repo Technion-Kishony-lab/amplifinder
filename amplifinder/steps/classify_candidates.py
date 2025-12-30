@@ -122,12 +122,11 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
         result = RecordTypedDf.from_records(classified_records, AnalyzedTnJc2)
 
-        # Log summary
-        if self.has_ancestor:
-            ancestral = sum(1 for r in classified_records if EventModifier.ANCESTRAL in r.event_modifiers)
-            de_novo = sum(1 for r in classified_records if EventModifier.DE_NOVO in r.event_modifiers)
-            self.log(f"Classification: {ancestral} ancestral, {de_novo} de novo, {len(classified_records)} total")
-        else:
-            self.log(f"Classification: {len(classified_records)} candidates (no ancestor comparison)")
-
         return result
+
+    def report_output_message(self, output: RecordTypedDf[AnalyzedTnJc2], *, from_cache: bool) -> Optional[str]:
+        if self.has_ancestor:
+            ancestral = sum(1 for r in output if EventModifier.ANCESTRAL in r.event_modifiers)
+            de_novo = sum(1 for r in output if EventModifier.DE_NOVO in r.event_modifiers)
+            return f"Classification: {ancestral} ancestral, {de_novo} de novo, {len(output)} total"
+        return f"Classification: {len(output)} candidates (no ancestor comparison)"

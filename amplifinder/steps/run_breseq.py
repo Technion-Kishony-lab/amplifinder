@@ -71,10 +71,13 @@ class BreseqStep(Step[Dict[str, pd.DataFrame]]):
             Dict with keys: JC, SNP, MOB, DEL, UN
         """
         outputs = parse_breseq_output(self.output_path)
-        jc_df = outputs.get("JC")
-        if jc_df is not None:
-            self.log(f"breseq: {len(jc_df)} junctions.", verbose_only=False)
         return outputs
+
+    def report_output_message(self, output: Dict[str, pd.DataFrame], *, from_cache: bool) -> Optional[str]:
+        jc_df = output.get("JC")
+        if jc_df is None:
+            return None
+        return f"breseq: {len(jc_df)} junctions."
 
 
 class AncBreseqStep(BreseqStep):
