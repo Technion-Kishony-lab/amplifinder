@@ -65,6 +65,8 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
             candidate_records.append(candidate)
 
         result = RecordTypedDf.from_records(candidate_records, FilteredTnJc2)
-        self.log(f"Filtered to {len(result)} candidates (from {len(self.classified_tnjc2s)} classified)")
 
         return result
+
+    def report_output_message(self, output: RecordTypedDf[FilteredTnJc2], *, from_cache: bool) -> Optional[str]:
+        return f"Filtered to {len(output)} candidates (from {len(self.classified_tnjc2s)} classified)"

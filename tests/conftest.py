@@ -29,6 +29,9 @@ TEST_DATA_ROOT = Path(
 )
 MATLAB_OUTPUT = TEST_DATA_ROOT / "AmpliFinderWorkspace" / "output"
 
+# Allow keeping outputs by setting AMPLIFINDER_KEEP_TEST_OUTPUT=true/1
+KEEP_TEST_OUTPUT = True
+
 # External data paths (from isolates.xlsx)
 FASTQ_PATH = Path(
     "/zdata/user-data/idan/small_projects/breseq_to_amplification_from_dropbox/morbidostat_sra"
@@ -75,7 +78,7 @@ def cleared_output_dir():
     base = Path(__file__).parent / "test_outputs" / "integration"
     output_dir = base / "output"
 
-    ensure_dir(output_dir, cleanup=True)
+    ensure_dir(output_dir, cleanup=not KEEP_TEST_OUTPUT)
 
     return output_dir
 

@@ -83,10 +83,13 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
             tnjcs.append(TnJunction.from_other(jc, ref_tn_sides=matches, swapped=swapped))
 
         tnjcs = RecordTypedDf.from_records(tnjcs, TnJunction)
-        tnjcs = tnjcs.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
+        # Sort but drop the old positional index so CSV won't write an Unnamed column
+        tnjcs = tnjcs.pipe(lambda df: df.sort_values(["scaf2", "pos2"]).reset_index(drop=True))
 
-        self.log(f"Found {len(tnjcs)} TN-associated junctions (TnJc)")
         return tnjcs
+
+    def report_output_message(self, output: RecordTypedDf[TnJunction], *, from_cache: bool) -> Optional[str]:
+        return f"Found {len(output)} TN-associated junctions (TnJc)"
 
     def _precompute_ref_tnjcs_sequences(self) -> None:
         """Pre-compute sequences for all reference TN junctions (cache to avoid recomputing)."""

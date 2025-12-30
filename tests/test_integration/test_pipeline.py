@@ -91,9 +91,9 @@ class TestPipeline(Pipeline):
 
         return result
 
-    def _export(self, analyzed, iso_output):
+    def _export(self, analyzed, genome, iso_output):
         """Step 14: Export results - compare final export tables with MATLAB."""
-        super()._export(analyzed, iso_output)
+        super()._export(analyzed, genome, iso_output)
 
         # Compare final export tables with MATLAB
         from tests.test_integration.matlab_compare import (

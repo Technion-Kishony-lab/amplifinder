@@ -225,12 +225,15 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
             genome=self.genome,
             min_amplicon_length=self.min_amplicon_length,
         )
-
-        self.log(
-            f"Classification: {len([r for r in classified if r.raw_event == RawEvent.FLANKED])} flanked, "
-            f"{len([r for r in classified if r.raw_event == RawEvent.UNFLANKED])} unflanked, "
-            f"{len([r for r in classified if r.raw_event == RawEvent.HEMI_FLANKED_LEFT])} hemi-left, "
-            f"{len([r for r in classified if r.raw_event == RawEvent.HEMI_FLANKED_RIGHT])} hemi-right"
-        )
-
         return classified
+
+    def report_output_message(self, output: RecordTypedDf[ClassifiedTnJc2], *, from_cache: bool) -> Optional[str]:
+        counts = output.df["raw_event"].value_counts()
+        flanked = counts.get(RawEvent.FLANKED, 0)
+        unflanked = counts.get(RawEvent.UNFLANKED, 0)
+        hemi_left = counts.get(RawEvent.HEMI_FLANKED_LEFT, 0)
+        hemi_right = counts.get(RawEvent.HEMI_FLANKED_RIGHT, 0)
+        return (
+            f"Classification: {flanked} flanked, {unflanked} unflanked, "
+            f"{hemi_left} hemi-left, {hemi_right} hemi-right"
+        )

@@ -52,5 +52,7 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
             ref_tnjcs.append(right_jc)
 
         ref_tnjcs = RecordTypedDf.from_records(ref_tnjcs, RefTnJunction)
-        self.log(f"Created {len(ref_tnjcs)} reference TN junctions")
         return ref_tnjcs
+
+    def report_output_message(self, output: RecordTypedDf[RefTnJunction], *, from_cache: bool) -> Optional[str]:
+        return f"Created {len(output)} reference TN junctions"
