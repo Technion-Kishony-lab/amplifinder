@@ -205,7 +205,7 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
 
             # Get scaffold sequence
             try:
-                scaf = self.genome.get_seq_scaffold(tn_loc.tn_scaf)
+                scaf = self.genome.get_scaffold(tn_loc.tn_scaf)
             except KeyError:
                 continue
             chr_seq = scaf.seq

@@ -5,11 +5,11 @@ from typing import ClassVar, List, NamedTuple, Optional, TypeVar, TYPE_CHECKING
 from enum import Enum
 
 from amplifinder.data_types.records import Record
-from amplifinder.data_types.enums import Side, Orientation, AverageMethod
+from amplifinder.data_types.enums import Side, Orientation
+from amplifinder.data_types.scaffold import SegmentScaffold, JcArm
 
 if TYPE_CHECKING:
     from amplifinder.data_types.genome import Genome
-    from amplifinder.data_types.scaffold import SegmentScaffold
 
 TnId = int
 
@@ -19,13 +19,6 @@ class JunctionCoverage(NamedTuple):
     spanning: int  # reads crossing junction
     left: int      # reads ending at junction
     right: int     # reads starting at junction
-
-
-# Import after enums are separated to avoid circular import
-from amplifinder.data_types.scaffold import SegmentScaffold
-
-if TYPE_CHECKING:
-    from amplifinder.data_types.genome import Genome
 
 
 ### Reference TN element sides ###
@@ -136,13 +129,13 @@ class Junction(Record):
             "flanking_left": self.flanking_right, "flanking_right": self.flanking_left,
         })
 
-    def get_scaf_pos_dir_flank(self, arm: int) -> tuple[str, int, Orientation, int]:
+    def get_jc_arm(self, arm: int) -> JcArm:
         """Get scaffold, position, direction, and flanking length for an arm."""
-        return (
-            self.scaf1 if arm == 1 else self.scaf2, 
-            self.pos1 if arm == 1 else self.pos2, 
-            self.dir1 if arm == 1 else self.dir2, 
-            self.flanking_left if arm == 1 else self.flanking_right
+        return JcArm(
+            scaf=self.scaf1 if arm == 1 else self.scaf2, 
+            start=self.pos1 if arm == 1 else self.pos2, 
+            dir=self.dir1 if arm == 1 else self.dir2, 
+            flank=self.flanking_left if arm == 1 else self.flanking_right
             )
 
 
@@ -228,12 +221,13 @@ class RawTnJc2(Record):
         properties: left, right, span_origin, segment_length.
         """
         from amplifinder.data_types.genome import Genome
-        scaf_obj = genome.get_seq_scaffold(self.scaf)
+        scaf_obj = genome.get_scaffold(self.scaf)
         return SegmentScaffold(
             is_circular=scaf_obj.is_circular,
             length=scaf_obj.length,
             start=self.start,
             end=self.end,
+            orientation=Orientation.FORWARD,  # by definition, the amplicon segment is on the forward strand
         )
 
 

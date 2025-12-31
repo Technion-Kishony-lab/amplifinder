@@ -16,17 +16,17 @@ def toy_genome(tmp_path) -> Genome:
 
 
 def test_get_forward_sequence_in_range(toy_genome: Genome):
-    scaf = toy_genome.get_seq_scaffold("toy")
+    scaf = toy_genome.get_scaffold("toy")
     assert scaf.slice(3, 8) == "cdefgh"
 
 
 def test_get_forward_sequence_in_range_circular(toy_genome: Genome):
-    scaf = toy_genome.get_seq_scaffold("toy")
+    scaf = toy_genome.get_scaffold("toy")
     assert scaf.slice(25, 2) == "yzab"
 
 
 def test_get_sequence_in_range_reverse(toy_genome: Genome):
-    scaf = toy_genome.get_seq_scaffold("toy")
+    scaf = toy_genome.get_scaffold("toy")
     result = scaf.slice(10, 5, direction=Orientation.REVERSE)
     assert result == reverse_complement("efghij")
 
