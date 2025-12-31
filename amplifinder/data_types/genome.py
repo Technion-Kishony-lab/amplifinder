@@ -114,20 +114,14 @@ class Genome:
             cumulative += len(scaf)
         return ranges
 
-    def get_seq_scaffold(self, scaf: str) -> SeqScaffold:
+    def get_scaffold(self, scaf: str) -> SeqScaffold:
         """Get scaffold by name."""
         return self.scaffolds[scaf]
 
-    def slice_in_range(self, scaf: str, seq: T, start: int, end: int) -> T:
-        """Slice arbitrary scaffold-aligned sequence (string or ndarray)."""
-        scaf_obj = self.get_seq_scaffold(scaf)
-        return scaf_obj.slice(start, end, seq)
-
     def get_junction_arm_sequence(self, jc: Junction, arm: int) -> str:
         """Get sequence for a junction arm."""
-        scaf, pos, direction, flank_len = jc.get_scaf_pos_dir_flank(arm)
-        scaf_obj = self.get_seq_scaffold(scaf)
-        return scaf_obj.slice(pos, pos + flank_len * direction, direction=direction)
+        jc_arm = jc.get_jc_arm(arm)
+        return jc_arm.slice_scaffold(self.get_scaffold(jc_arm.scaf))
 
     def get_junction_sequence_arm1_to_arm2(self, jc: Junction) -> str:
         """Get sequence for a junction from arm 1 to arm 2."""
@@ -136,25 +130,6 @@ class Genome:
     def get_junction_sequence_arm2_to_arm1(self, jc: Junction) -> str:
         """Get sequence for a junction from arm 2 to arm 1."""
         return reverse_complement(self.get_junction_arm_sequence(jc, 2)) + self.get_junction_arm_sequence(jc, 1)
-
-    def calc_length_between_scaf_points(self, scaf: str, start: int, end: int) -> int:
-        """Calculate length between two scaffold points.
-
-        Handles circular genomes and origin-spanning amplicons.
-        Args:
-            scaf: Scaffold name
-            start: Start position (1-based, inclusive)
-            end: End position (1-based, inclusive)
-            span_origin: True if span crosses circular origin
-
-        Returns:
-            Length between points, or -1 if invalid (spanning origin on linear scaffold)
-        """
-        scaf_obj = self.get_seq_scaffold(scaf)
-        return Scaffold(
-            is_circular=scaf_obj.is_circular,
-            length=scaf_obj.length,
-        ).get_segment_length(start, end)
 
 
 class GenomeRegistry:

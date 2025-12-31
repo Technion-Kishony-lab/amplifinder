@@ -55,7 +55,7 @@ def plot_candidate_coverage(
     plot_end = min(scaf_length, candidate.end + flank)
 
     # Get coverage in plot range using Genome method
-    scaf_obj = genome.get_seq_scaffold(candidate.scaf)
+    scaf_obj = genome.get_scaffold(candidate.scaf)
     iso_plot_cov = scaf_obj.slice(plot_start, plot_end, iso_scaf_cov)
     positions = np.arange(plot_start, plot_start + len(iso_plot_cov))
 
