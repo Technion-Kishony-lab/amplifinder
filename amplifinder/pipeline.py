@@ -189,8 +189,8 @@ class Pipeline:
         ).run()
 
         # Compare sources
-        # if tn_loc_genbank is not None:
-        #     compare_tn_locations(tn_loc_genbank, tn_loc_isfinder)
+        if tn_loc_genbank is not None:
+            compare_tn_locations(tn_loc_genbank, tn_loc_isfinder, output_file=tn_loc_dir / "tn_location_diffs.txt")
 
         # Select source
         if tn_loc_genbank is None and not cfg.use_isfinder:
