@@ -255,18 +255,13 @@ def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
 
     # Convert to DataFrames
     results = {}
-    name_width = max(len(n) for n in records) if records else 0
-    lines = []
+    lengths = {}
     for name, recs in records.items():
         df = pd.DataFrame(recs) if recs else pd.DataFrame()
         results[name] = df
-        name_col = name.ljust(max(4, name_width))
-        count_col = str(len(df)).rjust(4)
-        lines.append(f"  {name_col} {count_col} records")
-    
-    if lines:
-        info("Found the following breseq records:\n" + "\n".join(lines))
-
+        lengths[name] = len(df)
+    print("Found the following breseq records: ", end="")
+    print(", ".join(f"{name}: {lengths[name]}" for name in lengths.keys()))
     return results
 
 

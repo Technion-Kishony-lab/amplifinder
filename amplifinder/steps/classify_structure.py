@@ -3,188 +3,11 @@
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
-from amplifinder.data_types import (
-    RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc,
-)
+from amplifinder.data_types import RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc, Side, TnJunction
+from amplifinder.data_types.enums import BaseRawEvent
 from amplifinder.data_types.genome import Genome
-from amplifinder.steps.base import RecordTypedDfStep
 
-if TYPE_CHECKING:
-    pass
-
-
-def classify_structure(
-    covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
-    genome: 'Genome',
-    min_amplicon_length: int = 30,
-) -> RecordTypedDf[ClassifiedTnJc2]:
-    """Classify junction pairs based on TN relationships.
-
-    Based on MATLAB classify_ISJC2.m
-
-    Classification logic:
-    1. Reference: both junctions match reference TN at same location
-    2. Transposition: short amplicon (< threshold), de novo, not reference
-    3. Single-locus: reference or transposition
-    4. For each junction, check if it appears in other single-locus pairs
-    5. Classify based on shared IS:
-       - Both sides share: flanked
-       - One side shares: hemi-flanked (left/right)
-       - Neither shares: unflanked
-       - Multiple matches: multiple single locus
-
-    Args:
-        covered_tnjc2s: Covered TnJc2 records
-        min_amplicon_length: Threshold for transposition detection
-
-    Returns:
-        Classified TnJc2 records
-    """
-    if len(covered_tnjc2s) == 0:
-        return RecordTypedDf.empty(ClassifiedTnJc2)
-
-    # Step 1: Identify reference and transposition pairs
-    is_reference = []
-    is_transposition = []
-    is_single_locus = []
-
-    for tnjc2 in covered_tnjc2s:
-        # Reference: both junctions are reference (jc_num == 0) and match same TN
-        # Simplified: check if both jc_num are 0 (reference junctions)
-        # In practice, we'd need to check if they match the same reference TN location
-        ref_start = tnjc2.jc_num_S == 0
-        ref_end = tnjc2.jc_num_E == 0
-
-        # Check if both match same TN ID (simplified check)
-        same_tn = len(tnjc2.tn_ids) > 0 and all(tid == tnjc2.tn_ids[0] for tid in tnjc2.tn_ids)
-
-        is_ref = ref_start and ref_end and same_tn
-        is_reference.append(is_ref)
-
-        # Transposition: short amplicon, not reference
-        is_trans = (
-            not is_ref
-            and tnjc2.amplicon_length < min_amplicon_length
-        )
-        is_transposition.append(is_trans)
-
-        # Single-locus: reference or transposition
-        is_single_locus.append(is_ref or is_trans)
-
-    # Step 2: For each junction, find other single-locus pairs that share it
-    n = len(covered_tnjc2s)
-    shared_tn_ids_left = [[] for _ in range(n)]
-    shared_tn_ids_right = [[] for _ in range(n)]
-    shared_tn_ids_both = [[] for _ in range(n)]
-    multiple_single_locus = [False] * n
-
-    for i, tnjc2_i in enumerate(covered_tnjc2s):
-        if not is_single_locus[i]:
-            continue
-
-        # Check start junction
-        matches_start = []
-        for j, tnjc2_j in enumerate(covered_tnjc2s):
-            if i == j or not is_single_locus[j]:
-                continue
-
-            # Check if start junction matches
-            if tnjc2_i.jc_num_S == tnjc2_j.jc_num_S or tnjc2_i.jc_num_S == tnjc2_j.jc_num_E:
-                # Find shared TN IDs
-                shared = [tid for tid in tnjc2_i.tn_ids if tid in tnjc2_j.tn_ids]
-                if shared:
-                    matches_start.append((j, shared))
-
-        if len(matches_start) > 1:
-            multiple_single_locus[i] = True
-        elif len(matches_start) == 1:
-            _, shared = matches_start[0]
-            shared_tn_ids_left[i] = shared
-
-        # Check end junction
-        matches_end = []
-        for j, tnjc2_j in enumerate(covered_tnjc2s):
-            if i == j or not is_single_locus[j]:
-                continue
-
-            # Check if end junction matches
-            if tnjc2_i.jc_num_E == tnjc2_j.jc_num_S or tnjc2_i.jc_num_E == tnjc2_j.jc_num_E:
-                # Find shared TN IDs
-                shared = [tid for tid in tnjc2_i.tn_ids if tid in tnjc2_j.tn_ids]
-                if shared:
-                    matches_end.append((j, shared))
-
-        if len(matches_end) > 1:
-            multiple_single_locus[i] = True
-        elif len(matches_end) == 1:
-            _, shared = matches_end[0]
-            shared_tn_ids_right[i] = shared
-
-        # Find TN IDs shared by both sides
-        shared_both = [tid for tid in shared_tn_ids_left[i] if tid in shared_tn_ids_right[i]]
-        shared_tn_ids_both[i] = shared_both
-
-    # Step 3: Classify based on shared IS
-    classified_records = []
-    for i, tnjc2 in enumerate(covered_tnjc2s):
-        # Determine classification
-        if multiple_single_locus[i]:
-            raw_event = RawEvent.MULTIPLE_SINGLE_LOCUS
-        elif is_reference[i]:
-            raw_event = RawEvent.REFERENCE
-        elif is_transposition[i]:
-            raw_event = RawEvent.TRANSPOSITION
-        elif len(shared_tn_ids_both[i]) > 0:
-            raw_event = RawEvent.FLANKED
-        elif len(shared_tn_ids_left[i]) > 0 or len(shared_tn_ids_right[i]) > 0:
-            # Hemi-flanked: determine left vs right
-            # Check which side has the shared IS
-            has_left = len(shared_tn_ids_left[i]) > 0
-            has_right = len(shared_tn_ids_right[i]) > 0
-
-            # Account for origin spanning
-            seg_scaf = tnjc2.get_segment_scaffold(genome)
-            span_origin = seg_scaf.span_origin
-            if span_origin:
-                # When spanning origin, left/right are swapped
-                if has_right:
-                    raw_event = RawEvent.HEMI_FLANKED_LEFT
-                else:
-                    raw_event = RawEvent.HEMI_FLANKED_RIGHT
-            else:
-                if has_left:
-                    raw_event = RawEvent.HEMI_FLANKED_LEFT
-                else:
-                    raw_event = RawEvent.HEMI_FLANKED_RIGHT
-        else:
-            raw_event = RawEvent.UNFLANKED
-
-        # Determine shared TN IDs and chosen TN ID
-        if raw_event == RawEvent.FLANKED:
-            shared_tn_ids = shared_tn_ids_both[i]
-        elif raw_event in (RawEvent.HEMI_FLANKED_LEFT, RawEvent.HEMI_FLANKED_RIGHT):
-            # Use the side that has the shared IS
-            if len(shared_tn_ids_left[i]) > 0:
-                shared_tn_ids = shared_tn_ids_left[i]
-            else:
-                shared_tn_ids = shared_tn_ids_right[i]
-        else:
-            # Unflanked, reference, transposition: use all TN IDs
-            shared_tn_ids = tnjc2.tn_ids
-
-        # Chosen TN ID: first shared TN, or first TN if none shared
-        chosen_tn_id = shared_tn_ids[0] if shared_tn_ids else (tnjc2.tn_ids[0] if tnjc2.tn_ids else None)
-
-        # Create classified record
-        classified = ClassifiedTnJc2.from_other(
-            tnjc2,
-            raw_event=raw_event,
-            shared_tn_ids=shared_tn_ids,
-            chosen_tn_id=chosen_tn_id,
-        )
-        classified_records.append(classified)
-
-    return RecordTypedDf.from_records(classified_records, ClassifiedTnJc2)
+from .base import RecordTypedDfStep
 
 
 class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
@@ -205,35 +28,51 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
         genome: Genome,
         tn_locs: RecordTypedDf[RefTnLoc],
         output_dir: Path,
-        min_amplicon_length: int = 30,
+        transposition_threshold: int = 30,
         force: Optional[bool] = None,
     ):
         self.covered_tnjc2s = covered_tnjc2s
         self.genome = genome
         self.tn_locs = tn_locs
-        self.min_amplicon_length = min_amplicon_length
+        self.transposition_threshold = transposition_threshold
 
-        super().__init__(
-            output_dir=output_dir,
-            force=force,
-        )
+        super().__init__(output_dir=output_dir, force=force)
 
     def _calculate_output(self) -> RecordTypedDf[ClassifiedTnJc2]:
         """Classify junction pairs."""
-        classified = classify_structure(
-            self.covered_tnjc2s,
-            genome=self.genome,
-            min_amplicon_length=self.min_amplicon_length,
-        )
-        return classified
+        tnjc2s = self.covered_tnjc2s.to_records()
+        base_raw_events = [self._compute_base_raw_event(tnjc2) for tnjc2 in tnjc2s]
+        classified_tnjc2s = []
+        for i, tncj2_i in enumerate(tnjc2s):
+            tnjc2_matching_S = self._find_matching_tnjc2(tncj2_i.tnjc_S, tnjc2s, base_raw_events)
+            tnjc2_matching_E = self._find_matching_tnjc2(tncj2_i.tnjc_E, tnjc2s, base_raw_events)
+            classified_tnjc2s.append(ClassifiedTnJc2.from_other(
+                tncj2_i, 
+                tnjc2_matching_S=tnjc2_matching_S, 
+                tnjc2_matching_E=tnjc2_matching_E,
+                base_raw_event=base_raw_events[i],
+            ))
+        return RecordTypedDf.from_records(classified_tnjc2s, ClassifiedTnJc2)
+
+    def _compute_base_raw_event(self, tnjc2: CoveredTnJc2) -> BaseRawEvent:
+        if tnjc2.tnjc_S.is_ref_tn_junction() and tnjc2.tnjc_E.is_ref_tn_junction():
+            return BaseRawEvent.REFERENCE
+        elif abs(tnjc2.start - tnjc2.end) < self.transposition_threshold:
+            return BaseRawEvent.TRANSPOSITION
+        else:
+            return BaseRawEvent.LOCUS_JOINING
+
+    def _find_matching_tnjc2(self, tnjc_i: TnJunction, tnjc2s: list[CoveredTnJc2], base_raw_events: list[BaseRawEvent]) -> Optional[CoveredTnJc2]:
+        for j, tnjc2_j in enumerate(tnjc2s):
+            if base_raw_events[j] != BaseRawEvent.LOCUS_JOINING:
+                continue
+            if tnjc_i == tnjc2_j.tnjc_S or tnjc_i == tnjc2_j.tnjc_E:
+                return tnjc2_j
+        return None
 
     def report_output_message(self, output: RecordTypedDf[ClassifiedTnJc2], *, from_cache: bool) -> Optional[str]:
-        counts = output.df["raw_event"].value_counts()
-        flanked = counts.get(RawEvent.FLANKED, 0)
-        unflanked = counts.get(RawEvent.UNFLANKED, 0)
-        hemi_left = counts.get(RawEvent.HEMI_FLANKED_LEFT, 0)
-        hemi_right = counts.get(RawEvent.HEMI_FLANKED_RIGHT, 0)
-        return (
-            f"Classification: {flanked} flanked, {unflanked} unflanked, "
-            f"{hemi_left} hemi-left, {hemi_right} hemi-right"
-        )
+        records: list[ClassifiedTnJc2] = output.to_records()
+        counts: dict[RawEvent, int] = {name: 0 for name in RawEvent}
+        for record in records:
+            counts[record.raw_event] += 1
+        return ", ".join(f"{event}: {count}" for event, count in counts.items())

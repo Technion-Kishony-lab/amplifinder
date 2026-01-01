@@ -109,6 +109,6 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
             jc_S, jc_E = jc_j, jc_i
 
         # Create RawTnJc2 with the two junction objects
-        pair = RawTnJc2(tn_jc_S=jc_S, tn_jc_E=jc_E)
+        pair = RawTnJc2(tnjc_S=jc_S, tnjc_E=jc_E)
         pair.compute_and_store_amplicon_length(self.genome)
         return pair
