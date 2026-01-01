@@ -141,6 +141,11 @@ class Junction(Record):
         )
 
 
+class BreseqJunction(Junction):
+    """Breseq junction."""
+    NAME: ClassVar[str] = "Breseq junctions"
+
+
 class RefTnJunction(Junction):
     """Synthetic junction for reference TN element.
 
@@ -165,8 +170,9 @@ class RefTnJunction(Junction):
 class TnJunction(Junction):
     """Junction matched to TN element(s)."""
     NAME: ClassVar[str] = "TN-associated junctions"
+    ref_tn_side: RefTnSide
     ref_tn_sides: List[RefTnSide]  # Reference TN matches: [(tn_id, side, distance?), ...]
-    swapped: bool                 # True if BRESEQ arms were swapped (to normalize to TN on arm 1)
+    swapped: bool                  # True if BRESEQ arms were swapped (to normalize to TN on arm 1)
 
 
 # Paired TN junctions
