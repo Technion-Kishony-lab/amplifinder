@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, Orientation
+from amplifinder.data_types import RecordTypedDf, RefTnJunction, TnJunction, RawTnJc2, Orientation
 from amplifinder.data_types.genome import Genome
 
 
@@ -65,17 +65,24 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
                 jc_i = junctions[i]
                 jc_j = junctions[j]
 
-                # (a1) Same scaffold for chromosome arm (arm 2)
+                # (a) Same scaffold for chromosome arm (arm 2)
                 if jc_i.scaf2 != jc_j.scaf2:
                     continue
 
-                # (a2) Opposing chromosome directions
+                # (a) Opposing chromosome directions
                 if jc_i.dir2 == jc_j.dir2:
                     continue
 
-                # (b) Find matching TN: same ID, different sides
-                matching_tns = RawTnJc2.find_matching_tns(jc_i.ref_tn_sides, jc_j.ref_tn_sides)
-                if not matching_tns:
+                # (c) Find matching TN: same ID, different sides
+                matching_tn_sides = RawTnJc2.find_matching_tn_sides(jc_i.ref_tn_sides, jc_j.ref_tn_sides)
+                if not matching_tn_sides:
+                    continue
+
+                # (d) A reference TN junction must appear in the matching TNs
+                matching_tn_ids = [tn_side_i.tn_id for tn_side_i, tn_side_j in matching_tn_sides]
+                if jc_i.is_ref_tn_junction() and jc_i.ref_tn_side.tn_id not in matching_tn_ids:
+                    continue
+                if jc_j.is_ref_tn_junction() and jc_j.ref_tn_side.tn_id not in matching_tn_ids:
                     continue
 
                 # Create pair record
