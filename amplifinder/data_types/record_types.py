@@ -170,9 +170,13 @@ class RefTnJunction(Junction):
 class TnJunction(Junction):
     """Junction matched to TN element(s)."""
     NAME: ClassVar[str] = "TN-associated junctions"
-    ref_tn_side: RefTnSide
+    ref_tn_side: Optional[RefTnSide] = None
     ref_tn_sides: List[RefTnSide]  # Reference TN matches: [(tn_id, side, distance?), ...]
     swapped: bool                  # True if BRESEQ arms were swapped (to normalize to TN on arm 1)
+
+    def is_ref_tn_junction(self) -> bool:
+        """Return True if this is a reference TN junction."""
+        return self.ref_tn_side is not None
 
 
 # Paired TN junctions
