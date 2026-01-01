@@ -4,8 +4,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.data_types import RecordTypedDf, Junction, RefTnSide, TnJunction, Orientation, RefTnJunction
-from Bio.Seq import reverse_complement
+from amplifinder.data_types import RecordTypedDf, Junction, RefTnSide, TnJunction, RefTnJunction
 from amplifinder.data_types.genome import Genome
 
 
@@ -57,7 +56,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         """Match junctions to TN elements."""
 
         self._precompute_ref_tnjcs_sequences()
-        
+
         tnjcs = []
 
         for jc in self.junctions:
@@ -91,15 +90,14 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
     def _precompute_ref_tnjcs_sequences(self) -> None:
         """Pre-compute sequences for all reference TN junctions (cache to avoid recomputing)."""
         self._ref_tn_seqs = []
-        for ref_jc in self.ref_tnjcs:
-            seq_inward = self.genome.get_junction_sequence_arm2_to_arm1(ref_jc)
-            offset = -ref_jc.flanking_right
-            self._ref_tn_seqs.append((ref_jc, seq_inward, offset))
+        for ref_tnjc in self.ref_tnjcs:
+            seq_inward = self.genome.get_junction_sequence_arm2_to_arm1(ref_tnjc)
+            self._ref_tn_seqs.append((ref_tnjc, seq_inward))
 
     def _get_junction_arm_seq(self, jc: Junction, arm: int) -> str:
         """Extract sequence at junction arm."""
         seq = self.genome.get_junction_arm_sequence(jc, arm)
-        if self.trim_jc_flanking == 0:
+        if not self.trim_jc_flanking:
             return seq
         return seq[:-self.trim_jc_flanking]
 
@@ -108,14 +106,13 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         jc_arm_seq = self._get_junction_arm_seq(jc, arm)
         matches = []
 
-        for ref_jc, seq_inward, offset in self._ref_tn_seqs:
-            # Use pre-computed sequence (cached in _calculate_output)
+        for ref_tnjc, seq_inward in self._ref_tn_seqs:
+            # Use pre-computed sequence (cached in _precompute_ref_tnjcs_sequences)
 
             # Check inward sequence (towards TN)
             pos = seq_inward.find(jc_arm_seq)
             if pos >= 0:
-                distance = pos + offset
-                if distance <= self.max_dist_to_tn:
-                    matches.append(RefTnSide.from_other(ref_jc.ref_tn_side, distance=distance))
-                    continue
+                distance = pos - ref_tnjc.flanking_right
+                if abs(distance) <= self.max_dist_to_tn:
+                    matches.append(RefTnSide.from_other(ref_tnjc.ref_tn_side, distance=distance))
         return matches
