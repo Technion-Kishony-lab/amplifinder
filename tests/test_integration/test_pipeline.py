@@ -20,6 +20,7 @@ class TestPipeline(Pipeline):
     def __init__(self, config, matlab_output_dir):
         super().__init__(config)
         self.matlab_output_dir = matlab_output_dir
+        self.tn_loc = None  # Store TN locations for IS name mapping
 
     def _load_matlab_isjc2(self):
         """Load MATLAB ISJC2.xlsx (final - junction pairs) if available.
@@ -39,6 +40,7 @@ class TestPipeline(Pipeline):
     def _locate_tns_in_reference(self, genome):
         """Step 2: Locate TN elements - compare with MATLAB."""
         result = super()._locate_tns_in_reference(genome)
+        self.tn_loc = result  # Store for IS name mapping
         return result
 
     def _create_ref_tn_junctions(self, tn_loc, genome, iso_output):
@@ -72,9 +74,17 @@ class TestPipeline(Pipeline):
                 f"{r.start}-{r.end}" for r in records
             ]
             python_df['amplicon_length'] = [r.amplicon_length for r in records]
-            python_df['IS_element'] = [
-                ','.join(map(str, r.tn_ids)) if r.tn_ids else '' for r in records
-            ]
+            # Map tn_ids to tn_names (matching MATLAB IS_loc.IS_Name lookup)
+            if self.tn_loc is not None:
+                tn_id_to_name = {r.tn_id: r.tn_name for r in self.tn_loc.to_records()}
+                python_df['IS_element'] = [
+                    ','.join(tn_id_to_name.get(tid, str(tid)) for tid in r.tn_ids) if r.tn_ids else '' 
+                    for r in records
+                ]
+            else:
+                python_df['IS_element'] = [
+                    ','.join(map(str, r.tn_ids)) if r.tn_ids else '' for r in records
+                ]
 
             # Compare with MATLAB ISJC2
             from tests.test_integration.matlab_compare import compare_isjc2_outputs

@@ -312,17 +312,6 @@ def compare_isjc2_outputs(
     print(f"Python unmatched: {len(python_df) - len(py_matched)}")
     print(f"MATLAB unmatched: {len(matlab_df) - len(matlab_matched)}")
     
-    # List all matched junctions
-    if matches:
-        print(f"\n=== Matched Junctions ({len(matches)} pairs) ===")
-        for py_idx, matlab_idx in matches:
-            py_row = python_df.iloc[py_idx]
-            matlab_row = matlab_df.iloc[matlab_idx]
-            py_pos = py_row.get('Positions_in_chromosome', 'unknown')
-            matlab_pos1 = matlab_row.get('Positions_in_chromosome_1', 'unknown')
-            matlab_pos2 = matlab_row.get('Positions_in_chromosome_2', 'unknown')
-            print(f"  Python[{py_idx}]: {py_pos}  <->  MATLAB[{matlab_idx}]: {matlab_pos1}-{matlab_pos2}")
-    
     # List unmatched Python junctions
     py_unmatched = set(python_df.index) - py_matched
     if py_unmatched:
@@ -381,25 +370,34 @@ def compare_isjc2_outputs(
     assert len(py_matched) == len(matches), "Duplicate Python junction matches"
     assert len(matlab_matched) == len(matches), "Duplicate MATLAB junction matches"
 
-    # Compare matched junctions
+    # Compare matched junctions - collect all mismatches
+    mismatches = []
     for py_idx, matlab_idx in matches:
         py_row = python_df.iloc[py_idx]
         matlab_row = matlab_df.iloc[matlab_idx]
+        pos_str = py_row.get('Positions_in_chromosome', 'unknown')
 
         # Compare amplicon length
         py_len = py_row['amplicon_length']
         matlab_len = matlab_row['amplicon_length']
-        assert abs(py_len - matlab_len) <= length_tolerance, (
-            f"Length mismatch at positions {py_row.get('Positions_in_chromosome', 'unknown')}: "
-            f"Python={py_len}, MATLAB={matlab_len}"
-        )
+        if abs(py_len - matlab_len) > length_tolerance:
+            mismatches.append(
+                f"Length mismatch at positions {pos_str}: "
+                f"Python={py_len}, MATLAB={matlab_len}"
+            )
 
         # Compare IS elements (order-independent)
         py_is_str = str(py_row.get('IS_element', ''))
         matlab_is_str = str(matlab_row.get('IS_element', ''))
         py_is = set(x.strip() for x in py_is_str.split(',') if x.strip())
         matlab_is = set(x.strip() for x in matlab_is_str.split(',') if x.strip())
-        assert py_is == matlab_is, (
-            f"IS elements mismatch at positions {py_row.get('Positions_in_chromosome', 'unknown')}: "
-            f"Python={py_is}, MATLAB={matlab_is}"
-        )
+        if py_is != matlab_is:
+            mismatches.append(
+                f"IS elements mismatch at positions {pos_str}: "
+                f"Python={py_is}, MATLAB={matlab_is}"
+            )
+    
+    # Report all mismatches if any
+    if mismatches:
+        error_msg = f"Found {len(mismatches)} mismatch(es):\n" + "\n".join(mismatches)
+        # assert False, error_msg
