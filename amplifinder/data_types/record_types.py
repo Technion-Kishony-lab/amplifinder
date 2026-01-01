@@ -205,32 +205,104 @@ class RawTnJc2(Record):
 
     """
     NAME: ClassVar[str] = "Junction Pairs"
-    # Junction IDs
-    jc_num_S: int  # Junction number of the 'start' junction
-    jc_num_E: int  # Junction number of the 'end' junction
+    
+    # Core fields: the two junctions
+    tn_jc_S: TnJunction  # Start junction (dir2 == FORWARD)
+    tn_jc_E: TnJunction  # End junction (dir2 == REVERSE)
+    
+    # Cached computed value (requires genome to compute)
+    amplicon_length: Optional[int] = None
+    
+    # CSV export: only export derived properties, not the complex TnJunction objects
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = [
+        'jc_num_S', 'jc_num_E', 'scaf', 'start', 'end',
+        'pos_tn_S', 'pos_tn_E', 'dir_tn_S', 'dir_tn_E',
+        'tn_ids', 'tn_orientations', 'tn_distances', 'amplicon_length'
+    ]
 
-    # Scaffold
-    scaf: str
+    @staticmethod
+    def find_matching_tns(
+        i_ref_tn_sides: List[OffsetRefTnSide],
+        j_ref_tn_sides: List[OffsetRefTnSide],
+    ) -> List[OffsetRefTnSide]:
+        """Find TN elements that match both junctions on different sides.
+        
+        Returns list of OffsetRefTnSide objects from the first junction (i) that match
+        the second junction (j) on different sides.
+        """
+        return [i_tn_side for i_tn_side in i_ref_tn_sides for j_tn_side in j_ref_tn_sides
+                if i_tn_side.tn_id == j_tn_side.tn_id and i_tn_side.side != j_tn_side.side]
 
-    # Scaffold positions (start/end of amplicon segment on the forward strand)
-    start: int
-    end: int
+    def _find_matching_tns(self) -> List[OffsetRefTnSide]:
+        """Instance method: find matching TNs using this record's junctions.
+        
+        Returns list of OffsetRefTnSide objects from tn_jc_S that match tn_jc_E.
+        """
+        return self.find_matching_tns(self.tn_jc_S.ref_tn_sides, self.tn_jc_E.ref_tn_sides)
 
-    # TN positions
-    pos_tn_S: int  # TN position of the 'start' junction
-    pos_tn_E: int  # TN position of the 'end' junction
+    @property
+    def jc_num_S(self) -> int:
+        """Junction number of the 'start' junction."""
+        return self.tn_jc_S.num
 
-    # TN directions
-    dir_tn_S: Orientation  # TN direction of the 'start' junction
-    dir_tn_E: Orientation  # TN direction of the 'end' junction
+    @property
+    def jc_num_E(self) -> int:
+        """Junction number of the 'end' junction."""
+        return self.tn_jc_E.num
 
-    # TN info
-    tn_ids: List[int]                   # matching TN element IDs
-    tn_orientations: List[Orientation]  # one per tn_id
-    tn_distances: List[int]             # one per tn_id
+    @property
+    def scaf(self) -> str:
+        """Scaffold name."""
+        assert self.tn_jc_S.scaf2 == self.tn_jc_E.scaf2, "Scaffolds must be the same"
+        return self.tn_jc_S.scaf2
 
-    # Computed fields
-    amplicon_length: int = None  # None until computed
+    @property
+    def start(self) -> int:
+        """Start position of amplicon segment on the forward strand."""
+        return self.tn_jc_S.pos2
+
+    @property
+    def end(self) -> int:
+        """End position of amplicon segment on the forward strand."""
+        return self.tn_jc_E.pos2
+
+    @property
+    def pos_tn_S(self) -> int:
+        """TN position of the 'start' junction."""
+        return self.tn_jc_S.pos1
+
+    @property
+    def pos_tn_E(self) -> int:
+        """TN position of the 'end' junction."""
+        return self.tn_jc_E.pos1
+
+    @property
+    def dir_tn_S(self) -> Orientation:
+        """TN direction of the 'start' junction."""
+        return self.tn_jc_S.dir1
+
+    @property
+    def dir_tn_E(self) -> Orientation:
+        """TN direction of the 'end' junction."""
+        return self.tn_jc_E.dir1
+
+    @property
+    def tn_ids(self) -> List[int]:
+        """Matching TN element IDs."""
+        return [m.tn_id for m in self._find_matching_tns()]
+
+    @property
+    def tn_orientations(self) -> List[Orientation]:
+        """TN orientations, one per tn_id."""
+        matching_tns = self._find_matching_tns()
+        # Compute orientation: side_S.value * dir2_S.value
+        # dir2_S is FORWARD by definition (tn_jc_S is the start junction)
+        return [Orientation(m.side.value * self.tn_jc_S.dir2.value) for m in matching_tns]
+
+    @property
+    def tn_distances(self) -> List[int]:
+        """TN distances, one per tn_id."""
+        return [m.distance for m in self._find_matching_tns()]
 
     def compute_and_store_amplicon_length(self, genome: Genome):
         """Compute amplicon length using the genome."""
