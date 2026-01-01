@@ -57,37 +57,36 @@ class TestPipeline(Pipeline):
         return result
 
     def _create_tnjc2(self, tnjc, genome, iso_output):
-        """Step 6: Combine junction pairs."""
+        """Step 6: Combine junction pairs - compare RawTnJc2 with MATLAB ISJC2."""
         result = super()._create_tnjc2(tnjc, genome, iso_output)
-        return result
 
-    def _calc_coverage(self, tnjc2, genome, iso_output):
-        """Step 7: Calculate amplicon coverage - compare CoveredTnJc2 with MATLAB ISJC2."""
-        result = super()._calc_amplicon_coverage(tnjc2, genome, iso_output)
-
-        # Compare CoveredTnJc2 with MATLAB ISJC2.xlsx
+        # Compare RawTnJc2 with MATLAB ISJC2.xlsx (positions, length, IS elements)
         matlab_df = self._load_matlab_isjc2()
         if matlab_df is not None:
-            print(f"Step 7: MATLAB ISJC2.xlsx has {len(matlab_df)} candidates, Python={len(result)} candidates")
-            # Convert CoveredTnJc2 to comparable format
+            print(f"Step 6: MATLAB ISJC2.xlsx has {len(matlab_df)} candidates, Python={len(result)} candidates")
+            # Convert RawTnJc2 to comparable format
             python_df = result.df.copy()
             python_df['Positions_in_chromosome'] = python_df.apply(
-                lambda row: f"{row['pos_chr_L']}-{row['pos_chr_R']}", axis=1
+                lambda row: f"{row['start']}-{row['end']}", axis=1
             )
             python_df['amplicon_length'] = python_df['amplicon_length']
             python_df['IS_element'] = python_df['tn_ids'].apply(
                 lambda x: ','.join(map(str, x)) if isinstance(x, list) else str(x)
             )
-            python_df['amplicon_coverage'] = python_df['amplicon_coverage']
 
             # Compare with MATLAB ISJC2
             from tests.test_integration.matlab_compare import compare_isjc2_outputs
             compare_isjc2_outputs(python_df, matlab_df)
-            print("Step 7: ✓ Comparison passed: CoveredTnJc2 matches MATLAB ISJC2")
+            print("Step 6: ✓ Comparison passed: RawTnJc2 matches MATLAB ISJC2")
         else:
             assert not REQUIRE_MATLAB_FILES, "MATLAB file missing but REQUIRE_MATLAB_FILES=True"
-            print(f"Step 7: Python={len(result)} candidates (MATLAB file not found)")
+            print(f"Step 6: Python={len(result)} candidates (MATLAB file not found)")
 
+        return result
+
+    def _calc_amplicon_coverage(self, tnjc2, genome, iso_output):
+        """Step 7: Calculate amplicon coverage."""
+        result = super()._calc_amplicon_coverage(tnjc2, genome, iso_output)
         return result
 
     def _export(self, analyzed, genome, iso_output):
