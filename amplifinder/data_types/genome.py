@@ -5,22 +5,19 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, List, Dict, Tuple, TypeVar
+from typing import Optional, List, Dict, TypeVar
 
 import numpy as np
-
-from amplifinder.data_types.scaffold import Scaffold, SeqScaffold
-
-T = TypeVar('T', str, np.ndarray)
-
 from Bio import Entrez, SeqIO
 from Bio.Seq import reverse_complement
 from Bio.SeqRecord import SeqRecord
 
-from amplifinder.data_types.enums import Orientation
+from amplifinder.data_types.scaffold import SeqScaffold, SeqSegmentScaffold
 from amplifinder.data_types.record_types import Junction
 from amplifinder.logger import info
 from amplifinder.utils.file_utils import ensure_dir
+
+T = TypeVar('T', str, np.ndarray)
 
 # Set email for NCBI Entrez (required)
 Entrez.email = "amplifinder@example.com"
@@ -121,7 +118,9 @@ class Genome:
     def get_junction_arm_sequence(self, jc: Junction, arm: int) -> str:
         """Get sequence for a junction arm."""
         jc_arm = jc.get_jc_arm(arm)
-        return jc_arm.slice_scaffold(self.get_scaffold(jc_arm.scaf))
+        scaffold = self.get_scaffold(jc_arm.scaf)
+        seg_scaffold = SeqSegmentScaffold.from_scaffold_and_jc_arm(scaffold, jc_arm)
+        return seg_scaffold.slice()
 
     def get_junction_sequence_arm1_to_arm2(self, jc: Junction) -> str:
         """Get sequence for a junction from arm 1 to arm 2."""
