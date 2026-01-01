@@ -244,9 +244,8 @@ class Pipeline:
         """Step 5: Match junctions to TN elements."""
         cfg = self.config
 
-        # Combine breseq junctions with reference TN junctions
-        junctions = pd.concat([breseq_jcs.df, ref_tnjcs.df], ignore_index=True)
-        junctions = RecordTypedDf(junctions, Junction)
+        # Combine breseq junctions with reference TN junctions as a list to preserve types
+        junctions = list(ref_tnjcs) + list(breseq_jcs)
 
         tnjcs = CreateTnJcStep(
             junctions=junctions,
