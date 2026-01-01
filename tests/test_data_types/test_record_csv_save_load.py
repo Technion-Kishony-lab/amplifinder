@@ -127,6 +127,7 @@ def make_raw_tnjc2() -> RawTnJc2:
         dir_tn_E=Orientation.REVERSE,
         tn_ids=[1],
         tn_orientations=[Orientation.FORWARD],
+        tn_distances=[0],
         amplicon_length=201,
     )
 

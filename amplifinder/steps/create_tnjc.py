@@ -61,16 +61,16 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
 
         for jc in self.junctions:
             # Match against TN sequences
-            matches1 = self._find_ref_tn_sides_matches(jc, arm=1)
-            matches2 = self._find_ref_tn_sides_matches(jc, arm=2)
+            tn_sides_matching_arm1 = self._find_ref_tn_sides_matches(jc, arm=1)
+            tn_sides_matching_arm2 = self._find_ref_tn_sides_matches(jc, arm=2)
 
             # If this is a reference TN junction, assert we get a distance==0 match on arm 1 (TN side)
             if isinstance(jc, RefTnJunction):
-                ref_tn_side_matches = [m for m in matches1 if m.distance == 0 and m.is_same_side(jc.ref_tn_side)]
+                ref_tn_side_matches = [m for m in tn_sides_matching_arm1 if m.distance == 0 and m.is_same_side(jc.ref_tn_side)]
                 assert len(ref_tn_side_matches) == 1, f"Reference TN junction {jc} should match itself with distance==0"
 
-            is_arm1_tn = len(matches1) > 0
-            is_arm2_tn = len(matches2) > 0
+            is_arm1_tn = len(tn_sides_matching_arm1) > 0
+            is_arm2_tn = len(tn_sides_matching_arm2) > 0
 
             # Skip if neither arm matches a TN
             if not is_arm1_tn and not is_arm2_tn:
@@ -79,10 +79,10 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
             # Normalize: arm 1 should be the TN side
             swapped = not is_arm1_tn and is_arm2_tn
             if swapped:
-                matches = matches2
+                matches = tn_sides_matching_arm2
                 jc = jc.swap_sides()
             else:
-                matches = matches1
+                matches = tn_sides_matching_arm1
 
             tnjcs.append(TnJunction.from_other(jc, ref_tn_sides=matches, swapped=swapped))
 

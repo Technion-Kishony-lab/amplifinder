@@ -54,7 +54,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         Based on MATLAB combine_ISJC_pairs.m
 
         junctions: List[TnJunction] are all junctions that are matched to TN elements.
-        NOTE: in all junctions, arm 2 is the chromosome arm
+        note: in all junctions, arm 2 is the chromosome arm
         """
 
         pairs = []
@@ -88,10 +88,10 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         self,
         i_ref_tn_sides: List[OffsetRefTnSide],
         j_ref_tn_sides: List[OffsetRefTnSide],
-    ) -> List[Tuple[int, Side]]:
+    ) -> List[Tuple[int, Side, int]]:
         """Find TN elements that match both junctions on different sides.
 
-        Returns list of (tn_id, side_i) tuples where side_i is the TN side that junction i connects to.
+        Returns list of (tn_id, side_i, distance) tuples where side_i is the TN side that junction i connects to.
         """
         result = []
 
@@ -105,7 +105,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
                 if i_tn_side.side == j_tn_side.side:
                     continue
 
-                result.append((i_tn_side.tn_id, i_tn_side.side))
+                result.append((i_tn_side.tn_id, i_tn_side.side, i_tn_side.distance))
 
         return result
 
@@ -113,7 +113,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         self,
         jc_i: TnJunction,
         jc_j: TnJunction,
-        matching_tns: List[Tuple[int, Side]],
+        matching_tns: List[Tuple[int, Side, int]],
     ) -> RawTnJc2:
         """Create a junction pair record.
 
@@ -131,10 +131,11 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
             jc_E = jc_i
             swapped = True
 
-        # Extract TN IDs and compute orientations
+        # Extract TN IDs, compute orientations, and extract distances
         tn_ids = [m[0] for m in matching_tns]
         tn_orientations = [Orientation(side_i.value * jc_i.dir2.value * (-1 if swapped else 1))
-                           for _, side_i in matching_tns]
+                           for _, side_i, _ in matching_tns]
+        tn_distances = [m[2] for m in matching_tns]
 
         # Create RawTnJc2 with placeholder amplicon_length, then compute it
         pair = RawTnJc2(
@@ -149,6 +150,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
             dir_tn_E=jc_E.dir1,
             tn_ids=tn_ids,
             tn_orientations=tn_orientations,
+            tn_distances=tn_distances,
         )
         pair.compute_and_store_amplicon_length(self.genome)
         return pair

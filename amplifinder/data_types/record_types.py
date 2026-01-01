@@ -225,8 +225,9 @@ class RawTnJc2(Record):
     dir_tn_E: Orientation  # TN direction of the 'end' junction
 
     # TN info
-    tn_ids: List[int]              # matching TN element IDs
+    tn_ids: List[int]                   # matching TN element IDs
     tn_orientations: List[Orientation]  # one per tn_id
+    tn_distances: List[int]             # one per tn_id
 
     # Computed fields
     amplicon_length: int = None  # None until computed
