@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from Bio import SeqIO
-from Bio.Seq import Seq
 
 from amplifinder.logger import info, warning
 

@@ -44,7 +44,6 @@ class TestPipeline(Pipeline):
     def _create_ref_tn_junctions(self, tn_loc, genome, iso_output):
         """Step 3: Create reference TN junctions - compare with MATLAB."""
         result = super()._create_ref_tn_junctions(tn_loc, genome, iso_output)
-        ref_tnjc = result
         return result
 
     def _run_breseq(self, genome, iso_output):

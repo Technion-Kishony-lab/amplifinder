@@ -3,7 +3,6 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.logger import info
 from amplifinder.env import SAMTOOLS_PATH, BOWTIE2_PATH
 from amplifinder.utils.run_utils import get_tool_path, run_command
 from amplifinder.utils.file_utils import ensure_parent_dir
@@ -182,7 +181,7 @@ def align_reads_to_fasta(
 
     # Get junction name from output path
     junction_name = _folder_label(output_bam)
-    
+
     # Start printing the junction name
     print(f"junction '{junction_name}':  ", end="", flush=True)
 

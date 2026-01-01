@@ -1,16 +1,16 @@
 """Step 8: Classify junction pair structures based on TN relationships."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from amplifinder.data_types import (
-    RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc, Genome,
+    RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc,
 )
+from amplifinder.data_types.genome import Genome
 from amplifinder.steps.base import RecordTypedDfStep
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from amplifinder.data_types.genome import Genome
+    pass
 
 
 def classify_structure(

@@ -12,7 +12,7 @@ def sample_analyzed(analyzed_tnjc2_record):
     """Create sample AnalyzedTnJc2 records."""
     first = AnalyzedTnJc2.from_other(
         analyzed_tnjc2_record,
-        scaf="chr1",
+        scaf="tiny",
         start=100,
         end=200,
         pos_tn_S=10,
@@ -34,7 +34,7 @@ def sample_analyzed(analyzed_tnjc2_record):
         analyzed_tnjc2_record,
         jc_num_S=3,
         jc_num_E=4,
-        scaf="chr1",
+        scaf="tiny",
         start=300,
         end=400,
         pos_tn_S=30,

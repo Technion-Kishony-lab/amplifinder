@@ -21,7 +21,7 @@ class JunctionCoverage(NamedTuple):
     right: int     # reads starting at junction
 
 
-### Reference TN element sides ###
+# ===== Reference TN element sides =====
 
 class RefTnSide(Record):
     """A reference TN element side (with optional distance for matches)."""
@@ -31,7 +31,7 @@ class RefTnSide(Record):
     distance: Optional[int] = None  # None for reference junctions
 
 
-### Reference TN elements ###
+# ===== Reference TN elements =====
 
 class RefTnLoc(Record):
     """Reference TN element location in the genome."""
@@ -56,11 +56,13 @@ class RefTnLoc(Record):
             RefTnSide(tn_id=self.tn_id, side=Side.RIGHT),
         )
 
-    def get_junctions(self, out_span: int, in_span: Optional[int] = None) -> tuple[RefTnJunction, RefTnJunction]:
+    def get_junctions(
+            self, out_span: int, in_span: Optional[int] = None
+            ) -> tuple[RefTnJunction, RefTnJunction]:
         """Get left and right junctions of the TN.
-        
-        Junction numbering: negative values for reference junctions (breseq uses positive).
-        Left: -tn_id * 2 (even negative), Right: -tn_id * 2 - 1 (odd negative).
+
+        Junction numbering: negative values for reference junctions.
+        Left: -tn_id * 2, Right: -tn_id * 2 - 1 (odd negative).
         """
         if in_span is None:
             in_span = self.length
@@ -83,7 +85,7 @@ class RefTnLoc(Record):
         )
 
 
-### BLAST hits ###
+# ===== BLAST hits =====
 
 class BlastHit(Record):
     """BLAST alignment hit record."""
@@ -102,7 +104,7 @@ class BlastHit(Record):
     bitscore: float
 
 
-### Junctions ###
+# ===== Junctions =====
 
 JunctionT = TypeVar("JunctionT", bound="Junction")
 
@@ -132,11 +134,11 @@ class Junction(Record):
     def get_jc_arm(self, arm: int) -> JcArm:
         """Get scaffold, position, direction, and flanking length for an arm."""
         return JcArm(
-            scaf=self.scaf1 if arm == 1 else self.scaf2, 
-            start=self.pos1 if arm == 1 else self.pos2, 
-            dir=self.dir1 if arm == 1 else self.dir2, 
+            scaf=self.scaf1 if arm == 1 else self.scaf2,
+            start=self.pos1 if arm == 1 else self.pos2,
+            dir=self.dir1 if arm == 1 else self.dir2,
             flank=self.flanking_left if arm == 1 else self.flanking_right
-            )
+        )
 
 
 class RefTnJunction(Junction):
@@ -167,7 +169,7 @@ class TnJunction(Junction):
     swapped: bool                 # True if BRESEQ arms were swapped (to normalize to TN on arm 1)
 
 
-### Paired TN junctions ###
+# Paired TN junctions
 
 class RawTnJc2(Record):
     """Paired TN junctions (candidate amplicon).
@@ -214,13 +216,12 @@ class RawTnJc2(Record):
         """Compute amplicon length using the genome."""
         self.amplicon_length = self.get_segment_scaffold(genome).segment_length
 
-    def get_segment_scaffold(self, genome: Genome) -> SegmentScaffold:
+    def get_segment_scaffold(self, genome) -> SegmentScaffold:
         """Get SegmentScaffold for this amplicon segment.
-        
+
         Returns a SegmentScaffold with start/end positions that provides
         properties: left, right, span_origin, segment_length.
         """
-        from amplifinder.data_types.genome import Genome
         scaf_obj = genome.get_scaffold(self.scaf)
         return SegmentScaffold(
             is_circular=scaf_obj.is_circular,

@@ -47,5 +47,3 @@ def test_skips_if_exists(ref_jc_step):
     assert ref_jc_step.run_count == 1
     ref_jc_step.run()
     assert ref_jc_step.run_count == 1  # didn't run again
-
-

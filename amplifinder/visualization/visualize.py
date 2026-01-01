@@ -11,7 +11,6 @@ except ImportError:
     MATPLOTLIB_AVAILABLE = False
 
 from amplifinder.data_types import AnalyzedTnJc2, ClassifiedTnJc2, RecordTypedDf, Genome
-from amplifinder.data_types.scaffold import SeqScaffold
 from amplifinder.config import Config
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.steps.amplicon_coverage import get_scaffold_coverage
@@ -56,13 +55,13 @@ def plot_candidate_coverage(
 
     # Get coverage in plot range using Genome method
     scaf_obj = genome.get_scaffold(candidate.scaf)
-    iso_plot_cov = scaf_obj.slice(plot_start, plot_end, iso_scaf_cov)
+    iso_plot_cov = scaf_obj.slice(plot_start, plot_end, seq=iso_scaf_cov)
     positions = np.arange(plot_start, plot_start + len(iso_plot_cov))
 
     anc_plot_cov = None
     if anc_coverage is not None:
         anc_scaf_cov = get_scaffold_coverage(anc_coverage, candidate.scaf, genome)
-        anc_plot_cov = scaf_obj.slice(plot_start, plot_end, anc_scaf_cov)
+        anc_plot_cov = scaf_obj.slice(plot_start, plot_end, seq=anc_scaf_cov)
 
     # Create plot
     fig, ax = plt.subplots(figsize=(12, 6))

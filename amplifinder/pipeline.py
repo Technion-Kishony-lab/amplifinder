@@ -64,7 +64,10 @@ class Pipeline:
     def run(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Run full pipeline, return analyzed candidates."""
 
-        info(f"Running AmpliFinder pipeline, reference: {self.config.ref_name}, isolate: {self.config.iso_name}, ancestor: {self.config.anc_name}\n")
+        info(
+            f"Running AmpliFinder pipeline, reference: {self.config.ref_name}, "
+            f"isolate: {self.config.iso_name}, ancestor: {self.config.anc_name}\n"
+        )
         iso_output, anc_output = self._initialize()
 
         # Load reference genome (needed for ancestor breseq and isolate pipeline)
