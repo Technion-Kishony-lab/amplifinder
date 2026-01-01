@@ -68,10 +68,14 @@ class TypedDF:
         validate_and_cast_df(df, self.schema, check_missing=check_missing, check_extra=check_extra, cast=False)
 
     def to_csv(self, path: Path, index: Optional[bool] = None) -> None:
-        """Save DataFrame to CSV. Auto-detects meaningful indices if index=None."""
+        """Save DataFrame to CSV. Auto-detects meaningful indices if index=None.
+        
+        Only serializes columns defined in schema.
+        """
         from amplifinder.data_types.validate_and_cast_df import _is_optional
 
-        df = self.df.copy()
+        # Filter DataFrame to schema columns only
+        df = self.df[list(self.schema.column_names)].copy()
 
         # Convert Optional[int] columns to Int64
         dtypes = self.schema.dtypes
@@ -177,8 +181,8 @@ class RecordTypedDf(TypedDF, Generic[T]):
         schema = record_type.schema()
         if not records:
             return cls(pd.DataFrame(columns=schema.column_names), record_type)
-        # Use Pydantic's model_dump for serialization
-        data = [r.model_dump() for r in records]
+        # Extract field values directly (no serialization) to preserve complex objects
+        data = [{name: getattr(r, name) for name in record_type.model_fields} for r in records]
         return cls(pd.DataFrame(data), record_type)
 
     @classmethod
@@ -201,6 +205,31 @@ class RecordTypedDf(TypedDF, Generic[T]):
     @classmethod
     def empty(cls: Type[SelfRecordTypedDF], record_type: Type[T], headers: bool = True) -> SelfRecordTypedDF:
         return cls(pd.DataFrame(columns=record_type.schema().column_names), record_type, headers)
+
+    def to_records(self) -> List[T]:
+        """Convert DataFrame to list of Record objects.
+        
+        Provides explicit round-trip: from_records() → to_records() should recreate same records.
+        Uses existing __iter__() which calls model_validate() on each row.
+        """
+        return list(self)
+
+    def to_csv(self, path: Path, index: Optional[bool] = None) -> None:
+        """Save DataFrame to CSV.
+        
+        If schema includes properties not in DataFrame, computes them first.
+        Otherwise delegates to parent (which filters to schema columns).
+        """
+        # Check if all schema columns are in DataFrame
+        if not set(self.schema.column_names).issubset(set(self.df.columns)):
+            # Some schema columns are properties - compute them via records
+            records = self.to_records()
+            filtered_data = [{col: getattr(record, col) for col in self.schema.column_names} for record in records]
+            temp_df = TypedDF(pd.DataFrame(filtered_data), self.schema, self.headers)
+            temp_df.to_csv(path, index)
+        else:
+            # All schema columns are in DataFrame - parent filters to schema columns
+            super().to_csv(path, index)
 
     def __getitem__(self, key: Any) -> T:
         """Access record by index key."""

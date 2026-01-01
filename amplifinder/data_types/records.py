@@ -5,7 +5,7 @@ import pandas as pd
 
 from pathlib import Path
 from pydantic import BaseModel, ConfigDict
-from typing import Any, ClassVar, Dict, NamedTuple, Tuple, Type, TypeVar, get_origin, get_args, Union
+from typing import Any, ClassVar, Dict, List, NamedTuple, Optional, Tuple, Type, TypeVar, get_origin, get_args, Union
 
 T = TypeVar("T", bound="Record")
 
@@ -117,24 +117,35 @@ class Record(BaseModel):
     # Class variable to track if extra fields allowed (for schema generation)
     ALLOW_EXTRA: ClassVar[bool] = True
 
+    # CSV export control: None = export all fields, List[str] = export only specified fields/properties
+    CSV_EXPORT_FIELDS: ClassVar[Optional[List[str]]] = None
+
     @classmethod
     def schema(cls) -> Schema:
-        """Extract schema (Column definitions) from this model."""
+        """Extract schema (Column definitions) for CSV read/write.
+        
+        If CSV_EXPORT_FIELDS is set, schema includes only those fields/properties.
+        Otherwise includes all model fields.
+        """
+        # Determine which fields to include in schema
+        if hasattr(cls, 'CSV_EXPORT_FIELDS') and cls.CSV_EXPORT_FIELDS is not None:
+            field_names = cls.CSV_EXPORT_FIELDS
+        else:
+            field_names = list(cls.model_fields.keys())
+        
         columns = []
-
-        for name, field_info in cls.model_fields.items():
-            dtype = field_info.annotation
-            # Check if type is Optional (Union with None)
-            is_optional = (
-                get_origin(dtype) is Union and
-                type(None) in get_args(dtype)
-            )
-
-            columns.append(Column(
-                name=name,
-                dtype=dtype,
-                optional=is_optional,
-            ))
+        for name in field_names:
+            if name in cls.model_fields:
+                # It's a field - get type from model_fields
+                field_info = cls.model_fields[name]
+                dtype = field_info.annotation
+                is_optional = (get_origin(dtype) is Union and type(None) in get_args(dtype))
+            else:
+                # It's a property - infer type from property return annotation
+                from amplifinder.data_types.type_inference import infer_property_type
+                dtype, is_optional = infer_property_type(cls, name)
+            
+            columns.append(Column(name=name, dtype=dtype, optional=is_optional))
 
         return Schema(columns=tuple(columns), allow_extra=cls.ALLOW_EXTRA)
 
