@@ -30,7 +30,7 @@ TEST_DATA_ROOT = Path(
 MATLAB_OUTPUT = TEST_DATA_ROOT / "AmpliFinderWorkspace" / "output"
 
 # Allow keeping outputs by setting AMPLIFINDER_KEEP_TEST_OUTPUT=true/1
-KEEP_TEST_OUTPUT = True
+KEEP_TEST_OUTPUT = False
 
 # External data paths (from isolates.xlsx)
 FASTQ_PATH = Path(
@@ -285,20 +285,37 @@ def locate_tns_step(tmp_output, tiny_genome):
 @pytest.fixture
 def raw_tnjc2_record():
     """Base RawTnJc2 for step fixtures."""
-    from amplifinder.data_types import RawTnJc2, Orientation
+    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, Side
 
+    tn_jc_S = TnJunction(
+        num=1,
+        scaf1="tiny",
+        pos1=10,
+        dir1=Orientation.FORWARD,
+        scaf2="tiny",
+        pos2=200,
+        dir2=Orientation.FORWARD,
+        flanking_left=50,
+        flanking_right=50,
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
+        swapped=False,
+    )
+    tn_jc_E = TnJunction(
+        num=2,
+        scaf1="tiny",
+        pos1=20,
+        dir1=Orientation.REVERSE,
+        scaf2="tiny",
+        pos2=300,
+        dir2=Orientation.REVERSE,
+        flanking_left=50,
+        flanking_right=50,
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.RIGHT, distance=0)],
+        swapped=False,
+    )
     return RawTnJc2(
-        jc_num_S=1,
-        jc_num_E=2,
-        scaf="tiny",
-        start=200,
-        end=300,
-        pos_tn_S=10,
-        pos_tn_E=20,
-        dir_tn_S=Orientation.FORWARD,
-        dir_tn_E=Orientation.REVERSE,
-        tn_ids=[1],
-        tn_orientations=[Orientation.FORWARD],
+        tn_jc_S=tn_jc_S,
+        tn_jc_E=tn_jc_E,
         amplicon_length=100,
     )
 

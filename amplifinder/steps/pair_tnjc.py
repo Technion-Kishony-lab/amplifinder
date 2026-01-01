@@ -1,10 +1,10 @@
 """Step: Pair TN junctions into TnJc2."""
 
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import Optional, List
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, OffsetRefTnSide, Side, Orientation
+from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, Orientation
 from amplifinder.data_types.genome import Genome
 
 
@@ -74,46 +74,20 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
                     continue
 
                 # (b) Find matching TN: same ID, different sides
-                matching_tns = self._find_matching_tns(jc_i.ref_tn_sides, jc_j.ref_tn_sides)
+                matching_tns = RawTnJc2.find_matching_tns(jc_i.ref_tn_sides, jc_j.ref_tn_sides)
                 if not matching_tns:
                     continue
 
                 # Create pair record
-                pair = self._create_pair(jc_i, jc_j, matching_tns)
+                pair = self._create_pair(jc_i, jc_j)
                 pairs.append(pair)
 
         return pairs
-
-    def _find_matching_tns(
-        self,
-        i_ref_tn_sides: List[OffsetRefTnSide],
-        j_ref_tn_sides: List[OffsetRefTnSide],
-    ) -> List[Tuple[int, Side, int]]:
-        """Find TN elements that match both junctions on different sides.
-
-        Returns list of (tn_id, side_i, distance) tuples where side_i is the TN side that junction i connects to.
-        """
-        result = []
-
-        for i_tn_side in i_ref_tn_sides:
-            for j_tn_side in j_ref_tn_sides:
-                # Same TN ID
-                if i_tn_side.tn_id != j_tn_side.tn_id:
-                    continue
-
-                # Different sides (left vs right)
-                if i_tn_side.side == j_tn_side.side:
-                    continue
-
-                result.append((i_tn_side.tn_id, i_tn_side.side, i_tn_side.distance))
-
-        return result
 
     def _create_pair(
         self,
         jc_i: TnJunction,
         jc_j: TnJunction,
-        matching_tns: List[Tuple[int, Side, int]],
     ) -> RawTnJc2:
         """Create a junction pair record.
 
@@ -123,34 +97,11 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         """
         # Determine start/end based on forward strand direction
         if jc_i.dir2 == Orientation.FORWARD:
-            jc_S = jc_i
-            jc_E = jc_j
-            swapped = False
+            jc_S, jc_E = jc_i, jc_j
         else:
-            jc_S = jc_j
-            jc_E = jc_i
-            swapped = True
+            jc_S, jc_E = jc_j, jc_i
 
-        # Extract TN IDs, compute orientations, and extract distances
-        tn_ids = [m[0] for m in matching_tns]
-        tn_orientations = [Orientation(side_i.value * jc_i.dir2.value * (-1 if swapped else 1))
-                           for _, side_i, _ in matching_tns]
-        tn_distances = [m[2] for m in matching_tns]
-
-        # Create RawTnJc2 with placeholder amplicon_length, then compute it
-        pair = RawTnJc2(
-            jc_num_S=jc_S.num,
-            jc_num_E=jc_E.num,
-            scaf=jc_S.scaf2,
-            start=jc_S.pos2,
-            end=jc_E.pos2,
-            pos_tn_S=jc_S.pos1,
-            pos_tn_E=jc_E.pos1,
-            dir_tn_S=jc_S.dir1,
-            dir_tn_E=jc_E.dir1,
-            tn_ids=tn_ids,
-            tn_orientations=tn_orientations,
-            tn_distances=tn_distances,
-        )
+        # Create RawTnJc2 with the two junction objects
+        pair = RawTnJc2(tn_jc_S=jc_S, tn_jc_E=jc_E)
         pair.compute_and_store_amplicon_length(self.genome)
         return pair

@@ -115,19 +115,37 @@ def make_tn_junction() -> TnJunction:
 
 def make_raw_tnjc2() -> RawTnJc2:
     """Create sample RawTnJc2."""
+    from amplifinder.data_types import OffsetRefTnSide, Side
+    
+    tn_jc_S = TnJunction(
+        num=1,
+        scaf1="chr1",
+        pos1=100,
+        dir1=Orientation.FORWARD,
+        scaf2="chr1",
+        pos2=200,
+        dir2=Orientation.FORWARD,
+        flanking_left=50,
+        flanking_right=50,
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
+        swapped=False,
+    )
+    tn_jc_E = TnJunction(
+        num=2,
+        scaf1="chr1",
+        pos1=300,
+        dir1=Orientation.REVERSE,
+        scaf2="chr1",
+        pos2=400,
+        dir2=Orientation.REVERSE,
+        flanking_left=50,
+        flanking_right=50,
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.RIGHT, distance=0)],
+        swapped=False,
+    )
     return RawTnJc2(
-        jc_num_S=1,
-        jc_num_E=2,
-        scaf="chr1",
-        start=200,
-        end=400,
-        pos_tn_S=100,
-        pos_tn_E=300,
-        dir_tn_S=Orientation.FORWARD,
-        dir_tn_E=Orientation.REVERSE,
-        tn_ids=[1],
-        tn_orientations=[Orientation.FORWARD],
-        tn_distances=[0],
+        tn_jc_S=tn_jc_S,
+        tn_jc_E=tn_jc_E,
         amplicon_length=201,
     )
 
