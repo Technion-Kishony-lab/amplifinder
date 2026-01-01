@@ -7,7 +7,7 @@ from typing import Tuple, Optional
 
 from amplifinder.config import Config
 from amplifinder.data_types import (
-    Genome, RecordTypedDf, RefTnLoc, RefTnJunction, Junction, TnJunction, RawTnJc2,
+    Genome, RecordTypedDf, RefTnLoc, RefTnJunction, Junction, BreseqJunction, TnJunction, RawTnJc2,
     CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.logger import info
@@ -218,7 +218,7 @@ class Pipeline:
 
         return ref_tnjcs
 
-    def _run_breseq(self, genome: Genome, iso_output: Path) -> RecordTypedDf[Junction]:
+    def _run_breseq(self, genome: Genome, iso_output: Path) -> RecordTypedDf[BreseqJunction]:
         """Step 4: Run breseq on isolate to get junctions."""
         cfg = self.config
 
@@ -231,12 +231,12 @@ class Pipeline:
         ).run()
 
         breseq_jc_df = breseq_output["JC"]
-        breseq_jcs = RecordTypedDf(breseq_jc_df, Junction)
+        breseq_jcs = RecordTypedDf(breseq_jc_df, BreseqJunction)
         return breseq_jcs
 
     def _create_tnjc(
         self,
-        breseq_jcs: RecordTypedDf[Junction],
+        breseq_jcs: RecordTypedDf[BreseqJunction],
         ref_tnjcs: RecordTypedDf[RefTnJunction],
         genome: Genome,
         iso_output: Path,
