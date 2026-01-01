@@ -5,7 +5,7 @@ from typing import ClassVar, List, NamedTuple, Optional, TypeVar, TYPE_CHECKING
 from enum import Enum
 
 from amplifinder.data_types.records import Record
-from amplifinder.data_types.enums import Side, Orientation
+from amplifinder.data_types.enums import BaseRawEvent, RawEvent, Side, Orientation, EventModifier
 from amplifinder.data_types.scaffold import SegmentScaffold, JcArm
 
 if TYPE_CHECKING:
@@ -149,6 +149,10 @@ class Junction(Record):
             flank=self.flanking_left if arm == 1 else self.flanking_right
         )
 
+    def __eq__(self, other: Junction) -> bool:
+        """Check if two junctions are the same."""
+        return self.num == other.num
+
 
 class BreseqJunction(Junction):
     """Breseq junction."""
@@ -207,8 +211,8 @@ class RawTnJc2(Record):
     NAME: ClassVar[str] = "Junction Pairs"
     
     # Core fields: the two junctions
-    tn_jc_S: TnJunction  # Start junction (dir2 == FORWARD)
-    tn_jc_E: TnJunction  # End junction (dir2 == REVERSE)
+    tnjc_S: TnJunction  # Start junction (dir2 == FORWARD)
+    tnjc_E: TnJunction  # End junction (dir2 == REVERSE)
     
     # Cached computed value (requires genome to compute)
     amplicon_length: Optional[int] = None
@@ -239,53 +243,53 @@ class RawTnJc2(Record):
         
         Returns list of OffsetRefTnSide objects from tn_jc_S that match tn_jc_E.
         """
-        return self.find_matching_tn_sides(self.tn_jc_S.ref_tn_sides, self.tn_jc_E.ref_tn_sides)
+        return self.find_matching_tn_sides(self.tnjc_S.ref_tn_sides, self.tnjc_E.ref_tn_sides)
 
     @property
     def jc_num_S(self) -> int:
         """Junction number of the 'start' junction."""
-        return self.tn_jc_S.num
+        return self.tnjc_S.num
 
     @property
     def jc_num_E(self) -> int:
         """Junction number of the 'end' junction."""
-        return self.tn_jc_E.num
+        return self.tnjc_E.num
 
     @property
     def scaf(self) -> str:
         """Scaffold name."""
-        assert self.tn_jc_S.scaf2 == self.tn_jc_E.scaf2, "Scaffolds must be the same"
-        return self.tn_jc_S.scaf2
+        assert self.tnjc_S.scaf2 == self.tnjc_E.scaf2, "Scaffolds must be the same"
+        return self.tnjc_S.scaf2
 
     @property
     def start(self) -> int:
         """Start position of amplicon segment on the forward strand."""
-        return self.tn_jc_S.pos2
+        return self.tnjc_S.pos2
 
     @property
     def end(self) -> int:
         """End position of amplicon segment on the forward strand."""
-        return self.tn_jc_E.pos2
+        return self.tnjc_E.pos2
 
     @property
     def pos_tn_S(self) -> int:
         """TN position of the 'start' junction."""
-        return self.tn_jc_S.pos1
+        return self.tnjc_S.pos1
 
     @property
     def pos_tn_E(self) -> int:
         """TN position of the 'end' junction."""
-        return self.tn_jc_E.pos1
+        return self.tnjc_E.pos1
 
     @property
     def dir_tn_S(self) -> Orientation:
         """TN direction of the 'start' junction."""
-        return self.tn_jc_S.dir1
+        return self.tnjc_S.dir1
 
     @property
     def dir_tn_E(self) -> Orientation:
         """TN direction of the 'end' junction."""
-        return self.tn_jc_E.dir1
+        return self.tnjc_E.dir1
 
     @property
     def tn_ids(self) -> List[int]:
@@ -298,7 +302,7 @@ class RawTnJc2(Record):
         matching_tns = self._find_matching_tn_sides()
         # Compute orientation: side_S.value * dir2_S.value
         # dir2_S is FORWARD by definition (tn_jc_S is the start junction)
-        return [Orientation(tn_side_S.side.value * self.tn_jc_S.dir2.value) for tn_side_S, tn_side_E in matching_tns]
+        return [Orientation(tn_side_S.side.value * self.tnjc_S.dir2.value) for tn_side_S, tn_side_E in matching_tns]
 
     @property
     def tn_distances(self) -> List[tuple[int, int]]:
@@ -369,58 +373,52 @@ class CoveredTnJc2(RawTnJc2):
         return self.avg_norm_cov if self.avg_norm_cov is not None else self.iso_scaf_norm_copy_number
 
 
-class RawEvent(str, Enum):
-    """Structural classification based on junction pair relationships (Step 8)."""
-    REFERENCE = "reference"
-    TRANSPOSITION = "transposition"
-    UNFLANKED = "unflanked"
-    HEMI_FLANKED_LEFT = "hemi-flanked left"
-    HEMI_FLANKED_RIGHT = "hemi-flanked right"
-    FLANKED = "flanked"
-    MULTIPLE_SINGLE_LOCUS = "multiple single locus"
-    UNRESOLVED = "unresolved"
-
-
 class ClassifiedTnJc2(CoveredTnJc2):
     """CoveredTnJc2 with structural classification (Step 8 output)."""
     NAME: ClassVar[str] = "Classified Amplicons"
-    raw_event: RawEvent
-    shared_tn_ids: List[int]        # TN IDs shared by both junctions
-    chosen_tn_id: Optional[int]     # selected TN for analysis
+    tnjc2_matching_S: Optional[CoveredTnJc2] = None
+    tnjc2_matching_E: Optional[CoveredTnJc2] = None
+    base_raw_event: BaseRawEvent
+
+    @property
+    def raw_event(self) -> RawEvent:
+        """Raw event classification."""
+        if self.base_raw_event == BaseRawEvent.REFERENCE:
+            return RawEvent.REFERENCE
+        elif self.base_raw_event == BaseRawEvent.TRANSPOSITION:
+            return RawEvent.TRANSPOSITION
+        assert self.base_raw_event == BaseRawEvent.LOCUS_JOINING
+        has_match_S = self.tnjc2_matching_S is not None 
+        has_match_E = self.tnjc2_matching_E is not None
+        if has_match_S and has_match_E:
+            return RawEvent.FLANKED
+        elif has_match_S:
+            return RawEvent.HEMI_FLANKED_LEFT
+        elif has_match_E:
+            return RawEvent.HEMI_FLANKED_RIGHT
+        else:
+            return RawEvent.UNFLANKED
+    
+    @property
+    def chosen_tn_id(self) -> TnId:
+        """Selected TN for analysis."""
+        # Start with TN IDs from this tnjc2
+        tn_id_set = set(self.tn_ids)
+        
+        # Intersect with matching S/E tnjc2 if exists
+        if self.tnjc2_matching_S is not None:
+            tn_id_set &= set(self.tnjc2_matching_S.tn_ids)
+        if self.tnjc2_matching_E is not None:
+            tn_id_set &= set(self.tnjc2_matching_E.tn_ids)
+        
+        # Return first if available, otherwise None
+        return list(tn_id_set)[0] if tn_id_set else None
 
 
 class FilteredTnJc2(ClassifiedTnJc2):
     """Filtered candidate for detailed analysis (Step 9 output)."""
     NAME: ClassVar[str] = "Filtered Amplicons"
     analysis_dir: str  # "tn_jc2_001", "tn_jc2_002", etc.
-
-
-class JunctionType(int, Enum):
-    """The 7 synthetic junction types.
-
-    Amplicon structure: ~~~>>>======>>>======>>>~~~
-    (1) ~~==  left reference (chromosome-cassette)
-    (2) ~~>>  left IS transposition (chromosome-IS)
-    (3) ==>>  left of mid IS (cassette-IS)
-    (4) ====  lost IS (cassette-cassette, no IS)
-    (5) >>==  right of mid IS (IS-cassette)
-    (6) >>~~  right IS transposition (IS-chromosome)
-    (7) ==~~  right reference (cassette-chromosome)
-    """
-    LEFT_REF = 1
-    LEFT_IS_TRANS = 2
-    LEFT_MID_IS = 3
-    LOST_IS = 4
-    RIGHT_MID_IS = 5
-    RIGHT_IS_TRANS = 6
-    RIGHT_REF = 7
-
-
-class EventModifier(str, Enum):
-    """Modifiers for classified events (Step 13)."""
-    ANCESTRAL = "ancestral"
-    DE_NOVO = "de novo"
-    LOW_COVERAGE = "low coverage near junction"
 
 
 class AnalyzedTnJc2(FilteredTnJc2):

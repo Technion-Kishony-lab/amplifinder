@@ -99,7 +99,7 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_r
         genome=tiny_genome,
         tn_locs=sample_tn_locs,
         output_dir=tmp_path,
-        min_amplicon_length=30,
+        transposition_threshold=30,
     )
 
     result = step.run()

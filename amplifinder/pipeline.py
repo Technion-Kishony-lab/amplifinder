@@ -319,7 +319,7 @@ class Pipeline:
             genome=genome,
             tn_locs=tn_loc,
             output_dir=iso_output,
-            min_amplicon_length=self.config.min_amplicon_length,
+            transposition_threshold=self.config.min_amplicon_length,
         ).run()
         return classified_tnjc2s
 
