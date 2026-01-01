@@ -147,7 +147,7 @@ def write_genbank(path: Path, name: str, seq: Seq, tn_locations: dict) -> None:
         description="Synthetic reference with TN elements for testing",
         annotations={
             "molecule_type": "DNA",
-            "topology": "linear",
+            "topology": "circular",
             "data_file_division": "SYN",
         },
     )
@@ -289,9 +289,8 @@ def covered_tnjc2_record(raw_tnjc2_record):
         raw_tnjc2_record,
         ref_name="tiny",
         iso_name="sample1",
-        iso_amplicon_coverage=2.0,
-        iso_scaf_coverage=1.0,
-        copy_number=2.0,
+        iso_scaf_avg=1.0,
+        iso_amplicon_avg=2.0,
     )
 
 

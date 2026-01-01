@@ -1,7 +1,7 @@
 """Coverage analysis utilities."""
 from __future__ import annotations
 
-from typing import Optional, List, Dict, TYPE_CHECKING, Union
+from typing import List, Dict, TYPE_CHECKING, Union
 
 import numpy as np
 

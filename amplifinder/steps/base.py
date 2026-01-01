@@ -68,9 +68,17 @@ class Step(ABC, Generic[T]):
         if self.global_verbose:
             print(msg, end=end)
 
-    def print_timer(self, start_msg: str, end_msg: Optional[str] = None, time_format: str = "{:7.1f} sec", seperate_prints: bool = False, use_log: bool = False):
-        """Context manager for timing code blocks that respects verbose flag."""
-        return _print_timer(start_msg, end_msg=end_msg, time_format=time_format, should_log=self.global_verbose, seperate_prints=seperate_prints, use_log=use_log)
+    def print_timer(
+            self, start_msg: str, end_msg: Optional[str] = None,
+            time_format: str = "{:7.1f} sec", seperate_prints: bool = False,
+            use_log: bool = False
+            ):
+        """Context manager for timing code blocks."""
+        return _print_timer(
+            start_msg, end_msg=end_msg, time_format=time_format,
+            should_log=self.global_verbose, seperate_prints=seperate_prints,
+            use_log=use_log
+        )
 
     def _output_labels(self) -> list[str]:
         """Human-readable labels for outputs (override for custom logging)."""
@@ -145,7 +153,7 @@ class Step(ABC, Generic[T]):
         if missing_input := self.missing_input_files():
             raise FileNotFoundError(f"{self.name}: missing inputs: {missing_input}")
 
-        with self.print_timer(f"=" * 90 + " ", use_log=True, end_msg=" =====\n"):
+        with self.print_timer("=" * 90 + " ", use_log=True, end_msg=" ========\n"):
             # Fast path: check if can skip without lock (common case)
             if not self.force and self.has_output_files():
                 return self._execute_and_report("skipping (loading exisitng outputs)", True)
@@ -166,12 +174,12 @@ class Step(ABC, Generic[T]):
         """Run an action with optional log and standardized output reporting."""
         step_name = self.name
         step_name_color = f"\033[36m{step_name}\033[0m"
-        
+
         labels = self._output_labels() if self.output_files else []
         output_str = ", ".join(labels) if labels else "none"
-        
-        # Format: step_name (left), output_str at pos 40, log_msg right-aligned to 100
-        remaining = 117 - 40 - len(log_msg)
+
+        # Format: step_name (left), output_str at pos 40, log_msg right-aligned (120 chars total)
+        remaining = 120 - 40 - len(log_msg)
         formatted = f"{step_name_color:<40s}{output_str:<{remaining}s}{log_msg}"
         self.log(formatted)
 
@@ -194,7 +202,7 @@ class Step(ABC, Generic[T]):
 
         # Run
         self.run_count += 1
-        
+
         if self.should_profile:
             try:
                 from line_profiler import LineProfiler
@@ -203,17 +211,17 @@ class Step(ABC, Generic[T]):
                     "line_profiler is required for profiling. "
                     "Install it with: pip install 'amplifinder[dev]' or pip install line_profiler"
                 )
-            
+
             lp = LineProfiler()
             # Add functions specified by subclass
             for func in self._get_profiler_functions():
                 lp.add_function(func)
             # Profile _calculate_output itself
             lp.add_function(self._calculate_output)
-            
+
             # Run with profiler
             output = lp.runcall(self._calculate_output)
-            
+
             # Save and print stats
             self._save_profiler_stats(lp)
         else:
@@ -249,7 +257,7 @@ class Step(ABC, Generic[T]):
 
     def _get_profiler_functions(self) -> list:
         """Override in subclass to specify functions to profile.
-        
+
         Returns:
             List of functions to add to the line profiler.
         """
@@ -257,18 +265,18 @@ class Step(ABC, Generic[T]):
 
     def _save_profiler_stats(self, lp) -> None:
         """Save and optionally print line profiler statistics.
-        
+
         Args:
             lp: LineProfiler instance with collected stats.
         """
         from io import StringIO
-        
+
         # Save stats to file
         if self.output_files:
             stats_file = self.output_files[0].parent / "line_profiler_stats.lprof"
             lp.dump_stats(str(stats_file))
             self.log(f"Line profiler stats saved to {stats_file}", verbose_only=False)
-        
+
         # Print stats if verbose
         if self.global_verbose:
             output_stream = StringIO()

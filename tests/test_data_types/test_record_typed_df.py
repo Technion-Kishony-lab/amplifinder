@@ -128,31 +128,31 @@ def test_save_load_with_index(sample_records, tmp_path):
         "key2": sample_records[1],
     }
     df = RecordTypedDf.from_dict(records_dict, SampleRecord)
-    
+
     # Verify index before save
     assert list(df.keys()) == ["key1", "key2"]
     assert df["key1"].name == "a"
     assert df["key2"].name == "b"
-    
+
     # Save (should auto-save index since it's meaningful)
     df.to_csv(csv_path)
-    
+
     # Load with index
     df2 = RecordTypedDf.from_csv(csv_path, SampleRecord, index_col=0)
-    
+
     # Verify index is preserved
     assert list(df2.keys()) == ["key1", "key2"]
     assert len(df2) == 2
-    
+
     # Verify records match
     assert df2["key1"].name == "a"
     assert df2["key1"].count == 1
     assert df2["key1"].color == Color.RED
-    
+
     assert df2["key2"].name == "b"
     assert df2["key2"].count == 2
     assert df2["key2"].color == Color.BLUE
-    
+
     # Verify items() works
     items = list(df2.items())
     assert len(items) == 2

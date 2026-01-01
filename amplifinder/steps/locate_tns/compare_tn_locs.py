@@ -63,10 +63,13 @@ def compare_tn_locations(
         left_diff = row["loc_left"] - match["loc_left"]
         right_diff = row["loc_right"] - match["loc_right"]
         if left_diff != 0 or right_diff != 0:
-            diffs.append(f"Non-matching ends for '{row['tn_name']}' at {row['tn_scaf']}: "
-                        f"{name1}={row['loc_left']}-{row['loc_right']}, "
-                        f"{name2}={match['loc_left']}-{match['loc_right']} "
-                        f"(Δleft={left_diff:+d}, Δright={right_diff:+d})")
+            diffs.append(
+                f"Non-matching ends for '{row['tn_name']}' at "
+                f"{row['tn_scaf']}: "
+                f"{name1}={row['loc_left']}-{row['loc_right']}, "
+                f"{name2}={match['loc_left']}-{match['loc_right']} "
+                f"(Δleft={left_diff:+d}, Δright={right_diff:+d})"
+            )
 
     # Check tn2 against tn1 (only "not found")
     for _, row in df2.iterrows():
@@ -75,7 +78,7 @@ def compare_tn_locations(
             loc = f"{row['tn_scaf']}:{row['loc_left']}-{row['loc_right']}"
             diffs.append(f"{name2} TN '{row['tn_name']}' at {loc} not found in {name1}")
 
-    # If there are diffs, write to file and log single warning
+    # If there are diffs, write to file and log warnings
     if diffs:
         if output_file:
             output_file.parent.mkdir(parents=True, exist_ok=True)
@@ -84,4 +87,6 @@ def compare_tn_locations(
                     f.write(diff + '\n')
             warning(f"TN location differences found between {name1} and {name2}. See {output_file}.")
         else:
-            warning(f"TN location differences found between {name1} and {name2} ({len(diffs)} issues)")
+            # Log each diff as a separate warning for better visibility in tests/logs
+            for diff in diffs:
+                warning(diff)

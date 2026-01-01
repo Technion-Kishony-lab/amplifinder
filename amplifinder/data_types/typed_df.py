@@ -5,7 +5,7 @@ import pandas as pd
 
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Type, TypeVar, get_origin, get_args
+from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Type, TypeVar, get_args
 
 from amplifinder.data_types.records import Record, Schema
 from amplifinder.data_types.validate_and_cast_df import validate_and_cast_df
@@ -70,10 +70,10 @@ class TypedDF:
     def to_csv(self, path: Path, index: Optional[bool] = None) -> None:
         """Save DataFrame to CSV. Auto-detects meaningful indices if index=None."""
         from amplifinder.data_types.validate_and_cast_df import _is_optional
-        
+
         df = self.df.copy()
-        
-        # Convert Optional[int] columns to Int64 to preserve integer format in CSV
+
+        # Convert Optional[int] columns to Int64
         dtypes = self.schema.dtypes
         for col in df.columns:
             if col in dtypes:
@@ -84,16 +84,17 @@ class TypedDF:
                     if inner_type is int:
                         # Convert to Int64 (nullable integer) to preserve integer format
                         df[col] = df[col].astype("Int64")
-        
+
         # Serialize object columns (enums, Records, etc.)
         for col in df.columns:
             if df[col].dtype == object:
                 df[col] = df[col].apply(_serialize_for_csv)
-        
+
         # Auto-detect if index should be saved
+
         if index is None:
             index = self._has_meaningful_index()
-        
+
         df.to_csv(path, index=index, header=self.headers)
 
     @staticmethod
@@ -107,7 +108,10 @@ class TypedDF:
         return validate_and_cast_df(df, schema, check_missing=True, check_extra=True, cast=True)
 
     @classmethod
-    def from_csv(cls: Type[SelfTypedDF], path: Path, schema: Schema, headers: bool = True, index_col: Optional[int] = None) -> SelfTypedDF:
+    def from_csv(
+            cls: Type[SelfTypedDF], path: Path, schema: Schema,
+            headers: bool = True, index_col: Optional[int] = None
+            ) -> SelfTypedDF:
         df = cls._read_csv_df(path, schema, headers, index_col=index_col)
         return cls(df, schema, headers)
 

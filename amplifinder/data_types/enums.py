@@ -29,4 +29,3 @@ class AverageMethod(str, Enum):
     MEDIAN = "median"
     MODE = "mode"
     MEAN = "mean"
-

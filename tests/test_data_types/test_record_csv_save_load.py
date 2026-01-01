@@ -2,7 +2,6 @@
 
 import pytest
 from pathlib import Path
-from typing import List
 
 from amplifinder.data_types import (
     RecordTypedDf,
@@ -111,32 +110,6 @@ def make_tn_junction() -> TnJunction:
 
 def make_raw_tnjc2() -> RawTnJc2:
     """Create sample RawTnJc2."""
-    tnjc_a = TnJunction(
-        num=1,
-        scaf1="chr1",
-        pos1=100,
-        dir1=Orientation.FORWARD,
-        scaf2="chr1",
-        pos2=200,
-        dir2=Orientation.FORWARD,
-        flanking_left=50,
-        flanking_right=50,
-        ref_tn_sides=[RefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
-        swapped=False,
-    )
-    tnjc_b = TnJunction(
-        num=2,
-        scaf1="chr1",
-        pos1=300,
-        dir1=Orientation.REVERSE,
-        scaf2="chr1",
-        pos2=400,
-        dir2=Orientation.REVERSE,
-        flanking_left=50,
-        flanking_right=50,
-        ref_tn_sides=[RefTnSide(tn_id=1, side=Side.RIGHT, distance=0)],
-        swapped=False,
-    )
     return RawTnJc2(
         jc_num_S=1,
         jc_num_E=2,
@@ -158,12 +131,8 @@ def make_covered_tnjc2() -> CoveredTnJc2:
     raw = make_raw_tnjc2()
     return CoveredTnJc2.from_other(
         raw,
-        iso_amplicon_coverage=2.0,
-        iso_scaf_coverage=1.0,
-        anc_amplicon_coverage=None,
-        anc_scaf_coverage=None,
-        copy_number=2.0,
-        copy_number_vs_anc=None,
+        iso_scaf_avg=1.0,
+        iso_amplicon_avg=2.0,
     )
 
 
@@ -223,7 +192,8 @@ def make_exported_tnjc2() -> ExportedTnJc2:
 
 
 @pytest.mark.parametrize("record_type,make_func", [
-    ("RefTnSide", lambda: [make_ref_tn_side(), make_ref_tn_side(2, Side.RIGHT, 5), make_ref_tn_side(3, Side.LEFT, None)]),
+    ("RefTnSide", lambda: [make_ref_tn_side(), make_ref_tn_side(2, Side.RIGHT, 5),
+                           make_ref_tn_side(3, Side.LEFT, None)]),
     ("RefTnLoc", lambda: [make_ref_tn_loc(), make_ref_tn_loc(2)]),
     ("BlastHit", lambda: [make_blast_hit()]),
     ("Junction", lambda: [make_junction(1), make_junction(2)]),
@@ -253,33 +223,33 @@ def test_record_csv_save_load(record_type, make_func):
         "AnalyzedTnJc2": AnalyzedTnJc2,
         "ExportedTnJc2": ExportedTnJc2,
     }
-    
+
     record_cls = record_classes[record_type]
     sample_records = make_func()
-    
+
     # Create CSV path
     csv_path = TEST_OUTPUT_DIR / f"{record_type.lower()}_test.csv"
-    
+
     # Save to CSV
     df = RecordTypedDf.from_records(sample_records, record_cls)
     df.to_csv(csv_path)
-    
+
     # Verify file exists
     assert csv_path.exists(), f"CSV file not created: {csv_path}"
-    
+
     # Load from CSV
     df2 = RecordTypedDf.from_csv(csv_path, record_cls)
-    
+
     # Verify record count
     assert len(df2) == len(sample_records), f"Record count mismatch for {record_type}"
-    
+
     # Verify each record matches
     loaded_records = list(df2)
     for i, (original, loaded) in enumerate(zip(sample_records, loaded_records)):
         # Compare using model_dump for comprehensive comparison
         orig_dict = original.model_dump()
         loaded_dict = loaded.model_dump()
-        
+
         # Check all fields match
         for key in orig_dict.keys():
             assert key in loaded_dict, f"Missing field {key} in loaded record {i} for {record_type}"
@@ -287,4 +257,3 @@ def test_record_csv_save_load(record_type, make_func):
                 f"Field {key} mismatch in record {i} for {record_type}: "
                 f"expected {orig_dict[key]}, got {loaded_dict[key]}"
             )
-

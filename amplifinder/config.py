@@ -1,6 +1,7 @@
 """Configuration management for AmpliFinder."""
 
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
 from typing import Any, Optional, Tuple, ClassVar
 import json
@@ -190,6 +191,8 @@ class Config:
                 config_dict[key] = str(value)
             elif isinstance(value, tuple):
                 config_dict[key] = list(value)
+            elif isinstance(value, Enum):
+                config_dict[key] = value.value
             elif value is not None:
                 config_dict[key] = value
 

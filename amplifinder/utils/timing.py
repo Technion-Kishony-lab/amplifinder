@@ -19,7 +19,8 @@ def start_timer(timer: str = "default") -> None:
     _timers[timer] = perf_counter()
 
 
-def end_timer(msg: Optional[str], timer: str = "default", log: bool = True, extra: Optional[dict[str, str]] = None) -> float:
+def end_timer(msg: Optional[str], timer: str = "default", log: bool = True,
+              extra: Optional[dict[str, str]] = None) -> float:
     start = _timers.pop(timer, None)
     if start is None:
         raise ValueError(f"Timer {timer} not started")
@@ -47,7 +48,7 @@ def timer(msg: Optional[str] = None, log: bool = True, extra: Optional[dict[str,
 def print_timer(start_msg: str, end_msg: Optional[str] = None, time_format: str = "{:.1f} sec",
                 should_log: bool = True, seperate_prints: bool = False, use_log: bool = False):
     """Context manager that prints start message, runs code, then prints time.
-    
+
     Args:
         start_msg: Message to print before running code (printed with end="", flush=True)
         end_msg: Message to print after (default: time only)

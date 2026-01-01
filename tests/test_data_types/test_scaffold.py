@@ -1,24 +1,23 @@
 import numpy as np
-import pytest
 
-from amplifinder.data_types.enums import Orientation
 from amplifinder.data_types.scaffold import Scaffold, SeqScaffold, SegmentScaffold, SeqSegmentScaffold
+from amplifinder.data_types.enums import Orientation
 
 
 def test_seqscaffold_slice_forward_linear():
     scaf = SeqScaffold(seq="abcdef", is_circular=False)
-    assert scaf.slice(2, 4) == "bcd"
+    assert scaf.slice(2, 4, Orientation.FORWARD) == "bcd"
 
 
 def test_seqscaffold_slice_reverse_circular():
     scaf = SeqScaffold(seq="ATGCAT", is_circular=True)
-    assert scaf.slice(5, 2) == "ATAT"
+    assert scaf.slice(5, 2, Orientation.FORWARD) == "ATAT"
 
 
 def test_scaffold_slice_numpy_wrap():
     scaf = Scaffold(is_circular=True, length=5)
     arr = np.arange(1, 6)
-    np.testing.assert_array_equal(scaf.slice(4, 2, seq=arr), [4, 5, 1, 2])
+    np.testing.assert_array_equal(scaf.slice(4, 2, Orientation.FORWARD, seq=arr), [4, 5, 1, 2])
 
 
 def test_segment_scaffold_defaults_start_end():

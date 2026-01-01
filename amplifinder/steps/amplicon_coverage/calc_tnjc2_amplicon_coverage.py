@@ -6,10 +6,9 @@ from typing import Optional
 import numpy as np
 
 from amplifinder.data_types import RecordTypedDf, RawTnJc2, CoveredTnJc2, Genome, AverageMethod
-from amplifinder.data_types.scaffold import SeqScaffold, SegmentScaffold
+
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.tools.breseq import load_breseq_coverage
-from amplifinder.utils import start_timer, end_timer
 
 from .coverage import get_scaffold_coverage, calc_average, calc_scaffold_coverages_and_averages
 from .statistics import calc_distribution_mode
@@ -86,14 +85,16 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         with self.print_timer(f"loading iso coverage from {self.iso_breseq_path} ..."):
             iso_cov = load_breseq_coverage(self.iso_breseq_path, self.genome.name)
         with self.print_timer(f"calculating iso scaffold stats ({len(unique_scaffolds)} scaffolds) ..."):
-            iso_scaf_covs, iso_scaf_avgs = calc_scaffold_coverages_and_averages(iso_cov, unique_scaffolds, self.genome, self.average_method)
+            iso_scaf_covs, iso_scaf_avgs = calc_scaffold_coverages_and_averages(
+                iso_cov, unique_scaffolds, self.genome, self.average_method)
 
         # Load ancestor coverage if provided
         if self.has_ancestor:
             with self.print_timer(f"loading anc coverage from {self.anc_breseq_path} ..."):
                 anc_cov = load_breseq_coverage(self.anc_breseq_path, self.genome.name)
             with self.print_timer(f"calculating anc scaffold stats ({len(unique_scaffolds)} scaffolds) ..."):
-                anc_scaf_covs, anc_scaf_avgs = calc_scaffold_coverages_and_averages(anc_cov, unique_scaffolds, self.genome, self.average_method)
+                anc_scaf_covs, anc_scaf_avgs = calc_scaffold_coverages_and_averages(
+                    anc_cov, unique_scaffolds, self.genome, self.average_method)
         else:
             anc_cov = None
             anc_scaf_covs = {}
@@ -133,13 +134,13 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         seg_scaf = raw_tnjc2.get_segment_scaffold(self.genome)
 
         iso_amplicon_cov = seg_scaf.slice(seq=iso_scaf_cov)
-        
+
         # Remove zero coverage regions
         if self.has_ancestor:
-            # we mask by the ancestor coverage. 
+            # we mask by the ancestor coverage.
             # if the iso_cov=0 and anc_cov>0 it is meaningful (a deletion)
             anc_amplicon_cov = seg_scaf.slice(seq=anc_scaf_cov)
-            mask = anc_amplicon_cov > 0  
+            mask = anc_amplicon_cov > 0
         else:
             mask = iso_amplicon_cov > 0
 
