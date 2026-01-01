@@ -367,14 +367,31 @@ class RecordTypedDfStep(Step[RecordTypedDf[R]], Generic[R]):
             "Set record_cls class var or use RecordTypedDfStep[RecordType] typing."
         )
 
+    def has_output_files(self) -> bool:
+        """True if output files exist and can be loaded.
+        
+        Returns False if CSV_EXPORT_FIELDS is set (CSV is view-only, cannot be loaded).
+        """
+        record_cls = self._get_record_cls()
+        # If CSV_EXPORT_FIELDS is set, CSV is view-only - always recompute
+        if record_cls.CSV_EXPORT_FIELDS is not None:
+            return False
+        return super().has_output_files()
+
     def _save_output(self, output: RecordTypedDf[R]) -> None:
         """Save RecordTypedDf to CSV."""
         ensure_dir(self.output_file.parent)
         output.to_csv(self.output_file)
 
     def load_outputs(self) -> RecordTypedDf[R]:
-        """Load RecordTypedDf from CSV."""
+        """Load RecordTypedDf from CSV.
+        
+        Note: This will not be called if CSV_EXPORT_FIELDS is set (has_output_files returns False).
+        """
         record_cls = self._get_record_cls()
+        # Safety check: CSV_EXPORT_FIELDS makes CSV view-only
+        if record_cls.CSV_EXPORT_FIELDS is not None:
+            raise NotImplementedError(f"{record_cls.__name__} uses CSV_EXPORT_FIELDS. CSV file are view-only")
         return RecordTypedDf.from_csv(self.output_file, record_cls)
 
     def report_output_message(self, output: RecordTypedDf[R], *, from_cache: bool) -> Optional[str]:
