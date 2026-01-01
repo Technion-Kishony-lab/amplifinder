@@ -47,8 +47,8 @@ def create_synthetic_junctions(
     # start and end are 1-based inclusive (from BLAST/junction positions)
     # Get segment scaffold to access normalized left/right positions
     seg_scaf = candidate.get_segment_scaffold(genome)
-    pos_L = seg_scaf.left - 1  # Convert to 0-based start
-    pos_R = seg_scaf.right - 1  # Convert to 0-based start
+    pos_L = seg_scaf.start - 1  # Convert to 0-based start
+    pos_R = seg_scaf.end - 1  # Convert to 0-based start
 
     # Outside positions (flanking the amplicon)
     pos_out_L = pos_L - 1

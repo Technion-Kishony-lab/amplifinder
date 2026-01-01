@@ -87,20 +87,6 @@ def test_force_reruns(step_factory):
 class TestLocateTNsIntegration:
     """Test TN element location using GenBank annotations with real data."""
 
-    @pytest.fixture
-    def u00096_genome(self, tmp_path):
-        """Load U00096 reference (cached)."""
-        from amplifinder.steps import GetRefGenomeStep
-
-        ref_path = ensure_dir(tmp_path / "genomesDB")
-
-        step = GetRefGenomeStep(
-            ref_name="U00096",
-            ref_path=ref_path,
-            ncbi=True,
-        )
-        return step.run()
-
     def test_locate_tns_genbank(self, tmp_path, u00096_genome, isolate_srr25242877):
         """Locate TN elements from GenBank annotations."""
         output_dir = tmp_path / "tn_loc" / u00096_genome.name

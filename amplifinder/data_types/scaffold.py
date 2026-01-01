@@ -209,17 +209,17 @@ class SegmentMixin:
         )
 
     def slice(self, start: int | None = None, end: int | None = None,
-              orientation: Orientation = Orientation.FORWARD, seq: T | None = None) -> T:
+              orientation: Orientation | None = None, seq: T | None = None) -> T:
         start, end, orientation = self._resolve_params(start, end, orientation)
         return super().slice(start, end, orientation, seq)
 
     def circular_normalize_range(self, start: int | None = None, end: int | None = None,
-                        orientation: Orientation = Orientation.FORWARD) -> tuple[int, int, bool | None]:
+                        orientation: Orientation | None = None) -> tuple[int, int, bool | None]:
         start, end, orientation = self._resolve_params(start, end, orientation)
         return super().circular_normalize_range(start, end, orientation)
 
     def get_segment_length(self, start: int | None = None, end: int | None = None,
-                           orientation: Orientation = Orientation.FORWARD) -> int:
+                           orientation: Orientation | None = None) -> int:
         start, end, orientation = self._resolve_params(start, end, orientation)
         return super().get_segment_length(start, end, orientation)
 

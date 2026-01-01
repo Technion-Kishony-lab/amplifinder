@@ -29,6 +29,10 @@ class RefTnSide(Record):
     tn_id: TnId
     side: Side
 
+    def is_same_side(self, other: RefTnSide) -> bool:
+        """Check if two RefTnSide objects are the same side."""
+        return self.tn_id == other.tn_id and self.side == other.side
+
 
 class OffsetRefTnSide(RefTnSide):
     """A reference TN element side with offset distance for matches."""

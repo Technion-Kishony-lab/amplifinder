@@ -158,7 +158,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         df = blast_hits.df
 
         # Remove duplicate alignments (keep first by qstart, qend)
-        df = df.drop_duplicates(subset=["qstart", "qend"], keep="first")
+        df = df.drop_duplicates(subset=["qstart", "qend"], keep="first").copy()
 
         # Add subject length
         df["subject_length"] = df["subject"].map(tn_lengths).fillna(0).astype(int)
