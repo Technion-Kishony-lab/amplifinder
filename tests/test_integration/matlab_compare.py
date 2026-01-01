@@ -90,6 +90,17 @@ def match_junctions(
     for i, matlab_row in matlab_df.iterrows():
         matlab_pos1 = matlab_row['Positions_in_chromosome_1']
         matlab_pos2 = matlab_row['Positions_in_chromosome_2']
+        matlab_dir1 = matlab_row.get('Direction_in_chromosome_1', None)
+        matlab_dir2 = matlab_row.get('Direction_in_chromosome_2', None)
+        
+        # If directions are (-1, 1), it means span_origin - swap positions for comparison
+        span_origin = (matlab_dir1 == -1 and matlab_dir2 == 1)
+        if span_origin:
+            matlab_compare_pos1 = matlab_pos2
+            matlab_compare_pos2 = matlab_pos1
+        else:
+            matlab_compare_pos1 = matlab_pos1
+            matlab_compare_pos2 = matlab_pos2
 
         for j, python_row in python_df.iterrows():
             # Parse Python positions (format: "15386-16732")
@@ -101,8 +112,8 @@ def match_junctions(
                 continue  # Skip if format is wrong
 
             # Check if positions match within tolerance
-            pos1_diff = abs(py_pos1 - matlab_pos1)
-            pos2_diff = abs(py_pos2 - matlab_pos2)
+            pos1_diff = abs(py_pos1 - matlab_compare_pos1)
+            pos2_diff = abs(py_pos2 - matlab_compare_pos2)
             if pos1_diff <= pos_tolerance and pos2_diff <= pos_tolerance:
                 total_diff = pos1_diff + pos2_diff
                 candidates.append((j, i, total_diff))
@@ -289,9 +300,56 @@ def compare_isjc2_outputs(
     Raises:
         AssertionError: If 1-to-1 matching fails or properties don't match
     """
+    print(f"\n=== Comparison Summary ===")
+    print(f"MATLAB ISJC2: {len(matlab_df)} candidates")
+    print(f"Python tnjc2: {len(python_df)} candidates")
+    
     matches, py_matched, matlab_matched = match_junctions(
         python_df, matlab_df, pos_tolerance
     )
+    
+    print(f"Matched: {len(matches)} pairs")
+    print(f"Python unmatched: {len(python_df) - len(py_matched)}")
+    print(f"MATLAB unmatched: {len(matlab_df) - len(matlab_matched)}")
+    
+    # List all matched junctions
+    if matches:
+        print(f"\n=== Matched Junctions ({len(matches)} pairs) ===")
+        for py_idx, matlab_idx in matches:
+            py_row = python_df.iloc[py_idx]
+            matlab_row = matlab_df.iloc[matlab_idx]
+            py_pos = py_row.get('Positions_in_chromosome', 'unknown')
+            matlab_pos1 = matlab_row.get('Positions_in_chromosome_1', 'unknown')
+            matlab_pos2 = matlab_row.get('Positions_in_chromosome_2', 'unknown')
+            print(f"  Python[{py_idx}]: {py_pos}  <->  MATLAB[{matlab_idx}]: {matlab_pos1}-{matlab_pos2}")
+    
+    # List unmatched Python junctions
+    py_unmatched = set(python_df.index) - py_matched
+    if py_unmatched:
+        print(f"\n=== Unmatched Python Junctions ({len(py_unmatched)}) ===")
+        for py_idx in sorted(py_unmatched):
+            py_row = python_df.iloc[py_idx]
+            py_pos = py_row.get('Positions_in_chromosome', 'unknown')
+            print(f"\n  Python[{py_idx}]: {py_pos}")
+            print(f"  All fields:")
+            for col in python_df.columns:
+                value = py_row.get(col, 'N/A')
+                # Format list/array values nicely
+                if isinstance(value, list):
+                    value = str(value)
+                elif hasattr(value, '__iter__') and not isinstance(value, str):
+                    value = str(value)
+                print(f"    {col}: {value}")
+    
+    # List unmatched MATLAB junctions
+    matlab_unmatched = set(matlab_df.index) - matlab_matched
+    if matlab_unmatched:
+        print(f"\n=== Unmatched MATLAB Junctions ({len(matlab_unmatched)}) ===")
+        for matlab_idx in sorted(matlab_unmatched):
+            matlab_row = matlab_df.iloc[matlab_idx]
+            matlab_pos1 = matlab_row.get('Positions_in_chromosome_1', 'unknown')
+            matlab_pos2 = matlab_row.get('Positions_in_chromosome_2', 'unknown')
+            print(f"  MATLAB[{matlab_idx}]: {matlab_pos1}-{matlab_pos2}")
 
     # Require 1-to-1 match: every junction must have exactly one match
     assert len(matches) == len(matlab_df), (
@@ -299,9 +357,24 @@ def compare_isjc2_outputs(
         f"Missing MATLAB junctions: {len(matlab_df) - len(matlab_matched)}"
     )
 
+    # Build detailed error message with all fields for unmatched junctions
+    error_details = []
+    for py_idx in sorted(py_unmatched):
+        py_row = python_df.iloc[py_idx]
+        py_pos = py_row.get('Positions_in_chromosome', 'unknown')
+        error_details.append(f"  Python[{py_idx}]: {py_pos}")
+        for col in python_df.columns:
+            value = py_row.get(col, 'N/A')
+            if isinstance(value, list):
+                value = str(value)
+            elif hasattr(value, '__iter__') and not isinstance(value, str):
+                value = str(value)
+            error_details.append(f"    {col}: {value}")
+    
     assert len(matches) == len(python_df), (
         f"Not all Python junctions matched: {len(matches)}/{len(python_df)} matched. "
-        f"Extra Python junctions: {len(python_df) - len(py_matched)}"
+        f"Extra Python junctions: {len(py_unmatched)}\n"
+        f"Unmatched Python junctions with all fields:\n" + "\n".join(error_details)
     )
 
     # Verify no duplicates

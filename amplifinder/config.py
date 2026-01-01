@@ -200,7 +200,7 @@ class Config:
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
 
         from amplifinder.logger import info
-        info(f"Saved config to: {config_path}")
+        info(f"Saved config to:\n{config_path}")
 
     @classmethod
     def load_from_run(cls, run_dir: Path) -> "Config":
