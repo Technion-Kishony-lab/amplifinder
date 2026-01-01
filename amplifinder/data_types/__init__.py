@@ -6,7 +6,7 @@ from amplifinder.data_types.records import Column, Schema, Record
 from amplifinder.data_types.enums import Side, Orientation, AverageMethod
 from amplifinder.data_types.scaffold import JcArm
 from amplifinder.data_types.record_types import (
-    RefTnLoc, BlastHit, Junction, BreseqJunction, RefTnJunction, TnJunction, RawTnJc2, RefTnSide,
+    RefTnLoc, BlastHit, Junction, BreseqJunction, RefTnJunction, TnJunction, RawTnJc2, RefTnSide, OffsetRefTnSide,
     JunctionCoverage, CoveredTnJc2, RawEvent, ClassifiedTnJc2,
     FilteredTnJc2, JunctionType, EventModifier, AnalyzedTnJc2, ExportedTnJc2,
 )
@@ -28,6 +28,7 @@ __all__ = [
     "TnJunction",
     "RawTnJc2",
     "RefTnSide",
+    "OffsetRefTnSide",
     "Genome",
     "GenomeRegistry",
     "get_genome",

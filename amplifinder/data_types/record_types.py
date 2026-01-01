@@ -24,11 +24,16 @@ class JunctionCoverage(NamedTuple):
 # ===== Reference TN element sides =====
 
 class RefTnSide(Record):
-    """A reference TN element side (with optional distance for matches)."""
+    """A reference TN element side."""
     NAME: ClassVar[str] = "Reference TN sides"
     tn_id: TnId
     side: Side
-    distance: Optional[int] = None  # None for reference junctions
+
+
+class OffsetRefTnSide(RefTnSide):
+    """A reference TN element side with offset distance for matches."""
+    NAME: ClassVar[str] = "Offset Reference TN sides"
+    distance: int
 
 
 # ===== Reference TN elements =====
@@ -170,9 +175,9 @@ class RefTnJunction(Junction):
 class TnJunction(Junction):
     """Junction matched to TN element(s)."""
     NAME: ClassVar[str] = "TN-associated junctions"
-    ref_tn_side: Optional[RefTnSide] = None
-    ref_tn_sides: List[RefTnSide]  # Reference TN matches: [(tn_id, side, distance?), ...]
-    swapped: bool                  # True if BRESEQ arms were swapped (to normalize to TN on arm 1)
+    ref_tn_side: Optional[RefTnSide] = None  # None for breseq junctions
+    ref_tn_sides: List[OffsetRefTnSide]      # Reference TN matches with distances
+    swapped: bool                            # True if BRESEQ arms were swapped (to normalize to TN on arm 1)
 
     def is_ref_tn_junction(self) -> bool:
         """Return True if this is a reference TN junction."""

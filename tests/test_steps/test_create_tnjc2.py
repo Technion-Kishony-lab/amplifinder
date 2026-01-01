@@ -8,7 +8,7 @@ from amplifinder.steps import (
     CreateTnJcStep,
     PairTnJcToRawTnJc2Step,
 )
-from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, Junction, RefTnSide, Side, Orientation
+from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, Junction, OffsetRefTnSide, Side, Orientation
 
 
 # =============================================================================
@@ -29,7 +29,7 @@ def make_tnjc(
         scaf1=scaf, pos1=100 * num, dir1=Orientation.FORWARD if tn_side == Side.LEFT else Orientation.REVERSE,
         scaf2=scaf, pos2=pos2, dir2=dir2,
         flanking_left=50, flanking_right=50,
-        ref_tn_sides=[RefTnSide(tn_id=tn_id, side=tn_side, distance=0)],
+        ref_tn_sides=[OffsetRefTnSide(tn_id=tn_id, side=tn_side, distance=0)],
         swapped=False,
     )
 

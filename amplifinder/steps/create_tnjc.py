@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.data_types import RecordTypedDf, Junction, RefTnSide, TnJunction, RefTnJunction
+from amplifinder.data_types import RecordTypedDf, Junction, RefTnSide, OffsetRefTnSide, TnJunction, RefTnJunction
 from amplifinder.data_types.genome import Genome
 
 
@@ -101,7 +101,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
             return seq
         return seq[:-self.trim_jc_flanking]
 
-    def _find_ref_tn_sides_matches(self, jc: Junction, arm: int) -> List[RefTnSide]:
+    def _find_ref_tn_sides_matches(self, jc: Junction, arm: int) -> List[OffsetRefTnSide]:
         """Find TN elements matching a junction arm sequence."""
         jc_arm_seq = self._get_junction_arm_seq(jc, arm)
         matches = []
@@ -114,5 +114,5 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
             if pos >= 0:
                 distance = pos - ref_tnjc.flanking_right
                 if abs(distance) <= self.max_dist_to_tn:
-                    matches.append(RefTnSide.from_other(ref_tnjc.ref_tn_side, distance=distance))
+                    matches.append(OffsetRefTnSide.from_other(ref_tnjc.ref_tn_side, distance=distance))
         return matches
