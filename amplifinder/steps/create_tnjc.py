@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List, Union
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.data_types import RecordTypedDf, Junction, RefTnSide, OffsetRefTnSide, TnJunction, RefTnJunction, BreseqJunction
+from amplifinder.data_types import RecordTypedDf, Junction, OffsetRefTnSide, TnJunction, RefTnJunction, BreseqJunction
 from amplifinder.data_types.genome import Genome
 
 

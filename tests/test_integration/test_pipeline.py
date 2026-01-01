@@ -65,14 +65,16 @@ class TestPipeline(Pipeline):
         if matlab_df is not None:
             print(f"Step 6: MATLAB ISJC2.xlsx has {len(matlab_df)} candidates, Python={len(result)} candidates")
             # Convert RawTnJc2 to comparable format
+            # Access properties via Record objects, not DataFrame rows
             python_df = result.df.copy()
-            python_df['Positions_in_chromosome'] = python_df.apply(
-                lambda row: f"{row['start']}-{row['end']}", axis=1
-            )
-            python_df['amplicon_length'] = python_df['amplicon_length']
-            python_df['IS_element'] = python_df['tn_ids'].apply(
-                lambda x: ','.join(map(str, x)) if isinstance(x, list) else str(x)
-            )
+            records = result.to_records()
+            python_df['Positions_in_chromosome'] = [
+                f"{r.start}-{r.end}" for r in records
+            ]
+            python_df['amplicon_length'] = [r.amplicon_length for r in records]
+            python_df['IS_element'] = [
+                ','.join(map(str, r.tn_ids)) if r.tn_ids else '' for r in records
+            ]
 
             # Compare with MATLAB ISJC2
             from tests.test_integration.matlab_compare import compare_isjc2_outputs
