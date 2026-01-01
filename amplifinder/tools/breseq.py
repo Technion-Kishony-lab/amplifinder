@@ -367,10 +367,6 @@ def _load_cov_pyarrow(cov_file: Path) -> Optional[np.ndarray]:
             parse_options=pacsv.ParseOptions(delimiter="\t"),
             convert_options=pacsv.ConvertOptions(
                 include_columns=cols,
-                column_types={
-                    "unique_top_cov": pa.int32(),
-                    "unique_bot_cov": pa.int32(),
-                },
             ),
         )
     except pa.ArrowKeyError:
@@ -379,6 +375,13 @@ def _load_cov_pyarrow(cov_file: Path) -> Optional[np.ndarray]:
     for col in cols:
         if col not in table.column_names:
             return None
+        # Cast to int if needed (handles float columns)
+        if table[col].type != pa.int32():
+            table = table.set_column(
+                table.column_names.index(col),
+                col,
+                pc.cast(table[col], pa.int32())
+            )
 
     summed = pc.add(table["unique_top_cov"], table["unique_bot_cov"])
     return summed.to_numpy()
