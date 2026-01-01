@@ -45,6 +45,29 @@ BRESEQ_PATH = Path(
 # Real-data integration fixtures (used across test suites)
 # =============================================================================
 
+# Persistent cache directory for test genomes (survives across test runs)
+TEST_GENOMES_CACHE = Path(__file__).parent / "test_outputs" / "integration" / "genomesDB"
+
+
+@pytest.fixture(scope="session")
+def u00096_genome():
+    """Load U00096 reference genome (session-scoped, cached across all tests).
+    
+    Downloads from NCBI only if not already cached. All integration tests
+    share the same genome instance.
+    """
+    from amplifinder.steps import GetRefGenomeStep
+    
+    ref_path = ensure_dir(TEST_GENOMES_CACHE)
+    
+    step = GetRefGenomeStep(
+        ref_name="U00096",
+        ref_path=ref_path,
+        ncbi=True,
+    )
+    return step.run()
+
+
 @pytest.fixture
 def isolate_srr25242877():
     """Test isolate SRR25242877 configuration."""
