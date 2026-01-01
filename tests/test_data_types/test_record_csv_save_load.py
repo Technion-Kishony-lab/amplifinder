@@ -5,7 +5,7 @@ from pathlib import Path
 
 from amplifinder.data_types import (
     RecordTypedDf,
-    RefTnSide, RefTnLoc, BlastHit,
+    RefTnSide, OffsetRefTnSide, RefTnLoc, BlastHit,
     Junction, RefTnJunction, TnJunction,
     RawTnJc2, CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2, ExportedTnJc2,
     Side, Orientation, RawEvent, EventModifier,
@@ -24,9 +24,14 @@ def setup_output_dir():
     # Keep files after test for inspection
 
 
-def make_ref_tn_side(tn_id: int = 1, side: Side = Side.LEFT, distance: int = None) -> RefTnSide:
+def make_ref_tn_side(tn_id: int = 1, side: Side = Side.LEFT) -> RefTnSide:
     """Create sample RefTnSide."""
-    return RefTnSide(tn_id=tn_id, side=side, distance=distance)
+    return RefTnSide(tn_id=tn_id, side=side)
+
+
+def make_offset_ref_tn_side(tn_id: int = 1, side: Side = Side.LEFT, distance: int = 0) -> OffsetRefTnSide:
+    """Create sample OffsetRefTnSide."""
+    return OffsetRefTnSide(tn_id=tn_id, side=side, distance=distance)
 
 
 def make_ref_tn_loc(tn_id: int = 1) -> RefTnLoc:
@@ -103,7 +108,7 @@ def make_tn_junction() -> TnJunction:
         dir2=Orientation.FORWARD,
         flanking_left=50,
         flanking_right=50,
-        ref_tn_sides=[RefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
         swapped=False,
     )
 
@@ -192,8 +197,9 @@ def make_exported_tnjc2() -> ExportedTnJc2:
 
 
 @pytest.mark.parametrize("record_type,make_func", [
-    ("RefTnSide", lambda: [make_ref_tn_side(), make_ref_tn_side(2, Side.RIGHT, 5),
-                           make_ref_tn_side(3, Side.LEFT, None)]),
+    ("RefTnSide", lambda: [make_ref_tn_side(), make_ref_tn_side(2, Side.RIGHT)]),
+    ("OffsetRefTnSide", lambda: [make_offset_ref_tn_side(), make_offset_ref_tn_side(2, Side.RIGHT, 5),
+                                 make_offset_ref_tn_side(3, Side.LEFT, 10)]),
     ("RefTnLoc", lambda: [make_ref_tn_loc(), make_ref_tn_loc(2)]),
     ("BlastHit", lambda: [make_blast_hit()]),
     ("Junction", lambda: [make_junction(1), make_junction(2)]),
@@ -211,6 +217,7 @@ def test_record_csv_save_load(record_type, make_func):
     # Get record class and create sample records
     record_classes = {
         "RefTnSide": RefTnSide,
+        "OffsetRefTnSide": OffsetRefTnSide,
         "RefTnLoc": RefTnLoc,
         "BlastHit": BlastHit,
         "Junction": Junction,

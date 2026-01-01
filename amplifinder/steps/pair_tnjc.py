@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, RefTnSide, Side, Orientation
+from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, OffsetRefTnSide, Side, Orientation
 from amplifinder.data_types.genome import Genome
 
 
@@ -86,8 +86,8 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
 
     def _find_matching_tns(
         self,
-        i_ref_tn_sides: List[RefTnSide],
-        j_ref_tn_sides: List[RefTnSide],
+        i_ref_tn_sides: List[OffsetRefTnSide],
+        j_ref_tn_sides: List[OffsetRefTnSide],
     ) -> List[Tuple[int, Side]]:
         """Find TN elements that match both junctions on different sides.
 
