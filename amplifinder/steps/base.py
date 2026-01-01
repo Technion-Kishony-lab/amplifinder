@@ -66,7 +66,7 @@ class Step(ABC, Generic[T]):
     def print(self, msg: str, end: str = "\n") -> None:
         """Step-aware print that respects global verbosity."""
         if self.global_verbose:
-            print(msg, end=end)
+            print(msg, end=end, flush=True)
 
     def print_timer(
             self, start_msg: str, end_msg: Optional[str] = None,

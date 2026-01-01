@@ -75,6 +75,18 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             self._calc_candidate_coverage,
         ]
 
+    def _load_coverage_and_calc_scaffold_stats(self, breseq_path: Path, label: str, unique_scaffolds: list[str]
+                                              ) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, float]]:
+        """Load coverage and calculate scaffold statistics."""
+        self.print(f"{label} breseq: {breseq_path}")
+        with self.print_timer(f"loading coverage ... ", end_msg="\n", seperate_prints=True):
+            cov = load_breseq_coverage(breseq_path, self.genome.name)
+        with self.print_timer(f"calculating scaffold stats ({len(unique_scaffolds)} scaffolds) ... ",
+                              end_msg="\n", seperate_prints=True):
+            scaf_covs, scaf_avgs = calc_scaffold_coverages_and_averages(
+                cov, unique_scaffolds, self.genome, self.average_method)
+        return cov, scaf_covs, scaf_avgs
+
     def _calculate_output(self) -> RecordTypedDf[CoveredTnJc2]:
         """Calculate coverage for each TnJc2 candidate."""
 
@@ -82,26 +94,18 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         unique_scaffolds = list(set(raw_tnjc2.scaf for raw_tnjc2 in self.raw_tnjc2s))
 
         # Load isolate coverage
-        with self.print_timer(f"loading iso coverage from {self.iso_breseq_path} ..."):
-            iso_cov = load_breseq_coverage(self.iso_breseq_path, self.genome.name)
-        with self.print_timer(f"calculating iso scaffold stats ({len(unique_scaffolds)} scaffolds) ..."):
-            iso_scaf_covs, iso_scaf_avgs = calc_scaffold_coverages_and_averages(
-                iso_cov, unique_scaffolds, self.genome, self.average_method)
+        iso_cov, iso_scaf_covs, iso_scaf_avgs = self._load_coverage_and_calc_scaffold_stats(self.iso_breseq_path, "iso", unique_scaffolds)
 
         # Load ancestor coverage if provided
         if self.has_ancestor:
-            with self.print_timer(f"loading anc coverage from {self.anc_breseq_path} ..."):
-                anc_cov = load_breseq_coverage(self.anc_breseq_path, self.genome.name)
-            with self.print_timer(f"calculating anc scaffold stats ({len(unique_scaffolds)} scaffolds) ..."):
-                anc_scaf_covs, anc_scaf_avgs = calc_scaffold_coverages_and_averages(
-                    anc_cov, unique_scaffolds, self.genome, self.average_method)
+            anc_cov, anc_scaf_covs, anc_scaf_avgs = self._load_coverage_and_calc_scaffold_stats(self.anc_breseq_path, "anc", unique_scaffolds)
         else:
             anc_cov = None
             anc_scaf_covs = {}
             anc_scaf_avgs = {}
 
         # Process each raw_tnjc2s
-        with self.print_timer("Calculating coverage for each raw_tnjc2 ..."):
+        with self.print_timer("Calculating coverage for each raw_tnjc2 ...", end_msg="\n", seperate_prints=True):
             covered_records = []
             for raw_tnjc2 in self.raw_tnjc2s:
                 covered = self._calc_candidate_coverage(
