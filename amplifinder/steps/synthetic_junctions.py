@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import (
-    RecordTypedDf, FilteredTnJc2, Genome, JunctionType, RefTnLoc, 
+    RecordTypedDf, FilteredTnJc2, Genome, JunctionType, RefTn, 
     Junction, Orientation, Side, JcArm,
 )
 from amplifinder.steps.base import Step

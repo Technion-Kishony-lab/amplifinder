@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
-from amplifinder.data_types import RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTnLoc, Side, TnJunction
+from amplifinder.data_types import RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTn, Side, TnJunction
 from amplifinder.data_types.enums import BaseRawEvent
 from amplifinder.data_types.genome import Genome
 
@@ -26,7 +26,7 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
         self,
         covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
         genome: Genome,
-        tn_locs: RecordTypedDf[RefTnLoc],
+        tn_locs: RecordTypedDf[RefTn],
         output_dir: Path,
         transposition_threshold: int = 30,
         force: Optional[bool] = None,

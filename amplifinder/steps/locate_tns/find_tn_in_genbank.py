@@ -8,10 +8,10 @@ from Bio.SeqFeature import SeqFeature
 from Bio.SeqRecord import SeqRecord
 
 from amplifinder.data_types.enums import Orientation
-from amplifinder.data_types.record_types import RefTnLoc, TnId
+from amplifinder.data_types.record_types import RefTn, TnId
 
 
-def find_tn_elements(gb_records: List[SeqRecord]) -> List[RefTnLoc]:
+def find_tn_elements(gb_records: List[SeqRecord]) -> List[RefTn]:
     """Find TN elements from GenBank annotations.
 
     Looks for mobile_element features with 'insertion sequence' in the type.
@@ -32,7 +32,7 @@ def find_tn_elements(gb_records: List[SeqRecord]) -> List[RefTnLoc]:
             tn_id += 1
             # BioPython locations are 0-based (start) and 0-based exclusive end
             # Convert to 1-based inclusive for consistency with BLAST coordinates
-            results.append(RefTnLoc(
+            results.append(RefTn(
                 tn_id=tn_id,
                 tn_name=tn_name,
                 tn_scaf=scaf_name,

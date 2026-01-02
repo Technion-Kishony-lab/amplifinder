@@ -11,14 +11,14 @@ from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
 from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import ensure_dir
-from amplifinder.data_types import Orientation, RecordTypedDf, RefTnLoc, Genome
+from amplifinder.data_types import Orientation, RecordTypedDf, RefTn, Genome
 from amplifinder.steps.base import Step
 from amplifinder.steps.locate_tns.find_tn_in_genbank import find_tn_elements
 
 
 # Base class for TN location steps
 
-class LocateTNsStep(Step[Optional[RecordTypedDf[RefTnLoc]]]):
+class LocateTNsStep(Step[Optional[RecordTypedDf[RefTn]]]):
     """Base class for steps that locate TN elements."""
 
     def __init__(
@@ -40,19 +40,19 @@ class LocateTNsStep(Step[Optional[RecordTypedDf[RefTnLoc]]]):
             force=force,
         )
 
-    def _save_output(self, output: Optional[RecordTypedDf[RefTnLoc]]) -> None:
+    def _save_output(self, output: Optional[RecordTypedDf[RefTn]]) -> None:
         if output is not None:
             ensure_dir(self.output_file.parent)
             output.to_csv(self.output_file)
 
-    def load_outputs(self) -> Optional[RecordTypedDf[RefTnLoc]]:
+    def load_outputs(self) -> Optional[RecordTypedDf[RefTn]]:
         """Load TN locations from output file."""
         if not self.output_file.exists():
             return None
-        return RecordTypedDf.from_csv(self.output_file, RefTnLoc)
+        return RecordTypedDf.from_csv(self.output_file, RefTn)
 
     @abstractmethod
-    def _calculate_output(self) -> Optional[RecordTypedDf[RefTnLoc]]:
+    def _calculate_output(self) -> Optional[RecordTypedDf[RefTn]]:
         """Run the TN location logic."""
         pass
 
@@ -80,16 +80,16 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
             force=force,
         )
 
-    def _calculate_output(self) -> Optional[RecordTypedDf[RefTnLoc]]:
+    def _calculate_output(self) -> Optional[RecordTypedDf[RefTn]]:
         """Parse GenBank file and extract TN locations."""
         gb_records = self.genome.gb_records
         if gb_records is None:
             return None
         ref_tn_locs = find_tn_elements(gb_records)
-        ref_tn_locs = RecordTypedDf.from_records(ref_tn_locs, RefTnLoc)
+        ref_tn_locs = RecordTypedDf.from_records(ref_tn_locs, RefTn)
         return ref_tn_locs
 
-    def report_output_message(self, output: Optional[RecordTypedDf[RefTnLoc]], *, from_cache: bool) -> Optional[str]:
+    def report_output_message(self, output: Optional[RecordTypedDf[RefTn]], *, from_cache: bool) -> Optional[str]:
         if output is None:
             return "No GenBank file provided - skipping GenBank TN annotation."
         return f"GenBank: found {len(output)} TN elements"
@@ -125,7 +125,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         self.blast_output = self.output_dir / "isfinder_blast.txt"
         self.output_files.append(self.blast_output)
 
-    def _calculate_output(self) -> RecordTypedDf[RefTnLoc]:
+    def _calculate_output(self) -> RecordTypedDf[RefTn]:
         """Run BLAST and parse results."""
         ensure_dir(self.blast_output.parent)
 
@@ -147,10 +147,10 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         tn_loc = self._parse_blast()
         return tn_loc
 
-    def report_output_message(self, output: RecordTypedDf[RefTnLoc], *, from_cache: bool) -> Optional[str]:
+    def report_output_message(self, output: RecordTypedDf[RefTn], *, from_cache: bool) -> Optional[str]:
         return f"ISfinder: found {len(output)} TN elements"
 
-    def _parse_blast(self) -> RecordTypedDf[RefTnLoc]:
+    def _parse_blast(self) -> RecordTypedDf[RefTn]:
         """Parse BLAST output and convert to TN locations."""
         blast_hits = parse_blast_csv(self.blast_output)
 
@@ -189,4 +189,4 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
             "loc_right": loc_right,
             "orientation": orientations,
             "join": False,
-        }), RefTnLoc)
+        }), RefTn)

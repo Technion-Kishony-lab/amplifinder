@@ -42,7 +42,7 @@ class OffsetRefTnSide(RefTnSide):
 
 # ===== Reference TN elements =====
 
-class RefTnLoc(Record):
+class RefTn(Record):
     """Reference TN element location in the genome."""
     NAME: ClassVar[str] = "TN elements"
     tn_id: TnId

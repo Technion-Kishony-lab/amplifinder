@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.data_types import RecordTypedDf, RefTnLoc, RefTnJunction
+from amplifinder.data_types import RecordTypedDf, RefTn, RefTnJunction
 from amplifinder.data_types.genome import Genome
 
 
@@ -20,7 +20,7 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
 
     def __init__(
         self,
-        ref_tn_locs: RecordTypedDf[RefTnLoc],
+        ref_tn_locs: RecordTypedDf[RefTn],
         genome: Genome,
         output_dir: Path,
         source: str,

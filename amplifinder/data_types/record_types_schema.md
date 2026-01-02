@@ -77,7 +77,7 @@ Record
 #### TN Location Records
 ```
 Record
-└── RefTnLoc
+└── RefTn
     ├── tn_id: TnId (int)
     ├── tn_name: str
     ├── tn_scaf: str
@@ -203,13 +203,13 @@ Record
 ### Type Dependencies (What types use which other types as fields)
 
 #### RefTnSide
-- Used in: `RefTnJunction.ref_tn_side`, `TnJunction.ref_tn_sides`, `RefTnLoc.get_sides()`, `RefTnLoc.get_junctions()`
+- Used in: `RefTnJunction.ref_tn_side`, `TnJunction.ref_tn_sides`, `RefTn.get_sides()`, `RefTn.get_junctions()`
 
 #### SeqRefTnSide
 - Extends: `RefTnSide`
 - No direct field usage (specialized for sequence matching)
 
-#### RefTnLoc
+#### RefTn
 - No direct field usage (used for generating RefTnSide and RefTnJunction)
 
 #### Junction
@@ -219,7 +219,7 @@ Record
 #### RefTnJunction
 - Extends: `Junction`
 - Fields use: `RefTnSide` (ref_tn_side)
-- Created by: `RefTnLoc.get_junctions()`
+- Created by: `RefTn.get_junctions()`
 
 #### TnJunction
 - Extends: `Junction`
@@ -286,6 +286,6 @@ Step 14: ExportedTnJc2 (export format)
 
 ## Type Aliases
 
-- `TnId = int` - Used in: `RefTnSide.tn_id`, `RefTnLoc.tn_id`, `RawTnJc2.tn_ids`, etc.
+- `TnId = int` - Used in: `RefTnSide.tn_id`, `RefTn.tn_id`, `RawTnJc2.tn_ids`, etc.
 - `JunctionT = TypeVar("JunctionT", bound="Junction")` - Used for generic Junction methods
 
