@@ -121,7 +121,7 @@ JunctionT = TypeVar("JunctionT", bound="Junction")
 class Junction(Record):
     """Base junction record with shared positional fields."""
     NAME: ClassVar[str] = "Junctions"
-    num: int  # Junction identifier: breseq junction number (positive), or negative for reference junctions
+    num: int = None  # Junction identifier: breseq junction number (positive), or negative for reference junctions
     scaf1: str
     pos1: int
     dir1: Orientation
@@ -153,6 +153,10 @@ class Junction(Record):
         """Check if two junctions are the same."""
         return self.num == other.num
 
+    @classmethod
+    def from_jc_arms(cls, arm1: JcArm, arm2: JcArm) -> Junction:
+        """Create a Junction from junction arm coordinates."""
+        return cls(scaf1=arm1.scaf, pos1=arm1.start, dir1=arm1.dir, scaf2=arm2.scaf, pos2=arm2.start, dir2=arm2.dir, flanking_left=arm1.flank, flanking_right=arm2.flank)
 
 class BreseqJunction(Junction):
     """Breseq junction."""
@@ -246,19 +250,9 @@ class RawTnJc2(Record):
         return self.find_matching_tn_sides(self.tnjc_S.ref_tn_sides, self.tnjc_E.ref_tn_sides)
 
     @property
-    def jc_num_S(self) -> int:
-        """Junction number of the 'start' junction."""
-        return self.tnjc_S.num
-
-    @property
-    def jc_num_E(self) -> int:
-        """Junction number of the 'end' junction."""
-        return self.tnjc_E.num
-
-    @property
     def scaf(self) -> str:
         """Scaffold name."""
-        assert self.tnjc_S.scaf2 == self.tnjc_E.scaf2, "Scaffolds must be the same"
+        assert self.tnjc_S.scaf2 == self.tnjc_E.scaf2
         return self.tnjc_S.scaf2
 
     @property
@@ -272,37 +266,9 @@ class RawTnJc2(Record):
         return self.tnjc_E.pos2
 
     @property
-    def pos_tn_S(self) -> int:
-        """TN position of the 'start' junction."""
-        return self.tnjc_S.pos1
-
-    @property
-    def pos_tn_E(self) -> int:
-        """TN position of the 'end' junction."""
-        return self.tnjc_E.pos1
-
-    @property
-    def dir_tn_S(self) -> Orientation:
-        """TN direction of the 'start' junction."""
-        return self.tnjc_S.dir1
-
-    @property
-    def dir_tn_E(self) -> Orientation:
-        """TN direction of the 'end' junction."""
-        return self.tnjc_E.dir1
-
-    @property
     def tn_ids(self) -> List[int]:
         """Matching TN element IDs."""
         return [tn_side_S.tn_id for tn_side_S, tn_side_E in self._find_matching_tn_sides()]
-
-    @property
-    def tn_orientations(self) -> List[Orientation]:
-        """TN orientations, one per tn_id."""
-        matching_tns = self._find_matching_tn_sides()
-        # Compute orientation: side_S.value * dir2_S.value
-        # dir2_S is FORWARD by definition (tn_jc_S is the start junction)
-        return [Orientation(tn_side_S.side.value * self.tnjc_S.dir2.value) for tn_side_S, tn_side_E in matching_tns]
 
     @property
     def tn_distances(self) -> List[tuple[int, int]]:
@@ -413,7 +379,18 @@ class ClassifiedTnJc2(CoveredTnJc2):
         
         # Return first if available, otherwise None
         return list(tn_id_set)[0] if tn_id_set else None
-    
+
+    def get_sides_of_chosen_tn(self) -> tuple[Optional[OffsetRefTnSide], Optional[OffsetRefTnSide]]:
+        """Get sides of chosen TN."""
+        chosen_id = self.chosen_tn_id
+        if chosen_id is None:
+            return None, None
+        matching_tns = self._find_matching_tn_sides()
+        for tn_side_S, tn_side_E in matching_tns:
+            if tn_side_S.tn_id == chosen_id:
+                return tn_side_S, tn_side_E
+        assert False
+
     @property
     def chosen_tn_side_S(self) -> Optional[Side]:
         """Side of chosen TN that the Start junction connects to."""
@@ -422,6 +399,8 @@ class ClassifiedTnJc2(CoveredTnJc2):
             return None
         matching_tns = self._find_matching_tn_sides()
         for tn_side_S, tn_side_E in matching_tns:
+            assert tn_side_S.side == -tn_side_E.side
+            assert tn_side_S.tn_id == tn_side_E.tn_id
             if tn_side_S.tn_id == chosen_id:
                 return tn_side_S.side
         return None
