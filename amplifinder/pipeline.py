@@ -10,9 +10,9 @@ from amplifinder.data_types import (
     Genome, RecordTypedDf, RefTnLoc, RefTnJunction, Junction, BreseqJunction, TnJunction, RawTnJc2,
     CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2,
 )
-from amplifinder.logger import info
+from amplifinder.logger import info, warning
 from amplifinder.utils.file_utils import ensure_dir
-from amplifinder.utils.fasta import get_read_length
+from amplifinder.utils.fasta import get_read_length_stats
 from amplifinder.steps import (
     InitializingStep,
     GetRefGenomeStep,
@@ -43,21 +43,34 @@ class Pipeline:
     _iso_read_length: Optional[int] = None
     _anc_read_length: Optional[int] = None
 
+    @staticmethod
+    def _calc_read_length(fastq_dir: Path, provided_length: Optional[int], sample_type: str = "isolate") -> int:
+        """Calculate read length from FASTQ files."""
+        if provided_length is not None:
+            return provided_length
+        
+        stats = get_read_length_stats(fastq_dir)
+        if not stats.is_uniform:
+            warning(f"{sample_type.capitalize()} read length is not uniform - may affect junction coverage accuracy")
+        return stats.max_length
+
     def _get_iso_read_length(self) -> int:
         """Get isolate read length from config or auto-detect from FASTQ."""
         if self._iso_read_length is None:
-            self._iso_read_length = get_read_length(
-                fastq_dir=self.config.iso_path,
-                provided_length=self.config.iso_read_length,
+            self._iso_read_length = self._calc_read_length(
+                self.config.iso_path,
+                self.config.iso_read_length,
+                "isolate",
             )
         return self._iso_read_length
 
     def _get_anc_read_length(self) -> int:
         """Get ancestor read length from config or auto-detect from FASTQ."""
         if self._anc_read_length is None:
-            self._anc_read_length = get_read_length(
-                fastq_dir=self.config.anc_path,
-                provided_length=self.config.anc_read_length,
+            self._anc_read_length = self._calc_read_length(
+                self.config.anc_path,
+                self.config.anc_read_length,
+                "ancestor",
             )
         return self._anc_read_length
 
@@ -296,6 +309,7 @@ class Pipeline:
             output_dir=iso_output,
             min_amplicon_length=self.config.min_amplicon_length,
             max_amplicon_length=self.config.max_amplicon_length,
+            read_length=self._get_iso_read_length(),
         ).run()
 
     def _create_synthetic_junctions(

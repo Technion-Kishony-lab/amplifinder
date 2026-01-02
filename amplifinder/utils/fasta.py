@@ -112,34 +112,3 @@ def get_read_length_stats(
         num_reads=total_reads,
     )
 
-
-def get_read_length(
-    fastq_dir: Optional[Path] = None,
-    provided_length: Optional[int] = None,
-    sample_size: int = 1000,
-) -> int:
-    """Get read length from provided value or calculate from FASTQ files.
-
-    Args:
-        fastq_dir: Directory containing FASTQ files (used if provided_length is None)
-        provided_length: Pre-specified read length (takes precedence)
-        sample_size: Number of reads to sample for calculation
-
-    Returns:
-        Read length (max length from FASTQ or provided value)
-
-    Raises:
-        ValueError: If neither fastq_dir nor provided_length is given
-    """
-    if provided_length is not None:
-        info(f"Using provided read length: {provided_length}")
-        return provided_length
-
-    if fastq_dir is None:
-        raise ValueError("Either fastq_dir or provided_length must be specified")
-
-    stats = get_read_length_stats(fastq_dir, sample_size)
-    info(f"Auto-detected read length: {stats.max_length} (mean={stats.mean_length:.1f}, uniform={stats.is_uniform})")
-    if not stats.is_uniform:
-        warning("Read length is not uniform - may affect junction coverage accuracy")
-    return stats.max_length
