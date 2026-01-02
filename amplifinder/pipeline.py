@@ -98,7 +98,7 @@ class Pipeline:
         covered_tnjc2s = self._calc_amplicon_coverage(raw_tnjc2s, genome, iso_output)
         classified_tnjc2s = self._classify_structure(covered_tnjc2s, genome, tn_loc, iso_output)
         filtered_tnjc2s = self._filter_candidates(classified_tnjc2s, iso_output)
-        self._create_synthetic_junctions(filtered_tnjc2s, genome, tn_loc, iso_output)
+        self._create_synthetic_junctions(filtered_tnjc2s, genome, iso_output)
         self._align_reads(filtered_tnjc2s, iso_output)
         analyzed_tnjc2s = self._analyze_alignments(filtered_tnjc2s, iso_output, anc_output)
         analyzed_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
@@ -316,14 +316,12 @@ class Pipeline:
         self,
         filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
         genome: Genome,
-        tn_loc: RecordTypedDf[RefTnLoc],
         iso_output: Path,
     ) -> None:
         """Step 10: Create synthetic junction sequences."""
         return CreateSyntheticJunctionsStep(
             filtered_tnjc2s=filtered_tnjc2s,
             genome=genome,
-            tn_locs=tn_loc,
             output_dir=iso_output,
             read_length=self._get_iso_read_length(),
         ).run()
