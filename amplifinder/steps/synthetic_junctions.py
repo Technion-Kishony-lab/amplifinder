@@ -176,14 +176,18 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         self.read_length = read_length
 
         # Output files are per-candidate analysis directories
-        self.analysis_dirs = [
-            output_dir / "junctions" / filtered_tnjc2.analysis_dir
-            for filtered_tnjc2 in filtered_tnjc2s
-        ]
+        # Only track outputs for candidates with valid chosen_tn_id
+        self.analysis_dirs = []
+        output_files = []
+        for filtered_tnjc2 in filtered_tnjc2s:
+            if filtered_tnjc2.chosen_tn_id is not None:
+                analysis_dir = output_dir / "junctions" / filtered_tnjc2.analysis_dir
+                self.analysis_dirs.append(analysis_dir)
+                output_files.append(analysis_dir / "junctions.fasta")
 
         super().__init__(
             input_files=[genome.fasta_path],
-            output_files=[d / "junctions.fasta" for d in self.analysis_dirs],
+            output_files=output_files,
             force=force,
         )
 
