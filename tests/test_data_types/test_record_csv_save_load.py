@@ -5,7 +5,7 @@ from pathlib import Path
 
 from amplifinder.data_types import (
     RecordTypedDf,
-    RefTnSide, OffsetRefTnSide, RefTnLoc, BlastHit,
+    RefTnSide, OffsetRefTnSide, RefTn, BlastHit,
     Junction, RefTnJunction, TnJunction,
     RawTnJc2, CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2, ExportedTnJc2,
     Side, Orientation, RawEvent, EventModifier,
@@ -34,9 +34,9 @@ def make_offset_ref_tn_side(tn_id: int = 1, side: Side = Side.LEFT, distance: in
     return OffsetRefTnSide(tn_id=tn_id, side=side, distance=distance)
 
 
-def make_ref_tn_loc(tn_id: int = 1) -> RefTnLoc:
-    """Create sample RefTnLoc."""
-    return RefTnLoc(
+def make_ref_tn_loc(tn_id: int = 1) -> RefTn:
+    """Create sample RefTn."""
+    return RefTn(
         tn_id=tn_id,
         tn_name="IS1",
         tn_scaf="chr1",
@@ -219,7 +219,7 @@ def make_exported_tnjc2() -> ExportedTnJc2:
     ("RefTnSide", lambda: [make_ref_tn_side(), make_ref_tn_side(2, Side.RIGHT)]),
     ("OffsetRefTnSide", lambda: [make_offset_ref_tn_side(), make_offset_ref_tn_side(2, Side.RIGHT, 5),
                                  make_offset_ref_tn_side(3, Side.LEFT, 10)]),
-    ("RefTnLoc", lambda: [make_ref_tn_loc(), make_ref_tn_loc(2)]),
+    ("RefTn", lambda: [make_ref_tn_loc(), make_ref_tn_loc(2)]),
     ("BlastHit", lambda: [make_blast_hit()]),
     ("Junction", lambda: [make_junction(1), make_junction(2)]),
     ("RefTnJunction", lambda: [make_ref_tn_junction()]),
@@ -237,7 +237,7 @@ def test_record_csv_save_load(record_type, make_func):
     record_classes = {
         "RefTnSide": RefTnSide,
         "OffsetRefTnSide": OffsetRefTnSide,
-        "RefTnLoc": RefTnLoc,
+        "RefTn": RefTn,
         "BlastHit": BlastHit,
         "Junction": Junction,
         "RefTnJunction": RefTnJunction,

@@ -377,10 +377,10 @@ def analyzed_tnjc2_record(filtered_tnjc2_record):
 
 @pytest.fixture
 def ref_tn_loc_record():
-    """RefTnLoc base record."""
-    from amplifinder.data_types import Orientation, RefTnLoc
+    """RefTn base record."""
+    from amplifinder.data_types import Orientation, RefTn
 
-    return RefTnLoc(
+    return RefTn(
         tn_id=1,
         tn_name="IS1",
         tn_scaf="tiny",

@@ -3,13 +3,13 @@
 import pandas as pd
 
 from amplifinder.steps.locate_tns import compare_tn_locations
-from amplifinder.data_types import Orientation, RecordTypedDf, RefTnLoc
+from amplifinder.data_types import Orientation, RecordTypedDf, RefTn
 
 
-def make_tn_loc(records: list[dict]) -> RecordTypedDf[RefTnLoc]:
+def make_tn_loc(records: list[dict]) -> RecordTypedDf[RefTn]:
     """Helper to create TN location RecordDF."""
     if not records:
-        return RecordTypedDf.empty(RefTnLoc)
+        return RecordTypedDf.empty(RefTn)
     return RecordTypedDf(pd.DataFrame({
         "tn_id": [r.get("tn_id", i + 1) for i, r in enumerate(records)],
         "tn_name": [r["tn_name"] for r in records],
@@ -18,7 +18,7 @@ def make_tn_loc(records: list[dict]) -> RecordTypedDf[RefTnLoc]:
         "loc_right": [r["loc_right"] for r in records],
         "orientation": [Orientation.REVERSE if r.get("complement", False) else Orientation.FORWARD for r in records],
         "join": [r.get("join", False) for r in records],
-    }), RefTnLoc)
+    }), RefTn)
 
 
 def get_single_record(caplog):

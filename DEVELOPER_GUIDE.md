@@ -30,7 +30,7 @@ xxx[]  array
    │           │          │ 2b. LocateTNsUsingISfinder │      │              │
    │           │          └─────────────┬──────────────┘      │              │
    │           │                        ▼                     │              │
-   │           │                     RefTnLoc[]               │              │
+   │           │                     RefTn[]                  │              │
    │           │                        │                     │              │
    │           │                        ▼                     │              │
    │           │           ┌────────────────────────┐         │              │
@@ -152,7 +152,7 @@ xxx[]  array
 
 **TN Location Records:**
 ```python
-RefTnLoc(Record)
+RefTn(Record)
 ├── tn_id: int
 ├── tn_name: str
 ├── tn_scaf: str
@@ -385,7 +385,7 @@ Organized by: reference → ancestor → isolate
 
 **Per-candidate folder naming:** `jc_{start}_{end}_{tn_id}_L{read_len}`
 - `start`, `end`: amplicon coordinates (genomic positions)
-- `tn_id`: TN index from RefTnLoc table (e.g., 001, 002)
+- `tn_id`: TN index from RefTn table (e.g., 001, 002)
 - `read_len`: read length (affects junction flank size)
 
 **Junction and alignment workflow:**
