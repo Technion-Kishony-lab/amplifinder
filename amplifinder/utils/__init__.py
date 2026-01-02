@@ -4,7 +4,6 @@ from amplifinder.utils.fasta import (
     read_fasta_lengths,
     read_fastq_lengths,
     get_read_length_stats,
-    get_read_length,
     ReadLengthStats,
 )
 from amplifinder.utils.file_lock import (
@@ -28,7 +27,6 @@ __all__ = [
     "read_fasta_lengths",
     "read_fastq_lengths",
     "get_read_length_stats",
-    "get_read_length",
     "ReadLengthStats",
 
     # File locking utilities

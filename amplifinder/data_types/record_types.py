@@ -413,6 +413,18 @@ class ClassifiedTnJc2(CoveredTnJc2):
         
         # Return first if available, otherwise None
         return list(tn_id_set)[0] if tn_id_set else None
+    
+    @property
+    def chosen_tn_side_S(self) -> Optional[Side]:
+        """Side of chosen TN that the Start junction connects to."""
+        chosen_id = self.chosen_tn_id
+        if chosen_id is None:
+            return None
+        matching_tns = self._find_matching_tn_sides()
+        for tn_side_S, tn_side_E in matching_tns:
+            if tn_side_S.tn_id == chosen_id:
+                return tn_side_S.side
+        return None
 
 
 class FilteredTnJc2(ClassifiedTnJc2):
