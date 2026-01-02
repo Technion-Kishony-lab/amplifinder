@@ -1,11 +1,13 @@
 """Step 11: Align reads to synthetic junctions."""
 
+import shutil
 from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import RecordTypedDf, FilteredTnJc2
 from amplifinder.steps.base import Step
 from amplifinder.tools.bowtie2 import align_reads_to_fasta
+from amplifinder.utils import ensure_dir
 
 
 class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
@@ -36,19 +38,22 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         self.num_alignments = num_alignments
 
         # Build list of expected output BAM files
+        # Only process candidates with valid chosen_tn_id (those with junction files)
         output_files = []
-        for filtered_tnjc2 in filtered_tnjc2s:
-            analysis_dir = output_dir / "junctions" / filtered_tnjc2.analysis_dir
-            output_files.append(analysis_dir / "iso.sorted.bam")
-            if anc_fastq_path:
-                output_files.append(analysis_dir / "anc.sorted.bam")
-
         input_files = [iso_fastq_path]
         if anc_fastq_path:
             input_files.append(anc_fastq_path)
-        # Junction FASTA files are inputs
+        
         for filtered_tnjc2 in filtered_tnjc2s:
-            input_files.append(output_dir / "junctions" / filtered_tnjc2.analysis_dir / "junctions.fasta")
+            if filtered_tnjc2.chosen_tn_id is None:
+                continue
+            analysis_dir = output_dir / "junctions" / filtered_tnjc2.analysis_dir
+            # Junction FASTA file is input
+            input_files.append(analysis_dir / "junctions.fasta")
+            # BAM files are outputs
+            output_files.append(analysis_dir / "iso.sorted.bam")
+            if anc_fastq_path:
+                output_files.append(analysis_dir / "anc.sorted.bam")
 
         super().__init__(
             input_files=input_files,
@@ -113,5 +118,32 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
 
 
 class AncAlignReadsToJunctionsStep(AlignReadsToJunctionsStep):
-    """Align ancestor reads to synthetic junctions."""
-    pass
+    """Align ancestor reads to synthetic junctions.
+    
+    Copies junction files from isolate folder to ancestor folder before alignment.
+    """
+    
+    def __init__(self, iso_output_dir: Path, **kwargs):
+        self.iso_output_dir = Path(iso_output_dir)
+        super().__init__(**kwargs)
+    
+    def _calculate_output(self) -> RecordTypedDf[FilteredTnJc2]:
+        """Copy junctions then align reads."""
+        # Copy junctions first (only if not already there)
+        for filtered_tnjc2 in self.filtered_tnjc2s:
+            iso_jc_dir = self.iso_output_dir / "junctions" / filtered_tnjc2.analysis_dir
+            anc_jc_dir = self.output_dir / "junctions" / filtered_tnjc2.analysis_dir
+            anc_junctions = anc_jc_dir / "junctions.fasta"
+            
+            # Only copy if not already in ancestor folder
+            if anc_junctions.exists():
+                continue
+            
+            # Copy junctions.fasta from isolate to ancestor folder
+            iso_junctions = iso_jc_dir / "junctions.fasta"
+            if iso_junctions.exists():
+                ensure_dir(anc_jc_dir)
+                shutil.copy2(iso_junctions, anc_junctions)
+        
+        # Then perform alignment
+        return super()._calculate_output()
