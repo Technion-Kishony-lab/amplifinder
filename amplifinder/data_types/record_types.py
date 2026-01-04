@@ -10,6 +10,7 @@ from amplifinder.data_types.scaffold import SegmentScaffold, JcArm
 
 if TYPE_CHECKING:
     from amplifinder.data_types.genome import Genome
+    from amplifinder.data_types.scaffold import Scaffold, SeqScaffold
 
 TnId = int
 
@@ -42,37 +43,17 @@ class OffsetRefTnSide(RefTnSide):
 
 # ===== Reference TN elements =====
 
-class RefTn(Record):
-    """Reference TN element location in the genome."""
+class RefTn(SegmentScaffold):
+    """Reference TN element location in the genome.
+    
+    Inherits from SegmentScaffold for coordinate operations.
+    """
     NAME: ClassVar[str] = "TN elements"
     tn_id: TnId
     tn_name: str
-    tn_scaf: str
-    loc_left: int
-    loc_right: int
-    orientation: Orientation
     join: bool
 
-    @property
-    def loc_left(self) -> int:
-        """Left position (alias for start)."""
-        return self.start
-
-    @property
-    def loc_right(self) -> int:
-        """Right position (alias for end)."""
-        return self.end
-
-    def to_segment_scaffold(self) -> SegmentScaffold:
-        """Convert to SegmentScaffold for coordinate operations."""
-        return SegmentScaffold.from_other(self)
-
-    @property
-    def segment_length(self) -> int:
-        """TN length in bp (1-based inclusive coordinates)."""
-        return self.loc_right - self.loc_left + 1
-
-    def get_sides(self) -> tuple[RefTnSide, RefTnSide]:
+    def get_ref_tn_sides(self) -> tuple[RefTnSide, RefTnSide]:
         """Get left and right sides of the TN."""
         return (
             RefTnSide(tn_id=self.tn_id, side=Side.LEFT),
@@ -88,20 +69,20 @@ class RefTn(Record):
         Left: -tn_id * 2, Right: -tn_id * 2 - 1 (odd negative).
         """
         if in_span is None:
-            in_span = self.length
-        side_left, side_right = self.get_sides()
+            in_span = self.segment_length
+        side_left, side_right = self.get_ref_tn_sides()
         return (
             RefTnJunction(
                 num=-self.tn_id * 2,  # Left: even negative
-                scaf1=self.tn_scaf, pos1=self.loc_left, dir1=Orientation.FORWARD,
-                scaf2=self.tn_scaf, pos2=self.loc_left - 1, dir2=Orientation.REVERSE,
+                scaf1=self.scaf, pos1=self.start, dir1=Orientation.FORWARD,
+                scaf2=self.scaf, pos2=self.start - 1, dir2=Orientation.REVERSE,
                 flanking_left=in_span, flanking_right=out_span,
                 ref_tn_side=side_left,
             ),
             RefTnJunction(
                 num=-self.tn_id * 2 - 1,  # Right: odd negative
-                scaf1=self.tn_scaf, pos1=self.loc_right, dir1=Orientation.REVERSE,
-                scaf2=self.tn_scaf, pos2=self.loc_right + 1, dir2=Orientation.FORWARD,
+                scaf1=self.scaf, pos1=self.end, dir1=Orientation.REVERSE,
+                scaf2=self.scaf, pos2=self.end + 1, dir2=Orientation.FORWARD,
                 flanking_left=in_span, flanking_right=out_span,
                 ref_tn_side=side_right,
             ),
