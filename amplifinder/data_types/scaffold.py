@@ -56,28 +56,32 @@ from __future__ import annotations
 
 import numpy as np
 
-
-from dataclasses import dataclass, field
-from typing import NamedTuple, TypeVar
+from typing import ClassVar, TypeVar
+from pydantic import field_validator, model_validator
 
 from Bio.Seq import reverse_complement
 
+from amplifinder.data_types.records import Record
 from amplifinder.data_types.enums import Orientation
 from amplifinder.utils.sequence_utils import concatenate_sequence
 
 T = TypeVar('T', str, np.ndarray)
 
 
-class JcArm(NamedTuple):
+class JcArm(Record):
     """Junction arm coordinates and orientation."""
+    NAME: ClassVar[str] = "Junction arms"
     scaf: str
     start: int
     dir: Orientation
     flank: int
 
-    def __post_init__(self):
-        if self.dir not in [Orientation.FORWARD, Orientation.REVERSE]:
+    @field_validator('dir')
+    @classmethod
+    def validate_dir(cls, v: Orientation) -> Orientation:
+        if v not in [Orientation.FORWARD, Orientation.REVERSE]:
             raise ValueError("Invalid orientation")
+        return v
 
     @property
     def end(self) -> int:
@@ -85,10 +89,9 @@ class JcArm(NamedTuple):
         return self.start + self.flank * self.dir
 
 
-@dataclass
-class Scaffold:
+class Scaffold(Record):
     """Coordinate helper with circularity awareness."""
-
+    NAME: ClassVar[str] = "Scaffolds"
     is_circular: bool
     length: int
 
@@ -152,15 +155,18 @@ class Scaffold:
         return segment
 
 
-@dataclass
 class SeqScaffold(Scaffold):
     """Sequence-backed scaffold."""
+    model_config = {"arbitrary_types_allowed": True}
 
     seq: T
-    length: int = field(init=False)
+    length: int = 0  # Will be computed from seq
 
-    def __post_init__(self):
-        self.length = len(self.seq)
+    @model_validator(mode='after')
+    def compute_length(self):
+        """Compute length from sequence."""
+        object.__setattr__(self, 'length', len(self.seq))
+        return self
 
     def slice(self, start: int, end: int, orientation: Orientation = Orientation.FORWARD, seq: T | None = None) -> T:
         """Get range (1-based inclusive) from sequence."""
@@ -168,7 +174,6 @@ class SeqScaffold(Scaffold):
         return super().slice(start, end, orientation, seq)
 
 
-@dataclass
 class SegmentMixin:
     """Mixin adding start/end helpers."""
 
@@ -187,17 +192,23 @@ class SegmentMixin:
         Returns:
             SegmentScaffold or SeqSegmentScaffold with JcArm coordinates
         """
-        kwargs = {
-            'is_circular': scaffold.is_circular,
-            'start': jc_arm.start,
-            'end': jc_arm.end,
-            'orientation': jc_arm.dir
-        }
-        if isinstance(scaffold, SeqScaffold):
-            kwargs['seq'] = scaffold.seq
-        else:
-            kwargs['length'] = scaffold.length
-        return cls(**kwargs)
+        return cls.from_other(
+            scaffold,
+            start=jc_arm.start,
+            end=jc_arm.end,
+            orientation=jc_arm.dir
+        )
+
+    @classmethod
+    def from_scaffold_and_coordinates(cls, other: Scaffold | SeqScaffold, start: int, end: int, orientation: Orientation) -> SegmentScaffold | SeqSegmentScaffold:
+        """Create SegmentScaffold from other scaffold and JcArm."""
+        return cls(
+            is_circular=other.is_circular,
+            length=other.length,
+            start=start,
+            end=end,
+            orientation=orientation
+        )
 
     def _resolve_params(self, start: int | None, end: int | None,
                         orientation: Orientation | None) -> tuple[int, int, Orientation]:
@@ -232,13 +243,11 @@ class SegmentMixin:
         return self.circular_normalize_range()[2]
 
 
-@dataclass
 class SegmentScaffold(SegmentMixin, Scaffold):
     """Scaffold with persisted start/end."""
     pass
 
 
-@dataclass
 class SeqSegmentScaffold(SegmentMixin, SeqScaffold):
     """Sequence scaffold with persisted start/end."""
     pass
