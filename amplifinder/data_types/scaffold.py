@@ -56,7 +56,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from typing import ClassVar, TypeVar
+from typing import ClassVar, Optional, TypeVar
 from pydantic import field_validator, model_validator
 
 from Bio.Seq import reverse_complement
@@ -94,6 +94,7 @@ class Scaffold(Record):
     NAME: ClassVar[str] = "Scaffolds"
     is_circular: bool
     length: int
+    scaf: Optional[str] = None  # Scaffold name/identifier
 
     def __len__(self) -> int:
         return self.length
@@ -200,14 +201,21 @@ class SegmentMixin:
         )
 
     @classmethod
-    def from_scaffold_and_coordinates(cls, other: Scaffold | SeqScaffold, start: int, end: int, orientation: Orientation) -> SegmentScaffold | SeqSegmentScaffold:
-        """Create SegmentScaffold from other scaffold and JcArm."""
-        return cls(
-            is_circular=other.is_circular,
-            length=other.length,
+    def from_scaffold_left_right_orientation(cls, scaffold: Scaffold | SeqScaffold, left: int, right: int, orientation: Orientation, **kwargs) -> SegmentScaffold | SeqSegmentScaffold:
+        """Create SegmentScaffold from scaffold, left, right, and orientation.
+        
+        Additional kwargs are passed to from_other for subclass-specific fields.
+        """
+        if orientation == Orientation.FORWARD:
+            start, end = left, right
+        else:
+            start, end = right, left
+        return cls.from_other(
+            scaffold,
             start=start,
             end=end,
-            orientation=orientation
+            orientation=orientation,
+            **kwargs
         )
 
     def _resolve_params(self, start: int | None, end: int | None,

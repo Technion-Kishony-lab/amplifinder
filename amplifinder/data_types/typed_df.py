@@ -181,7 +181,6 @@ class RecordTypedDf(TypedDF, Generic[T]):
         schema = record_type.schema()
         if not records:
             return cls(pd.DataFrame(columns=schema.column_names), record_type)
-        # Extract field values directly (no serialization) to preserve complex objects
         data = [{name: getattr(r, name) for name in record_type.model_fields} for r in records]
         return cls(pd.DataFrame(data), record_type)
 

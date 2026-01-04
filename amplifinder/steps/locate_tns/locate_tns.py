@@ -1,12 +1,11 @@
 """Step: Find TN elements by BLAST against ISfinder database."""
 
-import pandas as pd
-
 from pathlib import Path
 from typing import Optional
 
 from abc import abstractmethod
 
+from amplifinder.data_types.record_types import TnId
 from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
 from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.utils.file_lock import locked_resource
@@ -15,7 +14,19 @@ from amplifinder.data_types import Orientation, RecordTypedDf, RefTn, Genome
 from amplifinder.steps.base import Step
 from amplifinder.steps.locate_tns.find_tn_in_genbank import find_tn_elements
 
+"""GenBank TN element parsing."""
+from __future__ import annotations
 
+import re
+from typing import List, Optional
+
+from Bio.SeqFeature import SeqFeature
+
+from amplifinder.data_types.enums import Orientation
+from amplifinder.data_types.record_types import RefTn, TnId
+from amplifinder.data_types.genome import Genome
+
+ 
 # Base class for TN location steps
 
 class LocateTNsStep(Step[Optional[RecordTypedDf[RefTn]]]):
@@ -46,15 +57,43 @@ class LocateTNsStep(Step[Optional[RecordTypedDf[RefTn]]]):
             output.to_csv(self.output_file)
 
     def load_outputs(self) -> Optional[RecordTypedDf[RefTn]]:
-        """Load TN locations from output file."""
+        """Load TN locations from output file (indexed by tn_id)."""
         if not self.output_file.exists():
             return None
-        return RecordTypedDf.from_csv(self.output_file, RefTn)
+        # Load with index_col=0 to preserve tn_id index
+        return RecordTypedDf.from_csv(self.output_file, RefTn, index_col=0)
 
     @abstractmethod
     def _calculate_output(self) -> Optional[RecordTypedDf[RefTn]]:
         """Run the TN location logic."""
         pass
+
+    def _build_ref_tns_dict(
+        self,
+        items: list[tuple[str, int, int, Orientation, str]],
+        start_id: int = 1,
+    ) -> RecordTypedDf[RefTn]:
+        """Build ref_tns dict from list of (scaf, left, right, orientation, tn_name) tuples.
+        
+        Args:
+            items: List of tuples (scaffold_name, left, right, orientation, tn_name)
+            start_id: Starting tn_id (default 1)
+        
+        Returns:
+            RecordTypedDf[RefTn] indexed by tn_id
+        """
+        ref_tns: dict[TnId, RefTn] = {}
+        tn_id = start_id - 1
+        
+        for scaf, left, right, orientation, tn_name in items:
+            scaffold = self.genome.get_scaffold(scaf)
+            tn_id += 1
+            ref_tns[tn_id] = RefTn.from_scaffold_left_right_orientation(
+                scaffold, left=left, right=right, orientation=orientation,
+                tn_id=tn_id, tn_name=tn_name, join=False
+            )
+        
+        return RecordTypedDf.from_dict(ref_tns, RefTn)
 
 
 # Locate TNs using GenBank annotations
@@ -80,14 +119,55 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
             force=force,
         )
 
+    @staticmethod
+    def _extract_tn_name_from_feature(feature: SeqFeature) -> Optional[str]:
+        """Extract TN name from a GenBank feature if it's an insertion sequence.
+
+        Returns TN name if feature is a TN element, None otherwise.
+        """
+        # Get text to search based on feature type
+        qualifiers = feature.qualifiers
+        if feature.type == "mobile_element":
+            text = qualifiers.get("mobile_element_type", [""])[0]
+        elif feature.type in ("misc_feature", "repeat_region"):
+            text = qualifiers.get("note", [""])[0]
+        else:
+            return None
+
+        # Check for "insertion sequence" and extract name
+        if "insertion sequence" not in text.lower():
+            return None
+
+        # Try "insertion sequence:IS1" format
+        match = re.search(r'insertion sequence[:\s]*(\S+)', text, re.IGNORECASE)
+        if match:
+            return match.group(1)
+
+        # Try ISxxx pattern anywhere
+        match = re.search(r'(IS\d+\w*)', text, re.IGNORECASE)
+        if match:
+            return match.group(1)
+
+        return "unknown"
+
     def _calculate_output(self) -> Optional[RecordTypedDf[RefTn]]:
         """Parse GenBank file and extract TN locations."""
-        gb_records = self.genome.gb_records
-        if gb_records is None:
-            return None
-        ref_tn_locs = find_tn_elements(gb_records)
-        ref_tn_locs = RecordTypedDf.from_records(ref_tn_locs, RefTn)
-        return ref_tn_locs
+        items = []
+        
+        for record in self.genome.gb_records:
+            scaf = record.name
+            scaffold = self.genome.get_scaffold(scaf)
+            for feature in record.features:
+                tn_name = self._extract_tn_name_from_feature(feature)
+                if tn_name is None:
+                    continue
+
+                location = feature.location
+                assert 1 <= location.start <= location.end <= len(scaffold)  # GenBank start/end are left/right
+                orientation = Orientation.REVERSE if location.strand == -1 else Orientation.FORWARD
+                items.append((scaf, location.start, location.end, orientation, tn_name))
+
+        return self._build_ref_tns_dict(items)
 
     def report_output_message(self, output: Optional[RecordTypedDf[RefTn]], *, from_cache: bool) -> Optional[str]:
         if output is None:
@@ -144,21 +224,24 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         )
 
         # Parse BLAST results
-        tn_loc = self._parse_blast()
-        return tn_loc
+        return self._parse_blast()
 
     def report_output_message(self, output: RecordTypedDf[RefTn], *, from_cache: bool) -> Optional[str]:
         return f"ISfinder: found {len(output)} TN elements"
 
     def _parse_blast(self) -> RecordTypedDf[RefTn]:
         """Parse BLAST output and convert to TN locations."""
+        # Parse BLAST output
         blast_hits = parse_blast_csv(self.blast_output)
 
         tn_lengths = read_fasta_lengths(self.isdb_path)
-        df = blast_hits.df
+        df = blast_hits.df.copy()
+
+        # qstart and qend are 1-based from BLAST output, qstart < qend always
+        assert (df["qstart"] < df["qend"]).all(), "BLAST query coordinates must have qstart < qend"
 
         # Remove duplicate alignments (keep first by qstart, qend)
-        df = df.drop_duplicates(subset=["qstart", "qend"], keep="first").copy()
+        df = df.drop_duplicates(subset=["qstart", "qend"], keep="first")
 
         # Add subject length
         df["subject_length"] = df["subject"].map(tn_lengths).fillna(0).astype(int)
@@ -170,23 +253,12 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         df["coverage"] = abs(df["sstart"] - df["send"]) / df["subject_length"]
         df = df[df["coverage"] > self.critical_coverage]
 
-        # Detect strand: sstart > send means reverse complement
-        is_complement = (df["sstart"] > df["send"]).values
-        orientations = [Orientation.REVERSE if comp else Orientation.FORWARD for comp in is_complement]
-
-        # Ensure LocLeft < LocRight
-        # qstart and qend are 1-based from BLAST output
-        loc_left = df[["qstart", "qend"]].min(axis=1).values
-        loc_right = df[["qstart", "qend"]].max(axis=1).values
-
-        # Build tn_loc table
-        # loc_left and loc_right are stored as 1-based inclusive (matching BLAST coordinates)
-        return RecordTypedDf(pd.DataFrame({
-            "tn_id": range(1, len(df) + 1),
-            "tn_name": df["subject"].values,
-            "tn_scaf": df["query"].values,
-            "loc_left": loc_left,
-            "loc_right": loc_right,
-            "orientation": orientations,
-            "join": False,
-        }), RefTn)
+        # Build ref_tns table indexed by tn_id
+        items = []
+        for _, row in df.iterrows():
+            # Detect strand: sstart > send means reverse complement
+            is_complement = row["sstart"] > row["send"]
+            orientation = Orientation.REVERSE if is_complement else Orientation.FORWARD
+            items.append((row["query"], row["qstart"], row["qend"], orientation, row["subject"]))
+        
+        return self._build_ref_tns_dict(items)
