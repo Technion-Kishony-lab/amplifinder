@@ -54,7 +54,21 @@ class RefTn(Record):
     join: bool
 
     @property
-    def length(self) -> int:
+    def loc_left(self) -> int:
+        """Left position (alias for start)."""
+        return self.start
+
+    @property
+    def loc_right(self) -> int:
+        """Right position (alias for end)."""
+        return self.end
+
+    def to_segment_scaffold(self) -> SegmentScaffold:
+        """Convert to SegmentScaffold for coordinate operations."""
+        return SegmentScaffold.from_other(self)
+
+    @property
+    def segment_length(self) -> int:
         """TN length in bp (1-based inclusive coordinates)."""
         return self.loc_right - self.loc_left + 1
 
@@ -286,9 +300,8 @@ class RawTnJc2(Record):
         properties: left, right, span_origin, segment_length.
         """
         scaf_obj = genome.get_scaffold(self.scaf)
-        return SegmentScaffold(
-            is_circular=scaf_obj.is_circular,
-            length=scaf_obj.length,
+        return SegmentScaffold.from_other(
+            scaf_obj,
             start=self.start,
             end=self.end,
             orientation=Orientation.FORWARD,  # by definition, the amplicon segment is on the forward strand
