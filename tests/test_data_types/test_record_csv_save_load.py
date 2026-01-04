@@ -34,14 +34,16 @@ def make_offset_ref_tn_side(tn_id: int = 1, side: Side = Side.LEFT, distance: in
     return OffsetRefTnSide(tn_id=tn_id, side=side, distance=distance)
 
 
-def make_ref_tn_loc(tn_id: int = 1) -> RefTn:
+def make_ref_tn(tn_id: int = 1) -> RefTn:
     """Create sample RefTn."""
     return RefTn(
         tn_id=tn_id,
         tn_name="IS1",
-        tn_scaf="chr1",
-        loc_left=100,
-        loc_right=200,
+        scaf="chr1",
+        is_circular=False,
+        length=1000,
+        start=100,
+        end=200,
         orientation=Orientation.FORWARD,
         join=False,
     )
@@ -219,7 +221,7 @@ def make_exported_tnjc2() -> ExportedTnJc2:
     ("RefTnSide", lambda: [make_ref_tn_side(), make_ref_tn_side(2, Side.RIGHT)]),
     ("OffsetRefTnSide", lambda: [make_offset_ref_tn_side(), make_offset_ref_tn_side(2, Side.RIGHT, 5),
                                  make_offset_ref_tn_side(3, Side.LEFT, 10)]),
-    ("RefTn", lambda: [make_ref_tn_loc(), make_ref_tn_loc(2)]),
+    ("RefTn", lambda: [make_ref_tn(), make_ref_tn(2)]),
     ("BlastHit", lambda: [make_blast_hit()]),
     ("Junction", lambda: [make_junction(1), make_junction(2)]),
     ("RefTnJunction", lambda: [make_ref_tn_junction()]),

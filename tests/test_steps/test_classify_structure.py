@@ -45,8 +45,8 @@ def sample_covered_tnjc2(covered_tnjc2_record):
 @pytest.fixture
 def sample_tn_locs(ref_tn_loc_record):
     """Create sample RefTn records."""
-    first = RefTn.from_other(ref_tn_loc_record, tn_scaf="chr1", loc_left=10, loc_right=20, tn_id=1, tn_name="IS1")
-    second = RefTn.from_other(ref_tn_loc_record, tn_scaf="chr1", loc_left=30, loc_right=40, tn_id=2, tn_name="IS2")
+    first = RefTn.from_other(ref_tn_loc_record, scaf="chr1", start=10, end=20, tn_id=1, tn_name="IS1")
+    second = RefTn.from_other(ref_tn_loc_record, scaf="chr1", start=30, end=40, tn_id=2, tn_name="IS2")
     return RecordTypedDf.from_records([first, second], RefTn)
 
 
