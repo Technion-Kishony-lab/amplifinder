@@ -33,7 +33,6 @@ def test_get_sequence_in_range_reverse(toy_genome: Genome):
 
 def test_junction_sequences(toy_genome: Genome):
     jc = Junction(
-        num=0,
         scaf1="toy",
         pos1=10,
         dir1=Orientation.REVERSE,

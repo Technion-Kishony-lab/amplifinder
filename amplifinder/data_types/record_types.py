@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, ClassVar, Dict, List, Optional, TypeVar, TYPE_CHECKING
-from enum import Enum
+from pydantic import ConfigDict
 
 from amplifinder.data_types.records import Record
 from amplifinder.data_types.enums import BaseRawEvent, RawEvent, Side, Orientation, EventModifier
@@ -178,6 +178,8 @@ class NumJunction(Junction):
 class BreseqJunction(NumJunction):
     """Breseq junction."""
     NAME: ClassVar[str] = "Breseq junctions"
+    model_config = ConfigDict(extra='allow')
+    ALLOW_EXTRA: ClassVar[bool] = True
 
 
 class RefTnJunction(NumJunction):

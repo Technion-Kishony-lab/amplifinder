@@ -32,11 +32,33 @@ def test_creates_junctions_fasta(tiny_genome, filtered_tnjc2_record, ref_tns_ind
         assert content.count(">") == 7
 
 
-def test_handles_missing_tn(tiny_genome, filtered_tnjc2_record, ref_tns_indexed, tmp_path):
+def test_handles_missing_tn(tiny_genome, ref_tns_indexed, tmp_path):
     """Should skip candidates with missing TN (chosen_tn_id=None)."""
+    from amplifinder.data_types import FilteredTnJc2, BaseRawEvent, TnJunction, RawTnJc2, Orientation, Side
+    
+    # Create TnJunctions with no ref_tn_sides (empty list) so tn_ids will be empty
+    tn_jc_left = TnJunction(
+        num=100, scaf1="tiny", pos1=200, dir1=Orientation.FORWARD,
+        scaf2="tiny", pos2=300, dir2=Orientation.FORWARD,
+        flanking1=50, flanking2=50,
+        ref_tn_sides=[],  # No TN sides
+        swapped=False,
+    )
+    tn_jc_right = TnJunction(
+        num=101, scaf1="tiny", pos1=20, dir1=Orientation.REVERSE,
+        scaf2="tiny", pos2=500, dir2=Orientation.REVERSE,
+        flanking1=50, flanking2=50,
+        ref_tn_sides=[],  # No TN sides
+        swapped=False,
+    )
+    scaffold = tiny_genome.get_scaffold("tiny")
+    raw_tnjc2 = RawTnJc2(tnjc_left=tn_jc_left, tnjc_right=tn_jc_right, scaffold=scaffold)
+    
     candidate_no_tn = FilteredTnJc2.from_other(
-        filtered_tnjc2_record,
-        chosen_tn_id=None,  # No chosen TN
+        raw_tnjc2,
+        iso_scaf_avg=1.0,
+        iso_amplicon_avg=1.0,
+        base_raw_event=BaseRawEvent.LOCUS_JOINING,
         analysis_dir="jc_200_300_no_tn",
     )
 

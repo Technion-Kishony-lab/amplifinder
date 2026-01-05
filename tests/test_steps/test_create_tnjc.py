@@ -36,7 +36,7 @@ def mock_junctions(locate_tns_step, tiny_genome, tmp_output):
     # Convert to base Junction type
     junctions = [
         Junction(
-            num=jc.num, scaf1=jc.scaf1, pos1=jc.pos1, dir1=jc.dir1,
+            scaf1=jc.scaf1, pos1=jc.pos1, dir1=jc.dir1,
             scaf2=jc.scaf2, pos2=jc.pos2, dir2=jc.dir2,
             flanking1=jc.flanking1, flanking2=jc.flanking2,
         )
