@@ -8,36 +8,66 @@ from amplifinder.data_types import (
 
 
 @pytest.fixture
-def sample_covered_tnjc2(covered_tnjc2_record):
+def sample_covered_tnjc2(tiny_genome):
     """Create sample CoveredTnJc2 records - one of each major type."""
-    # FLANKED: both TN sides match
+    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, Side
+    
+    scaffold = tiny_genome.get_scaffold("tiny")
+    
+    # Helper to create TnJunction with less boilerplate
+    def make_jc(num, pos1, pos2, side, tn_id=1):
+        is_left = (side == Side.START)
+        return TnJunction(
+            num=num, scaf1="tiny", pos1=pos1, scaf2="tiny", pos2=pos2,
+            dir1=Orientation.FORWARD if is_left else Orientation.REVERSE,
+            dir2=Orientation.FORWARD if is_left else Orientation.REVERSE,
+            flanking1=50, flanking2=50,
+            ref_tn_sides=[OffsetRefTnSide(tn_id=tn_id, side=side, offset=0)],
+            swapped=False,
+        )
+    
+    # FLANKED: both junctions match other single-locus pairs
+    jc_flank_left = make_jc(1, 10, 200, Side.START)
+    jc_flank_right = make_jc(2, 20, 300, Side.END)
     flanked = CoveredTnJc2.from_other(
-        covered_tnjc2_record,
-        iso_scaf_avg=1.0,
-        iso_amplicon_avg=2.0,
-        tn_id_start=1,
-        tn_id_end=1,
+        RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=jc_flank_right, scaffold=scaffold),
+        iso_scaf_avg=1.0, iso_amplicon_avg=2.0,
+    )
+    
+    # Single-locus pairs matching left/right junctions (for flanking classification)
+    single_locus_left = CoveredTnJc2.from_other(
+        RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=make_jc(3, 30, 400, Side.END), scaffold=scaffold),
+        iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
+    )
+    single_locus_right = CoveredTnJc2.from_other(
+        RawTnJc2(tnjc_left=make_jc(4, 40, 250, Side.START), tnjc_right=jc_flank_right, scaffold=scaffold),
+        iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
 
-    # TRANSPOSITION: reference location junction
+    # TRANSPOSITION: junctions < 30bp apart (500 to 515 = 15bp)
     transposition = CoveredTnJc2.from_other(
-        covered_tnjc2_record,
-        iso_scaf_avg=10.0,
-        iso_amplicon_avg=1.0,
-        tn_id_start=1,
-        tn_id_end=2,
+        RawTnJc2(
+            tnjc_left=make_jc(10, 100, 500, Side.START),
+            tnjc_right=make_jc(11, 110, 515, Side.END),
+            scaffold=scaffold,
+        ),
+        iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
-
-    # UNFLANKED: no TN sides match
+    
+    # UNFLANKED: unique junctions
     unflanked = CoveredTnJc2.from_other(
-        covered_tnjc2_record,
-        iso_scaf_avg=1.0,
-        iso_amplicon_avg=1.0,
-        tn_id_start=None,
-        tn_id_end=None,
+        RawTnJc2(
+            tnjc_left=make_jc(20, 150, 700, Side.START, tn_id=2),
+            tnjc_right=make_jc(21, 160, 900, Side.END, tn_id=2),
+            scaffold=scaffold,
+        ),
+        iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
 
-    return RecordTypedDf.from_records([flanked, transposition, unflanked], CoveredTnJc2)
+    return RecordTypedDf.from_records(
+        [flanked, transposition, unflanked, single_locus_left, single_locus_right],
+        CoveredTnJc2
+    )
 
 
 @pytest.fixture
@@ -59,12 +89,15 @@ def test_classify_structure(sample_covered_tnjc2, sample_tn_locs, tmp_path, tiny
 
     result = step.run()
 
-    assert len(result) == 3
+    assert len(result) == 5  # flanked, transposition, unflanked, 2 single-locus pairs
     result_list = list(result)
-    # Test each of the 3 types
+    # Test the main 3 types (first 3 records)
     assert result_list[0].raw_event == RawEvent.FLANKED
     assert result_list[1].raw_event == RawEvent.TRANSPOSITION
     assert result_list[2].raw_event == RawEvent.UNFLANKED
+    # The other 2 are single-locus pairs used for matching
+    assert result_list[3].raw_event in [RawEvent.UNFLANKED, RawEvent.HEMI_FLANKED_LEFT, RawEvent.HEMI_FLANKED_RIGHT]
+    assert result_list[4].raw_event in [RawEvent.UNFLANKED, RawEvent.HEMI_FLANKED_LEFT, RawEvent.HEMI_FLANKED_RIGHT]
 
 
 def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_record, tmp_path, tiny_genome):
@@ -74,8 +107,6 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_r
         covered_tnjc2_record,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=1.0,
-        tn_id_start=1,
-        tn_id_end=1,
     )
 
     all_records = RecordTypedDf.from_records(
@@ -92,5 +123,5 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_r
     )
 
     result = step.run()
-    # Now expecting 4 records (3 from fixture + 1 new)
-    assert len(result) == 4
+    # Now expecting 6 records (5 from fixture + 1 new)
+    assert len(result) == 6

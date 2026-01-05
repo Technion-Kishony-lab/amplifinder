@@ -44,8 +44,8 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
         base_raw_events = [self._compute_base_raw_event(tnjc2) for tnjc2 in tnjc2s]
         classified_tnjc2s = []
         for i, tncj2_i in enumerate(tnjc2s):
-            tnjc2_matching_left = self._find_matching_tnjc2(tncj2_i.tnjc_left, tnjc2s, base_raw_events)
-            tnjc2_matching_right = self._find_matching_tnjc2(tncj2_i.tnjc_right, tnjc2s, base_raw_events)
+            tnjc2_matching_left = self._find_matching_tnjc2(tncj2_i.tnjc_left, tnjc2s, base_raw_events, exclude_idx=i)
+            tnjc2_matching_right = self._find_matching_tnjc2(tncj2_i.tnjc_right, tnjc2s, base_raw_events, exclude_idx=i)
             classified_tnjc2s.append(ClassifiedTnJc2.from_other(
                 tncj2_i, 
                 tnjc2_matching_left=tnjc2_matching_left, 
@@ -62,8 +62,10 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
         else:
             return BaseRawEvent.LOCUS_JOINING
 
-    def _find_matching_tnjc2(self, tnjc_i: TnJunction, tnjc2s: list[CoveredTnJc2], base_raw_events: list[BaseRawEvent]) -> Optional[CoveredTnJc2]:
+    def _find_matching_tnjc2(self, tnjc_i: TnJunction, tnjc2s: list[CoveredTnJc2], base_raw_events: list[BaseRawEvent], exclude_idx: int) -> Optional[CoveredTnJc2]:
         for j, tnjc2_j in enumerate(tnjc2s):
+            if j == exclude_idx:  # Don't match with self
+                continue
             if base_raw_events[j] != BaseRawEvent.LOCUS_JOINING:
                 continue
             if tnjc_i == tnjc2_j.tnjc_left or tnjc_i == tnjc2_j.tnjc_right:

@@ -110,12 +110,12 @@ class Record(BaseModel):
         #    Column('notes', Optional[str], True))
     """
 
-    model_config = ConfigDict(extra='allow')
+    model_config = ConfigDict(extra='forbid')
 
     NAME: ClassVar[str] = "records"  # Display name for logging
 
     # Class variable to track if extra fields allowed (for schema generation)
-    ALLOW_EXTRA: ClassVar[bool] = True
+    ALLOW_EXTRA: ClassVar[bool] = False
 
     # CSV export control: None = export all fields, List[str] = export only specified fields/properties
     CSV_EXPORT_FIELDS: ClassVar[Optional[List[str]]] = None

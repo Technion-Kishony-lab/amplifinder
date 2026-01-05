@@ -330,8 +330,6 @@ def covered_tnjc2_record(raw_tnjc2_record):
 
     return CoveredTnJc2.from_other(
         raw_tnjc2_record,
-        ref_name="tiny",
-        iso_name="sample1",
         iso_scaf_avg=1.0,
         iso_amplicon_avg=2.0,
     )
