@@ -202,8 +202,8 @@ class RawTnJc2(Record):
     - Match the same TN element on different sides (left/right)
 
     # nomenclature:
-    # start (S): the junction from which we start the amplicon segment going on the forward strand
-    # end (E):   the junction at which we end the amplicon segment when we go on the forward strand
+    # left: the junction from which we start the amplicon segment going on the forward strand (dir2 == FORWARD)
+    # right: the junction at which we end the amplicon segment when we go on the forward strand (dir2 == REVERSE)
 
     modified from combine_ISJC_pairs.m
 
@@ -211,16 +211,16 @@ class RawTnJc2(Record):
     NAME: ClassVar[str] = "Junction Pairs"
     
     # Core fields: the two junctions
-    tnjc_S: TnJunction  # Start junction (dir2 == FORWARD)
-    tnjc_E: TnJunction  # End junction (dir2 == REVERSE)
+    tnjc_left: TnJunction  # Left junction (dir2 == FORWARD)
+    tnjc_right: TnJunction  # Right junction (dir2 == REVERSE)
     
     # Cached computed value (requires genome to compute)
     amplicon_length: Optional[int] = None
     
     # CSV export: only export derived properties, not the complex TnJunction objects
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = [
-        'jc_num_S', 'jc_num_E', 'scaf', 'start', 'end',
-        'pos_tn_S', 'pos_tn_E', 'dir_tn_S', 'dir_tn_E',
+        'jc_num_left', 'jc_num_right', 'scaf', 'start', 'end',
+        'pos_tn_left', 'pos_tn_right', 'dir_tn_left', 'dir_tn_right',
         'tn_ids', 'tn_orientations', 'tn_distances', 'amplicon_length'
     ]
 
@@ -241,25 +241,25 @@ class RawTnJc2(Record):
     def _find_matching_tn_sides(self) -> List[tuple[OffsetRefTnSide, OffsetRefTnSide]]:
         """Instance method: find matching TNs using this record's junctions.
         
-        Returns list of OffsetRefTnSide objects from tn_jc_S that match tn_jc_E.
+        Returns list of (left_tn_side, right_tn_side) tuples where both sides match the same TN ID.
         """
-        return self.find_matching_tn_sides(self.tnjc_S.ref_tn_sides, self.tnjc_E.ref_tn_sides)
+        return self.find_matching_tn_sides(self.tnjc_left.ref_tn_sides, self.tnjc_right.ref_tn_sides)
 
     @property
     def scaf(self) -> str:
         """Scaffold name."""
-        assert self.tnjc_S.scaf2 == self.tnjc_E.scaf2
-        return self.tnjc_S.scaf2
+        assert self.tnjc_left.scaf2 == self.tnjc_right.scaf2
+        return self.tnjc_left.scaf2
 
     @property
     def start(self) -> int:
         """Start position of amplicon segment on the forward strand."""
-        return self.tnjc_S.pos2
+        return self.tnjc_left.pos2
 
     @property
     def end(self) -> int:
         """End position of amplicon segment on the forward strand."""
-        return self.tnjc_E.pos2
+        return self.tnjc_right.pos2
 
     @property
     def tn_ids(self) -> List[int]:
@@ -337,8 +337,8 @@ class CoveredTnJc2(RawTnJc2):
 class ClassifiedTnJc2(CoveredTnJc2):
     """CoveredTnJc2 with structural classification (Step 8 output)."""
     NAME: ClassVar[str] = "Classified Amplicons"
-    tnjc2_matching_S: Optional[CoveredTnJc2] = None
-    tnjc2_matching_E: Optional[CoveredTnJc2] = None
+    tnjc2_matching_left: Optional[CoveredTnJc2] = None
+    tnjc2_matching_right: Optional[CoveredTnJc2] = None
     base_raw_event: BaseRawEvent
 
     @property
@@ -349,13 +349,13 @@ class ClassifiedTnJc2(CoveredTnJc2):
         elif self.base_raw_event == BaseRawEvent.TRANSPOSITION:
             return RawEvent.TRANSPOSITION
         assert self.base_raw_event == BaseRawEvent.LOCUS_JOINING
-        has_match_S = self.tnjc2_matching_S is not None 
-        has_match_E = self.tnjc2_matching_E is not None
-        if has_match_S and has_match_E:
+        has_match_left = self.tnjc2_matching_left is not None 
+        has_match_right = self.tnjc2_matching_right is not None
+        if has_match_left and has_match_right:
             return RawEvent.FLANKED
-        elif has_match_S:
+        elif has_match_left:
             return RawEvent.HEMI_FLANKED_LEFT
-        elif has_match_E:
+        elif has_match_right:
             return RawEvent.HEMI_FLANKED_RIGHT
         else:
             return RawEvent.UNFLANKED
@@ -366,11 +366,11 @@ class ClassifiedTnJc2(CoveredTnJc2):
         # Start with TN IDs from this tnjc2
         tn_id_set = set(self.tn_ids)
         
-        # Intersect with matching S/E tnjc2 if exists
-        if self.tnjc2_matching_S is not None:
-            tn_id_set &= set(self.tnjc2_matching_S.tn_ids)
-        if self.tnjc2_matching_E is not None:
-            tn_id_set &= set(self.tnjc2_matching_E.tn_ids)
+        # Intersect with matching left/right tnjc2 if exists
+        if self.tnjc2_matching_left is not None:
+            tn_id_set &= set(self.tnjc2_matching_left.tn_ids)
+        if self.tnjc2_matching_right is not None:
+            tn_id_set &= set(self.tnjc2_matching_right.tn_ids)
         
         # Return first if available, otherwise None
         return list(tn_id_set)[0] if tn_id_set else None
@@ -387,8 +387,8 @@ class ClassifiedTnJc2(CoveredTnJc2):
         assert False
 
     @property
-    def chosen_tn_side_S(self) -> Optional[Side]:
-        """Side of chosen TN that the Start junction connects to."""
+    def chosen_tn_side_left(self) -> Optional[Side]:
+        """Side of chosen TN that the left junction connects to."""
         chosen_id = self.chosen_tn_id
         if chosen_id is None:
             return None

@@ -104,11 +104,11 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         """
         # Determine start/end based on forward strand direction
         if jc_i.dir2 == Orientation.FORWARD:
-            jc_S, jc_E = jc_i, jc_j
+            jc_left, jc_right = jc_i, jc_j
         else:
-            jc_S, jc_E = jc_j, jc_i
+            jc_left, jc_right = jc_j, jc_i
 
         # Create RawTnJc2 with the two junction objects
-        pair = RawTnJc2(tnjc_S=jc_S, tnjc_E=jc_E)
+        pair = RawTnJc2(tnjc_left=jc_left, tnjc_right=jc_right)
         pair.compute_and_store_amplicon_length(self.genome)
         return pair
