@@ -109,7 +109,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
             tnjc_left, tnjc_right = jc_j, jc_i
 
         # Get scaffold object
-        scaffold = self.genome.get_scaffold(jc_S.scaf2)
+        scaffold = self.genome.get_scaffold(tnjc_left.scaf2)
 
         # Create RawTnJc2 with the two junction objects and scaffold
         pair = RawTnJc2(tnjc_left=tnjc_left, tnjc_right=tnjc_right, scaffold=scaffold)

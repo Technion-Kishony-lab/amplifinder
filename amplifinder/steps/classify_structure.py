@@ -57,7 +57,7 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
     def _compute_base_raw_event(self, tnjc2: CoveredTnJc2) -> BaseRawEvent:
         if tnjc2.tnjc_left.is_ref_tn_junction() and tnjc2.tnjc_right.is_ref_tn_junction():
             return BaseRawEvent.REFERENCE
-        elif abs(tnjc2.start - tnjc2.end) < self.transposition_threshold:
+        elif abs(tnjc2.left - tnjc2.right) < self.transposition_threshold:
             return BaseRawEvent.TRANSPOSITION
         else:
             return BaseRawEvent.LOCUS_JOINING

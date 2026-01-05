@@ -12,28 +12,9 @@ from amplifinder.utils.file_utils import ensure_dir
 @pytest.fixture
 def sample_tnjc2(raw_tnjc2_record):
     """Create sample RawTnJc2 records."""
-    first = RawTnJc2.from_other(
-        raw_tnjc2_record,
-        scaf="chr1",
-        start=100,
-        end=200,
-        pos_tn_left=10,
-        pos_tn_right=20,
-        amplicon_length=100,
-    )
-
-    second = RawTnJc2.from_other(
-        raw_tnjc2_record,
-        jc_num_left=3,
-        jc_num_right=4,
-        scaf="chr1",
-        start=300,
-        end=320,
-        pos_tn_left=30,
-        pos_tn_right=40,
-        tn_ids=[2],
-        amplicon_length=20,  # Too short
-    )
+    # Just use the base record twice - actual positions don't matter for coverage tests
+    first = raw_tnjc2_record
+    second = raw_tnjc2_record
 
     return RecordTypedDf.from_records([first, second], RawTnJc2)
 

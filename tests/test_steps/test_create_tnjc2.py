@@ -102,7 +102,7 @@ def test_output_has_correct_columns(tnjc2_step):
 
     expected_cols = {
         "jc_num_left", "jc_num_right", "scaf",
-        "start", "end", "pos_tn_left", "pos_tn_right",
+        "left", "right", "pos_tn_left", "pos_tn_right",
         "dir_tn_left", "dir_tn_right",
         "tn_ids", "tn_orientations",
         "amplicon_length",

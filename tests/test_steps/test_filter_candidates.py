@@ -1,5 +1,6 @@
 """Tests for FilterTnJc2CandidatesStep."""
 
+from amplifinder.data_types.enums import BaseRawEvent
 import pytest
 from amplifinder.steps import FilterTnJc2CandidatesStep
 from amplifinder.data_types import (
@@ -10,39 +11,19 @@ from amplifinder.data_types import (
 @pytest.fixture
 def sample_classified_tnjc2(classified_tnjc2_record):
     """Create sample ClassifiedTnJc2 records."""
+    # Use different base_raw_event values to differentiate
     first = ClassifiedTnJc2.from_other(
         classified_tnjc2_record,
-        scaf="chr1",
-        start=100,
-        end=200,
-        pos_tn_left=10,
-        pos_tn_right=20,
-        amplicon_length=100,
-        ref_name="U00096",
-        iso_name="sample1",
-        iso_amplicon_coverage=2.0,
-        copy_number=2.0,
-        raw_event=RawEvent.FLANKED,
-        shared_tn_ids=[1],
-        chosen_tn_id=1,
+        base_raw_event=BaseRawEvent.LOCUS_JOINING,
+        iso_scaf_avg=1.0,
+        iso_amplicon_avg=2.0,
     )
 
     second = ClassifiedTnJc2.from_other(
         classified_tnjc2_record,
-        jc_num_left=3,
-        jc_num_right=4,
-        scaf="chr1",
-        start=300,
-        end=320,
-        pos_tn_left=30,
-        pos_tn_right=40,
-        tn_ids=[2],
-        amplicon_length=20,  # Too short
-        iso_amplicon_coverage=1.0,
-        copy_number=1.0,
-        raw_event=RawEvent.UNFLANKED,
-        shared_tn_ids=[2],
-        chosen_tn_id=2,
+        base_raw_event=BaseRawEvent.TRANSPOSITION,
+        iso_scaf_avg=1.0,
+        iso_amplicon_avg=1.0,
     )
 
     return RecordTypedDf.from_records([first, second], ClassifiedTnJc2)
