@@ -3,11 +3,14 @@
 import gzip
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Union
 
 from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
 from amplifinder.logger import info, warning
+from amplifinder.utils.file_utils import ensure_parent_dir
 
 
 def read_fasta_lengths(fasta_path: Path, max_num_reads: Optional[int] = None) -> Dict[str, int]:
@@ -111,4 +114,25 @@ def get_read_length_stats(
         num_bases=total_bases,
         num_reads=total_reads,
     )
+
+
+def write_fasta(
+    sequences: Dict[str, str],
+    output_path: Path,
+    sort_keys: bool = False,
+) -> None:
+    """Write sequences to FASTA file.
+
+    Args:
+        sequences: Dict mapping sequence ID to sequence string
+        output_path: Output FASTA file path
+        sort_keys: If True, sort sequences by ID before writing
+    """
+    ensure_parent_dir(output_path)
+
+    items = sequences.items()
+    if sort_keys:
+        items = sorted(items)
+    records = [SeqRecord(Seq(seq), id=seq_id, description="") for seq_id, seq in items]
+    SeqIO.write(records, output_path, "fasta")
 

@@ -1,9 +1,12 @@
 """Step: Find TN elements by BLAST against ISfinder database."""
+from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional
-
+from typing import Optional, List
+import re
 from abc import abstractmethod
+
+from Bio.SeqFeature import SeqFeature
 
 from amplifinder.data_types.record_types import TnId
 from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
@@ -12,19 +15,7 @@ from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.data_types import Orientation, RecordTypedDf, RefTn, Genome
 from amplifinder.steps.base import Step
-from amplifinder.steps.locate_tns.find_tn_in_genbank import find_tn_elements
-
-"""GenBank TN element parsing."""
-from __future__ import annotations
-
-import re
-from typing import List, Optional
-
-from Bio.SeqFeature import SeqFeature
-
-from amplifinder.data_types.enums import Orientation
-from amplifinder.data_types.record_types import RefTn, TnId
-from amplifinder.data_types.genome import Genome
+from amplifinder.data_types.record_types import TnId
 
  
 # Base class for TN location steps

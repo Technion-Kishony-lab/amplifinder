@@ -135,7 +135,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
     ) -> CoveredTnJc2:
         """Calculate coverage for a single candidate."""
         # Get segment scaffold for this amplicon
-        seg_scaf = raw_tnjc2.get_segment_scaffold(self.genome)
+        seg_scaf = raw_tnjc2.get_segment_scaffold()
 
         iso_amplicon_cov = seg_scaf.slice(seq=iso_scaf_cov)
 

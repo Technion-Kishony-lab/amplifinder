@@ -51,7 +51,7 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
             # Format: jc_{start}_{end}_{tn_id:03d}_{side}_L{read_len}
             side_S = tnjc2.chosen_tn_side_left
             assert side_S is not None
-            side_str = "L" if side_S == Side.LEFT else "R"
+            side_str = "S" if side_S == Side.START else "E"
             analysis_dir = f"jc_{tnjc2.start}-{tnjc2.end}_{tn_id:03d}{side_str}_{self.read_length}bp"
 
             # Create candidate record

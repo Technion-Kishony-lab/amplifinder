@@ -1,6 +1,7 @@
 """Enum definitions for AmpliFinder."""
 
 from enum import Enum
+from typing import NamedTuple
 
 
 class ReversibleIntEnum(int, Enum):
@@ -12,9 +13,9 @@ class ReversibleIntEnum(int, Enum):
 
 
 class Side(ReversibleIntEnum):
-    """Side of a TN element (left or right)."""
-    LEFT = -1
-    RIGHT = 1
+    """Side of a TN element (start or end)."""
+    START = -1
+    END = 1
 
 
 class Orientation(ReversibleIntEnum):
@@ -54,22 +55,22 @@ class RawEvent(str, Enum):
 class JunctionType(int, Enum):
     """The 7 synthetic junction types.
 
-    Amplicon structure: ~~~>>>======>>>======>>>~~~
-    (1) ~~==  left reference (chromosome-cassette)
-    (2) ~~>>  left IS transposition (chromosome-IS)
-    (3) ==>>  left of mid IS (cassette-IS)
-    (4) ====  lost IS (cassette-cassette, no IS)
-    (5) >>==  right of mid IS (IS-cassette)
-    (6) >>~~  right IS transposition (IS-chromosome)
-    (7) ==~~  right reference (cassette-chromosome)
+    Amplicon structure: 
+    
+    ~~~~~~~~~>>>======>>>======>>>~~~~~~~~~
+    
+    legend:
+    ~~~    chromosome
+    >>>    IS
+    ====== cassette (amplicon)
     """
-    LEFT_REF = 1
-    LEFT_IS_TRANS = 2
-    LEFT_MID_IS = 3
-    LOST_IS = 4
-    RIGHT_MID_IS = 5
-    RIGHT_IS_TRANS = 6
-    RIGHT_REF = 7
+    CHR_TO_AMP_LEFT = 1          # (1) ~~-==  left reference (chromosome-cassette)
+    CHR_TO_TN_LEFT = 2           # (2) ~~->>  left IS transposition (chromosome-IS)
+    AMP_RIGHT_TO_TN_LEFT = 3     # (3) ==->>  left of mid IS (cassette-IS)
+    AMP_RIGHT_TO_AMP_LEFT = 4    # (4) ==-==  lost IS (cassette-cassette, no IS)
+    TN_RIGHT_TO_AMP_LEFT = 5     # (5) >>-==  right of mid IS (IS-cassette)
+    TN_RIGHT_TO_CHR = 6          # (6) >>-~~  right IS transposition (IS-chromosome)
+    AMP_RIGHT_TO_CHR = 7         # (7) ==-~~  right reference (cassette-chromosome)
 
 
 class EventModifier(str, Enum):
@@ -78,3 +79,9 @@ class EventModifier(str, Enum):
     DE_NOVO = "de novo"
     LOW_COVERAGE = "low coverage near junction"
 
+
+class JunctionCoverage(NamedTuple):
+    """Read coverage at a synthetic junction."""
+    spanning: int  # reads crossing junction
+    left: int      # reads ending at junction
+    right: int     # reads starting at junction

@@ -90,15 +90,15 @@ class Pipeline:
         self._ancestor_breseq(genome, anc_output)
 
         # Run isolate pipeline
-        tn_loc = self._locate_tns_in_reference(genome)
-        ref_tnjc = self._create_ref_tn_junctions(tn_loc, genome, iso_output)
-        breseq_jc = self._run_breseq(genome, iso_output)
-        tnjcs = self._create_tnjc(breseq_jc, ref_tnjc, genome, iso_output)
+        ref_tns = self._locate_tns_in_reference(genome)
+        ref_tnjcs = self._create_ref_tn_junctions(ref_tns, genome, iso_output)
+        breseq_jcs = self._run_breseq(genome, iso_output)
+        tnjcs = self._create_tnjc(breseq_jcs, ref_tnjcs, genome, iso_output)
         raw_tnjc2s = self._create_tnjc2(tnjcs, genome, iso_output)
         covered_tnjc2s = self._calc_amplicon_coverage(raw_tnjc2s, genome, iso_output)
-        classified_tnjc2s = self._classify_structure(covered_tnjc2s, genome, tn_loc, iso_output)
+        classified_tnjc2s = self._classify_structure(covered_tnjc2s, genome, ref_tns, iso_output)
         filtered_tnjc2s = self._filter_candidates(classified_tnjc2s, iso_output)
-        self._create_synthetic_junctions(filtered_tnjc2s, genome, iso_output)
+        self._create_synthetic_junctions(filtered_tnjc2s, genome, ref_tns, iso_output)
         self._align_reads(filtered_tnjc2s, iso_output)
         analyzed_tnjc2s = self._analyze_alignments(filtered_tnjc2s, iso_output, anc_output)
         analyzed_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
@@ -158,13 +158,13 @@ class Pipeline:
         tn_loc_dir = cfg.ref_path / "tn_loc" / genome.name
 
         # 2a: GenBank annotations
-        tn_loc_genbank = LocateTNsUsingGenbankStep(
+        ref_tns_genbank = LocateTNsUsingGenbankStep(
             genome=genome,
             output_dir=tn_loc_dir,
         ).run()
 
         # 2b: ISfinder database
-        tn_loc_isfinder = LocateTNsUsingISfinderStep(
+        ref_tns_isfinder = LocateTNsUsingISfinderStep(
             genome=genome,
             output_dir=tn_loc_dir,
             isdb_path=cfg.isdb_path or get_builtin_isfinder_db_path(),
@@ -173,13 +173,13 @@ class Pipeline:
         ).run()
 
         # Compare sources
-        if tn_loc_genbank is not None:
-            compare_tn_locations(tn_loc_genbank, tn_loc_isfinder, output_file=tn_loc_dir / "tn_location_diffs.txt")
+        if ref_tns_genbank is not None:
+            compare_tn_locations(ref_tns_genbank, ref_tns_isfinder, output_file=tn_loc_dir / "tn_location_diffs.txt")
 
         # Select source
-        if tn_loc_genbank is None and not cfg.use_isfinder:
+        if ref_tns_genbank is None and not cfg.use_isfinder:
             raise ValueError("No TN locations - provide GenBank or set --use-isfinder")
-        tn_loc = tn_loc_isfinder if cfg.use_isfinder else tn_loc_genbank
+        tn_loc = ref_tns_isfinder if cfg.use_isfinder else ref_tns_genbank
         assert tn_loc is not None
         return tn_loc
 
@@ -312,12 +312,14 @@ class Pipeline:
         self,
         filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
         genome: Genome,
+        ref_tns: RecordTypedDf[RefTn],
         iso_output: Path,
     ) -> None:
         """Step 10: Create synthetic junction sequences."""
         return CreateSyntheticJunctionsStep(
             filtered_tnjc2s=filtered_tnjc2s,
             genome=genome,
+            ref_tns=ref_tns,
             output_dir=iso_output,
             read_length=self._get_iso_read_length(),
         ).run()
