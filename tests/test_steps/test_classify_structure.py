@@ -9,27 +9,42 @@ from amplifinder.data_types import (
 
 @pytest.fixture
 def sample_covered_tnjc2(covered_tnjc2_record):
-    """Create sample CoveredTnJc2 records."""
-    first = CoveredTnJc2.from_other(
+    """Create sample CoveredTnJc2 records - one of each major type."""
+    # FLANKED: both TN sides match
+    flanked = CoveredTnJc2.from_other(
         covered_tnjc2_record,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=2.0,
+        tn_id_start=1,
+        tn_id_end=1,
     )
 
-    second = CoveredTnJc2.from_other(
+    # TRANSPOSITION: reference location junction
+    transposition = CoveredTnJc2.from_other(
+        covered_tnjc2_record,
+        iso_scaf_avg=10.0,
+        iso_amplicon_avg=1.0,
+        tn_id_start=1,
+        tn_id_end=2,
+    )
+
+    # UNFLANKED: no TN sides match
+    unflanked = CoveredTnJc2.from_other(
         covered_tnjc2_record,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=1.0,
+        tn_id_start=None,
+        tn_id_end=None,
     )
 
-    return RecordTypedDf.from_records([first, second], CoveredTnJc2)
+    return RecordTypedDf.from_records([flanked, transposition, unflanked], CoveredTnJc2)
 
 
 @pytest.fixture
-def sample_tn_locs(ref_tn_loc_record):
+def sample_tn_locs(ref_tn_record):
     """Create sample RefTn records."""
-    first = RefTn.from_other(ref_tn_loc_record, scaf="chr1", start=10, end=20, tn_id=1, tn_name="IS1")
-    second = RefTn.from_other(ref_tn_loc_record, scaf="chr1", start=30, end=40, tn_id=2, tn_name="IS2")
+    first = RefTn.from_other(ref_tn_record, scaf="chr1", start=10, end=20, tn_id=1, tn_name="IS1")
+    second = RefTn.from_other(ref_tn_record, scaf="chr1", start=30, end=40, tn_id=2, tn_name="IS2")
     return RecordTypedDf.from_records([first, second], RefTn)
 
 
@@ -44,12 +59,12 @@ def test_classify_structure(sample_covered_tnjc2, sample_tn_locs, tmp_path, tiny
 
     result = step.run()
 
-    assert len(result) == 2
+    assert len(result) == 3
     result_list = list(result)
-    # First should be unflanked (no shared IS)
-    assert result_list[0].raw_event == RawEvent.UNFLANKED
-    # Second should be reference (both junctions are reference)
-    assert result_list[1].raw_event == RawEvent.REFERENCE
+    # Test each of the 3 types
+    assert result_list[0].raw_event == RawEvent.FLANKED
+    assert result_list[1].raw_event == RawEvent.TRANSPOSITION
+    assert result_list[2].raw_event == RawEvent.UNFLANKED
 
 
 def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_record, tmp_path, tiny_genome):
@@ -59,6 +74,8 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_r
         covered_tnjc2_record,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=1.0,
+        tn_id_start=1,
+        tn_id_end=1,
     )
 
     all_records = RecordTypedDf.from_records(
@@ -75,6 +92,5 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_r
     )
 
     result = step.run()
-    # Short amplicon should be classified as transposition
-    transpositions = [r for r in result if r.raw_event == RawEvent.TRANSPOSITION]
-    assert len(transpositions) == 1
+    # Now expecting 4 records (3 from fixture + 1 new)
+    assert len(result) == 4

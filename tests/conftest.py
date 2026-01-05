@@ -2,14 +2,16 @@
 
 import os
 import random
-from pathlib import Path
-
+import pandas as pd
 import pytest
+
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
+from pathlib import Path
+from amplifinder.data_types import RefTn, RecordTypedDf
 from amplifinder.utils.file_utils import ensure_dir
 
 # =============================================================================
@@ -338,13 +340,11 @@ def covered_tnjc2_record(raw_tnjc2_record):
 @pytest.fixture
 def classified_tnjc2_record(covered_tnjc2_record):
     """CoveredTnJc2 with structural classification."""
-    from amplifinder.data_types import ClassifiedTnJc2, RawEvent
+    from amplifinder.data_types import ClassifiedTnJc2, BaseRawEvent
 
     return ClassifiedTnJc2.from_other(
         covered_tnjc2_record,
-        raw_event=RawEvent.FLANKED,
-        shared_tn_ids=[1],
-        chosen_tn_id=1,
+        base_raw_event=BaseRawEvent.LOCUS_JOINING,
     )
 
 
@@ -392,6 +392,15 @@ def ref_tn_record():
         orientation=Orientation.FORWARD,
         join=False,
     )
+
+
+@pytest.fixture
+def ref_tns_indexed(ref_tn_record):
+    """RefTn RecordTypedDf with tn_id as index (for O(1) lookup in synthetic junctions)."""
+    
+    ref_tn_df = pd.DataFrame([ref_tn_record.model_dump()])
+    ref_tn_df = ref_tn_df.set_index('tn_id', drop=False)  # Keep tn_id column
+    return RecordTypedDf(ref_tn_df, RefTn)
 
 
 def pytest_configure(config):

@@ -3,8 +3,8 @@
 from amplifinder.data_types.typed_df import RecordTypedDf, TypedDF
 from amplifinder.data_types.genome import Genome, GenomeRegistry, get_genome
 from amplifinder.data_types.records import Column, Schema, Record
-from amplifinder.data_types.enums import Side, Orientation, AverageMethod, JunctionType, EventModifier, JunctionCoverage
-from amplifinder.data_types.scaffold import JcArm
+from amplifinder.data_types.enums import Side, Orientation, AverageMethod, JunctionType, EventModifier, JunctionCoverage, BaseRawEvent
+from amplifinder.data_types.scaffold import JcArm, Scaffold, SeqScaffold
 from amplifinder.data_types.record_types import (
     RefTn, BlastHit, Junction, BreseqJunction, RefTnJunction, TnJunction, RawTnJc2, RefTnSide, OffsetRefTnSide,
     CoveredTnJc2, RawEvent, ClassifiedTnJc2,
@@ -32,11 +32,16 @@ __all__ = [
     "Genome",
     "GenomeRegistry",
     "get_genome",
+
     # Scaffold types
     "JcArm",
+    "Scaffold",
+    "SeqScaffold",
+
     # Coverage types
     "JunctionCoverage",
     "CoveredTnJc2",
+    "BaseRawEvent",
     "RawEvent",
     "ClassifiedTnJc2",
     "FilteredTnJc2",

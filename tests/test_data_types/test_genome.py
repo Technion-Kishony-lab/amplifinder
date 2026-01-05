@@ -47,7 +47,7 @@ def test_junction_sequences(toy_genome: Genome):
     arm1 = toy_genome.get_junction_arm_sequence(jc, 1)
     arm2 = toy_genome.get_junction_arm_sequence(jc, 2)
 
-    assert arm1 == reverse_complement("efghij")
-    assert arm2 == "klmnop"
-    assert toy_genome.get_junction_sequence_arm1_to_arm2(jc) == "efghijklmnop"
-    assert toy_genome.get_junction_sequence_arm2_to_arm1(jc) == reverse_complement("efghijklmnop")
+    assert arm1 == reverse_complement("fghij")
+    assert arm2 == "klmno"
+    assert toy_genome.get_junction_sequence_arm1_to_arm2(jc) == "fghijklmno"
+    assert toy_genome.get_junction_sequence_arm2_to_arm1(jc) == reverse_complement("fghijklmno")

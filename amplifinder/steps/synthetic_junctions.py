@@ -40,10 +40,10 @@ def create_synthetic_junctions(tnjc2: FilteredTnJc2, jc_width: int, ref_tns: Rec
     assert ref_tn.tn_id == chosen_tn_id
     
     # Get inward arms for Amplicon
-    amp_left, amp_right = tnjc2.get_inward_arms(flanks=jc_width)
+    amp_left, amp_right = tnjc2.get_inward_arms(flank=jc_width)
 
     # Get chromosome arms (ouward amplicon arms)
-    chr_left, chr_right = tnjc2.get_outward_arms(flanks=jc_width)
+    chr_left, chr_right = tnjc2.get_outward_arms(flank=jc_width)
    
     # Get inward arms for RefTn with offset adjustments via ref_tn_side
     # The right-side of the TN is one that connects to the left-side of the amplicon
@@ -109,7 +109,7 @@ class CreateSyntheticJunctionsStep(Step[None]):
 
             # Extract sequences and write FASTA
             sequences = {
-                jtype.value: self.genome.get_junction_sequence_arm1_to_arm2(jc)
+                jtype.name: self.genome.get_junction_sequence_arm1_to_arm2(jc)
                 for jtype, jc in junctions.items()
             }
             write_fasta(sequences, analysis_dir / "junctions.fasta", sort_keys=True)
