@@ -71,7 +71,7 @@ class TestPipeline(Pipeline):
             python_df = result.df.copy()
             records = result.to_records()
             python_df['Positions_in_chromosome'] = [
-                f"{r.start}-{r.end}" for r in records
+                f"{r.left}-{r.right}" for r in records
             ]
             python_df['amplicon_length'] = [r.amplicon_length for r in records]
             # Map tn_ids to tn_names (matching MATLAB IS_loc.IS_Name lookup)

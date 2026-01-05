@@ -90,7 +90,7 @@ class BreseqStep(Step[RecordTypedDf[BreseqJunction]]):
             'flanking_right': 'flanking2'
         })
         
-        return RecordTypedDf.from_dataframe(jc_df, BreseqJunction)
+        return RecordTypedDf(jc_df, BreseqJunction)
 
     def report_output_message(self, output: RecordTypedDf[BreseqJunction], *, from_cache: bool) -> Optional[str]:
         """Report junction count."""

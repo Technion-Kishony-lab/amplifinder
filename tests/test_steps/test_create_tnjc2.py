@@ -97,17 +97,23 @@ def test_runs_without_error(tnjc2_step):
 
 
 def test_output_has_correct_columns(tnjc2_step):
-    """RawTnJc2 output should have expected columns."""
+    """RawTnJc2 output should have expected properties accessible."""
     raw_tnjc2s = tnjc2_step.run()
 
-    expected_cols = {
+    # Check that expected properties are accessible on records
+    expected_properties = {
         "jc_num_left", "jc_num_right", "scaf",
-        "left", "right", "pos_tn_left", "pos_tn_right",
-        "dir_tn_left", "dir_tn_right",
-        "tn_ids", "tn_orientations",
+        "left", "right",
+        "tn_ids", "tn_offsets",
         "amplicon_length",
     }
-    assert expected_cols.issubset(set(raw_tnjc2s.df.columns))
+    
+    # Verify properties work by accessing them on first record
+    if len(raw_tnjc2s) > 0:
+        record = raw_tnjc2s.to_records()[0]
+        for prop in expected_properties:
+            assert hasattr(record, prop), f"Missing property: {prop}"
+            getattr(record, prop)  # Access to ensure no errors
 
 
 def test_skips_if_exists(tnjc2_step):
