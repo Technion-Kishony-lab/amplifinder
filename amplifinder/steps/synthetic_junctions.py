@@ -31,30 +31,24 @@ from amplifinder.utils.fasta import write_fasta
 
 def create_synthetic_junctions(tnjc2: FilteredTnJc2, jc_width: int, ref_tns: RecordTypedDf[RefTn]) -> dict[JunctionType, Junction]:
 
-    # Get TN sides that S and E junctions connect to
-    tn_side_left_amp, _ = tnjc2.get_sides_of_chosen_tn()
+    # Get TN sides that S and E junctions connect to (with offsets)
+    tn_side_left_amp, tn_side_right_amp = tnjc2.get_sides_of_chosen_tn()
     
     # Get RefTn from chosen_tn_id (O(1) lookup using indexed ref_tns)
     chosen_tn_id = tnjc2.chosen_tn_id
     ref_tn = ref_tns[chosen_tn_id]
     assert ref_tn.tn_id == chosen_tn_id
     
-    # Get inward arms for RefTn
-    tn_S_arm, tn_E_arm = ref_tn.get_inward_arms(flank=jc_width)
-
     # Get inward arms for Amplicon
-    amp_left, amp_right = tnjc2.get_inward_arms(flank=jc_width)
+    amp_left, amp_right = tnjc2.get_inward_arms(flanks=jc_width)
 
     # Get chromosome arms (ouward amplicon arms)
-    chr_left, chr_right = tnjc2.get_outward_arms(flank=jc_width)
+    chr_left, chr_right = tnjc2.get_outward_arms(flanks=jc_width)
    
-    # We define the right-side of the TN as the one that connects to the left (START) of the amplicon
-    if tn_side_left_amp.side == Side.START:
-        # The amplicon left-side connects to the TN start, so define the TN start as the right-side of the TN:
-        tn_left, tn_right = tn_E_arm, tn_S_arm
-    else:
-        # The amplicon left-side connects to the TN end, so define the TN end as the right-side of the TN:
-        tn_left, tn_right = tn_S_arm, tn_E_arm
+    # Get inward arms for RefTn with offset adjustments via ref_tn_side
+    # The right-side of the TN is one that connects to the left-side of the amplicon
+    tn_right = ref_tn.get_inward_arm_by_ref_tn_side(tn_side_left_amp, jc_width)
+    tn_left = ref_tn.get_inward_arm_by_ref_tn_side(tn_side_right_amp, jc_width)
     
     # Create Junction objects for each junction type
     return {

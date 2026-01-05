@@ -64,10 +64,10 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
             tn_sides_matching_arm1 = self._find_ref_tn_sides_matches(jc, arm=1)
             tn_sides_matching_arm2 = self._find_ref_tn_sides_matches(jc, arm=2)
 
-            # If this is a reference TN junction, assert we get a distance==0 match on arm 1 (TN side)
+            # If this is a reference TN junction, assert we get an offset==0 match on arm 1 (TN side)
             if isinstance(jc, RefTnJunction):
-                ref_tn_side_matches = [m for m in tn_sides_matching_arm1 if m.distance == 0 and m.is_same_side(jc.ref_tn_side)]
-                assert len(ref_tn_side_matches) == 1, f"Reference TN junction {jc} should match itself with distance==0"
+                ref_tn_side_matches = [m for m in tn_sides_matching_arm1 if m.offset == 0 and m.is_same_side(jc.ref_tn_side)]
+                assert len(ref_tn_side_matches) == 1, f"Reference TN junction {jc} should match itself with offset==0"
 
             is_arm1_tn = len(tn_sides_matching_arm1) > 0
             is_arm2_tn = len(tn_sides_matching_arm2) > 0
@@ -115,7 +115,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         for ref_tnjc, seq_inward in self._ref_tn_seqs:
             pos = seq_inward.find(jc_arm_seq)
             if pos >= 0:
-                distance = pos - ref_tnjc.flanking2 - 1
-                if abs(distance) <= self.max_dist_to_tn:
-                    ref_tn_sides_matches.append(OffsetRefTnSide.from_other(ref_tnjc.ref_tn_side, distance=distance))
+                offset = pos - ref_tnjc.flanking2 - 1
+                if abs(offset) <= self.max_dist_to_tn:
+                    ref_tn_sides_matches.append(OffsetRefTnSide.from_other(ref_tnjc.ref_tn_side, offset=offset))
         return ref_tn_sides_matches

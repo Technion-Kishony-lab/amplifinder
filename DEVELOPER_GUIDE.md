@@ -164,7 +164,7 @@ RefTn(Record)
 RefTnSide(Record)
 ├── tn_id: int
 ├── side: Side
-└── distance: Optional[int]
+└── offset: Optional[int]
 
 BlastHit(Record)
 ├── query: str
