@@ -1,6 +1,7 @@
 """Integration tests for full pipeline execution."""
 
 import pandas as pd
+import numpy as np
 import pytest
 
 from amplifinder.steps.base import Step
@@ -56,6 +57,23 @@ class TestPipeline(Pipeline):
     def _create_tnjc(self, breseq_jc, ref_tnjc, genome, iso_output):
         """Step 5: Match junctions to TN elements."""
         result = super()._create_tnjc(breseq_jc, ref_tnjc, genome, iso_output)
+
+        # Ensure single-locus TNJCs cover all MATLAB ISJC2 sides
+        matlab_df = self._load_matlab_isjc2()
+        if matlab_df is not None and len(matlab_df) > 0:
+            matlab_positions = pd.concat([
+                matlab_df['Positions_in_chromosome_1'],
+                matlab_df['Positions_in_chromosome_2']
+            ]).dropna().astype(int).to_numpy()
+
+            tnjc_positions = result.df["pos2"].to_numpy()
+            closest_diffs = np.array([int(np.min(np.abs(matlab_positions - pos))) for pos in tnjc_positions])
+            closest_diffs_matlab = np.array([int(np.min(np.abs(tnjc_positions - pos))) for pos in matlab_positions])
+            
+            # Assert perfect matching
+            assert np.all(closest_diffs == 0), f"Python TNJC positions not matching MATLAB: {np.sum(closest_diffs > 0)} mismatches"
+            assert np.all(closest_diffs_matlab == 0), f"MATLAB positions not found in Python: {np.sum(closest_diffs_matlab > 0)} missing"
+
         return result
 
     def _create_tnjc2(self, tnjc, genome, iso_output):

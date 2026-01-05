@@ -154,9 +154,12 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
                     continue
 
                 location = feature.location
-                assert 1 <= location.start <= location.end <= len(scaffold)  # GenBank start/end are left/right
+                # BioPython uses 0-based start, 1-based exclusive end; convert to 1-based inclusive
+                left = location.start + 1  # Convert 0-based to 1-based
+                right = location.end  # Already 1-based exclusive == 1-based inclusive
+                assert 1 <= left <= right <= len(scaffold)
                 orientation = Orientation.REVERSE if location.strand == -1 else Orientation.FORWARD
-                items.append((scaf, location.start, location.end, orientation, tn_name))
+                items.append((scaf, left, right, orientation, tn_name))
 
         return self._build_ref_tns_dict(items)
 
