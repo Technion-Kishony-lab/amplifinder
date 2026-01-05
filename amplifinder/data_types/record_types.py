@@ -123,8 +123,8 @@ class Junction(Record):
     scaf2: str
     pos2: int
     dir2: Orientation
-    flanking_left: int   # Length of sequence flanking arm 1 (used for sequence extraction)
-    flanking_right: int  # Length of sequence flanking arm 2 (used for sequence extraction)
+    flanking1: int   # Length of sequence flanking arm 1 (used for sequence extraction)
+    flanking2: int  # Length of sequence flanking arm 2 (used for sequence extraction)
 
     def swap_sides(self: JunctionT) -> JunctionT:
         """Return new junction with arm 1 and arm 2 swapped."""
@@ -132,7 +132,7 @@ class Junction(Record):
             "scaf1": self.scaf2, "scaf2": self.scaf1,
             "pos1": self.pos2, "pos2": self.pos1,
             "dir1": self.dir2, "dir2": self.dir1,
-            "flanking_left": self.flanking_right, "flanking_right": self.flanking_left,
+            "flanking1": self.flanking2, "flanking2": self.flanking1,
         })
 
     def get_jc_arm(self, arm: int) -> JcArm:
@@ -141,7 +141,7 @@ class Junction(Record):
             scaf=self.scaf1 if arm == 1 else self.scaf2,
             start=self.pos1 if arm == 1 else self.pos2,
             dir=self.dir1 if arm == 1 else self.dir2,
-            flank=self.flanking_left if arm == 1 else self.flanking_right
+            flank=self.flanking1 if arm == 1 else self.flanking2
         )
 
     def __eq__(self, other: Junction) -> bool:
@@ -151,7 +151,8 @@ class Junction(Record):
     @classmethod
     def from_jc_arms(cls, arm1: JcArm, arm2: JcArm) -> Junction:
         """Create a Junction from junction arm coordinates."""
-        return cls(scaf1=arm1.scaf, pos1=arm1.start, dir1=arm1.dir, scaf2=arm2.scaf, pos2=arm2.start, dir2=arm2.dir, flanking_left=arm1.flank, flanking_right=arm2.flank)
+        return cls(scaf1=arm1.scaf, pos1=arm1.start, dir1=arm1.dir, flanking1=arm1.flank, 
+                   scaf2=arm2.scaf, pos2=arm2.start, dir2=arm2.dir, flanking2=arm2.flank)
 
 class BreseqJunction(Junction):
     """Breseq junction."""
@@ -168,13 +169,13 @@ class RefTnJunction(Junction):
 
     #   chr      TN       chr
     # ~~~~~~~|>>>>>>>>>|~~~~~~~    ref_tn_side.side == Side.LEFT
-    #        |------>              arm1, flanking_left (into TN)
-    #     <--|                     arm2, flanking_right (out of TN)
+    #        |------>              arm1, flanking1 (into TN)
+    #     <--|                     arm2, flanking2 (out of TN)
 
     #   chr      TN       chr
     # ~~~~~~~|>>>>>>>>>|~~~~~~~    ref_tn_side.side == Side.RIGHT
-    #           <------|           arm1, flanking_left (into TN)
-    #                  |-->        arm2, flanking_right (out of TN)
+    #           <------|           arm1, flanking1 (into TN)
+    #                  |-->        arm2, flanking2 (out of TN)
 
     ref_tn_side: RefTnSide
 

@@ -127,7 +127,7 @@ class Pipeline:
 
         # Run breseq (BreseqStep handles caching - skips if output exists)
         AncBreseqStep(
-            output_path=anc_breseq_path,
+            output_dir=anc_breseq_path,
             fastq_path=self.config.anc_path,
             ref_file=genome.genbank_path or genome.fasta_path,
             docker=self.config.breseq_docker,
@@ -201,17 +201,13 @@ class Pipeline:
         """Step 4: Run breseq on isolate to get junctions."""
         cfg = self.config
 
-        breseq_output = BreseqStep(
+        return BreseqStep(
             fastq_path=cfg.iso_path,
             ref_file=genome.genbank_path or genome.fasta_path,
-            output_path=cfg.iso_breseq_path or iso_output / "breseq",
+            output_dir=cfg.iso_breseq_path or iso_output / "breseq",
             docker=cfg.breseq_docker,
             threads=cfg.breseq_threads,
         ).run()
-
-        breseq_jc_df = breseq_output["JC"]
-        breseq_jcs = RecordTypedDf(breseq_jc_df, BreseqJunction)
-        return breseq_jcs
 
     def _create_tnjc(
         self,

@@ -38,7 +38,7 @@ def mock_junctions(locate_tns_step, tiny_genome, tmp_output):
         Junction(
             num=jc.num, scaf1=jc.scaf1, pos1=jc.pos1, dir1=jc.dir1,
             scaf2=jc.scaf2, pos2=jc.pos2, dir2=jc.dir2,
-            flanking_left=jc.flanking_left, flanking_right=jc.flanking_right,
+            flanking1=jc.flanking1, flanking2=jc.flanking2,
         )
         for jc in ref_jc
     ]
@@ -71,7 +71,7 @@ def test_output_has_correct_columns(tnjc_step):
     tnjcs = tnjc_step.run()
 
     expected_cols = {"num", "scaf1", "pos1", "dir1", "scaf2", "pos2", "dir2",
-                     "flanking_left", "flanking_right", "ref_tn_sides", "swapped"}
+                     "flanking1", "flanking2", "ref_tn_sides", "swapped"}
     assert expected_cols.issubset(set(tnjcs.df.columns))
 
 

@@ -295,8 +295,8 @@ def raw_tnjc2_record():
         scaf2="tiny",
         pos2=200,
         dir2=Orientation.FORWARD,
-        flanking_left=50,
-        flanking_right=50,
+        flanking1=50,
+        flanking2=50,
         ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
         swapped=False,
     )
@@ -308,8 +308,8 @@ def raw_tnjc2_record():
         scaf2="tiny",
         pos2=300,
         dir2=Orientation.REVERSE,
-        flanking_left=50,
-        flanking_right=50,
+        flanking1=50,
+        flanking2=50,
         ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.RIGHT, distance=0)],
         swapped=False,
     )

@@ -99,8 +99,8 @@ Record
     ├── scaf2: str
     ├── pos2: int
     ├── dir2: Orientation
-    ├── flanking_left: int
-    ├── flanking_right: int
+    ├── flanking1: int
+    ├── flanking2: int
     └── [methods: switch_sides(), get_scaf_pos_dir_flank()]
     │
     ├── RefTnJunction(Junction)

@@ -115,7 +115,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         for ref_tnjc, seq_inward in self._ref_tn_seqs:
             pos = seq_inward.find(jc_arm_seq)
             if pos >= 0:
-                distance = pos - ref_tnjc.flanking_right - 1
+                distance = pos - ref_tnjc.flanking2 - 1
                 if abs(distance) <= self.max_dist_to_tn:
                     ref_tn_sides_matches.append(OffsetRefTnSide.from_other(ref_tnjc.ref_tn_side, distance=distance))
         return ref_tn_sides_matches

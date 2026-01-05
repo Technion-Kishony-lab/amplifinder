@@ -40,8 +40,8 @@ def test_junction_sequences(toy_genome: Genome):
         scaf2="toy",
         pos2=11,
         dir2=Orientation.FORWARD,
-        flanking_left=5,
-        flanking_right=5,
+        flanking1=5,
+        flanking2=5,
     )
 
     arm1 = toy_genome.get_junction_arm_sequence(jc, 1)
