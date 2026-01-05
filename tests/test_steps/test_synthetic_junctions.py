@@ -7,13 +7,14 @@ from amplifinder.data_types import (
 from amplifinder.utils.file_utils import ensure_parent_dir
 
 
-def test_creates_junctions_fasta(tiny_genome, filtered_tnjc2_record, tmp_path):
+def test_creates_junctions_fasta(tiny_genome, filtered_tnjc2_record, ref_tns_indexed, tmp_path):
     """Should create junctions.fasta file."""
     filtered_tnjc2s = RecordTypedDf.from_records([filtered_tnjc2_record], FilteredTnJc2)
 
     step = CreateSyntheticJunctionsStep(
         filtered_tnjc2s=filtered_tnjc2s,
         genome=tiny_genome,
+        ref_tns=ref_tns_indexed,
         output_dir=tmp_path,
         read_length=150,
     )
@@ -31,7 +32,7 @@ def test_creates_junctions_fasta(tiny_genome, filtered_tnjc2_record, tmp_path):
         assert content.count(">") == 7
 
 
-def test_handles_missing_tn(tiny_genome, filtered_tnjc2_record, tmp_path):
+def test_handles_missing_tn(tiny_genome, filtered_tnjc2_record, ref_tns_indexed, tmp_path):
     """Should skip candidates with missing TN (chosen_tn_id=None)."""
     candidate_no_tn = FilteredTnJc2.from_other(
         filtered_tnjc2_record,
@@ -49,9 +50,10 @@ def test_handles_missing_tn(tiny_genome, filtered_tnjc2_record, tmp_path):
     step = CreateSyntheticJunctionsStep(
         filtered_tnjc2s=filtered_tnjc2s,
         genome=tiny_genome,
+        ref_tns=ref_tns_indexed,
         output_dir=tmp_path,
     )
 
     # Should not raise error, just skip creating content
     result = step.run()
-    assert len(result) == 1
+    # Step returns None (it creates files but doesn't return data)

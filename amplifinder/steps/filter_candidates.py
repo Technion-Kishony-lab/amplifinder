@@ -44,12 +44,12 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[FilteredTnJc2]):
             if not (self.min_amplicon_length <= tnjc2.amplicon_length <= self.max_amplicon_length):
                 continue
             tn_id = tnjc2.chosen_tn_id
+            side_S = tnjc2.chosen_tn_side_left
             if tn_id is None or side_S is None:
                 continue
 
             # Generate analysis directory name
             # Format: jc_{start}_{end}_{tn_id:03d}_{side}_L{read_len}
-            side_S = tnjc2.chosen_tn_side_left
             assert side_S is not None
             side_str = "S" if side_S == Side.START else "E"
             analysis_dir = f"jc_{tnjc2.left}-{tnjc2.right}_{tn_id:03d}{side_str}_{self.read_length}bp"

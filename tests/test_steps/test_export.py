@@ -60,7 +60,8 @@ def test_export_creates_files(sample_analyzed, tmp_path, tiny_genome):
 
     # Check that candidate_amplifications.csv contains filtered candidates
     df_filtered = pd.read_csv(candidates_file)
-    # First candidate should be included (copy_number > threshold, length > filter)
-    # Second should be excluded (length too short)
-    assert len(df_filtered) == 1
-    assert df_filtered.iloc[0]['amplicon_length'] == 150
+    # Both candidates should be included (both have length > filter_amplicon_length=100)
+    # First: length=101, copy_number=2.5 > 1.5 threshold -> included
+    # Second: length=101, copy_number=0.2 < 0.3 del_threshold -> included (deletion)
+    assert len(df_filtered) == 2
+    assert df_filtered.iloc[0]['amplicon_length'] == 101
