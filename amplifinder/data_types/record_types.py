@@ -241,8 +241,7 @@ class RawTnJc2(Record):
     # CSV export: only export derived properties, not the complex TnJunction/Scaffold objects
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = [
         'jc_num_left', 'jc_num_right', 'scaf', 'left', 'right',
-        'pos_tn_left', 'pos_tn_right', 'dir_tn_left', 'dir_tn_right',
-        'tn_ids', 'tn_orientations', 'tn_offsets', 'amplicon_length'
+        'tn_ids', 'tn_offsets', 'amplicon_length'
     ]
 
     @staticmethod
@@ -264,6 +263,16 @@ class RawTnJc2(Record):
         Returns list of (left_tn_side, right_tn_side) tuples where both sides match the same TN ID.
         """
         return self.find_matching_tn_sides(self.tnjc_left.ref_tn_sides, self.tnjc_right.ref_tn_sides)
+
+    @property
+    def jc_num_left(self) -> int:
+        """Junction number for left junction."""
+        return self.tnjc_left.num
+
+    @property
+    def jc_num_right(self) -> int:
+        """Junction number for right junction."""
+        return self.tnjc_right.num
 
     @property
     def scaf(self) -> str:

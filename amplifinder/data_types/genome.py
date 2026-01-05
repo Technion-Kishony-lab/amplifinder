@@ -91,7 +91,7 @@ class Genome:
             else:
                 circularities = {rec.name: False for rec in records}
             self._scaffolds = {
-                rec.name: SeqScaffold(seq=str(rec.seq), is_circular=circularities[rec.name])
+                rec.name: SeqScaffold(seq=str(rec.seq), is_circular=circularities[rec.name], scaf=rec.name)
                 for rec in records
             }
         return self._scaffolds

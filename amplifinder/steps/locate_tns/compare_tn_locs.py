@@ -33,15 +33,15 @@ def compare_tn_locations(
     def find_match(row, other_df):
         """Find matching TN in other_df within tolerance."""
         return other_df[
-            (other_df["tn_scaf"] == row["tn_scaf"]) &
-            (abs(other_df["loc_left"] - row["loc_left"]) <= tolerance) &
-            (abs(other_df["loc_right"] - row["loc_right"]) <= tolerance)
+            (other_df["scaf"] == row["scaf"]) &
+            (abs(other_df["start"] - row["start"]) <= tolerance) &
+            (abs(other_df["end"] - row["end"]) <= tolerance)
         ]
 
     # Check tn1 against tn2 (full check: not found, multiple, name mismatch, non-matching ends)
     for _, row in df1.iterrows():
         matches = find_match(row, df2)
-        loc = f"{row['tn_scaf']}:{row['loc_left']}-{row['loc_right']}"
+        loc = f"{row['scaf']}:{row['start']}-{row['end']}"
 
         if matches.empty:
             diffs.append(f"{name1} TN '{row['tn_name']}' at {loc} not found in {name2}")
@@ -60,14 +60,14 @@ def compare_tn_locations(
             match = name_matches.iloc[0]
 
         # Check for non-matching ends
-        left_diff = row["loc_left"] - match["loc_left"]
-        right_diff = row["loc_right"] - match["loc_right"]
+        left_diff = row["start"] - match["start"]
+        right_diff = row["end"] - match["end"]
         if left_diff != 0 or right_diff != 0:
             diffs.append(
                 f"Non-matching ends for '{row['tn_name']}' at "
-                f"{row['tn_scaf']}: "
-                f"{name1}={row['loc_left']}-{row['loc_right']}, "
-                f"{name2}={match['loc_left']}-{match['loc_right']} "
+                f"{row['scaf']}: "
+                f"{name1}={row['start']}-{row['end']}, "
+                f"{name2}={match['start']}-{match['end']} "
                 f"(Δleft={left_diff:+d}, Δright={right_diff:+d})"
             )
 
@@ -75,7 +75,7 @@ def compare_tn_locations(
     for _, row in df2.iterrows():
         matches = find_match(row, df1)
         if matches.empty:
-            loc = f"{row['tn_scaf']}:{row['loc_left']}-{row['loc_right']}"
+            loc = f"{row['scaf']}:{row['start']}-{row['end']}"
             diffs.append(f"{name2} TN '{row['tn_name']}' at {loc} not found in {name1}")
 
     # If there are diffs, write to file and log warnings
