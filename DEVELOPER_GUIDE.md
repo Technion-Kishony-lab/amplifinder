@@ -191,8 +191,8 @@ Junction(Record)  # Base junction
 ├── scaf2: str
 ├── pos2: int
 ├── dir2: Orientation
-├── flanking_left: int
-└── flanking_right: int
+├── flanking1: int
+└── flanking2: int
 
 RefTnJunction(Junction)  # Reference TN junction
 └── ref_tn_side: RefTnSide

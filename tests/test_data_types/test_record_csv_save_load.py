@@ -77,8 +77,8 @@ def make_junction(num: int = 1) -> Junction:
         scaf2="chr1",
         pos2=200,
         dir2=Orientation.FORWARD,
-        flanking_left=50,
-        flanking_right=50,
+        flanking1=50,
+        flanking2=50,
     )
 
 
@@ -92,8 +92,8 @@ def make_ref_tn_junction() -> RefTnJunction:
         scaf2="chr1",
         pos2=200,
         dir2=Orientation.FORWARD,
-        flanking_left=50,
-        flanking_right=50,
+        flanking1=50,
+        flanking2=50,
         ref_tn_side=RefTnSide(tn_id=1, side=Side.LEFT),
     )
 
@@ -108,8 +108,8 @@ def make_tn_junction() -> TnJunction:
         scaf2="chr1",
         pos2=200,
         dir2=Orientation.FORWARD,
-        flanking_left=50,
-        flanking_right=50,
+        flanking1=50,
+        flanking2=50,
         ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
         swapped=False,
     )
@@ -127,8 +127,8 @@ def make_raw_tnjc2() -> RawTnJc2:
         scaf2="chr1",
         pos2=200,
         dir2=Orientation.FORWARD,
-        flanking_left=50,
-        flanking_right=50,
+        flanking1=50,
+        flanking2=50,
         ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
         swapped=False,
     )
@@ -140,8 +140,8 @@ def make_raw_tnjc2() -> RawTnJc2:
         scaf2="chr1",
         pos2=400,
         dir2=Orientation.REVERSE,
-        flanking_left=50,
-        flanking_right=50,
+        flanking1=50,
+        flanking2=50,
         ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.RIGHT, distance=0)],
         swapped=False,
     )
