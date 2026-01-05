@@ -15,8 +15,8 @@ def sample_classified_tnjc2(classified_tnjc2_record):
         scaf="chr1",
         start=100,
         end=200,
-        pos_tn_S=10,
-        pos_tn_E=20,
+        pos_tn_left=10,
+        pos_tn_right=20,
         amplicon_length=100,
         ref_name="U00096",
         iso_name="sample1",
@@ -29,13 +29,13 @@ def sample_classified_tnjc2(classified_tnjc2_record):
 
     second = ClassifiedTnJc2.from_other(
         classified_tnjc2_record,
-        jc_num_S=3,
-        jc_num_E=4,
+        jc_num_left=3,
+        jc_num_right=4,
         scaf="chr1",
         start=300,
         end=320,
-        pos_tn_S=30,
-        pos_tn_E=40,
+        pos_tn_left=30,
+        pos_tn_right=40,
         tn_ids=[2],
         amplicon_length=20,  # Too short
         iso_amplicon_coverage=1.0,

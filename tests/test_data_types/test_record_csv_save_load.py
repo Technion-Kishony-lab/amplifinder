@@ -146,8 +146,8 @@ def make_raw_tnjc2() -> RawTnJc2:
         swapped=False,
     )
     return RawTnJc2(
-        tnjc_S=tn_jc_S,
-        tnjc_E=tn_jc_E,
+        tnjc_left=tn_jc_S,
+        tnjc_right=tn_jc_E,
         amplicon_length=201,
     )
 
