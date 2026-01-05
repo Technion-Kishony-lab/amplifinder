@@ -52,7 +52,7 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
         export_records = []
         for analyzed_tnjc2 in self.analyzed_tnjc2s:
             # Get span_origin from segment scaffold
-            seg_scaf = analyzed_tnjc2.get_segment_scaffold(self.genome)
+            seg_scaf = analyzed_tnjc2.get_segment_scaffold()
             span_origin = seg_scaf.span_origin
             export_records.append(ExportedTnJc2(
                 isolate=self.iso_name,

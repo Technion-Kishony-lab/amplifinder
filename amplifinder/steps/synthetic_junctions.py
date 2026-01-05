@@ -1,13 +1,21 @@
 """
 Create synthetic junction sequences for alignment.
-Junction types (amplicon: ~~~>>>======>>>======>>>~~~):
-1. ~~==  left reference (chromosome-cassette)
-2. ~~>>  left IS transposition (chromosome-IS)
-3. ==>>  left of mid IS (cassette-IS)
-4. ====  lost IS (cassette-cassette, no IS)
-5. >>==  right of mid IS (IS-cassette)
-6. >>~~  right IS transposition (IS-chromosome)
-7. ==~~  right reference (cassette-chromosome)
+
+Amplicon structure: 
+
+~~~~~~~~~>>>======>>>======>>>~~~~~~~~~
+
+legend:
+~~~    chromosome
+>>>    IS
+====== cassette (amplicon)
+(1) ~~-==  left reference (chromosome-cassette)
+(2) ~~->>  left IS transposition (chromosome-IS)
+(3) ==->>  left of mid IS (cassette-IS)
+(4) ==-==  lost IS (cassette-cassette, no IS)
+(5) >>-==  right of mid IS (IS-cassette)
+(6) >>-~~  right IS transposition (IS-chromosome)
+(7) ==-~~  right reference (cassette-chromosome)
 """
 
 from pathlib import Path
@@ -15,86 +23,52 @@ from typing import Optional
 
 from amplifinder.data_types import (
     RecordTypedDf, FilteredTnJc2, Genome, JunctionType, RefTn, 
-    Junction, Orientation, Side, JcArm,
+    Junction, Orientation, Side, JcArm, TnJunction,
 )
 from amplifinder.steps.base import Step
-from amplifinder.utils.file_utils import ensure_parent_dir
+from amplifinder.utils.fasta import write_fasta
 
 
-def create_synthetic_junctions(tnjc2: FilteredTnJc2, jc_width: int, genome: Genome) -> dict[JunctionType, Junction]:
-
-    # Get amplicon boundaries (1-based)
-    amp_scaf = tnjc2.scaf
-    amp_S = tnjc2.start
-    amp_E = tnjc2.end
-
-    # Outside positions (flanking the amplicon, 1-based)
-    chr_S = amp_S - 1
-    chr_E = amp_E + 1
+def create_synthetic_junctions(tnjc2: FilteredTnJc2, jc_width: int, ref_tns: RecordTypedDf[RefTn]) -> dict[JunctionType, Junction]:
 
     # Get TN sides that S and E junctions connect to
-    tn_side_S, tn_side_E = tnjc2.get_sides_of_chosen_tn()
+    tn_side_left_amp, _ = tnjc2.get_sides_of_chosen_tn()
     
-    # Compute TN boundaries from junction positions and distances
-    tn_scaf = amp_scaf  # TN is on same scaffold as amplicon
-    if tn_side_S.side == Side.RIGHT:
-        tn_left = amp_S - tn_side_S.distance
-        tn_right = amp_E - tn_side_E.distance
-    else:  # Side.LEFT
-        tn_right = amp_S - tn_side_S.distance
-        tn_left = amp_E - tn_side_E.distance
+    # Get RefTn from chosen_tn_id (O(1) lookup using indexed ref_tns)
+    chosen_tn_id = tnjc2.chosen_tn_id
+    ref_tn = ref_tns[chosen_tn_id]
+    assert ref_tn.tn_id == chosen_tn_id
+    
+    # Get inward arms for RefTn
+    tn_S_arm, tn_E_arm = ref_tn.get_inward_arms(flank=jc_width)
 
-    # Define junction arms (chromosome/amplicon)
-    chr_S_left = JcArm(scaf=amp_scaf, start=chr_S, dir=Orientation.REVERSE, flank=jc_width)
-    amp_S_right = JcArm(scaf=amp_scaf, start=amp_S, dir=Orientation.FORWARD, flank=jc_width)
-    amp_E_left = JcArm(scaf=amp_scaf, start=amp_E, dir=Orientation.REVERSE, flank=jc_width)
-    chr_E_right = JcArm(scaf=amp_scaf, start=chr_E, dir=Orientation.FORWARD, flank=jc_width)
+    # Get inward arms for Amplicon
+    amp_left, amp_right = tnjc2.get_inward_arms(flank=jc_width)
 
-    # Define TN arms based on which sides connect to S/E junctions
-    # Side.RIGHT (=1) → tn_left with FORWARD, Side.LEFT (=-1) → tn_right with REVERSE
-    tn_S_arm = JcArm(
-        scaf=tn_scaf, 
-        start=tn_left if tn_side_S.side == Side.RIGHT else tn_right,
-        dir=Orientation(tn_side_S.side.value),  # RIGHT=1=FORWARD, LEFT=-1=REVERSE
-        flank=jc_width
-    )
-    tn_E_arm = JcArm(
-        scaf=tn_scaf,
-        start=tn_left if tn_side_E.side == Side.RIGHT else tn_right,
-        dir=Orientation(tn_side_E.side.value),  # RIGHT=1=FORWARD, LEFT=-1=REVERSE
-        flank=jc_width
-    )
-
+    # Get chromosome arms (ouward amplicon arms)
+    chr_left, chr_right = tnjc2.get_outward_arms(flank=jc_width)
+   
+    # We define the right-side of the TN as the one that connects to the left (START) of the amplicon
+    if tn_side_left_amp.side == Side.START:
+        # The amplicon left-side connects to the TN start, so define the TN start as the right-side of the TN:
+        tn_left, tn_right = tn_E_arm, tn_S_arm
+    else:
+        # The amplicon left-side connects to the TN end, so define the TN end as the right-side of the TN:
+        tn_left, tn_right = tn_S_arm, tn_E_arm
+    
     # Create Junction objects for each junction type
     return {
-        JunctionType.LEFT_REF:       Junction.from_jc_arms(chr_S_left, amp_S_right),
-        JunctionType.LEFT_IS_TRANS:  Junction.from_jc_arms(chr_S_left, tn_S_arm),
-        JunctionType.LEFT_MID_IS:    Junction.from_jc_arms(amp_E_left, tn_S_arm),
-        JunctionType.LOST_IS:        Junction.from_jc_arms(amp_E_left, amp_S_right),
-        JunctionType.RIGHT_MID_IS:   Junction.from_jc_arms(tn_E_arm,   amp_S_right),
-        JunctionType.RIGHT_IS_TRANS: Junction.from_jc_arms(tn_E_arm,   chr_E_right),
-        JunctionType.RIGHT_REF:      Junction.from_jc_arms(amp_E_left, chr_E_right),
+        JunctionType.CHR_TO_AMP_LEFT:       Junction.from_jc_arms(chr_left,  amp_left),
+        JunctionType.CHR_TO_TN_LEFT:        Junction.from_jc_arms(chr_left,  tn_left ),
+        JunctionType.AMP_RIGHT_TO_TN_LEFT:  Junction.from_jc_arms(amp_right, tn_left ),
+        JunctionType.AMP_RIGHT_TO_AMP_LEFT: Junction.from_jc_arms(amp_right, amp_left),
+        JunctionType.TN_RIGHT_TO_AMP_LEFT:  Junction.from_jc_arms(tn_right,  amp_left),
+        JunctionType.TN_RIGHT_TO_CHR:       Junction.from_jc_arms(tn_right,  chr_right),
+        JunctionType.AMP_RIGHT_TO_CHR:      Junction.from_jc_arms(amp_right, chr_right),
     }
 
 
-def write_junctions_fasta(
-    junctions: dict[JunctionType, str],
-    output_path: Path,
-) -> None:
-    """Write junction sequences to FASTA file.
-
-    Args:
-        junctions: Dict mapping JunctionType to sequence
-        output_path: Output FASTA file path
-    """
-    ensure_parent_dir(output_path)
-
-    with open(output_path, 'w') as f:
-        for jtype, seq in sorted(junctions.items(), key=lambda x: x[0].value):
-            f.write(f">{jtype.value}\n{seq}\n")
-
-
-class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
+class CreateSyntheticJunctionsStep(Step[None]):
     """
     Creates 7 junction sequences per candidate for read alignment analysis.
     """
@@ -103,24 +77,24 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         self,
         filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
         genome: Genome,
+        ref_tns: RecordTypedDf[RefTn],
         output_dir: Path,
         read_length: int = 150,
         force: Optional[bool] = None,
     ):
         self.filtered_tnjc2s = filtered_tnjc2s
         self.genome = genome
+        self.ref_tns = ref_tns
         self.output_dir = Path(output_dir)
         self.read_length = read_length
 
         # Output files are per-candidate analysis directories
-        # Only track outputs for candidates with valid chosen_tn_id
         self.analysis_dirs = []
         output_files = []
         for filtered_tnjc2 in filtered_tnjc2s:
-            if filtered_tnjc2.chosen_tn_id is not None:
-                analysis_dir = output_dir / "junctions" / filtered_tnjc2.analysis_dir
-                self.analysis_dirs.append(analysis_dir)
-                output_files.append(analysis_dir / "junctions.fasta")
+            analysis_dir = self._get_analysis_dir(filtered_tnjc2)
+            self.analysis_dirs.append(analysis_dir)
+            output_files.append(analysis_dir / "junctions.fasta")
 
         super().__init__(
             input_files=[genome.fasta_path],
@@ -128,28 +102,26 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDf[FilteredTnJc2]:
+    def _get_analysis_dir(self, filtered_tnjc2: FilteredTnJc2) -> Path:
+        """Get analysis directory for a candidate."""
+        return self.output_dir / "junctions" / filtered_tnjc2.analysis_dir
+
+    def _calculate_output(self) -> None:
         """Create synthetic junctions for each candidate."""
-        for filtered_tnjc2 in self.filtered_tnjc2s:
-            # Skip candidates without valid chosen TN
-            if filtered_tnjc2.chosen_tn_id is None:
-                continue
+        for tnjc2 in self.filtered_tnjc2s:
+            analysis_dir = self._get_analysis_dir(tnjc2)
 
-            analysis_dir = self.output_dir / "junctions" / filtered_tnjc2.analysis_dir
+            junctions = create_synthetic_junctions(tnjc2=tnjc2, jc_width=self.read_length * 2, ref_tns=self.ref_tns)
 
-            # Create junctions using new Genome/Scaffold methods
-            junctions = create_synthetic_junctions(
-                tnjc2=filtered_tnjc2,
-                jc_width=self.read_length * 2,
-                genome=self.genome,
-            )
+            # Extract sequences and write FASTA
+            sequences = {
+                jtype.value: self.genome.get_junction_sequence_arm1_to_arm2(jc)
+                for jtype, jc in junctions.items()
+            }
+            write_fasta(sequences, analysis_dir / "junctions.fasta", sort_keys=True)
+        return None
 
-            # Write FASTA
-            write_junctions_fasta(junctions, analysis_dir / "junctions.fasta")
-
-        return self.filtered_tnjc2s
-
-    def _save_output(self, output: RecordTypedDf[FilteredTnJc2]) -> None:
+    def _save_output(self, output: None) -> None:
         """Output already saved in _calculate_output."""
         pass
 
@@ -157,9 +129,9 @@ class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         """Summarize outputs as count."""
         if self.output_files:
             n = len(self.filtered_tnjc2s)
-            return [f"{n} junctions"]
+            return [f"{n} fasta files of synthetic junctions"]
         return []
 
-    def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
-        """Return candidates (junction files are side effects)."""
-        return self.filtered_tnjc2s
+    def load_outputs(self) -> None:
+        """Junction files are side effects, nothing to return."""
+        return None

@@ -86,7 +86,7 @@ class JcArm(Record):
     @property
     def end(self) -> int:
         """Compute end position based on start position, flank length, and direction."""
-        return self.start + self.flank * self.dir
+        return self.start + (self.flank - 1) * self.dir
 
 
 class Scaffold(Record):
@@ -193,6 +193,7 @@ class SegmentMixin:
         Returns:
             SegmentScaffold or SeqSegmentScaffold with JcArm coordinates
         """
+        assert scaffold.scaf == jc_arm.scaf
         return cls.from_other(
             scaffold,
             start=jc_arm.start,
@@ -249,6 +250,59 @@ class SegmentMixin:
     @property
     def span_origin(self) -> bool | None:
         return self.circular_normalize_range()[2]
+
+    def get_inward_arms(self, flank: int) -> tuple[JcArm, JcArm]:
+        """Get junction arms at segment boundaries.
+        
+        Args:
+            flank: Flank length pointing into the segment
+            
+        Returns:
+            arm_S: Arm at segment start (dir matches segment orientation)
+            arm_E: Arm at segment end (dir opposite to segment orientation)
+        """
+        arm_S = JcArm(scaf=self.scaf, start=self.start, dir=self.orientation, flank=flank)
+        arm_E = JcArm(scaf=self.scaf, start=self.end, dir=self.orientation.opposite(), flank=flank)
+        return arm_S, arm_E
+    
+    def get_outward_arms(self, flank: int) -> tuple[JcArm, JcArm]:
+        """Get junction arms flanking (outside) segment boundaries.
+        
+        Args:
+            flank: Flank length for both arms
+            
+        Returns:
+            start_arm: Arm at segment start (dir matches segment orientation)
+            end_arm: Arm at segment end (dir opposite to segment orientation)
+        """
+        arm_S = JcArm(scaf=self.scaf, start=self.start - 1 * self.orientation, dir=self.orientation, flank=flank)
+        arm_E = JcArm(scaf=self.scaf, start=self.end + 1 * self.orientation, dir=self.orientation.opposite(), flank=flank)
+        return arm_S, arm_E
+
+    def get_junctions(self, out_flank: int, in_flank: int, junction_class=None):
+        """Get junctions at segment boundaries.
+        
+        Args:
+            out_span: Flank length for flanking (chromosome) arms
+            in_span: Flank length for boundary (segment) arms
+            junction_class: Junction class to instantiate (default: Junction from data_types.record_types)
+            
+        Returns:
+            Tuple of (start_junction, end_junction)
+            - start_junction: arm1=boundary, arm2=flanking (before segment)
+            - end_junction: arm1=boundary, arm2=flanking (after segment)
+        """
+        if junction_class is None:
+            from amplifinder.data_types.record_types import Junction
+            junction_class = Junction
+        
+        inward_arms = self.get_inward_arms(flank=in_flank)
+        outward_arms = self.get_outward_arms(flank=out_flank)
+        
+        return (
+            junction_class.from_jc_arms(inward_arms[0], outward_arms[0]),
+            junction_class.from_jc_arms(inward_arms[1], outward_arms[1]),
+        )
 
 
 class SegmentScaffold(SegmentMixin, Scaffold):

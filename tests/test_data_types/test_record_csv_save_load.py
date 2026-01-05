@@ -24,12 +24,12 @@ def setup_output_dir():
     # Keep files after test for inspection
 
 
-def make_ref_tn_side(tn_id: int = 1, side: Side = Side.LEFT) -> RefTnSide:
+def make_ref_tn_side(tn_id: int = 1, side: Side = Side.START) -> RefTnSide:
     """Create sample RefTnSide."""
     return RefTnSide(tn_id=tn_id, side=side)
 
 
-def make_offset_ref_tn_side(tn_id: int = 1, side: Side = Side.LEFT, distance: int = 0) -> OffsetRefTnSide:
+def make_offset_ref_tn_side(tn_id: int = 1, side: Side = Side.START, distance: int = 0) -> OffsetRefTnSide:
     """Create sample OffsetRefTnSide."""
     return OffsetRefTnSide(tn_id=tn_id, side=side, distance=distance)
 
@@ -94,7 +94,7 @@ def make_ref_tn_junction() -> RefTnJunction:
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_side=RefTnSide(tn_id=1, side=Side.LEFT),
+        ref_tn_side=RefTnSide(tn_id=1, side=Side.START),
     )
 
 
@@ -110,14 +110,14 @@ def make_tn_junction() -> TnJunction:
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.START, distance=0)],
         swapped=False,
     )
 
 
 def make_raw_tnjc2() -> RawTnJc2:
     """Create sample RawTnJc2."""
-    from amplifinder.data_types import OffsetRefTnSide, Side
+    from amplifinder.data_types import OffsetRefTnSide, Side, Scaffold
     
     tn_jc_S = TnJunction(
         num=1,
@@ -129,7 +129,7 @@ def make_raw_tnjc2() -> RawTnJc2:
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.LEFT, distance=0)],
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.START, distance=0)],
         swapped=False,
     )
     tn_jc_E = TnJunction(
@@ -142,13 +142,14 @@ def make_raw_tnjc2() -> RawTnJc2:
         dir2=Orientation.REVERSE,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.RIGHT, distance=0)],
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.END, distance=0)],
         swapped=False,
     )
+    scaffold = Scaffold(scaf="chr1", length=1000, is_circular=False)
     return RawTnJc2(
         tnjc_left=tn_jc_S,
         tnjc_right=tn_jc_E,
-        amplicon_length=201,
+        scaffold=scaffold,
     )
 
 
@@ -218,9 +219,9 @@ def make_exported_tnjc2() -> ExportedTnJc2:
 
 
 @pytest.mark.parametrize("record_type,make_func", [
-    ("RefTnSide", lambda: [make_ref_tn_side(), make_ref_tn_side(2, Side.RIGHT)]),
-    ("OffsetRefTnSide", lambda: [make_offset_ref_tn_side(), make_offset_ref_tn_side(2, Side.RIGHT, 5),
-                                 make_offset_ref_tn_side(3, Side.LEFT, 10)]),
+    ("RefTnSide", lambda: [make_ref_tn_side(), make_ref_tn_side(2, Side.END)]),
+    ("OffsetRefTnSide", lambda: [make_offset_ref_tn_side(), make_offset_ref_tn_side(2, Side.END, 5),
+                                 make_offset_ref_tn_side(3, Side.START, 10)]),
     ("RefTn", lambda: [make_ref_tn(), make_ref_tn(2)]),
     ("BlastHit", lambda: [make_blast_hit()]),
     ("Junction", lambda: [make_junction(1), make_junction(2)]),
