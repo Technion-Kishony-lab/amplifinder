@@ -67,7 +67,7 @@ def load_matlab_candidate(matlab_output_dir: Path, require_files: bool = None) -
 def match_junctions(
     python_df: pd.DataFrame,
     matlab_df: pd.DataFrame,
-    pos_tolerance: int = 5,
+    pos_tolerance: int = 0,
 ):
     """Match Python and MATLAB junctions by position (1-to-1 matching).
 
@@ -134,7 +134,7 @@ def match_junctions(
 def compare_tn_junctions(
     python_df: pd.DataFrame,
     matlab_df: pd.DataFrame,
-    tolerance: int = 5,
+    tolerance: int = 0,
 ) -> dict:
     """Compare Python and MATLAB TN junction outputs.
 
@@ -164,7 +164,7 @@ def compare_tn_junctions(
 def match_individual_junctions(
     python_df: pd.DataFrame,
     matlab_df: pd.DataFrame,
-    pos_tolerance: int = 5,
+    pos_tolerance: int = 0,
 ):
     """Match individual junctions by position (pos1, pos2, scaf1, scaf2).
 
@@ -229,7 +229,7 @@ def match_individual_junctions(
 def compare_isjc_outputs(
     python_df: pd.DataFrame,
     matlab_df: pd.DataFrame,
-    pos_tolerance: int = 5,
+    pos_tolerance: int = 0,
 ):
     """Compare ISJC outputs (individual junctions) with 1-to-1 matching requirement.
 
@@ -286,8 +286,8 @@ def compare_isjc_outputs(
 def compare_isjc2_outputs(
     python_df: pd.DataFrame,
     matlab_df: pd.DataFrame,
-    pos_tolerance: int = 5,
-    length_tolerance: int = 10,
+    pos_tolerance: int = 0,
+    length_tolerance: int = 0,
 ):
     """Compare ISJC2 outputs with 1-to-1 matching requirement.
 
