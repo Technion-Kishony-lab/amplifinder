@@ -251,6 +251,16 @@ class SegmentMixin:
     def span_origin(self) -> bool | None:
         return self.circular_normalize_range()[2]
 
+    @property
+    def left(self) -> int:
+        """Leftmost position on the forward strand."""
+        return self.start if self.orientation == Orientation.FORWARD else self.end
+
+    @property
+    def right(self) -> int:
+        """Rightmost position on the forward strand."""
+        return self.end if self.orientation == Orientation.FORWARD else self.start
+
     def get_inward_arms(self, flank: int) -> tuple[JcArm, JcArm]:
         """Get junction arms at segment boundaries.
         

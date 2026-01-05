@@ -12,31 +12,14 @@ def sample_covered_tnjc2(covered_tnjc2_record):
     """Create sample CoveredTnJc2 records."""
     first = CoveredTnJc2.from_other(
         covered_tnjc2_record,
-        scaf="chr1",
-        start=100,
-        end=200,
-        pos_tn_left=10,
-        pos_tn_right=20,
-        ref_name="U00096",
-        iso_name="sample1",
-        iso_amplicon_coverage=2.0,
-        copy_number=2.0,
+        iso_scaf_avg=1.0,
+        iso_amplicon_avg=2.0,
     )
 
     second = CoveredTnJc2.from_other(
         covered_tnjc2_record,
-        jc_num_left=0,
-        jc_num_right=0,  # reference junctions
-        scaf="chr1",
-        start=300,
-        end=400,
-        pos_tn_left=30,
-        pos_tn_right=40,
-        tn_ids=[2],
-        ref_name="U00096",
-        iso_name="sample1",
-        iso_amplicon_coverage=1.0,
-        copy_number=1.0,
+        iso_scaf_avg=1.0,
+        iso_amplicon_avg=1.0,
     )
 
     return RecordTypedDf.from_records([first, second], CoveredTnJc2)
@@ -74,19 +57,8 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_r
     # Create a short amplicon
     short_record = CoveredTnJc2.from_other(
         covered_tnjc2_record,
-        jc_num_left=3,
-        jc_num_right=4,
-        scaf="chr1",
-        start=500,
-        end=520,
-        pos_tn_left=50,
-        pos_tn_right=60,
-        tn_ids=[1],
-        amplicon_length=20,  # Too short
-        ref_name="U00096",
-        iso_name="sample1",
-        iso_amplicon_coverage=1.0,
-        copy_number=1.0,
+        iso_scaf_avg=1.0,
+        iso_amplicon_avg=1.0,
     )
 
     all_records = RecordTypedDf.from_records(

@@ -58,7 +58,7 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
                 isolate=self.iso_name,
                 Reference=self.ref_name,
                 Ancestor=self.anc_name,
-                Positions_in_chromosome=f"{analyzed_tnjc2.start}-{analyzed_tnjc2.end}",
+                Positions_in_chromosome=f"{analyzed_tnjc2.left}-{analyzed_tnjc2.right}",
                 Direction_in_chromosome=(
                     f"{Orientation.REVERSE if span_origin else Orientation.FORWARD}/"
                     f"{Orientation.FORWARD if span_origin else Orientation.REVERSE}"),

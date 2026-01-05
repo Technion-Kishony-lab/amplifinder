@@ -227,7 +227,7 @@ class RawTnJc2(Record):
     
     # CSV export: only export derived properties, not the complex TnJunction/Scaffold objects
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = [
-        'jc_num_left', 'jc_num_right', 'scaf', 'start', 'end',
+        'jc_num_left', 'jc_num_right', 'scaf', 'left', 'right',
         'pos_tn_left', 'pos_tn_right', 'dir_tn_left', 'dir_tn_right',
         'tn_ids', 'tn_orientations', 'tn_distances', 'amplicon_length'
     ]
@@ -259,13 +259,13 @@ class RawTnJc2(Record):
         return self.scaffold.scaf
 
     @property
-    def start(self) -> int:
-        """Start position of amplicon segment on the forward strand."""
+    def left(self) -> int:
+        """Left position of amplicon segment on the forward strand."""
         return self.tnjc_left.pos2
 
     @property
-    def end(self) -> int:
-        """End position of amplicon segment on the forward strand."""
+    def right(self) -> int:
+        """Right position of amplicon segment on the forward strand."""
         return self.tnjc_right.pos2
 
     @property
@@ -286,13 +286,13 @@ class RawTnJc2(Record):
     def get_segment_scaffold(self) -> SeqSegmentScaffold:
         """Get SegmentScaffold for this amplicon segment.
 
-        Returns a SegmentScaffold with start/end positions that provides
-        properties: left, right, span_origin, segment_length.
+        Returns a SeqSegmentScaffold with start=left, end=right, orientation=FORWARD
+        that provides properties: segment_length, span_origin.
         """
         return SeqSegmentScaffold.from_other(
             self.scaffold,
-            start=self.start,
-            end=self.end,
+            start=self.left,
+            end=self.right,
             orientation=Orientation.FORWARD,  # by definition, the amplicon segment is on the forward strand
         )
 
@@ -307,7 +307,7 @@ class RawTnJc2(Record):
     def __str__(self) -> str:
         """String representation of RawTnJc2."""
         cls_name = self.__class__.__name__
-        return f"{cls_name}({self.start}-{self.end}, scaf={self.scaf}, len={self.amplicon_length}, tn_ids={self.tn_ids})"
+        return f"{cls_name}({self.left}-{self.right}, scaf={self.scaf}, len={self.amplicon_length}, tn_ids={self.tn_ids})"
 
 
 class CoveredTnJc2(RawTnJc2):
