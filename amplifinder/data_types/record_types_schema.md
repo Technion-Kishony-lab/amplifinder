@@ -66,10 +66,10 @@ Record
 ├── RefTnSide
 │   ├── tn_id: TnId (int)
 │   ├── side: Side
-│   └── distance: Optional[int]
+│   └── offset: Optional[int]
 │
 └── SeqRefTnSide(RefTnSide)
-    ├── [inherits: tn_id, side, distance]
+    ├── [inherits: tn_id, side, offset]
     ├── offset: int
     └── seq_inward: str
 ```

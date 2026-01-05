@@ -29,9 +29,9 @@ def make_ref_tn_side(tn_id: int = 1, side: Side = Side.START) -> RefTnSide:
     return RefTnSide(tn_id=tn_id, side=side)
 
 
-def make_offset_ref_tn_side(tn_id: int = 1, side: Side = Side.START, distance: int = 0) -> OffsetRefTnSide:
+def make_offset_ref_tn_side(tn_id: int = 1, side: Side = Side.START, offset: int = 0) -> OffsetRefTnSide:
     """Create sample OffsetRefTnSide."""
-    return OffsetRefTnSide(tn_id=tn_id, side=side, distance=distance)
+    return OffsetRefTnSide(tn_id=tn_id, side=side, offset=offset)
 
 
 def make_ref_tn(tn_id: int = 1) -> RefTn:
@@ -110,7 +110,7 @@ def make_tn_junction() -> TnJunction:
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.START, distance=0)],
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.START, offset=0)],
         swapped=False,
     )
 
@@ -129,7 +129,7 @@ def make_raw_tnjc2() -> RawTnJc2:
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.START, distance=0)],
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.START, offset=0)],
         swapped=False,
     )
     tn_jc_E = TnJunction(
@@ -142,7 +142,7 @@ def make_raw_tnjc2() -> RawTnJc2:
         dir2=Orientation.REVERSE,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.END, distance=0)],
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.END, offset=0)],
         swapped=False,
     )
     scaffold = Scaffold(scaf="chr1", length=1000, is_circular=False)
