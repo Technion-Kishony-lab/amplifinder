@@ -293,6 +293,13 @@ class RawTnJc2(Record):
         return self.tnjc_right.pos2
 
     @property
+    def span_origin(self) -> bool:
+        """True if amplicon segment spans the origin of the scaffold."""
+        tf = self.get_segment_scaffold().span_origin
+        assert tf is (self.left > self.right)
+        return tf
+
+    @property
     def tn_ids(self) -> List[int]:
         """Matching TN element IDs."""
         return [tn_side_S.tn_id for tn_side_S, tn_side_E in self._find_matching_tn_sides()]
