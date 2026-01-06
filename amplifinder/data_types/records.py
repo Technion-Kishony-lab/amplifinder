@@ -161,3 +161,17 @@ class Record(BaseModel):
     def extra(self) -> Dict[str, Any]:
         """Return extra fields not in schema."""
         return self.__pydantic_extra__ or {}
+
+    def __repr__(self) -> str:
+        """Custom repr that excludes sequence fields."""
+        fields = []
+        for field_name in self.model_fields.keys():
+            # Skip sequence fields
+            value = getattr(self, field_name, None)
+            if ('sequence' in field_name.lower() or 'seq' in field_name.lower()) and isinstance(value, str):
+                s = f"{field_name}='<{len(value)} chars>'"
+            else:
+                s = f"{field_name}={repr(value)}"
+            fields.append(s)
+        
+        return f"{self.__class__.__name__}({', '.join(fields)})"
