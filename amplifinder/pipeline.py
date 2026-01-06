@@ -25,7 +25,7 @@ from amplifinder.steps import (
     CalcTnJc2AmpliconCoverageStep,
     ClassifyTnJc2StructureStep,
     FilterTnJc2CandidatesStep,
-    CreateSyntheticJunctionsStep,
+    CreateSyntheticJunctionsStep, AncCreateSyntheticJunctionsStep,
     AlignReadsToJunctionsStep, AncAlignReadsToJunctionsStep,
     AnalyzeTnJc2AlignmentsStep,
     ClassifyTnJc2CandidatesStep,
@@ -98,8 +98,8 @@ class Pipeline:
         covered_tnjc2s = self._calc_amplicon_coverage(raw_tnjc2s, genome, iso_output)
         classified_tnjc2s = self._classify_structure(covered_tnjc2s, genome, ref_tns, iso_output)
         filtered_tnjc2s = self._filter_candidates(classified_tnjc2s, iso_output)
-        self._create_synthetic_junctions(filtered_tnjc2s, genome, ref_tns, iso_output)
-        self._align_reads(filtered_tnjc2s, iso_output)
+        self._create_synthetic_junctions(filtered_tnjc2s, genome, ref_tns, iso_output, anc_output)
+        self._align_reads(filtered_tnjc2s, iso_output, anc_output)
         analyzed_tnjc2s = self._analyze_alignments(filtered_tnjc2s, iso_output, anc_output)
         analyzed_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
         self._export(analyzed_tnjc2s, genome, iso_output)
@@ -316,20 +316,33 @@ class Pipeline:
         genome: Genome,
         ref_tns: RecordTypedDf[RefTn],
         iso_output: Path,
+        anc_output: Optional[Path],
     ) -> None:
         """Step 10: Create synthetic junction sequences."""
-        return CreateSyntheticJunctionsStep(
+        # Create junctions for isolate
+        CreateSyntheticJunctionsStep(
             filtered_tnjc2s=filtered_tnjc2s,
             genome=genome,
             ref_tns=ref_tns,
             output_dir=iso_output,
             read_length=self._get_iso_read_length(),
         ).run()
+        
+        # Create junctions for ancestor if needed
+        if anc_output:
+            AncCreateSyntheticJunctionsStep(
+                filtered_tnjc2s=filtered_tnjc2s,
+                genome=genome,
+                ref_tns=ref_tns,
+                output_dir=anc_output,
+                read_length=self._get_anc_read_length(),
+            ).run()
 
     def _align_reads(
         self,
         filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
         iso_output: Path,
+        anc_output: Optional[Path],
     ) -> None:
         """Step 11: Align reads to synthetic junctions."""
         cfg = self.config
@@ -343,11 +356,11 @@ class Pipeline:
             threads=cfg.breseq_threads,
         ).run()
 
-        if cfg.has_ancestor:
+        # Align ancestor reads in ancestor folder
+        if anc_output:
             AncAlignReadsToJunctionsStep(
                 filtered_tnjc2s=filtered_tnjc2s,
-                output_dir=cfg.anc_run_dir,
-                iso_output_dir=iso_output,    # Source folder with junctions
+                output_dir=anc_output,
                 iso_fastq_path=cfg.anc_path,  # Ancestor reads aligned as "iso" in ancestor folder
                 anc_fastq_path=None,
                 threads=cfg.breseq_threads,

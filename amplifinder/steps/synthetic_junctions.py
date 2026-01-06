@@ -129,3 +129,11 @@ class CreateSyntheticJunctionsStep(Step[None]):
     def load_outputs(self) -> None:
         """Junction files are side effects, nothing to return."""
         return None
+
+
+class AncCreateSyntheticJunctionsStep(CreateSyntheticJunctionsStep):
+    """
+    Creates synthetic junctions for ancestor with its own read_length.
+    Avoids copying junctions from isolate.
+    """
+    pass
