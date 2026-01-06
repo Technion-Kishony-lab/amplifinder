@@ -391,8 +391,8 @@ class CoveredTnJc2(RawTnJc2):
 class ClassifiedTnJc2(CoveredTnJc2):
     """CoveredTnJc2 with structural classification (Step 8 output)."""
     NAME: ClassVar[str] = "Classified Amplicons"
-    tnjc2_matching_left: Optional[CoveredTnJc2] = None
-    tnjc2_matching_right: Optional[CoveredTnJc2] = None
+    single_locus_tnjc2_matching_left: Optional[CoveredTnJc2] = None
+    single_locus_tnjc2_matching_right: Optional[CoveredTnJc2] = None
     base_raw_event: BaseRawEvent
 
     @property
@@ -403,8 +403,8 @@ class ClassifiedTnJc2(CoveredTnJc2):
         elif self.base_raw_event == BaseRawEvent.TRANSPOSITION:
             return RawEvent.TRANSPOSITION
         assert self.base_raw_event == BaseRawEvent.LOCUS_JOINING
-        has_match_left = self.tnjc2_matching_left is not None 
-        has_match_right = self.tnjc2_matching_right is not None
+        has_match_left = self.single_locus_tnjc2_matching_left is not None 
+        has_match_right = self.single_locus_tnjc2_matching_right is not None
         if has_match_left and has_match_right:
             return RawEvent.FLANKED
         elif has_match_left:
@@ -421,10 +421,10 @@ class ClassifiedTnJc2(CoveredTnJc2):
         tn_id_set = set(self.tn_ids)
         
         # Intersect with matching left/right tnjc2 if exists
-        if self.tnjc2_matching_left is not None:
-            tn_id_set &= set(self.tnjc2_matching_left.tn_ids)
-        if self.tnjc2_matching_right is not None:
-            tn_id_set &= set(self.tnjc2_matching_right.tn_ids)
+        if self.single_locus_tnjc2_matching_left is not None:
+            tn_id_set &= set(self.single_locus_tnjc2_matching_left.tn_ids)
+        if self.single_locus_tnjc2_matching_right is not None:
+            tn_id_set &= set(self.single_locus_tnjc2_matching_right.tn_ids)
         
         # Return first if available, otherwise None
         return list(tn_id_set)[0] if tn_id_set else None
