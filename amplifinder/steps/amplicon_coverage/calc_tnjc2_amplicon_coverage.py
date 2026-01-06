@@ -36,6 +36,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         ncp_max: float = 1000.0,
         ncp_n: int = 150,
         average_method: AverageMethod = AverageMethod.MEDIAN,
+        min_amplicon_length: int = 30,
+        max_amplicon_length: int = 1_000_000,
         force: Optional[bool] = None,
     ):
         self.raw_tnjc2s = raw_tnjc2s
@@ -49,6 +51,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         self.ncp_max = ncp_max
         self.ncp_n = ncp_n
         self.average_method = average_method
+        self.min_amplicon_length = min_amplicon_length
+        self.max_amplicon_length = max_amplicon_length
 
         input_files = [iso_breseq_path]
         if anc_breseq_path:
@@ -134,6 +138,17 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         anc_scaf_avg: Optional[float],
     ) -> CoveredTnJc2:
         """Calculate coverage for a single candidate."""
+        # Skip coverage calculation for amplicons outside length range
+        if not (self.min_amplicon_length <= raw_tnjc2.amplicon_length <= self.max_amplicon_length):
+            return CoveredTnJc2.from_other(
+                raw_tnjc2,
+                iso_scaf_avg=iso_scaf_avg,
+                iso_amplicon_avg=np.nan,
+                anc_scaf_avg=anc_scaf_avg if self.has_ancestor else None,
+                anc_amplicon_avg=np.nan if self.has_ancestor else None,
+                avg_norm_cov=np.nan,
+            )
+        
         # Get segment scaffold for this amplicon
         seg_scaf = raw_tnjc2.get_segment_scaffold()
 
