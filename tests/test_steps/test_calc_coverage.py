@@ -168,3 +168,28 @@ def test_calculates_coverage_for_all_lengths(tiny_genome, sample_tnjc2, mock_bre
     if length_col and cov_col:
         short_row = result_df[result_df[length_col] == 20].iloc[0]
         assert not pd.isna(short_row[cov_col])
+
+
+def test_skips_coverage_for_too_long_amplicons(tiny_genome, sample_tnjc2, mock_breseq_output, tmp_path):
+    """Should skip coverage calculation for amplicons outside length range."""
+    # Set max_amplicon_length to 50, which is less than the sample amplicon length (100)
+    step = CalcTnJc2AmpliconCoverageStep(
+        raw_tnjc2s=sample_tnjc2,
+        genome=tiny_genome,
+        iso_breseq_path=mock_breseq_output,
+        output_dir=tmp_path,
+        ref_name="tiny",
+        iso_name="sample1",
+        max_amplicon_length=50,  # Too short to include sample amplicons
+        force=True,
+    )
+
+    result = step.run()
+
+    # Candidates should still be in result, but with NaN coverage
+    assert len(result) == 2
+    
+    # Check that coverage values are NaN
+    for rec in result:
+        assert pd.isna(rec.iso_amplicon_avg)
+        assert pd.isna(rec.avg_norm_cov)

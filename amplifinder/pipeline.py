@@ -276,6 +276,8 @@ class Pipeline:
             ncp_max=cfg.ncp_max,
             ncp_n=cfg.ncp_n,
             average_method=cfg.average_method,
+            min_amplicon_length=cfg.min_amplicon_length,
+            max_amplicon_length=cfg.max_amplicon_length,
         ).run()
 
     def _classify_structure(

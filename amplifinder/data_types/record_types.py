@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from typing import Any, ClassVar, Dict, List, Optional, TypeVar, TYPE_CHECKING
-from pydantic import ConfigDict
+from pydantic import ConfigDict, field_validator
+import numpy as np
 
 from amplifinder.data_types.records import Record
 from amplifinder.data_types.enums import BaseRawEvent, RawEvent, Side, Orientation, EventModifier
@@ -342,18 +343,24 @@ class RawTnJc2(Record):
 
 
 class CoveredTnJc2(RawTnJc2):
-    """RawTnJc2 with coverage information (Step 7 output).
+    """RawTnJc2 with coverage.
 
-    Coverage fields depend on run type:
-    - anc_path=None: scaffold-normalized only
-    - anc_path=set: scaffold-normalized then ancestor-normalized
+    Coverage values:
+    None = not applicable (anc fields when we don't have an ancestor)
+    np.nan = value not calculated (amplicon too short/long)
     """
     NAME: ClassVar[str] = "Covered Junction Pairs"
     iso_scaf_avg: float
     iso_amplicon_avg: float
-    anc_scaf_avg: Optional[float] = None
-    anc_amplicon_avg: Optional[float] = None
+    anc_scaf_avg: Optional[float] = None  # None if no ancestor
+    anc_amplicon_avg: Optional[float] = None  # None if no ancestor
     avg_norm_cov: Optional[float] = None  # Position-by-position ancestor-normalized average
+
+    @field_validator('iso_scaf_avg', 'iso_amplicon_avg', mode='before')
+    @classmethod
+    def _none_to_nan(cls, v):
+        """Convert None to np.nan for required float fields."""
+        return np.nan if v is None else v
 
     @property
     def iso_scaf_norm_copy_number(self) -> float:
