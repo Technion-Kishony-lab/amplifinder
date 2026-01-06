@@ -44,29 +44,28 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
         base_raw_events = [self._compute_base_raw_event(tnjc2) for tnjc2 in tnjc2s]
         classified_tnjc2s = []
         for i, tncj2_i in enumerate(tnjc2s):
-            tnjc2_matching_left = self._find_matching_tnjc2(tncj2_i.tnjc_left, tnjc2s, base_raw_events, exclude_idx=i)
-            tnjc2_matching_right = self._find_matching_tnjc2(tncj2_i.tnjc_right, tnjc2s, base_raw_events, exclude_idx=i)
             classified_tnjc2s.append(ClassifiedTnJc2.from_other(
                 tncj2_i, 
-                tnjc2_matching_left=tnjc2_matching_left, 
-                tnjc2_matching_right=tnjc2_matching_right,
+                single_locus_tnjc2_matching_left=self._find_single_locus_matching_tnjc2(tncj2_i.tnjc_left, tnjc2s, base_raw_events, exclude_idx=i),
+                single_locus_tnjc2_matching_right=self._find_single_locus_matching_tnjc2(tncj2_i.tnjc_right, tnjc2s, base_raw_events, exclude_idx=i),
                 base_raw_event=base_raw_events[i],
             ))
         return RecordTypedDf.from_records(classified_tnjc2s, ClassifiedTnJc2)
 
     def _compute_base_raw_event(self, tnjc2: CoveredTnJc2) -> BaseRawEvent:
-        if tnjc2.tnjc_left.is_ref_tn_junction() and tnjc2.tnjc_right.is_ref_tn_junction():
+        if tnjc2.tnjc_left.is_ref_tn_junction() and tnjc2.tnjc_right.is_ref_tn_junction() \
+            and tnjc2.tnjc_left.ref_tn_side.tn_id == tnjc2.tnjc_right.ref_tn_side.tn_id:
             return BaseRawEvent.REFERENCE
         elif abs(tnjc2.left - tnjc2.right) < self.transposition_threshold:
             return BaseRawEvent.TRANSPOSITION
         else:
             return BaseRawEvent.LOCUS_JOINING
 
-    def _find_matching_tnjc2(self, tnjc_i: TnJunction, tnjc2s: list[CoveredTnJc2], base_raw_events: list[BaseRawEvent], exclude_idx: int) -> Optional[CoveredTnJc2]:
+    def _find_single_locus_matching_tnjc2(self, tnjc_i: TnJunction, tnjc2s: list[CoveredTnJc2], base_raw_events: list[BaseRawEvent], exclude_idx: int) -> Optional[CoveredTnJc2]:
         for j, tnjc2_j in enumerate(tnjc2s):
             if j == exclude_idx:  # Don't match with self
                 continue
-            if base_raw_events[j] != BaseRawEvent.LOCUS_JOINING:
+            if not base_raw_events[j].is_single_locus():
                 continue
             if tnjc_i == tnjc2_j.tnjc_left or tnjc_i == tnjc2_j.tnjc_right:
                 return tnjc2_j
@@ -77,4 +76,5 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
         counts: dict[RawEvent, int] = {name: 0 for name in RawEvent}
         for record in records:
             counts[record.raw_event] += 1
-        return ", ".join(f"{event}: {count}" for event, count in counts.items())
+        lines = [f"{event.value:22s}: {count:4d}" for event, count in counts.items()]
+        return "\n" + "\n".join(lines)

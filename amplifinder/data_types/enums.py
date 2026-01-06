@@ -36,6 +36,10 @@ class BaseRawEvent(str, Enum):
     REFERENCE = "reference"
     TRANSPOSITION = "transposition"
     LOCUS_JOINING = "locus-joining"
+    
+    def is_single_locus(self) -> bool:
+        """Return True if this is a single locus event."""
+        return self in [self.REFERENCE, self.TRANSPOSITION]
 
 
 class RawEvent(str, Enum):
