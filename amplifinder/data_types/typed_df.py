@@ -212,6 +212,14 @@ class RecordTypedDf(TypedDF, Generic[T]):
         Uses existing __iter__() which calls model_validate() on each row.
         """
         return list(self)
+    
+    def to_dict(self) -> Dict[Any, T]:
+        """Convert DataFrame to dict of Record objects using index as keys.
+        
+        Provides explicit round-trip: from_dict() → to_dict() should recreate same dict.
+        Useful when DataFrame has meaningful index (e.g., tn_id).
+        """
+        return dict(self.items())
 
     def to_csv(self, path: Path, index: Optional[bool] = None) -> None:
         """Save DataFrame to CSV.

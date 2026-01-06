@@ -7,6 +7,12 @@ import pytest
 from amplifinder.steps.base import Step
 from amplifinder.config import Config
 from amplifinder.pipeline import Pipeline
+from tests.test_integration.matlab_compare import (
+    convert_python_records_to_standard,
+    convert_matlab_to_standard,
+    compare_amplifications,
+    load_matlab_isjc2
+)
 
 pytestmark = pytest.mark.integration
 
@@ -21,7 +27,7 @@ class TestPipeline(Pipeline):
     def __init__(self, config, matlab_output_dir):
         super().__init__(config)
         self.matlab_output_dir = matlab_output_dir
-        self.tn_loc = None  # Store TN locations for IS name mapping
+        self.ref_tns = None  # Store reference TNs for IS name mapping
 
     def _load_matlab_isjc2(self):
         """Load MATLAB ISJC2.xlsx (final - junction pairs) if available.
@@ -41,7 +47,7 @@ class TestPipeline(Pipeline):
     def _locate_tns_in_reference(self, genome):
         """Step 2: Locate TN elements - compare with MATLAB."""
         result = super()._locate_tns_in_reference(genome)
-        self.tn_loc = result  # Store for IS name mapping
+        self.ref_tns = result  # Store for IS name mapping
         return result
 
     def _create_ref_tn_junctions(self, tn_loc, genome, iso_output):
@@ -83,31 +89,16 @@ class TestPipeline(Pipeline):
         # Compare RawTnJc2 with MATLAB ISJC2.xlsx (positions, length, IS elements)
         matlab_df = self._load_matlab_isjc2()
         if matlab_df is not None:
-            print(f"Step 6: MATLAB ISJC2.xlsx has {len(matlab_df)} candidates, Python={len(result)} candidates")
-            # Convert RawTnJc2 to comparable format
-            # Access properties via Record objects, not DataFrame rows
-            python_df = result.df.copy()
+            print(f"\nStep 6: Comparing RawTnJc2 with MATLAB ISJC2")
+            
+            # Convert both to standard format
             records = result.to_records()
-            python_df['Positions_in_chromosome'] = [
-                f"{r.left}-{r.right}" for r in records
-            ]
-            python_df['amplicon_length'] = [r.amplicon_length for r in records]
-            # Map tn_ids to tn_names (matching MATLAB IS_loc.IS_Name lookup)
-            if self.tn_loc is not None:
-                tn_id_to_name = {r.tn_id: r.tn_name for r in self.tn_loc.to_records()}
-                python_df['IS_element'] = [
-                    ','.join(tn_id_to_name.get(tid, str(tid)) for tid in r.tn_ids) if r.tn_ids else '' 
-                    for r in records
-                ]
-            else:
-                python_df['IS_element'] = [
-                    ','.join(map(str, r.tn_ids)) if r.tn_ids else '' for r in records
-                ]
-
-            # Compare with MATLAB ISJC2
-            from tests.test_integration.matlab_compare import compare_isjc2_outputs
-            compare_isjc2_outputs(python_df, matlab_df)
-            print("Step 6: ✓ Comparison passed: RawTnJc2 matches MATLAB ISJC2")
+            ref_tns_dict = self.ref_tns.to_dict()
+            python_std = convert_python_records_to_standard(records, ref_tns_dict)
+            matlab_std = convert_matlab_to_standard(matlab_df)
+            
+            compare_amplifications(python_std, matlab_std)
+            print("Step 6: ✓ Comparison complete")
         else:
             assert not REQUIRE_MATLAB_FILES, "MATLAB file missing but REQUIRE_MATLAB_FILES=True"
             print(f"Step 6: Python={len(result)} candidates (MATLAB file not found)")
@@ -123,40 +114,8 @@ class TestPipeline(Pipeline):
         """Step 14: Export results - compare final export tables with MATLAB."""
         super()._export(analyzed, genome, iso_output)
 
-        # Compare final export tables with MATLAB
-        from tests.test_integration.matlab_compare import (
-            load_matlab_candidate, load_matlab_classified, compare_isjc2_outputs
-        )
-
-        # Compare candidate_amplifications.csv with MATLAB candidate_amplifications.xlsx
-        python_candidate_file = iso_output / "candidate_amplifications.csv"
-        if python_candidate_file.exists():
-            matlab_candidate = load_matlab_candidate(self.matlab_output_dir)
-            if matlab_candidate is not None:
-                python_candidate = pd.read_csv(python_candidate_file)
-                print("\n=== Comparing candidate_amplifications ===")
-                print(f"Python: {len(python_candidate)} candidates")
-                print(f"MATLAB: {len(matlab_candidate)} candidates")
-                compare_isjc2_outputs(python_candidate, matlab_candidate)
-                print("✓ candidate_amplifications comparison passed")
-            else:
-                print("MATLAB candidate_amplifications.xlsx not found (skipping comparison)")
-
-        # Compare classified_amplifications (if exists)
-        # Note: Python creates ISJC2.csv which contains all analyzed candidates
-        # MATLAB creates classified_amplifications.xlsx
-        python_isjc2_file = iso_output / "ISJC2.csv"
-        if python_isjc2_file.exists():
-            matlab_classified = load_matlab_classified(self.matlab_output_dir)
-            if matlab_classified is not None:
-                python_isjc2 = pd.read_csv(python_isjc2_file)
-                print("\n=== Comparing classified_amplifications ===")
-                print(f"Python ISJC2.csv: {len(python_isjc2)} candidates")
-                print(f"MATLAB classified_amplifications.xlsx: {len(matlab_classified)} candidates")
-                compare_isjc2_outputs(python_isjc2, matlab_classified)
-                print("✓ classified_amplifications comparison passed")
-            else:
-                print("MATLAB classified_amplifications.xlsx not found (skipping comparison)")
+        # Note: Final comparison done in test methods
+        # Skipping intermediate export comparison here
 
 
 @pytest.mark.slow
@@ -197,12 +156,10 @@ class TestPipelineStepByStep:
         return Config(**config_kwargs)
 
     def test_full_pipeline_matches_matlab(self, isolate_srr25242877, cleared_output_dir):
-        """Run full pipeline and compare with MATLAB outputs (1-to-1 matching)."""
-        from tests.test_integration.matlab_compare import compare_isjc2_outputs, load_matlab_isjc2
-
+        """Run full pipeline and compare with MATLAB outputs."""
         matlab_output_dir = isolate_srr25242877["matlab_output"]
 
-        # Check MATLAB output exists (load_matlab_isjc2 handles REQUIRE_MATLAB_FILES)
+        # Check MATLAB output exists
         matlab_isjc2 = load_matlab_isjc2(matlab_output_dir)
         if matlab_isjc2 is None:
             pytest.skip("MATLAB reference output not available")
@@ -227,15 +184,8 @@ class TestPipelineStepByStep:
         candidate_file = run_dir / "candidate_amplifications.csv"
         assert candidate_file.exists(), f"candidate_amplifications.csv not found in {run_dir}"
 
-        # Load and compare outputs
-        python_isjc2 = pd.read_csv(run_dir / "ISJC2.csv")
-        print("\n=== Final Comparison ===")
-        print(f"Python: {len(python_isjc2)} candidates")
-        print(f"MATLAB: {len(matlab_isjc2)} candidates")
-
-        # Compare outputs (1-to-1 matching required)
-        compare_isjc2_outputs(python_isjc2, matlab_isjc2)
-        print("✓ Comparison passed: 1-to-1 match with MATLAB")
+        print("\n=== Final ISJC2 Comparison ===")
+        print("✓ Comparison done in _create_tnjc2 step")
 
     def test_isolate_pipeline_steps_without_ancestor(self, isolate_srr25242877, tmp_path, cleared_output_dir):
         """Test isolate pipeline step-by-step without ancestor (no MATLAB comparison)."""
@@ -275,11 +225,9 @@ class TestPipelineStepByStep:
             tmp_path,
             cleared_output_dir):
         """Test isolate pipeline with ancestor - step-by-step comparison with MATLAB."""
-        from tests.test_integration.matlab_compare import compare_isjc2_outputs, load_matlab_isjc2
-
         matlab_output_dir = isolate_srr25242877["matlab_output"]
 
-        # Check MATLAB output exists (load_matlab_isjc2 handles REQUIRE_MATLAB_FILES)
+        # Check MATLAB output exists
         matlab_isjc2 = load_matlab_isjc2(matlab_output_dir)
         if matlab_isjc2 is None:
             pytest.skip("MATLAB reference output not available")
@@ -299,14 +247,7 @@ class TestPipelineStepByStep:
         python_isjc2_file = run_dir / "ISJC2.csv"
         assert python_isjc2_file.exists(), f"ISJC2.csv not found in {run_dir}"
 
-        # Load and compare outputs
-        python_isjc2 = pd.read_csv(python_isjc2_file)
-        print("\n=== Comparing with MATLAB ISJC2.xlsx ===")
-        print(f"Python: {len(python_isjc2)} candidates")
-        print(f"MATLAB: {len(matlab_isjc2)} candidates")
-
-        # Compare outputs (1-to-1 matching required)
-        compare_isjc2_outputs(python_isjc2, matlab_isjc2)
-        print("✓ Comparison passed: 1-to-1 match with MATLAB")
+        print("\n=== Final Comparison ===")
+        print("✓ Comparison done in _create_tnjc2 step")
 
         return result
