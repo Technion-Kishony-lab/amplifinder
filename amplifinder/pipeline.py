@@ -74,6 +74,30 @@ class Pipeline:
             )
         return self._anc_read_length
 
+    def _get_junction_lengths(self) -> tuple[int, Optional[int]]:
+        """Determine junction flank length for iso/anc with 10% tolerance."""
+        iso_len = self._get_iso_read_length()
+        if not self.config.has_ancestor:
+            info(f"Junction length: no ancestor; using isolate length {iso_len} for isolate junctions")
+            return iso_len, None
+
+        anc_len = self._get_anc_read_length()
+        delta = abs(iso_len - anc_len)
+        threshold = anc_len * 0.10
+
+        def _log_decision(prefix: str, using_len: int, func: callable) -> None:
+            msg = f"{prefix} iso={iso_len}, anc={anc_len}, diff={delta}, " \
+                f"10% threshold (anc)={threshold}; using {using_len}"
+            func(msg)
+
+        if delta <= threshold:
+            iso_jc_len = anc_len
+            _log_decision("isolate-ancestor read lengths within threshold;", iso_jc_len, info)
+        else:
+            iso_jc_len = iso_len
+            _log_decision("isolate-ancestor read lengths exceed threshold;", iso_jc_len, warning)    
+        return iso_jc_len, anc_len
+
     def run(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Run full pipeline, return analyzed candidates."""
 
@@ -319,13 +343,15 @@ class Pipeline:
         anc_output: Optional[Path],
     ) -> None:
         """Step 10: Create synthetic junction sequences."""
+        iso_jc_len, anc_jc_len = self._get_junction_lengths()
+
         # Create junctions for isolate
         CreateSyntheticJunctionsStep(
             filtered_tnjc2s=filtered_tnjc2s,
             genome=genome,
             ref_tns=ref_tns,
             output_dir=iso_output,
-            read_length=self._get_iso_read_length(),
+            read_length=iso_jc_len,
         ).run()
         
         # Create junctions for ancestor if needed
@@ -335,7 +361,7 @@ class Pipeline:
                 genome=genome,
                 ref_tns=ref_tns,
                 output_dir=anc_output,
-                read_length=self._get_anc_read_length(),
+                read_length=anc_jc_len,
             ).run()
 
     def _align_reads(
