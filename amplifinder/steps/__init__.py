@@ -11,7 +11,7 @@ from amplifinder.steps.pair_tnjc import PairTnJcToRawTnJc2Step
 from amplifinder.steps.classify_structure import ClassifyTnJc2StructureStep
 from amplifinder.steps.filter_candidates import FilterTnJc2CandidatesStep
 from amplifinder.steps.amplicon_coverage import CalcTnJc2AmpliconCoverageStep
-from amplifinder.steps.synthetic_junctions import CreateSyntheticJunctionsStep
+from amplifinder.steps.synthetic_junctions import CreateSyntheticJunctionsStep, AncCreateSyntheticJunctionsStep
 from amplifinder.steps.align_reads import AlignReadsToJunctionsStep, AncAlignReadsToJunctionsStep
 from amplifinder.steps.analyze_alignments import AnalyzeTnJc2AlignmentsStep
 from amplifinder.steps.classify_candidates import ClassifyTnJc2CandidatesStep
@@ -32,6 +32,7 @@ __all__ = [
     "ClassifyTnJc2StructureStep",
     "FilterTnJc2CandidatesStep",
     "CreateSyntheticJunctionsStep",
+    "AncCreateSyntheticJunctionsStep",
     "AlignReadsToJunctionsStep",
     "AncAlignReadsToJunctionsStep",
     "AnalyzeTnJc2AlignmentsStep",
