@@ -79,7 +79,7 @@ xxx[]  array
    │                          │ 9. FilterTnJc2Candidates  │                  │
    │                          └─────────────┬─────────────┘                  │
    │                                        ▼                                │
-   │                                  FilteredTnJc2[]                        │
+   │                                 ClassifiedTnJc2[]                       │
    │                                        │                                │
    │                                        ▼                                │
    │                         ┌──────────────────────────────┐                │
@@ -235,10 +235,11 @@ ClassifiedTnJc2(CoveredTnJc2)  # Step 8: Structure classified
 ├── shared_tn_ids: List[int]
 └── chosen_tn_id: Optional[int]
 
-FilteredTnJc2(ClassifiedTnJc2)  # Step 9: Filtered candidates
-└── analysis_dir: str
+SynJctsTnJc2(ClassifiedTnJc2)  # Step 10: Synthetic junctions with analysis dirs
+├── analysis_dir: str
+└── analysis_dir_anc: Optional[str]
 
-AnalyzedTnJc2(FilteredTnJc2)  # Step 12: Junction coverage analyzed
+AnalyzedTnJc2(SynJctsTnJc2)  # Step 12: Junction coverage analyzed
 ├── jc_cov_left: List[int]
 ├── jc_cov_right: List[int]
 ├── jc_cov_spanning: List[int]

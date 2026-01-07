@@ -149,12 +149,13 @@ Record
             ├── shared_tn_ids: List[int]
             └── chosen_tn_id: Optional[int]
             │
-            └── FilteredTnJc2(ClassifiedTnJc2)
+            └── SynJctsTnJc2(ClassifiedTnJc2)
                 ├── [inherits all ClassifiedTnJc2 fields]
-                └── analysis_dir: str
+                ├── analysis_dir: str
+                └── analysis_dir_anc: Optional[str]
                 │
-                └── AnalyzedTnJc2(FilteredTnJc2)
-                    ├── [inherits all FilteredTnJc2 fields]
+                └── AnalyzedTnJc2(SynJctsTnJc2)
+                    ├── [inherits all SynJctsTnJc2 fields]
                     ├── jc_cov_left: List[int]
                     ├── jc_cov_right: List[int]
                     ├── jc_cov_spanning: List[int]
@@ -236,12 +237,12 @@ Record
 - Extends: `CoveredTnJc2`
 - Fields use: `RawEvent` (raw_event), `List[int]` (shared_tn_ids, chosen_tn_id)
 
-#### FilteredTnJc2
+#### SynJctsTnJc2
 - Extends: `ClassifiedTnJc2`
-- No additional type dependencies
+- No additional type dependencies (analysis_dir, analysis_dir_anc are strings)
 
 #### AnalyzedTnJc2
-- Extends: `FilteredTnJc2`
+- Extends: `SynJctsTnJc2`
 - Fields use: `RawEvent` (isolate_architecture, ancestor_architecture), `List[EventModifier]` (event_modifiers)
 
 #### ExportedTnJc2
@@ -277,7 +278,9 @@ Step 7: CoveredTnJc2 (adds coverage)
     ↓
 Step 8: ClassifiedTnJc2 (adds raw_event classification)
     ↓
-Step 9: FilteredTnJc2 (adds analysis_dir)
+Step 9: Filter by amplicon length (still ClassifiedTnJc2)
+    ↓
+Step 10: SynJctsTnJc2 (adds analysis_dir, analysis_dir_anc)
     ↓
 Step 12: AnalyzedTnJc2 (adds junction coverage analysis)
     ↓

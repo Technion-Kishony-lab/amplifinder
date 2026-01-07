@@ -348,10 +348,10 @@ def classified_tnjc2_record(covered_tnjc2_record):
 
 @pytest.fixture
 def filtered_tnjc2_record(classified_tnjc2_record):
-    """FilteredTnJc2 with analysis directory."""
-    from amplifinder.data_types import FilteredTnJc2
+    """SynJctsTnJc2 with analysis directory."""
+    from amplifinder.data_types import SynJctsTnJc2
 
-    return FilteredTnJc2.from_other(
+    return SynJctsTnJc2.from_other(
         classified_tnjc2_record,
         analysis_dir="jc_200_300_001_L150",
     )

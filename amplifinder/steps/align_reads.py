@@ -3,12 +3,12 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.data_types import RecordTypedDf, FilteredTnJc2
+from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2
 from amplifinder.steps.base import Step
 from amplifinder.tools.bowtie2 import align_reads_to_fasta
 
 
-class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
+class AlignReadsToJunctionsStep(Step[RecordTypedDf[SynJctsTnJc2]]):
     """Align reads to synthetic junction sequences.
 
     Alignment depends on run type:
@@ -18,7 +18,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
 
     def __init__(
         self,
-        filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
+        filtered_tnjc2s: RecordTypedDf[SynJctsTnJc2],
         output_dir: Path,
         iso_fastq_path: Path,
         anc_fastq_path: Optional[Path] = None,
@@ -45,7 +45,7 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         for filtered_tnjc2 in filtered_tnjc2s:
             if filtered_tnjc2.chosen_tn_id is None:
                 continue
-            analysis_dir = output_dir / "junctions" / filtered_tnjc2.analysis_dir
+            analysis_dir = self._get_analysis_dir(filtered_tnjc2)
             # Junction FASTA file is input
             input_files.append(analysis_dir / "junctions.fasta")
             # BAM files are outputs
@@ -71,10 +71,10 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
         """True if ancestor reads should be aligned."""
         return self.anc_fastq_path is not None
 
-    def _calculate_output(self) -> RecordTypedDf[FilteredTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[SynJctsTnJc2]:
         """Align reads to synthetic junctions for each candidate."""
         for filtered_tnjc2 in self.filtered_tnjc2s:
-            analysis_dir = self.output_dir / "junctions" / filtered_tnjc2.analysis_dir
+            analysis_dir = self._get_analysis_dir(filtered_tnjc2)
             junctions_fasta = analysis_dir / "junctions.fasta"
 
             if not junctions_fasta.exists():
@@ -106,13 +106,17 @@ class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
 
         return self.filtered_tnjc2s
 
-    def _save_output(self, output: RecordTypedDf[FilteredTnJc2]) -> None:
+    def _save_output(self, output: RecordTypedDf[SynJctsTnJc2]) -> None:
         """BAM files already created in _calculate_output."""
         pass
 
-    def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
+    def load_outputs(self) -> RecordTypedDf[SynJctsTnJc2]:
         """Return candidates (BAM files are side effects)."""
         return self.filtered_tnjc2s
+
+    def _get_analysis_dir(self, filtered_tnjc2: SynJctsTnJc2) -> Path:
+        """Isolate analysis dir."""
+        return self.output_dir / "junctions" / filtered_tnjc2.analysis_dir
 
 
 class AncAlignReadsToJunctionsStep(AlignReadsToJunctionsStep):
@@ -120,4 +124,7 @@ class AncAlignReadsToJunctionsStep(AlignReadsToJunctionsStep):
     Align ancestor reads to synthetic junctions.
     Junctions are created by AncCreateSyntheticJunctionsStep.
     """
-    pass
+    def _get_analysis_dir(self, filtered_tnjc2: SynJctsTnJc2) -> Path:
+        """Ancestor analysis dir (falls back to isolate dir)."""
+        anc_dir = filtered_tnjc2.analysis_dir_anc or filtered_tnjc2.analysis_dir
+        return self.output_dir / "junctions" / anc_dir

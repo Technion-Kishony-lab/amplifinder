@@ -1,13 +1,13 @@
 """Tests for AlignReadsToJunctionsStep."""
 
 from amplifinder.steps import AlignReadsToJunctionsStep
-from amplifinder.data_types import RecordTypedDf, FilteredTnJc2
+from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2
 from amplifinder.utils.file_utils import ensure_parent_dir
 
 
 def test_step_initialization(filtered_tnjc2_record, tmp_path):
     """Should initialize step correctly."""
-    filtered_tnjc2s = RecordTypedDf.from_records([filtered_tnjc2_record], FilteredTnJc2)
+    filtered_tnjc2s = RecordTypedDf.from_records([filtered_tnjc2_record], SynJctsTnJc2)
 
     # Create dummy FASTQ file
     fastq_file = tmp_path / "test.fastq"

@@ -5,7 +5,7 @@ from typing import Dict, Type
 
 from amplifinder.data_types import (
     RefTnJunction, TnJunction, RawTnJc2, CoveredTnJc2, ClassifiedTnJc2,
-    FilteredTnJc2, AnalyzedTnJc2, ExportedTnJc2,
+    SynJctsTnJc2, AnalyzedTnJc2, ExportedTnJc2,
 )
 from amplifinder.data_types.records import Record
 
@@ -16,7 +16,7 @@ DEFAULT_FILENAMES: Dict[Type[Record], str] = {
     RawTnJc2: "tnjc2_raw.csv",
     CoveredTnJc2: "tnjc2_covered.csv",
     ClassifiedTnJc2: "tnjc2_classified.csv",
-    FilteredTnJc2: "tnjc2_filtered.csv",
+    SynJctsTnJc2: "tnjc2_syn_jcts.csv",
     AnalyzedTnJc2: "tnjc2_analyzed.csv",
     ExportedTnJc2: "tnjc2_exported.csv",
 }

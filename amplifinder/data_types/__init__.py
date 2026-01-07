@@ -7,8 +7,8 @@ from amplifinder.data_types.enums import Side, Orientation, AverageMethod, Junct
 from amplifinder.data_types.scaffold import JcArm, Scaffold, SeqScaffold
 from amplifinder.data_types.record_types import (
     RefTn, BlastHit, Junction, BreseqJunction, RefTnJunction, TnJunction, RawTnJc2, RefTnSide, OffsetRefTnSide,
-    CoveredTnJc2, RawEvent, ClassifiedTnJc2,
-    FilteredTnJc2, AnalyzedTnJc2, ExportedTnJc2,
+    CoveredTnJc2, RawEvent, ClassifiedTnJc2, SynJctsTnJc2,
+    AnalyzedTnJc2, ExportedTnJc2,
 )
 
 __all__ = [
@@ -44,7 +44,7 @@ __all__ = [
     "BaseRawEvent",
     "RawEvent",
     "ClassifiedTnJc2",
-    "FilteredTnJc2",
+    "SynJctsTnJc2",
     "JunctionType",
     "EventModifier",
     "AnalyzedTnJc2",

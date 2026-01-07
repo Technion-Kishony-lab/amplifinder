@@ -7,7 +7,7 @@ from amplifinder.data_types import (
     RecordTypedDf,
     RefTnSide, OffsetRefTnSide, RefTn, BlastHit,
     Junction, RefTnJunction, TnJunction,
-    RawTnJc2, CoveredTnJc2, ClassifiedTnJc2, FilteredTnJc2, AnalyzedTnJc2, ExportedTnJc2,
+    RawTnJc2, CoveredTnJc2, ClassifiedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ExportedTnJc2,
     Side, Orientation, RawEvent, EventModifier, SeqScaffold,
 )
 
@@ -173,20 +173,21 @@ def make_classified_tnjc2() -> ClassifiedTnJc2:
     )
 
 
-def make_filtered_tnjc2() -> FilteredTnJc2:
-    """Create sample FilteredTnJc2."""
+def make_syn_jcts_tnjc2() -> SynJctsTnJc2:
+    """Create sample SynJctsTnJc2."""
     classified = make_classified_tnjc2()
-    return FilteredTnJc2.from_other(
+    return SynJctsTnJc2.from_other(
         classified,
         analysis_dir="tn_jc2_001",
+        analysis_dir_anc="tn_jc2_001_anc",
     )
 
 
 def make_analyzed_tnjc2() -> AnalyzedTnJc2:
     """Create sample AnalyzedTnJc2."""
-    filtered = make_filtered_tnjc2()
+    syn_jcts = make_syn_jcts_tnjc2()
     return AnalyzedTnJc2.from_other(
-        filtered,
+        syn_jcts,
         jc_cov_left=[0, 1, 2, 3, 4, 5, 6],
         jc_cov_right=[10, 11, 12, 13, 14, 15, 16],
         jc_cov_spanning=[20, 21, 22, 23, 24, 25, 26],
@@ -231,7 +232,7 @@ def make_exported_tnjc2() -> ExportedTnJc2:
     # ("RawTnJc2", lambda: [make_raw_tnjc2()]),
     # ("CoveredTnJc2", lambda: [make_covered_tnjc2()]),
     # ("ClassifiedTnJc2", lambda: [make_classified_tnjc2()]),
-    # ("FilteredTnJc2", lambda: [make_filtered_tnjc2()]),
+    # ("SynJctsTnJc2", lambda: [make_syn_jcts_tnjc2()]),
     # ("AnalyzedTnJc2", lambda: [make_analyzed_tnjc2()]),
     ("ExportedTnJc2", lambda: [make_exported_tnjc2()]),
 ])
@@ -249,7 +250,7 @@ def test_record_csv_save_load(record_type, make_func):
         "RawTnJc2": RawTnJc2,
         "CoveredTnJc2": CoveredTnJc2,
         "ClassifiedTnJc2": ClassifiedTnJc2,
-        "FilteredTnJc2": FilteredTnJc2,
+        "SynJctsTnJc2": SynJctsTnJc2,
         "AnalyzedTnJc2": AnalyzedTnJc2,
         "ExportedTnJc2": ExportedTnJc2,
     }

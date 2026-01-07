@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import (
-    RecordTypedDf, FilteredTnJc2, AnalyzedTnJc2,
+    RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.steps.analyze_alignments.parse_bam import get_junction_coverage
@@ -21,7 +21,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
     def __init__(
         self,
-        filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
+        filtered_tnjc2s: RecordTypedDf[SynJctsTnJc2],
         output_dir: Path,
         anc_output_dir: Optional[Path] = None,
         read_length: int = 150,
@@ -43,13 +43,13 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         # Input files are the BAM files from alignment step
         input_files = []
         for filtered_tnjc2 in filtered_tnjc2s:
-            analysis_dir = output_dir / "junctions" / filtered_tnjc2.analysis_dir
+            analysis_dir = self._get_iso_dir(filtered_tnjc2)
             input_files.append(analysis_dir / "iso.sorted.bam")
             if has_ancestor:
                 # Ancestor BAM is in ancestor folder (as iso.sorted.bam)
                 if not self.anc_output_dir:
                     raise ValueError("anc_output_dir must be provided when has_ancestor=True")
-                anc_analysis_dir = self.anc_output_dir / "junctions" / filtered_tnjc2.analysis_dir
+                anc_analysis_dir = self._get_anc_dir(filtered_tnjc2)
                 input_files.append(anc_analysis_dir / "iso.sorted.bam")
 
         super().__init__(
@@ -62,7 +62,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         """Analyze alignments for each candidate."""
         analyzed_records = []
         for filtered_tnjc2 in self.filtered_tnjc2s:
-            analysis_dir = self.output_dir / "junctions" / filtered_tnjc2.analysis_dir
+            analysis_dir = self._get_iso_dir(filtered_tnjc2)
 
             # Get isolate junction coverage
             iso_bam = analysis_dir / "iso.sorted.bam"
@@ -82,7 +82,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             if self.has_ancestor:
                 if not self.anc_output_dir:
                     raise ValueError("anc_output_dir must be provided when has_ancestor=True")
-                anc_analysis_dir = self.anc_output_dir / "junctions" / filtered_tnjc2.analysis_dir
+                anc_analysis_dir = self._get_anc_dir(filtered_tnjc2)
                 anc_bam = anc_analysis_dir / "iso.sorted.bam"
 
                 if anc_bam.exists():
@@ -109,3 +109,14 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             analyzed_records.append(analyzed_tnjc2)
 
         return RecordTypedDf.from_records(analyzed_records, AnalyzedTnJc2)
+
+    def _get_iso_dir(self, filtered_tnjc2: SynJctsTnJc2) -> Path:
+        """Isolate analysis directory."""
+        return self.output_dir / "junctions" / filtered_tnjc2.analysis_dir
+
+    def _get_anc_dir(self, filtered_tnjc2: SynJctsTnJc2) -> Path:
+        """Ancestor analysis directory (falls back to isolate if missing)."""
+        if not self.anc_output_dir:
+            raise ValueError("anc_output_dir must be provided for ancestor dirs")
+        anc_dir = filtered_tnjc2.analysis_dir_anc or filtered_tnjc2.analysis_dir
+        return self.anc_output_dir / "junctions" / anc_dir
