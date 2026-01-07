@@ -455,13 +455,14 @@ class ClassifiedTnJc2(CoveredTnJc2):
         return None
 
 
-class FilteredTnJc2(ClassifiedTnJc2):
-    """Filtered candidate for detailed analysis (Step 9 output)."""
-    NAME: ClassVar[str] = "Filtered Amplicons"
-    analysis_dir: str  # "tn_jc2_001", "tn_jc2_002", etc.
+class SynJctsTnJc2(ClassifiedTnJc2):
+    """Candidate with synthetic junction folder names."""
+    NAME: ClassVar[str] = "Synthetic Junction Amplicons"
+    analysis_dir: str
+    analysis_dir_anc: Optional[str] = None
 
 
-class AnalyzedTnJc2(FilteredTnJc2):
+class AnalyzedTnJc2(SynJctsTnJc2):
     """Candidate with junction coverage analysis (Step 12 output).
 
     Junction coverage fields depend on run type:
