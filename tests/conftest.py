@@ -12,7 +12,7 @@ from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 from pathlib import Path
 from amplifinder.data_types import RefTn, RecordTypedDf
-from amplifinder.utils.file_utils import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir, remove_file_or_dir
 
 # =============================================================================
 # Assertion helpers
@@ -31,8 +31,8 @@ TEST_DATA_ROOT = Path(
 )
 MATLAB_OUTPUT = TEST_DATA_ROOT / "AmpliFinderWorkspace" / "output"
 
-# Allow keeping outputs by setting AMPLIFINDER_KEEP_TEST_OUTPUT=true/1
-KEEP_TEST_OUTPUT = False
+# Output cleanup mode: "clear", "keep", or "keep_junctions"
+OUTPUT_CLEANUP_MODE = "keep_junctions"
 
 # External data paths (from isolates.xlsx)
 FASTQ_PATH = Path(
@@ -96,14 +96,29 @@ def isolate_srr25242906():
 
 @pytest.fixture
 def cleared_output_dir():
-    """Clear entire output directory before test run.
+    """Clear output directory based on OUTPUT_CLEANUP_MODE.
 
-    Returns the cleared output_dir Path.
+    Modes:
+        - "clear": Remove entire output directory
+        - "keep": Keep all existing outputs
+        - "keep_junctions": Clear all except junctions folder
+
+    Returns the output_dir Path.
     """
     base = Path(__file__).parent / "test_outputs" / "integration"
     output_dir = base / "output"
 
-    ensure_dir(output_dir, cleanup=not KEEP_TEST_OUTPUT)
+    if OUTPUT_CLEANUP_MODE == "clear":
+        ensure_dir(output_dir, cleanup=True)
+    elif OUTPUT_CLEANUP_MODE == "keep":
+        ensure_dir(output_dir, cleanup=False)
+    elif OUTPUT_CLEANUP_MODE == "keep_junctions":
+        if output_dir.exists():
+            for item in output_dir.iterdir():
+                if item.name != "junctions":
+                    remove_file_or_dir(item)
+        else:
+            ensure_dir(output_dir)
 
     return output_dir
 

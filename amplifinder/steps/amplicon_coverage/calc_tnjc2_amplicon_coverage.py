@@ -53,6 +53,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         self.average_method = average_method
         self.min_amplicon_length = min_amplicon_length
         self.max_amplicon_length = max_amplicon_length
+        self._too_long_amplicons = 0
+        self._too_short_amplicons = 0
 
         input_files = [iso_breseq_path]
         if anc_breseq_path:
@@ -122,6 +124,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                 covered_records.append(covered)
                 self.print(".", end="")
 
+        self.print(f"\nTotal amplicons: {len(self.raw_tnjc2s)}, too long: {self._too_long_amplicons}, too short: {self._too_short_amplicons}")
+
         df = RecordTypedDf.from_records(covered_records, CoveredTnJc2)
         return df
 
@@ -140,6 +144,10 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         """Calculate coverage for a single candidate."""
         # Skip coverage calculation for amplicons outside length range
         if not (self.min_amplicon_length <= raw_tnjc2.amplicon_length <= self.max_amplicon_length):
+            if raw_tnjc2.amplicon_length > self.max_amplicon_length:
+                self._too_long_amplicons += 1
+            else:
+                self._too_short_amplicons += 1
             return CoveredTnJc2.from_other(
                 raw_tnjc2,
                 iso_scaf_avg=iso_scaf_avg,

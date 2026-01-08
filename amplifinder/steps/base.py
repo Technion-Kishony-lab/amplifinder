@@ -180,7 +180,7 @@ class Step(ABC, Generic[T]):
 
         # Format: step_name (left), output_str at pos 40, log_msg right-aligned (120 chars total)
         remaining = 120 - 40 - len(log_msg)
-        formatted = f"{step_name_color:<40s}{output_str:<{remaining}s}{log_msg}"
+        formatted = f"{step_name_color:<42s}{output_str:<{remaining}s}{log_msg}"
         self.log(formatted)
 
         output = self.load_outputs() if from_cache else self._run_unlocked()

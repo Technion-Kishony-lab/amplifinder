@@ -45,7 +45,7 @@ def get_junction_coverage(
         junction_points = {name: length // 2 for name, length in ref_lengths.items()}
 
         # [left, right, spanning] for each junction type
-        counts = {str(jc): JunctionReadCounts() for jc in range(1, 8)}
+        counts = {name: JunctionReadCounts() for name in ref_lengths.keys()}
 
         for read in bam.fetch():
             if read.is_unmapped:

@@ -104,9 +104,6 @@ def get_read_length_stats(
     min_len = min(all_lengths)
     is_uniform = (max_length / min_len) < 1.05 if min_len > 0 else False
 
-    info(f"Read length stats: max={max_length}, mean={mean_length:.1f}, "
-         f"uniform={is_uniform}, reads={total_reads:,}, bases={total_bases:,}")
-
     return ReadLengthStats(
         max_length=max_length,
         mean_length=mean_length,
