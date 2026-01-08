@@ -47,12 +47,13 @@ class Pipeline:
     _anc_read_length: Optional[int] = None
 
     @staticmethod
-    def _calc_read_length(fastq_dir: Path, provided_length: Optional[int], sample_type: str = "isolate") -> int:
+    def _calc_read_length(fastq_dir: Path, provided_length: Optional[int], sample_type: str) -> int:
         """Calculate read length from FASTQ files."""
         if provided_length is not None:
             return provided_length
         
         stats = get_read_length_stats(fastq_dir)
+        info(f"{sample_type}: read-length stats: {stats}")
         if not stats.is_uniform:
             warning(f"{sample_type.capitalize()} read length is not uniform - may affect junction coverage accuracy")
         return stats.max_length
