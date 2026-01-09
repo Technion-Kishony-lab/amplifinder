@@ -31,7 +31,7 @@ def test_creates_junction_records(ref_jc_step):
 def test_junction_positions_correct(ref_jc_step, locate_tns_step):
     """Junction positions should match TN boundaries."""
     ref_jc = ref_jc_step.run()
-    tn_loc = locate_tns_step.load_outputs()
+    tn_loc = locate_tns_step.run()  # run() returns output
 
     tn1 = tn_loc.df.iloc[0]
     start_jc = next(jc for jc in ref_jc if jc.ref_tn_side.tn_id == tn1["tn_id"] and jc.ref_tn_side.side == Side.START)

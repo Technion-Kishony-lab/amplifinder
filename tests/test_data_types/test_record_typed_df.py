@@ -230,20 +230,17 @@ def test_csv_export_fields(tmp_path):
     assert csv_df.iloc[0]['name'] == 'a'
     assert csv_df.iloc[0]['value'] == 10
     
-    # Verify step won't try to load from cache (has_output_files returns False)
+    # Verify step can detect artifact files exist
     from amplifinder.steps.base import RecordTypedDfStep
     
-    # Create a minimal step instance to test has_output_files
+    # Create a minimal step instance to test has_artifact_files
     class TestStep(RecordTypedDfStep[RecordWithComplexFields]):
         def _calculate_output(self):
             return RecordTypedDf.from_records([], RecordWithComplexFields)
     
     step = TestStep(output_file=csv_path)
-    # has_output_files should return False even though file exists (CSV is view-only)
-    assert not step.has_output_files()
-    
-    # Direct load attempt would fail (safety check - but step won't call this)
-    # The CSV is missing the 'inner' column, so loading would fail anyway
+    # has_artifact_files returns True when output file exists
+    assert step.has_artifact_files()
 
 
 def test_csv_export_fields_with_property(tmp_path):

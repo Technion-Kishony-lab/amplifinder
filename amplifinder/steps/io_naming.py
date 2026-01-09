@@ -24,3 +24,8 @@ DEFAULT_FILENAMES: Dict[Type[Record], str] = {
 
 def default_filename(record_type: Type[Record]) -> str:
     return DEFAULT_FILENAMES[record_type]
+
+
+def default_path(run_dir: Path, record_type: Type[Record]) -> Path:
+    """Return the default path for a record type within a run directory."""
+    return run_dir / default_filename(record_type)

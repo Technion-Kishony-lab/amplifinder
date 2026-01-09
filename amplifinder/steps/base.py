@@ -298,11 +298,11 @@ class OutputStep(Step, Generic[T]):
         """
         # Merge output_files into artifact_files
         if output_files is not None:
-            all_artifacts = (artifact_files or []) + output_files
+            artifact_files = (artifact_files or []) + output_files
         
         super().__init__(
             input_files=input_files,
-            artifact_files=all_artifacts if all_artifacts else None,
+            artifact_files=artifact_files,
             force=force,
         )
 
@@ -327,7 +327,9 @@ class OutputStep(Step, Generic[T]):
         super()._generate_artifacts_if_needed()
         
         # Calculate output (always - we need to return it)
-        self.run_count += 1
+        # Only increment run_count when artifacts were freshly generated
+        if not self._artifacts_cached:
+            self.run_count += 1
         if self.should_profile:
             lp = self._create_profiler()
             lp.add_function(self._calculate_output)

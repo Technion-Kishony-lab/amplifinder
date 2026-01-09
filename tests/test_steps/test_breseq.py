@@ -30,8 +30,8 @@ def test_breseq_step_calls_run_breseq(breseq_step):
     """Should call run_breseq with correct params."""
     def mock_run_fn(*args, **kwargs):
         # Create output file when "running"
-        ensure_dir(breseq_step.breseq_output_path / "output")
-        (breseq_step.breseq_output_path / "output" / "output.gd").touch()
+        ensure_dir(breseq_step.breseq_path / "output")
+        (breseq_step.breseq_path / "output" / "output.gd").touch()
 
     with patch("amplifinder.steps.run_breseq.run_breseq", side_effect=mock_run_fn) as mock_run:
         breseq_step.run()
@@ -39,7 +39,7 @@ def test_breseq_step_calls_run_breseq(breseq_step):
         mock_run.assert_called_once_with(
             ref_paths=[breseq_step.ref_file],
             fastq_path=breseq_step.fastq_path,
-            output_path=breseq_step.breseq_output_path,
+            output_path=breseq_step.breseq_path,
             docker=False,
             threads=1,
         )
@@ -47,11 +47,11 @@ def test_breseq_step_calls_run_breseq(breseq_step):
 
 def test_breseq_step_skips_if_output_exists(breseq_step):
     """Should skip if output.gd already exists."""
-    ensure_dir(breseq_step.breseq_output_path / "output")
-    (breseq_step.breseq_output_path / "output" / "output.gd").touch()
+    ensure_dir(breseq_step.breseq_path / "output")
+    (breseq_step.breseq_path / "output" / "output.gd").touch()
 
     breseq_step.run()
-    assert breseq_step.run_count == 0  # skipped
+    assert breseq_step.run_count == 0  # skipped (artifacts cached)
 
 
 def test_breseq_step_read_outputs():
@@ -61,7 +61,8 @@ def test_breseq_step_read_outputs():
         breseq_path=FIXTURES_DIR / "breseq",
     )
 
-    result = step.load_outputs()
+    # run() returns the parsed output (uses existing artifacts)
+    result = step.run()
 
     assert isinstance(result, RecordTypedDf)
     assert len(result.df) > 0

@@ -35,12 +35,14 @@ def sample_covered_tnjc2(tiny_genome):
     )
     
     # Single-locus pairs matching left/right junctions (for flanking classification)
+    # These must be TRANSPOSITION events (amplicon_length < 30bp) to qualify as "single locus"
+    # pos2 difference must be < 30 for transposition classification
     single_locus_left = CoveredTnJc2.from_other(
-        RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=make_jc(3, 30, 400, Side.END), scaffold=scaffold),
+        RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=make_jc(3, 30, 210, Side.END), scaffold=scaffold),  # 210-200=10 < 30
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
     single_locus_right = CoveredTnJc2.from_other(
-        RawTnJc2(tnjc_left=make_jc(4, 40, 250, Side.START), tnjc_right=jc_flank_right, scaffold=scaffold),
+        RawTnJc2(tnjc_left=make_jc(4, 40, 290, Side.START), tnjc_right=jc_flank_right, scaffold=scaffold),  # 300-290=10 < 30
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
 
@@ -95,9 +97,9 @@ def test_classify_structure(sample_covered_tnjc2, sample_tn_locs, tmp_path, tiny
     assert result_list[0].raw_event == RawEvent.FLANKED
     assert result_list[1].raw_event == RawEvent.TRANSPOSITION
     assert result_list[2].raw_event == RawEvent.UNFLANKED
-    # The other 2 are single-locus pairs used for matching
-    assert result_list[3].raw_event in [RawEvent.UNFLANKED, RawEvent.HEMI_FLANKED_LEFT, RawEvent.HEMI_FLANKED_RIGHT]
-    assert result_list[4].raw_event in [RawEvent.UNFLANKED, RawEvent.HEMI_FLANKED_LEFT, RawEvent.HEMI_FLANKED_RIGHT]
+    # The other 2 are single-locus pairs (transposition events, short amplicons)
+    assert result_list[3].raw_event == RawEvent.TRANSPOSITION
+    assert result_list[4].raw_event == RawEvent.TRANSPOSITION
 
 
 def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_record, tmp_path, tiny_genome):
