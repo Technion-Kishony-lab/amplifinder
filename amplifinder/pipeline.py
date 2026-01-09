@@ -155,11 +155,11 @@ class Pipeline:
 
         # Run breseq (BreseqStep handles caching - skips if output exists)
         AncBreseqStep(
-            output_dir=anc_breseq_path,
+            breseq_path=anc_breseq_path,
             fastq_path=self.config.anc_path,
             ref_file=genome.genbank_path or genome.fasta_path,
             docker=self.config.breseq_docker,
-            threads=self.config.breseq_threads,
+            threads=self.config.threads,
         ).run()
 
     @property
@@ -232,9 +232,9 @@ class Pipeline:
         return BreseqStep(
             fastq_path=cfg.iso_path,
             ref_file=genome.genbank_path or genome.fasta_path,
-            output_dir=cfg.iso_breseq_path or iso_output / "breseq",
+            breseq_path=cfg.iso_breseq_path or iso_output / "breseq",
             docker=cfg.breseq_docker,
-            threads=cfg.breseq_threads,
+            threads=cfg.threads,
         ).run()
 
     def _create_tnjc(
@@ -380,21 +380,19 @@ class Pipeline:
 
         # Align isolate reads in isolate folder
         AlignReadsToJunctionsStep(
-            filtered_tnjc2s=syn_tnjc2s,
+            synjcs_tnjc2s=syn_tnjc2s,
             output_dir=iso_output,
-            iso_fastq_path=cfg.iso_path,
-            anc_fastq_path=None,  # Only align isolate reads here
-            threads=cfg.breseq_threads,
+            fastq_path=cfg.iso_path,
+            threads=cfg.threads,
         ).run()
 
         # Align ancestor reads in ancestor folder
         if anc_output:
             AncAlignReadsToJunctionsStep(
-                filtered_tnjc2s=syn_tnjc2s,
+                synjcs_tnjc2s=syn_tnjc2s,
                 output_dir=anc_output,
-                iso_fastq_path=cfg.anc_path,  # Ancestor reads aligned as "iso" in ancestor folder
-                anc_fastq_path=None,
-                threads=cfg.breseq_threads,
+                fastq_path=cfg.anc_path,
+                threads=cfg.threads,
             ).run()
 
     def _analyze_alignments(

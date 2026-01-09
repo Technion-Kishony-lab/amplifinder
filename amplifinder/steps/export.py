@@ -4,10 +4,10 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import RecordTypedDf, AnalyzedTnJc2, ExportedTnJc2, Orientation, Genome
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import OutputStep
 
 
-class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
+class ExportTnJc2Step(OutputStep[RecordTypedDf[ExportedTnJc2]]):
     """Export analyzed candidates to CSV files.
 
     Creates two CSV files:
@@ -47,7 +47,7 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
         )
 
     def _calculate_output(self) -> RecordTypedDf[ExportedTnJc2]:
-        """Export candidates to CSV."""
+        """Build export dataframe (writing handled in _save_output)."""
         # Build export records by iterating over typed records
         export_records = []
         for analyzed_tnjc2 in self.analyzed_tnjc2s:
@@ -77,24 +77,16 @@ class ExportTnJc2Step(Step[RecordTypedDf[ExportedTnJc2]]):
             lambda df: df.sort_values('mode_copy_number', ascending=False)
         )
 
-        # Export tnjc2_exported.csv (all candidates) - to_csv handles empty DataFrames automatically
-        export_df.to_csv(self.isjc2_file, index=False)
-
-        # Filter candidates for candidate_amplifications.csv
-        filtered = self._filter_export_df(export_df)
-
-        # to_csv handles empty DataFrames automatically
-        filtered.to_csv(self.candidates_file, index=False)
-
         return export_df
 
     def _save_output(self, output: RecordTypedDf[ExportedTnJc2]) -> None:
-        """Output already saved in _calculate_output."""
-        pass
+        """Write export CSVs."""
+        # Export tnjc2_exported.csv (all candidates)
+        output.to_csv(self.isjc2_file, index=False)
 
-    def load_outputs(self) -> RecordTypedDf[ExportedTnJc2]:
-        """Load exported TnJc2 data."""
-        return RecordTypedDf.from_csv(self.isjc2_file, ExportedTnJc2)
+        # Filter candidates for candidate_amplifications.csv
+        filtered = self._filter_export_df(output)
+        filtered.to_csv(self.candidates_file, index=False)
 
     def report_output_message(self, output: RecordTypedDf[ExportedTnJc2], *, from_cache: bool) -> Optional[str]:
         filtered_len = len(self._filter_export_df(output))

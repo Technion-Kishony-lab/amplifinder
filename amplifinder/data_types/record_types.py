@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any, ClassVar, Dict, List, Optional, TypeVar, TYPE_CHECKING
+from pathlib import Path
 from pydantic import ConfigDict, field_validator
 import numpy as np
 
@@ -460,6 +461,23 @@ class SynJctsTnJc2(ClassifiedTnJc2):
     NAME: ClassVar[str] = "Synthetic Junction Amplicons"
     analysis_dir: str
     analysis_dir_anc: Optional[str] = None
+
+    def analysis_dir_name(self, *, is_ancestor: bool = False) -> str:
+        """Return the analysis directory name (ancestor-aware)."""
+        return self.analysis_dir_anc if is_ancestor else self.analysis_dir
+
+    def analysis_dir_path(self, base_dir: Path, *, is_ancestor: bool = False) -> Path:
+        """Directory path for this candidate under base_dir/junctions."""
+        return base_dir / "junctions" / self.analysis_dir_name(is_ancestor=is_ancestor)
+
+    def fasta_path(self, base_dir: Path, *, is_ancestor: bool = False) -> Path:
+        """Path to junctions FASTA for this candidate."""
+        return self.analysis_dir_path(base_dir, is_ancestor=is_ancestor) / "junctions.fasta"
+
+    def bam_path(self, base_dir: Path, *, is_ancestor: bool = False) -> Path:
+        """Path to BAM for this candidate."""
+        filename = "anc.sorted.bam" if is_ancestor else "iso.sorted.bam"
+        return self.analysis_dir_path(base_dir, is_ancestor=is_ancestor) / filename
 
 
 class AnalyzedTnJc2(SynJctsTnJc2):

@@ -4,7 +4,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional, List
 import re
-from abc import abstractmethod
 
 from Bio.SeqFeature import SeqFeature
 
@@ -14,13 +13,13 @@ from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.data_types import Orientation, RecordTypedDf, RefTn, Genome
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import OutputStep
 from amplifinder.data_types.record_types import TnId
 
  
 # Base class for TN location steps
 
-class LocateTNsStep(Step[Optional[RecordTypedDf[RefTn]]]):
+class LocateTNsStep(OutputStep[Optional[RecordTypedDf[RefTn]]]):
     """Base class for steps that locate TN elements."""
 
     def __init__(
@@ -29,6 +28,7 @@ class LocateTNsStep(Step[Optional[RecordTypedDf[RefTn]]]):
         output_dir: Path,
         source: str,
         input_files: list[Path],
+        artifact_files: Optional[list[Path]] = None,
         force: Optional[bool] = None,
     ):
         self.genome = genome
@@ -38,6 +38,7 @@ class LocateTNsStep(Step[Optional[RecordTypedDf[RefTn]]]):
 
         super().__init__(
             input_files=input_files,
+            artifact_files=artifact_files,
             output_files=[self.output_file],
             force=force,
         )
@@ -46,18 +47,6 @@ class LocateTNsStep(Step[Optional[RecordTypedDf[RefTn]]]):
         if output is not None:
             ensure_dir(self.output_file.parent)
             output.to_csv(self.output_file)
-
-    def load_outputs(self) -> Optional[RecordTypedDf[RefTn]]:
-        """Load TN locations from output file (indexed by tn_id)."""
-        if not self.output_file.exists():
-            return None
-        # Load with index_col=0 to preserve tn_id index
-        return RecordTypedDf.from_csv(self.output_file, RefTn, index_col=0)
-
-    @abstractmethod
-    def _calculate_output(self) -> Optional[RecordTypedDf[RefTn]]:
-        """Run the TN location logic."""
-        pass
 
     def _build_ref_tns_dict(
         self,
@@ -74,15 +63,15 @@ class LocateTNsStep(Step[Optional[RecordTypedDf[RefTn]]]):
             RecordTypedDf[RefTn] indexed by tn_id
         """
         ref_tns: dict[TnId, RefTn] = {}
-        tn_id = start_id - 1
+        tn_id = start_id
         
         for scaf, left, right, orientation, tn_name in items:
             scaffold = self.genome.get_scaffold(scaf)
-            tn_id += 1
             ref_tns[tn_id] = RefTn.from_scaffold_left_right_orientation(
                 scaffold, left=left, right=right, orientation=orientation,
                 tn_id=tn_id, tn_name=tn_name, join=False
             )
+            tn_id += 1
         
         return RecordTypedDf.from_dict(ref_tns, RefTn)
 
@@ -143,6 +132,9 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
 
     def _calculate_output(self) -> Optional[RecordTypedDf[RefTn]]:
         """Parse GenBank file and extract TN locations."""
+        if self.genome.gb_records is None:
+            return None
+            
         items = []
         
         for record in self.genome.gb_records:
@@ -187,20 +179,19 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         self.evalue = evalue
         self.critical_coverage = critical_coverage
 
+        self.blast_output = self.output_dir / "isfinder_blast.txt"
+
         super().__init__(
             genome=genome,
             output_dir=output_dir,
             source="isfinder",
             input_files=[genome.fasta_path, self.isdb_path],
+            artifact_files=[self.blast_output],
             force=force,
         )
 
-        # Additional output
-        self.blast_output = self.output_dir / "isfinder_blast.txt"
-        self.output_files.append(self.blast_output)
-
-    def _calculate_output(self) -> RecordTypedDf[RefTn]:
-        """Run BLAST and parse results."""
+    def _generate_artifacts(self) -> None:
+        """Run BLAST to produce artifact files."""
         ensure_dir(self.blast_output.parent)
 
         # Create BLAST DB if needed (with lock to prevent parallel creation)
@@ -217,14 +208,11 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
             evalue=self.evalue,
         )
 
-        # Parse BLAST results
-        return self._parse_blast()
-
     def report_output_message(self, output: RecordTypedDf[RefTn], *, from_cache: bool) -> Optional[str]:
         return f"ISfinder: found {len(output)} TN elements"
 
-    def _parse_blast(self) -> RecordTypedDf[RefTn]:
-        """Parse BLAST output and convert to TN locations."""
+    def _calculate_output(self) -> RecordTypedDf[RefTn]:
+        """Parse BLAST results."""
         # Parse BLAST output
         blast_hits = parse_blast_csv(self.blast_output)
 

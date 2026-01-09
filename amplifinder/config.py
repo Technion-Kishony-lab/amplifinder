@@ -27,8 +27,8 @@ DEFAULT_CONFIG = {
     "isfinder_evalue": 1e-4,
     "isfinder_critical_coverage": 0.9,
 
-    # breseq parameters
-    "breseq_threads": 4,
+    # Alignment threads (breseq, bowtie2)
+    "threads": 4,
 
     # Junction filtering
     "min_jct_cov": 5,
@@ -110,8 +110,8 @@ class Config:
     isfinder_evalue: float = 1e-4
     isfinder_critical_coverage: float = 0.9
 
-    # breseq parameters
-    breseq_threads: int = 4
+    # Alignment threads (breseq, bowtie2)
+    threads: int = 4
 
     # Junction filtering
     min_jct_cov: int = 5

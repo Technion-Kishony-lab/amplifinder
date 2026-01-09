@@ -3,13 +3,13 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import OutputStep
 from amplifinder.tools.breseq import run_breseq, parse_breseq_output
 from amplifinder.data_types.record_types import BreseqJunction
 from amplifinder.data_types.typed_df import RecordTypedDf
 
 
-class BreseqStep(Step[RecordTypedDf[BreseqJunction]]):
+class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
     """Run breseq alignment pipeline.
     
     Output is breseq run directory (output.gd), not a saved CSV.
@@ -20,7 +20,7 @@ class BreseqStep(Step[RecordTypedDf[BreseqJunction]]):
 
     def __init__(
         self,
-        output_dir: Path,
+        breseq_path: Path,
         fastq_path: Optional[Path] = None,
         ref_file: Optional[Path] = None,
         docker: bool = False,
@@ -33,8 +33,8 @@ class BreseqStep(Step[RecordTypedDf[BreseqJunction]]):
         self.threads = threads
 
         # Breseq output location
-        self.breseq_output_path = Path(output_dir)
-        output_gd = self.breseq_output_path / "output" / "output.gd"
+        self.breseq_path = Path(breseq_path)
+        output_gd = self.breseq_path / "output" / "output.gd"
 
         # If output doesn't exist, fastq_path and ref_file are required
         if not output_gd.exists() and (fastq_path is None or ref_file is None):
@@ -48,36 +48,27 @@ class BreseqStep(Step[RecordTypedDf[BreseqJunction]]):
 
         super().__init__(
             input_files=input_files if input_files else None,
-            output_files=[output_gd],  # Track breseq output.gd, not CSV
+            artifact_files=[output_gd],
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDf[BreseqJunction]:
-        """Run breseq and return parsed junctions."""
+    def _generate_artifacts(self) -> None:
+        """Run breseq to produce output.gd and related files."""
         run_breseq(
             ref_paths=[self.ref_file],
             fastq_path=self.fastq_path,
-            output_path=self.breseq_output_path,
+            output_path=self.breseq_path,
             docker=self.docker,
             threads=self.threads,
         )
-        return self._parse_junctions()
 
-    def _save_output(self, output: RecordTypedDf[BreseqJunction]) -> None:
-        """No-op: breseq already created output.gd."""
-        pass
-
-    def load_outputs(self) -> RecordTypedDf[BreseqJunction]:
-        """Load by parsing breseq output.gd."""
-        return self._parse_junctions()
-
-    def _parse_junctions(self) -> RecordTypedDf[BreseqJunction]:
+    def _calculate_output(self) -> RecordTypedDf[BreseqJunction]:
         """Parse breseq junction output into RecordTypedDf.
 
         Returns:
             RecordTypedDf[BreseqJunction] with column renaming applied
         """
-        outputs = parse_breseq_output(self.breseq_output_path)
+        outputs = parse_breseq_output(self.breseq_path)
         jc_df = outputs.get("JC")
         
         if jc_df is None or jc_df.empty:
@@ -94,7 +85,7 @@ class BreseqStep(Step[RecordTypedDf[BreseqJunction]]):
 
     def report_output_message(self, output: RecordTypedDf[BreseqJunction], *, from_cache: bool) -> Optional[str]:
         """Report junction count."""
-        prefix = 'Loaded' if from_cache else 'Found'
+        prefix = 'Artifacts cached,' if from_cache else 'Artifacts created,'
         return f"{prefix} {len(output)} breseq junctions."
 
 
