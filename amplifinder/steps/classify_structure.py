@@ -3,14 +3,14 @@
 from pathlib import Path
 from typing import Optional, TYPE_CHECKING
 
-from amplifinder.data_types import RecordTypedDf, CoveredTnJc2, ClassifiedTnJc2, RawEvent, RefTn, Side, TnJunction
+from amplifinder.data_types import RecordTypedDf, CoveredTnJc2, SingleLocusLinkedTnJc2, RawEvent, RefTn, Side, TnJunction
 from amplifinder.data_types.enums import BaseRawEvent
 from amplifinder.data_types.genome import Genome
 
 from .base import RecordTypedDfStep
 
 
-class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
+class ClassifyTnJc2StructureStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
     """Classify junction pair structures based on TN relationships.
 
     This step analyzes how junction pairs relate to reference TN elements
@@ -38,19 +38,19 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
 
         super().__init__(output_dir=output_dir, force=force)
 
-    def _calculate_output(self) -> RecordTypedDf[ClassifiedTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
         """Classify junction pairs."""
         tnjc2s = self.covered_tnjc2s.to_records()
         base_raw_events = [self._compute_base_raw_event(tnjc2) for tnjc2 in tnjc2s]
         classified_tnjc2s = []
         for i, tncj2_i in enumerate(tnjc2s):
-            classified_tnjc2s.append(ClassifiedTnJc2.from_other(
+            classified_tnjc2s.append(SingleLocusLinkedTnJc2.from_other(
                 tncj2_i, 
                 single_locus_tnjc2_matching_left=self._find_single_locus_matching_tnjc2(tncj2_i.tnjc_left, tnjc2s, base_raw_events, exclude_idx=i),
                 single_locus_tnjc2_matching_right=self._find_single_locus_matching_tnjc2(tncj2_i.tnjc_right, tnjc2s, base_raw_events, exclude_idx=i),
                 base_raw_event=base_raw_events[i],
             ))
-        return RecordTypedDf.from_records(classified_tnjc2s, ClassifiedTnJc2)
+        return RecordTypedDf.from_records(classified_tnjc2s, SingleLocusLinkedTnJc2)
 
     def _compute_base_raw_event(self, tnjc2: CoveredTnJc2) -> BaseRawEvent:
         if tnjc2.tnjc_left.is_ref_tn_junction() and tnjc2.tnjc_right.is_ref_tn_junction() \
@@ -71,8 +71,8 @@ class ClassifyTnJc2StructureStep(RecordTypedDfStep[ClassifiedTnJc2]):
                 return tnjc2_j
         return None
 
-    def report_output_message(self, output: RecordTypedDf[ClassifiedTnJc2], *, from_cache: bool) -> Optional[str]:
-        records: list[ClassifiedTnJc2] = output.to_records()
+    def report_output_message(self, output: RecordTypedDf[SingleLocusLinkedTnJc2], *, from_cache: bool) -> Optional[str]:
+        records: list[SingleLocusLinkedTnJc2] = output.to_records()
         counts: dict[RawEvent, int] = {name: 0 for name in RawEvent}
         for record in records:
             counts[record.raw_event] += 1

@@ -131,8 +131,7 @@ output/
             ├── run_config.yaml
             └── jc_*/              # per-candidate directories
                 ├── junctions.fasta
-                ├── iso.sorted.bam
-                ├── anc.sorted.bam
+                ├── sorted.bam
                 └── coverage_plot.png  # (if --save-plots)
 ```
 

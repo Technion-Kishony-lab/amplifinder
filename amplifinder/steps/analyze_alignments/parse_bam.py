@@ -1,19 +1,11 @@
 """Parsing junction coverage from BAM files."""
 
-from dataclasses import dataclass
-from pathlib import Path
-from typing import List
-
 import pysam
 
+from pathlib import Path
+from typing import Dict
 
-@dataclass
-class JunctionReadCounts:
-    """Read counts at a junction."""
-    left: int = 0      # reads on left side of junction
-    right: int = 0     # reads on right side of junction
-    spanning: int = 0  # reads spanning the junction
-    other: int = 0     # reads partially overlapping the junction
+from amplifinder.data_types import JunctionReadCounts
 
 
 def get_junction_coverage(
@@ -21,7 +13,7 @@ def get_junction_coverage(
     read_length: int,
     read_length_tolerance: float = 0.1,
     min_overlap: int = 12,
-) -> List[JunctionReadCounts]:
+) -> Dict[str, JunctionReadCounts]:
     """Parse BAM and get coverage for all 7 junction types.
 
     Args:
@@ -31,7 +23,7 @@ def get_junction_coverage(
         min_overlap: Minimum overlap to count as spanning
 
     Returns:
-        List of 7 JunctionReadCounts (indexed 0-6 for junction types 1-7)
+        dict mapping reference name -> JunctionReadCounts
     """
     if not bam_path.exists():
         raise FileNotFoundError(f"BAM file not found: {bam_path}")
@@ -70,4 +62,4 @@ def get_junction_coverage(
             else:
                 counts[ref_name].other += 1     # other (partial overlap)
 
-    return list(counts.values())
+    return counts

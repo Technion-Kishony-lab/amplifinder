@@ -4,12 +4,12 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import (
-    RecordTypedDf, ClassifiedTnJc2,
+    RecordTypedDf, SingleLocusLinkedTnJc2,
 )
 from amplifinder.steps.base import RecordTypedDfStep
 
 
-class FilterTnJc2CandidatesStep(RecordTypedDfStep[ClassifiedTnJc2]):
+class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
     """Filter candidates by amplicon length.
 
     Filters out candidates that are:
@@ -21,7 +21,7 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[ClassifiedTnJc2]):
 
     def __init__(
         self,
-        classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
+        classified_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
         output_dir: Path,
         min_amplicon_length: int = 30,
         max_amplicon_length: int = 1_000_000,
@@ -33,9 +33,9 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[ClassifiedTnJc2]):
 
         super().__init__(output_dir=output_dir, force=force)
 
-    def _calculate_output(self) -> RecordTypedDf[ClassifiedTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
         """Filter candidates by amplicon length."""
-        filtered_tnjc2s: list[ClassifiedTnJc2] = []
+        filtered_tnjc2s: list[SingleLocusLinkedTnJc2] = []
 
         for tnjc2 in self.classified_tnjc2s:
             # Filter by length
@@ -48,7 +48,7 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[ClassifiedTnJc2]):
 
             filtered_tnjc2s.append(tnjc2)
 
-        return RecordTypedDf.from_records(filtered_tnjc2s, ClassifiedTnJc2)
+        return RecordTypedDf.from_records(filtered_tnjc2s, SingleLocusLinkedTnJc2)
 
-    def report_output_message(self, output: RecordTypedDf[ClassifiedTnJc2], *, from_cache: bool) -> Optional[str]:
+    def report_output_message(self, output: RecordTypedDf[SingleLocusLinkedTnJc2], *, from_cache: bool) -> Optional[str]:
         return f"Filtered to {len(output)} candidates (from {len(self.classified_tnjc2s)} classified)"

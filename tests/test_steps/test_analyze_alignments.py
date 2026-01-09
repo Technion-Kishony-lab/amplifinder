@@ -10,17 +10,17 @@ def test_step_initialization(filtered_tnjc2_record, tmp_path):
     filtered_tnjc2s = RecordTypedDf.from_records([filtered_tnjc2_record], SynJctsTnJc2)
 
     # Create dummy BAM file (empty, just for initialization test)
-    bam_file = tmp_path / "junctions" / filtered_tnjc2_record.analysis_dir / "iso.sorted.bam"
+    bam_file = tmp_path / "junctions" / filtered_tnjc2_record.analysis_dir / "sorted.bam"
     ensure_parent_dir(bam_file)
     bam_file.write_text("dummy")
 
     step = AnalyzeTnJc2AlignmentsStep(
-        filtered_tnjc2s=filtered_tnjc2s,
+        synjct_tnjc2s=filtered_tnjc2s,
         output_dir=tmp_path,
-        read_length=150,
+        iso_read_length=150,
         has_ancestor=False,
     )
 
-    assert step.filtered_tnjc2s == filtered_tnjc2s
-    assert step.read_length == 150
+    assert step.synjct_tnjc2s == filtered_tnjc2s
+    assert step.ido_read_length == 150
     assert step.has_ancestor is False

@@ -4,13 +4,13 @@ from amplifinder.data_types.enums import BaseRawEvent
 import pytest
 from amplifinder.steps import FilterTnJc2CandidatesStep
 from amplifinder.data_types import (
-    RecordTypedDf, ClassifiedTnJc2, RawEvent,
+    RecordTypedDf, SingleLocusLinkedTnJc2, RawEvent,
 )
 
 
 @pytest.fixture
 def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
-    """Create sample ClassifiedTnJc2 records with different amplicon lengths."""
+    """Create sample SingleLocusLinkedTnJc2 records with different amplicon lengths."""
     from amplifinder.data_types import TnJunction, Orientation, OffsetRefTnSide, Side, RawTnJc2
     
     # Short amplicon (20bp) - should be filtered out
@@ -30,7 +30,7 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
     )
     scaffold = tiny_genome.get_scaffold("tiny")
     short_raw = RawTnJc2(tnjc_left=tn_jc_S_short, tnjc_right=tn_jc_E_short, scaffold=scaffold)
-    short = ClassifiedTnJc2.from_other(
+    short = SingleLocusLinkedTnJc2.from_other(
         short_raw,
         base_raw_event=BaseRawEvent.TRANSPOSITION,
         iso_scaf_avg=1.0,
@@ -38,7 +38,7 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
     )
 
     # Medium amplicon (101bp) - from base fixture
-    medium = ClassifiedTnJc2.from_other(
+    medium = SingleLocusLinkedTnJc2.from_other(
         classified_tnjc2_record,
         base_raw_event=BaseRawEvent.LOCUS_JOINING,
         iso_scaf_avg=1.0,
@@ -61,14 +61,14 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
         swapped=False,
     )
     long_raw = RawTnJc2(tnjc_left=tn_jc_S_long, tnjc_right=tn_jc_E_long, scaffold=scaffold)
-    long = ClassifiedTnJc2.from_other(
+    long = SingleLocusLinkedTnJc2.from_other(
         long_raw,
         base_raw_event=BaseRawEvent.LOCUS_JOINING,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=3.0,
     )
 
-    return RecordTypedDf.from_records([short, medium, long], ClassifiedTnJc2)
+    return RecordTypedDf.from_records([short, medium, long], SingleLocusLinkedTnJc2)
 
 
 def test_filters_by_length(sample_classified_tnjc2, tmp_path):

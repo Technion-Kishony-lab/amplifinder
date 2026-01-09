@@ -367,9 +367,9 @@ def covered_tnjc2_record(raw_tnjc2_record):
 @pytest.fixture
 def classified_tnjc2_record(covered_tnjc2_record):
     """CoveredTnJc2 with structural classification."""
-    from amplifinder.data_types import ClassifiedTnJc2, BaseRawEvent
+    from amplifinder.data_types import SingleLocusLinkedTnJc2, BaseRawEvent
 
-    return ClassifiedTnJc2.from_other(
+    return SingleLocusLinkedTnJc2.from_other(
         covered_tnjc2_record,
         base_raw_event=BaseRawEvent.LOCUS_JOINING,
     )
