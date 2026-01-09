@@ -52,28 +52,26 @@ class AlignReadsToJunctionsStep(Step):
 
     def _generate_artifacts(self) -> None:
         """Align reads to synthetic junctions; skip BAMs that already exist."""
+        analysis_dir_names = [tnjc2.analysis_dir_name(is_ancestor=self.is_ancestor) for tnjc2 in self.synjcs_tnjc2s]
+        max_name_length = max(len(name) for name in analysis_dir_names)
         for filtered_tnjc2 in self.synjcs_tnjc2s:
             junctions_fasta = filtered_tnjc2.fasta_path(self.output_dir, is_ancestor=self.is_ancestor)
-
-            if not junctions_fasta.exists():
-                self.log(f"Skipping {filtered_tnjc2.analysis_dir}: no junctions.fasta")
-                continue
+            assert junctions_fasta.exists()
 
             bam_path = filtered_tnjc2.bam_path(self.output_dir, is_ancestor=self.is_ancestor)
-            if not bam_path.exists():
-                align_reads_to_fasta(
-                    ref_fasta=junctions_fasta,
-                    fastq_path=self.fastq_path,
-                    output_bam=bam_path,
-                    threads=self.threads,
-                    score_min=self.score_min,
-                    num_alignments=self.num_alignments,
-                )
-
-    def _clean_artifacts(self) -> None:
-        """One-by-one treatment of files. Do not delete unless force is True."""
-        if self.force:
-            super()._clean_artifacts()
+            print(f"{filtered_tnjc2.analysis_dir_name(is_ancestor=self.is_ancestor):<{max_name_length}}: ", end="", flush=True)
+            if bam_path.exists():
+                print("file exists, skipping")
+                continue
+            align_reads_to_fasta(
+                ref_fasta=junctions_fasta,
+                fastq_path=self.fastq_path,
+                output_bam=bam_path,
+                threads=self.threads,
+                score_min=self.score_min,
+                num_alignments=self.num_alignments,
+            )
+            assert bam_path.exists()
 
 
 class AncAlignReadsToJunctionsStep(AlignReadsToJunctionsStep):
