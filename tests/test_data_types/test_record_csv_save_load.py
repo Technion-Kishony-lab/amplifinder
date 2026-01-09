@@ -7,7 +7,7 @@ from amplifinder.data_types import (
     RecordTypedDf,
     RefTnSide, OffsetRefTnSide, RefTn, BlastHit,
     Junction, RefTnJunction, TnJunction,
-    RawTnJc2, CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ExportedTnJc2,
+    RawTnJc2, CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ClassifiedTnJc2, ExportedTnJc2,
     Side, Orientation, RawEvent, EventModifier, SeqScaffold,
 )
 
@@ -194,10 +194,17 @@ def make_analyzed_tnjc2() -> AnalyzedTnJc2:
         anc_jc_cov_left=None,
         anc_jc_cov_right=None,
         anc_jc_cov_spanning=None,
+    )
+
+
+def make_classified_tnjc2_full() -> ClassifiedTnJc2:
+    """Create sample ClassifiedTnJc2."""
+    analyzed = make_analyzed_tnjc2()
+    return ClassifiedTnJc2.from_other(
+        analyzed,
         isolate_architecture=RawEvent.FLANKED,
         ancestor_architecture=None,
-        event="flanked",
-        event_modifiers=[EventModifier.DE_NOVO],
+        event_modifiers=[EventModifier.DENOVO_LEFT],
     )
 
 

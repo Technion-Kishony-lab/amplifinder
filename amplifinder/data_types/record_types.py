@@ -499,8 +499,13 @@ class ClassifiedTnJc2(AnalyzedTnJc2):
     isolate_architecture: RawEvent
     ancestor_architecture: Optional[RawEvent] = None  # only when anc_path is set
     # Final event classification
-    event: str                              # full event description
-    event_modifiers: List[EventModifier]    # de novo, ancestral, etc.
+    event_modifiers: List[EventModifier]    # de novo left/right, ancestral, etc.
+
+    @property
+    def event(self) -> str:
+        """Full event description derived from architecture and modifiers."""
+        modifiers = [m.value for m in self.event_modifiers if m]
+        return f"{self.isolate_architecture.value} ({', '.join(modifiers)})"
 
 
 class ExportedTnJc2(Record):
