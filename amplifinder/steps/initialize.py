@@ -3,12 +3,12 @@
 from pathlib import Path
 from typing import Optional, Tuple
 
-from amplifinder.steps.base import Step
+from amplifinder.steps.base import OutputStep
 from amplifinder.config import Config
 from amplifinder.utils.file_utils import ensure_dir
 
 
-class InitializingStep(Step[Tuple[Path, Optional[Path]]]):
+class InitializingStep(OutputStep[Tuple[Path, Optional[Path]]]):
     """Create output directories for the pipeline.
 
     Folder structure: {output_dir}/{ref_name}/{anc_name}/{iso_name}/
@@ -31,9 +31,9 @@ class InitializingStep(Step[Tuple[Path, Optional[Path]]]):
         else:
             self.anc_run_dir = None
 
-        super().__init__(output_files=output_files, force=force)
+        super().__init__(artifact_files=output_files, force=force)
 
-    def _calculate_output(self) -> Tuple[Path, Optional[Path]]:
+    def _generate_artifacts(self) -> None:
         """Create directories and save config."""
         ensure_dir(self.iso_run_dir)
 
@@ -44,7 +44,6 @@ class InitializingStep(Step[Tuple[Path, Optional[Path]]]):
         # Save config to run directory
         self.config.save(self.iso_run_dir)
 
-        return self.iso_run_dir, self.anc_run_dir
-
-    def load_outputs(self) -> Tuple[Path, Optional[Path]]:
+    def _calculate_output(self) -> Tuple[Path, Optional[Path]]:
+        """Return run directories."""
         return self.iso_run_dir, self.anc_run_dir

@@ -18,7 +18,7 @@ def breseq_step(tmp_path, tiny_ref_fasta):
     output = ensure_dir(tmp_path / "breseq_out")
 
     return BreseqStep(
-        output_dir=output,
+        breseq_path=output,
         fastq_path=fastq,
         ref_file=tiny_ref_fasta,
         docker=False,
@@ -58,7 +58,7 @@ def test_breseq_step_read_outputs():
     """Should parse breseq output correctly when output exists."""
     # When output exists, fastq_path and ref_file are optional
     step = BreseqStep(
-        output_dir=FIXTURES_DIR / "breseq",
+        breseq_path=FIXTURES_DIR / "breseq",
     )
 
     result = step.load_outputs()
@@ -73,7 +73,7 @@ def test_breseq_step_requires_inputs_when_no_output(tmp_path):
     output = ensure_dir(tmp_path / "breseq_out")
 
     with pytest.raises(ValueError, match="fastq_path and ref_file are required"):
-        BreseqStep(output_dir=output)
+        BreseqStep(breseq_path=output)
 
 
 # =============================================================================

@@ -4,24 +4,28 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Generic, List, Optional, TypeVar, get_args, get_origin, Type
 
+from line_profiler import LineProfiler
+
 from amplifinder.logger import info
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import remove_file_or_dir, ensure_dir
 from amplifinder.utils.timing import print_timer as _print_timer
 from amplifinder.data_types.typed_df import RecordTypedDf
 from amplifinder.data_types.records import Record
-from amplifinder.steps.io_naming import default_path
+from amplifinder.steps.io_naming import default_filename
 
 T = TypeVar("T")
 
 
-class Step(ABC, Generic[T]):
-    """Base class for pipeline steps with input/output file tracking.
-
-    Handles:
-    - Skip if all outputs exist (unless force=True)
-    - Clean partial outputs before re-run
-    - Global and step-specific force control
+class Step(ABC):
+    """Pipeline step that creates artifacts via external tools.
+    
+    Base class for steps that:
+    - Generate artifact files (BAMs, indexes, databases, etc.)
+    - Use caching: skip generation if artifacts exist and not force
+    - Don't return data to next step (use OutputStep for that)
+    
+    For steps that also return data to next step, use OutputStep.
     """
 
     # Default lock timeout for steps (seconds); override per step if needed
@@ -33,13 +37,11 @@ class Step(ABC, Generic[T]):
     global_verbose: bool = False
     # Global profile flag (applies to all steps)
     should_profile: bool = False
-    # Should save output flag (False = do not save output)
-    should_save: bool = True
 
     def __init__(
-        self,
+        self, *,
         input_files: Optional[List[Path]] = None,
-        output_files: Optional[List[Path]] = None,
+        artifact_files: Optional[List[Path]] = None,
         force: Optional[bool] = None,
     ):
         """Initialize step.
@@ -48,14 +50,22 @@ class Step(ABC, Generic[T]):
             input_files: Required input files/dirs (must exist)
                     None - no file inputs.
 
-            output_files: Output files/dirs (produced by this step)
-                     None - no file outputs (only calculate result in memory)
+            artifact_files: Files/dirs created by external tools. Generation
+                    can be skipped if all exist and force is False.
+
             force: Step-specific force flag (None = use global)
         """
         self.input_files: List[Path] = [Path(p) for p in input_files] if input_files else []
-        self.output_files: Optional[List[Path]] = [Path(p) for p in output_files] if output_files else None
+        self.artifact_files: Optional[List[Path]] = [Path(p) for p in artifact_files] if artifact_files else None
         self._force = force
         self.run_count = 0
+
+    """ Logging """
+
+    @classmethod
+    def set_global_verbose(cls, verbose: bool) -> None:
+        """Set global verbose flag for all steps."""
+        cls.global_verbose = verbose
 
     def log(self, msg: str, *, verbose_only: bool = True, extra: Optional[dict[str, str]] = None) -> None:
         """Step-aware info log that honors global verbosity."""
@@ -80,14 +90,17 @@ class Step(ABC, Generic[T]):
             use_log=use_log
         )
 
-    def _output_labels(self) -> list[str]:
-        """Human-readable labels for outputs (override for custom logging)."""
-        return [str(p.name) for p in self.output_files]
-
     @property
     def name(self) -> str:
         """Step name (class name by default)."""
         return self.__class__.__name__
+
+    """ Artifact files """
+
+    @classmethod
+    def set_global_force(cls, force: bool) -> None:
+        """Set global force flag for all steps."""
+        cls.global_force = force
 
     @property
     def force(self) -> bool:
@@ -96,164 +109,117 @@ class Step(ABC, Generic[T]):
             return self._force
         return Step.global_force
 
-    @property
-    def is_saving(self) -> bool:
-        """True if output_files defined and should_save is True."""
-        return self.output_files is not None and len(self.output_files) > 0 and self.should_save
+    def _artifact_labels(self) -> list[str]:
+        """Human-readable labels for artifacts (override for custom logging)."""
+        return [str(p.name) for p in self.artifact_files] if self.artifact_files else []
 
-    @abstractmethod
-    def _calculate_output(self) -> T:
-        """Execute the step logic. Override in subclass."""
+    def _generate_artifacts(self) -> None:
+        """Create artifact files (external tools). Subclasses should override."""
         pass
 
-    def report_output_message(self, output: T, *, from_cache: bool) -> Optional[str]:
-        """Message to report after producing/loading output. Override per step."""
-        return None
+    def missing_artifact_files(self) -> Optional[list[Path]]:
+        """Check if all artifact files exist. None if no artifacts tracked."""
+        if self.artifact_files is None:
+            return None
+        return [p for p in self.artifact_files if not p.exists()]
 
-    def _save_output(self, output: T) -> None:
-        """Save output to files. Override in subclass to save to files."""
-        pass
+    def has_artifact_files(self) -> bool:
+        """True if artifact_files defined and all exist."""
+        missing = self.missing_artifact_files()
+        return missing is not None and len(missing) == 0
 
-    def _save_output_and_verify(self, output: T) -> None:
-        """Save output to files and verify that it was created."""
-        self._save_output(output)
-        if missing_out := self.missing_output_files():
-            raise FileNotFoundError(f"{self.name}: expected outputs not created: {missing_out}")
-
-    def load_outputs(self) -> T:
-        """Load outputs from files. Override in subclass to return typed data."""
-        raise NotImplementedError
+    """ Running """
 
     def missing_input_files(self) -> list[Path]:
         """Check if all inputs exist."""
         return [p for p in self.input_files if not p.exists()]
 
-    def missing_output_files(self) -> Optional[list[Path]]:
-        """Check if all output files exist. None if no output files."""
-        if self.output_files is None:
-            return None
-        return [p for p in self.output_files if not p.exists()]
+    def _generate_artifacts_if_needed(self):
+        """Generate artifacts if needed. Subclasses override to return computed output."""
+        artifacts_cached = False
 
-    def has_output_files(self) -> bool:
-        """True if output_files defined and all exist."""
-        missing = self.missing_output_files()
-        return missing is not None and len(missing) == 0
+        if self.artifact_files:
+            # Fast path: skip artifact generation if already present
+            if not self.force and self.has_artifact_files():
+                artifacts_cached = True
+                self._log_run_status("artifacts ready, skipping generation")
+            else:
+                # Acquire lock and re-check (TOCTOU)
+                lock_target = self._get_lock_target()
+                with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
+                    if not self.force and self.has_artifact_files():
+                        artifacts_cached = True
+                        self._log_run_status("artifacts ready (verified under lock)")
+                    else:
+                        self._clean_artifacts()
+                        self._log_run_status("generating artifacts (under lock)")
+                        if self.should_profile:
+                            lp = self._create_profiler()
+                            lp.add_function(self._generate_artifacts)
+                            lp.runcall(self._generate_artifacts)
+                            self._save_profiler_stats(lp, suffix="artifacts")
+                        else:
+                            self._generate_artifacts()
+        else:
+            self._log_run_status("no artifacts to generate")
+        
+        self._artifacts_cached = artifacts_cached
 
-    def run(self) -> T:
-        """Execute step with caching logic and parallel-safe locking.
-
-        Uses double-check locking pattern to prevent race conditions:
-        1. Quick check without lock (fast path for cached results)
-        2. Acquire lock
-        3. Re-check under lock (another process may have created output)
-        4. Execute if still needed
-        5. Release lock
-        """
+    def run(self):
+        """Execute step: generate artifacts with caching and optional locking."""
         # Check inputs exist
         if missing_input := self.missing_input_files():
             raise FileNotFoundError(f"{self.name}: missing inputs: {missing_input}")
 
         with self.print_timer("=" * 90 + " ", use_log=True, end_msg=" ========\n"):
-            # Fast path: check if can skip without lock (common case)
-            if not self.force and self.has_output_files():
-                return self._execute_and_report("skipping (loading exisitng outputs)", True)
+            return self._generate_artifacts_if_needed()
 
-            # Steps without file outputs or not saving don't need locking
-            if not self.is_saving:
-                return self._execute_and_report("running...", False)
-
-            # Acquire lock and re-check (TOCTOU fix)
-            lock_target = self._get_lock_target()
-            with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
-                # Re-check under lock: another process may have created output
-                if not self.force and self.has_output_files():
-                    return self._execute_and_report("skipped (outputs exist, verified under lock)", True)
-                return self._execute_and_report("running (under lock)", False)
-
-    def _execute_and_report(self, log_msg: str, from_cache: bool) -> T:
-        """Run an action with optional log and standardized output reporting."""
+    def _log_run_status(self, log_msg: str) -> None:
+        """Standardized run status logging."""
         step_name = self.name
         step_name_color = f"\033[36m{step_name}\033[0m"
 
-        labels = self._output_labels() if self.output_files else []
+        labels = self._artifact_labels()
         output_str = ", ".join(labels) if labels else "none"
 
-        # Format: step_name (left), output_str at pos 40, log_msg right-aligned (120 chars total)
         remaining = 120 - 40 - len(log_msg)
         formatted = f"{step_name_color:<42s}{output_str:<{remaining}s}{log_msg}"
         self.log(formatted)
 
-        output = self.load_outputs() if from_cache else self._run_unlocked()
-
-        msg = self.report_output_message(output, from_cache=from_cache)
-        if msg:
-            self.log(msg, verbose_only=False)
-
-        return output
-
     def _get_lock_target(self) -> Path:
         """Path used for step lock; override to customize lock scope."""
-        return self.output_files[0]
+        if not self.artifact_files:
+            raise ValueError(f"{self.name}: artifact_files not set; cannot derive lock target")
+        return self.artifact_files[0]
 
-    def _run_unlocked(self) -> T:
-        """Execute step logic (assumes lock is held or not needed)."""
-        # Clean partial outputs
-        self._clean_outputs()
-
-        # Run
-        self.run_count += 1
-
-        if self.should_profile:
-            try:
-                from line_profiler import LineProfiler
-            except ImportError:
-                raise ImportError(
-                    "line_profiler is required for profiling. "
-                    "Install it with: pip install 'amplifinder[dev]' or pip install line_profiler"
-                )
-
-            lp = LineProfiler()
-            # Add functions specified by subclass
-            for func in self._get_profiler_functions():
-                lp.add_function(func)
-            # Profile _calculate_output itself
-            lp.add_function(self._calculate_output)
-
-            # Run with profiler
-            output = lp.runcall(self._calculate_output)
-
-            # Save and print stats
-            self._save_profiler_stats(lp)
-        else:
-            output = self._calculate_output()
-
-        # Save output (only if output_files defined and should_save is True)
-        if self.is_saving:
-            self._save_output_and_verify(output)
-
-        return output
-
-    def _clean_outputs(self) -> None:
-        """Remove existing outputs before re-run."""
-        if self.output_files is None:
+    def _clean_artifacts(self) -> None:
+        """Remove existing artifacts before regeneration."""
+        if self.artifact_files is None:
             return
-        for p in self.output_files:
+        for p in self.artifact_files:
             remove_file_or_dir(p)
 
-    @classmethod
-    def set_global_force(cls, force: bool) -> None:
-        """Set global force flag for all steps."""
-        cls.global_force = force
-
-    @classmethod
-    def set_global_verbose(cls, verbose: bool) -> None:
-        """Set global verbose flag for all steps."""
-        cls.global_verbose = verbose
+    """ Profiling """
 
     @classmethod
     def set_global_profile(cls, profile: bool) -> None:
         """Set global profile flag for all steps."""
         cls.should_profile = profile
+
+    def _create_profiler(self) -> LineProfiler:
+        """Create and configure LineProfiler with custom functions."""
+        try:
+            from line_profiler import LineProfiler
+        except ImportError:
+            raise ImportError(
+                "line_profiler is required for profiling. "
+                "Install it with: pip install 'amplifinder[dev]' or pip install line_profiler"
+            )
+
+        lp = LineProfiler()
+        for func in self._get_profiler_functions():
+            lp.add_function(func)
+        return lp
 
     def _get_profiler_functions(self) -> list:
         """Override in subclass to specify functions to profile.
@@ -263,17 +229,25 @@ class Step(ABC, Generic[T]):
         """
         return []
 
-    def _save_profiler_stats(self, lp) -> None:
+    def _get_profiler_stats_path(self, suffix: str = "") -> Optional[Path]:
+        """Get path for saving profiler stats. Override in subclass to customize."""
+        if self.artifact_files:
+            suffix_str = f"_{suffix}" if suffix else ""
+            return self.artifact_files[0].parent / f"line_profiler_stats{suffix_str}.lprof"
+        return None
+
+    def _save_profiler_stats(self, lp, suffix: str = "") -> None:
         """Save and optionally print line profiler statistics.
 
         Args:
             lp: LineProfiler instance with collected stats.
+            suffix: Optional suffix for stats filename (e.g., "artifacts", "calculation").
         """
         from io import StringIO
 
         # Save stats to file
-        if self.output_files:
-            stats_file = self.output_files[0].parent / "line_profiler_stats.lprof"
+        stats_file = self._get_profiler_stats_path(suffix)
+        if stats_file:
             lp.dump_stats(str(stats_file))
             self.log(f"Line profiler stats saved to {stats_file}", verbose_only=False)
 
@@ -283,20 +257,106 @@ class Step(ABC, Generic[T]):
             lp.print_stats(stream=output_stream, stripzeros=True)
             stats_text = output_stream.getvalue()
             if stats_text.strip():
-                self.log("Line profiler stats:")
+                self.log(f"Line profiler stats ({suffix or 'all'}):")
                 for line in stats_text.strip().split('\n'):
                     self.log(f"  {line}")
+
+
+class OutputStep(Step, Generic[T]):
+    """Step that creates artifacts AND returns output data to next step.
+    
+    Output files (CSVs, etc.) are treated as artifacts - included in artifact_files.
+    Overrides _generate_artifacts_if_needed to also compute and return output.
+    
+    Extends Step with:
+    - _calculate_output() -> T: Compute output from artifacts
+    - _generate_artifacts_if_needed() -> T: Returns calculated output (not None)
+    - _save_output(output): Called after artifacts are generated to save output files
+    
+    Use this when step needs to:
+    - Generate artifacts (BAMs, CSVs, etc.)
+    - Return data to next pipeline step
+    
+    Note: run() is inherited from Step and automatically returns the result of
+    _generate_artifacts_if_needed(), which is T for OutputStep.
+    """
+
+    def __init__(
+        self, *,
+        input_files: Optional[List[Path]] = None,
+        artifact_files: Optional[List[Path]] = None,
+        output_files: Optional[List[Path]] = None,
+        force: Optional[bool] = None,
+    ):
+        """Initialize output step.
+
+        Args:
+            input_files: Required input files/dirs (must exist)
+            artifact_files: Files/dirs created by external tools (BAMs, etc.)
+            output_files: Output files to create (CSVs, etc.) - added to artifacts
+            force: Step-specific force flag (None = use global)
+        """
+        # Merge output_files into artifact_files
+        if output_files is not None:
+            all_artifacts = (artifact_files or []) + output_files
+        
+        super().__init__(
+            input_files=input_files,
+            artifact_files=all_artifacts if all_artifacts else None,
+            force=force,
+        )
+
+        self.output_files = output_files
+
+    @abstractmethod
+    def _calculate_output(self) -> T:
+        """Calculate output using existing artifacts and step attributes."""
+        pass
+
+    def report_output_message(self, output: T, *, from_cache: bool) -> Optional[str]:
+        """Message to report after producing/loading output. Override per step."""
+        return None
+
+    def _save_output(self, output: T) -> None:
+        """Save output to artifact files (e.g., CSV). Override in subclass."""
+        pass
+
+    def _generate_artifacts_if_needed(self) -> T:
+        """Generate artifacts AND compute/save output. Returns calculated output."""
+        # Generate external artifacts (BAMs, indexes, etc.)
+        super()._generate_artifacts_if_needed()
+        
+        # Calculate output (always - we need to return it)
+        self.run_count += 1
+        if self.should_profile:
+            lp = self._create_profiler()
+            lp.add_function(self._calculate_output)
+            output = lp.runcall(self._calculate_output)
+            self._save_profiler_stats(lp, suffix="calculation")
+        else:
+            output = self._calculate_output()
+        
+        # Save output files if artifacts were just generated (not cached)
+        if not self._artifacts_cached:
+            self._save_output(output)
+        
+        # Report
+        msg = self.report_output_message(output, from_cache=self._artifacts_cached)
+        if msg:
+            self.log(msg, verbose_only=False)
+        
+        return output
 
 
 R = TypeVar("R", bound=Record)
 
 
-class RecordTypedDfStep(Step[RecordTypedDf[R]], Generic[R]):
-    """Base class for steps that output RecordTypedDf to CSV.
+class RecordTypedDfStep(OutputStep[RecordTypedDf[R]], Generic[R]):
+    """Base class for steps that output RecordTypedDf to CSV (view only).
 
     Automatically handles:
     - Output file path from io_naming.default_path()
-    - CSV save/load using RecordTypedDf
+    - CSV save via RecordTypedDf
 
     Subclasses should:
     - Set class var `record_cls` (or it will be auto-deduced from typing)
@@ -307,39 +367,45 @@ class RecordTypedDfStep(Step[RecordTypedDf[R]], Generic[R]):
 
     def __init__(
         self,
-        output_dir: Optional[Path] = None,
-        output_file: Optional[Path] = None,
+        *,
+        output_dir: Optional[Path | str] = None,
+        output_file: Optional[Path | str] = None,
         input_files: Optional[List[Path]] = None,
+        artifact_files: Optional[List[Path]] = None,
         force: Optional[bool] = None,
     ):
         """Initialize step.
 
         Args:
-            output_dir: Directory for output CSV file (uses default filename from io_naming)
-            output_file: Full path to output CSV file (overrides output_dir)
+            output_dir: Directory for output CSV file (str or Path; uses default filename from io_naming)
+            output_file: Full path to output CSV file (str or Path; overrides output_dir)
             input_files: Required input files/dirs
             force: Step-specific force flag
         """
         if output_dir is not None and output_file is not None:
             raise ValueError("Cannot specify both output_dir and output_file")
-        if output_dir is None and output_file is None:
-            raise ValueError("Must specify either output_dir or output_file")
 
-        if output_file is not None:
-            # Use provided output_file directly
-            self.output_file = Path(output_file)
-            self.output_dir = self.output_file.parent
-        else:
+        if output_file is None and output_dir is not None:
             # Use output_dir with default filename
-            self.output_dir = Path(output_dir)
             record_type = self._get_record_cls()
-            self.output_file = default_path(self.output_dir, record_type)
+            output_file = Path(output_dir) / default_filename(record_type)
 
         super().__init__(
             input_files=input_files,
-            output_files=[self.output_file],
+            artifact_files=artifact_files,
+            output_files=[output_file] if output_file is not None else None,
             force=force,
         )
+
+    @property
+    def output_file(self) -> Optional[Path]:
+        """Output file."""
+        return self.output_files[0] if self.output_files else None
+
+    @property
+    def output_dir(self) -> Optional[Path]:
+        """Output directory."""
+        return self.output_files[0].parent if self.output_files else None
 
     @classmethod
     def _get_record_cls(cls) -> Type[R]:
@@ -367,35 +433,13 @@ class RecordTypedDfStep(Step[RecordTypedDf[R]], Generic[R]):
             "Set record_cls class var or use RecordTypedDfStep[RecordType] typing."
         )
 
-    def has_output_files(self) -> bool:
-        """True if output files exist and can be loaded.
-        
-        Returns False if CSV_EXPORT_FIELDS is set (CSV is view-only, cannot be loaded).
-        """
-        record_cls = self._get_record_cls()
-        # If CSV_EXPORT_FIELDS is set, CSV is view-only - always recompute
-        if record_cls.CSV_EXPORT_FIELDS is not None:
-            return False
-        return super().has_output_files()
-
     def _save_output(self, output: RecordTypedDf[R]) -> None:
         """Save RecordTypedDf to CSV."""
         ensure_dir(self.output_file.parent)
         output.to_csv(self.output_file)
 
-    def load_outputs(self) -> RecordTypedDf[R]:
-        """Load RecordTypedDf from CSV.
-        
-        Note: This will not be called if CSV_EXPORT_FIELDS is set (has_output_files returns False).
-        """
-        record_cls = self._get_record_cls()
-        # Safety check: CSV_EXPORT_FIELDS makes CSV view-only
-        if record_cls.CSV_EXPORT_FIELDS is not None:
-            raise NotImplementedError(f"{record_cls.__name__} uses CSV_EXPORT_FIELDS. CSV file are view-only")
-        return RecordTypedDf.from_csv(self.output_file, record_cls)
-
     def report_output_message(self, output: RecordTypedDf[R], *, from_cache: bool) -> Optional[str]:
         """Uniform record count logging for RecordTypedDf steps."""
         record_cls = self._get_record_cls()
-        prefix = 'Loaded' if from_cache else 'Created'
-        return f"{prefix} {len(output)} {record_cls.NAME}."
+        prefix = 'Artifacts cached,' if from_cache else 'Artifacts created,'
+        return f"{prefix} computed {len(output)} {record_cls.NAME}."

@@ -19,11 +19,11 @@ def test_step_initialization(filtered_tnjc2_record, tmp_path):
     junctions_file.write_text(">1\nACGTACGT\n")
 
     step = AlignReadsToJunctionsStep(
-        filtered_tnjc2s=filtered_tnjc2s,
+        synjcs_tnjc2s=filtered_tnjc2s,
         output_dir=tmp_path,
-        iso_fastq_path=fastq_file,
+        fastq_path=fastq_file,
     )
 
-    assert step.filtered_tnjc2s == filtered_tnjc2s
-    assert step.iso_fastq_path == fastq_file
-    assert step.anc_fastq_path is None
+    assert step.synjcs_tnjc2s == filtered_tnjc2s
+    assert step.fastq_path == fastq_file
+    assert step.is_ancestor is False
