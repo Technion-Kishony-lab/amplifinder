@@ -179,7 +179,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         self.evalue = evalue
         self.critical_coverage = critical_coverage
 
-        self.blast_output = self.output_dir / "isfinder_blast.txt"
+        self.blast_output = Path(output_dir) / "isfinder_blast.txt"
 
         super().__init__(
             genome=genome,

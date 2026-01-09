@@ -121,9 +121,8 @@ def test_skips_if_exists(tnjc2_step):
     tnjc2_step.run()
     assert tnjc2_step.run_count == 1
     tnjc2_step.run()
-    # Note: Step runs again because it doesn't save to file (should_save=True but no output_files)
-    # This is expected behavior for steps without file outputs
-    assert tnjc2_step.run_count == 2
+    # Artifacts are cached on second run, so run_count doesn't increment
+    assert tnjc2_step.run_count == 1
 
 
 def test_pairs_opposing_junctions(tiny_genome, tmp_output):

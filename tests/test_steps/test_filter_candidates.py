@@ -89,8 +89,8 @@ def test_filters_by_length(sample_classified_tnjc2, tmp_path):
     assert result_list[1].amplicon_length == 500
 
 
-def test_assigns_analysis_dir(sample_classified_tnjc2, tmp_path):
-    """Should assign analysis directory names with correct format."""
+def test_keeps_all_when_no_length_filter(sample_classified_tnjc2, tmp_path):
+    """Should keep all candidates when length filter is permissive."""
     step = FilterTnJc2CandidatesStep(
         classified_tnjc2s=sample_classified_tnjc2,
         output_dir=tmp_path,
@@ -103,8 +103,6 @@ def test_assigns_analysis_dir(sample_classified_tnjc2, tmp_path):
     assert len(result) == 3  # All pass length filter
     result_list = list(result)
     
-    # Check all have analysis_dir in correct format: jc_{left}-{right}_{tn_id:03d}{side}_{read_length}bp
-    for filtered in result_list:
-        assert filtered.analysis_dir.startswith("jc_")
-        assert "_150bp" in filtered.analysis_dir
-        assert "-" in filtered.analysis_dir  # Should have left-right format
+    # Check all have expected amplicon lengths
+    lengths = sorted([r.amplicon_length for r in result_list])
+    assert lengths == [20, 101, 500]

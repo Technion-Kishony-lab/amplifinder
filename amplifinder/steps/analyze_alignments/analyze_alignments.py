@@ -32,8 +32,8 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         force: Optional[bool] = None,
     ):
         self.filtered_tnjc2s = filtered_tnjc2s
-        self.output_dir = Path(output_dir)
-        self.anc_output_dir = Path(anc_output_dir) if anc_output_dir else None
+        self._run_output_dir = Path(output_dir)
+        self._anc_output_dir = Path(anc_output_dir) if anc_output_dir else None
         self.read_length = read_length
         self.anc_read_length = anc_read_length if anc_read_length else read_length
         self.min_overlap = min_overlap
@@ -47,7 +47,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             input_files.append(analysis_dir / "iso.sorted.bam")
             if has_ancestor:
                 # Ancestor BAM is in ancestor folder (as iso.sorted.bam)
-                if not self.anc_output_dir:
+                if not self._anc_output_dir:
                     raise ValueError("anc_output_dir must be provided when has_ancestor=True")
                 anc_analysis_dir = self._get_anc_dir(filtered_tnjc2)
                 input_files.append(anc_analysis_dir / "iso.sorted.bam")
@@ -80,7 +80,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             anc_jc_cov = None
             anc_arch = None
             if self.has_ancestor:
-                if not self.anc_output_dir:
+                if not self._anc_output_dir:
                     raise ValueError("anc_output_dir must be provided when has_ancestor=True")
                 anc_analysis_dir = self._get_anc_dir(filtered_tnjc2)
                 anc_bam = anc_analysis_dir / "iso.sorted.bam"
@@ -112,11 +112,11 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
     def _get_iso_dir(self, filtered_tnjc2: SynJctsTnJc2) -> Path:
         """Isolate analysis directory."""
-        return self.output_dir / "junctions" / filtered_tnjc2.analysis_dir
+        return self._run_output_dir / "junctions" / filtered_tnjc2.analysis_dir
 
     def _get_anc_dir(self, filtered_tnjc2: SynJctsTnJc2) -> Path:
         """Ancestor analysis directory (falls back to isolate if missing)."""
-        if not self.anc_output_dir:
+        if not self._anc_output_dir:
             raise ValueError("anc_output_dir must be provided for ancestor dirs")
         anc_dir = filtered_tnjc2.analysis_dir_anc or filtered_tnjc2.analysis_dir
-        return self.anc_output_dir / "junctions" / anc_dir
+        return self._anc_output_dir / "junctions" / anc_dir
