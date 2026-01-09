@@ -1,14 +1,11 @@
 """Step 13: Final classification of candidates based on junction analysis."""
 
 from pathlib import Path
-from typing import Optional, List, Tuple
+from typing import Optional, List
 
-from amplifinder.data_types import (
-    RecordTypedDf, AnalyzedTnJc2, ClassifiedTnJc2, RawEvent, EventModifier, JunctionType,
-)
+from amplifinder.data_types import JunctionReadCounts, RecordTypedDf, AnalyzedTnJc2, ClassifiedTnJc2, RawEvent, \
+    EventModifier, JunctionType
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.steps.analyze_alignments.classify import classify_architecture
-
 
 # Iso/Anc pattern transition rules (from MATLAB classify_candidates.m)
 # Format: (iso_pattern, anc_pattern) -> (de_novo_left, de_novo_right)
@@ -24,12 +21,25 @@ ISO_ANC_TRANSITIONS = {
     (RawEvent.UNFLANKED, RawEvent.REFERENCE): (False, False),
 }
 
+# Junction coverage patterns -> RawEvent classification
+# Pattern: (jct1, jct2, ..., jct7) where 1=covered, 0=not
+ARCHITECTURE_PATTERNS = {
+    (0, 1, 1, 0, 1, 1, 0): RawEvent.FLANKED,
+    (0, 1, 1, 0, 1, 0, 1): RawEvent.HEMI_FLANKED_LEFT,
+    (1, 0, 1, 0, 1, 1, 0): RawEvent.HEMI_FLANKED_RIGHT,
+    (1, 0, 1, 0, 1, 0, 1): RawEvent.UNFLANKED,
+    (0, 1, 0, 0, 1, 0, 1): RawEvent.HEMI_FLANKED_LEFT,   # single variant
+    (1, 0, 1, 0, 0, 1, 0): RawEvent.HEMI_FLANKED_RIGHT,  # single variant
+    (1, 0, 0, 0, 0, 0, 1): RawEvent.REFERENCE,
+    (0, 1, 0, 0, 0, 1, 0): RawEvent.TRANSPOSITION,
+}
+
 
 def classify_iso_vs_anc(
     iso_arch: RawEvent,
     anc_arch: Optional[RawEvent],
     min_jct_cov: int = 5,
-) -> Tuple[str, List[EventModifier]]:
+) -> List[EventModifier]:
     """Classify event based on isolate vs ancestor architecture comparison.
 
     Based on MATLAB classify_candidates.m
@@ -40,38 +50,61 @@ def classify_iso_vs_anc(
         min_jct_cov: Minimum coverage threshold
 
     Returns:
-        (event_name, list_of_modifiers)
+        list_of_modifiers
     """
     modifiers = []
 
     if anc_arch is None:
         # No ancestor - can't determine de novo status
-        return iso_arch.value, modifiers
+        return modifiers
 
     if iso_arch == anc_arch:
         # Same architecture - ancestral
         modifiers.append(EventModifier.ANCESTRAL)
-        return f"{iso_arch.value} (ancestral)", modifiers
+        return modifiers
 
     # Look up transition
     transition = ISO_ANC_TRANSITIONS.get((iso_arch, anc_arch))
 
     if transition is None:
         # Unrecognized transition
-        return f"{iso_arch.value} (unresolved iso-anc pair)", modifiers
+        return modifiers
 
     de_novo_left, de_novo_right = transition
 
-    event_parts = [iso_arch.value]
     if de_novo_left:
-        event_parts.append("de novo left")
-        modifiers.append(EventModifier.DE_NOVO)
+        modifiers.append(EventModifier.DENOVO_LEFT)
     if de_novo_right:
-        event_parts.append("de novo right")
-        if EventModifier.DE_NOVO not in modifiers:
-            modifiers.append(EventModifier.DE_NOVO)
+        modifiers.append(EventModifier.DENOVO_RIGHT)
 
-    return " ".join(event_parts), modifiers
+    return modifiers
+
+
+def classify_architecture(jc_cov: List[JunctionReadCounts], min_jct_cov: int = 5) -> RawEvent:
+    """Classify junction architecture from read coverage patterns.
+
+    Based on MATLAB classify_candidates.m
+
+    Junction patterns (1=covered, 0=not):
+        Pattern         Name
+        [0,1,1,0,1,1,0] flanked
+        [0,1,1,0,1,0,1] hemi-flanked left
+        [1,0,1,0,1,1,0] hemi-flanked right
+        [1,0,1,0,1,0,1] unflanked
+        [0,1,0,0,1,0,1] hemi-flanked left single
+        [1,0,1,0,0,1,0] hemi-flanked right single
+        [1,0,0,0,0,0,1] no IS (reference)
+        [0,1,0,0,0,1,0] deletion
+
+    Args:
+        jc_cov: List of 7 JunctionReadCounts (one per junction type)
+        min_jct_cov: Minimum spanning reads to consider junction "covered"
+
+    Returns:
+        RawEvent classification
+    """
+    pattern = tuple(1 if jc.spanning >= min_jct_cov else 0 for jc in jc_cov)
+    return ARCHITECTURE_PATTERNS.get(pattern, RawEvent.UNRESOLVED)
 
 
 class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[ClassifiedTnJc2]):
@@ -108,35 +141,33 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[ClassifiedTnJc2]):
 
         for analyzed_tnjc2 in self.analyzed_tnjc2s:
             # Compute architectures from junction coverage
-            iso_cov_list = [analyzed_tnjc2.jc_cov[jt] for jt in sorted(JunctionType, key=lambda x: x.value)]
+            iso_cov_list = [analyzed_tnjc2.jc_cov[jt] for jt in JunctionType.sorted()]
             iso_arch = classify_architecture(iso_cov_list, self.min_jct_cov)
 
             anc_arch = None
             if self.has_ancestor and analyzed_tnjc2.jc_cov_anc:
-                anc_cov_list = [analyzed_tnjc2.jc_cov_anc[jt] for jt in sorted(JunctionType, key=lambda x: x.value)]
+                anc_cov_list = [analyzed_tnjc2.jc_cov_anc[jt] for jt in JunctionType.sorted()]
                 anc_arch = classify_architecture(anc_cov_list, self.min_jct_cov)
 
             # Reclassify
-            event, modifiers = classify_iso_vs_anc(iso_arch, anc_arch, self.min_jct_cov)
+            modifiers = classify_iso_vs_anc(iso_arch, anc_arch, self.min_jct_cov)
 
             # Create ClassifiedTnJc2 with architecture and classification
             classified = ClassifiedTnJc2.from_other(
                 analyzed_tnjc2,
                 isolate_architecture=iso_arch,
                 ancestor_architecture=anc_arch,
-                event=event,
                 event_modifiers=modifiers,
             )
 
             classified_records.append(classified)
 
-        result = RecordTypedDf.from_records(classified_records, ClassifiedTnJc2)
-
-        return result
+        return RecordTypedDf.from_records(classified_records, ClassifiedTnJc2)
 
     def report_output_message(self, output: RecordTypedDf[ClassifiedTnJc2], *, from_cache: bool) -> Optional[str]:
         if self.has_ancestor:
             ancestral = sum(1 for r in output if EventModifier.ANCESTRAL in r.event_modifiers)
-            de_novo = sum(1 for r in output if EventModifier.DE_NOVO in r.event_modifiers)
+            de_novo = sum(1 for r in output if EventModifier.DENOVO_LEFT in r.event_modifiers
+                          or EventModifier.DENOVO_RIGHT in r.event_modifiers)
             return f"Classification: {ancestral} ancestral, {de_novo} de novo, {len(output)} total"
         return f"Classification: {len(output)} candidates (no ancestor comparison)"

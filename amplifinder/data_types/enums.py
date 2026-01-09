@@ -1,4 +1,5 @@
 """Enum definitions for AmpliFinder."""
+from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
@@ -76,11 +77,17 @@ class JunctionType(int, Enum):
     TN_RIGHT_TO_CHR = 6          # (6) >>-~~  right IS transposition (IS-chromosome)
     AMP_RIGHT_TO_CHR = 7         # (7) ==-~~  right reference (cassette-chromosome)
 
+    @classmethod
+    def sorted(cls) -> list[JunctionType]:
+        """Return the JunctionType enum members sorted by value."""
+        return sorted(cls, key=lambda x: x.value)
+
 
 class EventModifier(str, Enum):
     """Modifiers for classified events (Step 13)."""
     ANCESTRAL = "ancestral"
-    DE_NOVO = "de novo"
+    DENOVO_LEFT = "de novo left"
+    DENOVO_RIGHT = "de novo right"
     LOW_COVERAGE = "low coverage near junction"
 
 
