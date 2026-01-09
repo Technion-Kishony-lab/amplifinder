@@ -3,14 +3,16 @@
 import gzip
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 
-from amplifinder.logger import info, warning
 from amplifinder.utils.file_utils import ensure_parent_dir
+
+
+READ_LENGTH_UNIFORMITY_TOLERANCE: float = 0.05
 
 
 def read_fasta_lengths(fasta_path: Path, max_num_reads: Optional[int] = None) -> Dict[str, int]:
@@ -54,25 +56,31 @@ def read_fastq_lengths(fastq_path: Path, max_num_reads: Optional[int] = None) ->
 @dataclass
 class ReadLengthStats:
     """Read length statistics from FASTQ files."""
+    min_length: int
     max_length: int
     mean_length: float
-    is_uniform: bool  # All sampled reads within 5% of each other
-    num_bases: int
-    num_reads: int
+
+    @property
+    def is_uniform(self) -> bool:
+        """True if all sampled reads within 5% of each other."""
+        return self.min_length > 0 and (self.max_length / self.min_length) < (1 + READ_LENGTH_UNIFORMITY_TOLERANCE)
 
 
 def get_read_length_stats(
     fastq_dir: Path,
-    sample_size: int = 1000,
+    sample_per_file: int = 1000,
 ) -> ReadLengthStats:
     """Calculate read length statistics from FASTQ files in a directory.
 
+    Samples reads from all FASTQ files (e.g., paired-end R1/R2) to determine
+    read length. For paired-end, R1 and R2 typically have the same length.
+
     Args:
         fastq_dir: Directory containing FASTQ files
-        sample_size: Number of reads to sample per file for uniformity check
+        sample_per_file: Number of reads to sample per file
 
     Returns:
-        ReadLengthStats with max_length, mean_length, is_uniform, num_bases, num_reads
+        ReadLengthStats with min_length, max_length, mean_length
     """
     fastq_dir = Path(fastq_dir)
 
@@ -82,34 +90,17 @@ def get_read_length_stats(
         raise FileNotFoundError(f"No FASTQ files found in {fastq_dir}")
 
     all_lengths: List[int] = []
-    total_bases = 0
-    total_reads = 0
-
     for fq_file in fastq_files:
-        lengths = read_fastq_lengths(fq_file, max_num_reads=sample_size)
-        if lengths:
-            all_lengths.extend(lengths)
-            # Estimate total bases/reads from file
-            file_lengths = read_fastq_lengths(fq_file, max_num_reads=None)
-            total_reads += len(file_lengths)
-            total_bases += sum(file_lengths)
+        lengths = read_fastq_lengths(fq_file, max_num_reads=sample_per_file)
+        all_lengths.extend(lengths)
 
     if not all_lengths:
         raise ValueError(f"No reads found in FASTQ files in {fastq_dir}")
 
-    max_length = max(all_lengths)
-    mean_length = sum(all_lengths) / len(all_lengths)
-
-    # Check uniformity: all sampled reads within 5% of each other
-    min_len = min(all_lengths)
-    is_uniform = (max_length / min_len) < 1.05 if min_len > 0 else False
-
     return ReadLengthStats(
-        max_length=max_length,
-        mean_length=mean_length,
-        is_uniform=is_uniform,
-        num_bases=total_bases,
-        num_reads=total_reads,
+        min_length=min(all_lengths),
+        max_length=max(all_lengths),
+        mean_length=sum(all_lengths) / len(all_lengths),
     )
 
 
