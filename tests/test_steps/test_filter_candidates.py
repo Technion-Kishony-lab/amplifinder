@@ -74,7 +74,7 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
 def test_filters_by_length(sample_classified_tnjc2, tmp_path):
     """Should filter candidates by amplicon length."""
     step = FilterTnJc2CandidatesStep(
-        classified_tnjc2s=sample_classified_tnjc2,
+        linked_tnjc2s=sample_classified_tnjc2,
         output_dir=tmp_path,
         min_amplicon_length=50,  # Filter out the 20bp amplicon
         max_amplicon_length=1_000_000,
@@ -92,7 +92,7 @@ def test_filters_by_length(sample_classified_tnjc2, tmp_path):
 def test_keeps_all_when_no_length_filter(sample_classified_tnjc2, tmp_path):
     """Should keep all candidates when length filter is permissive."""
     step = FilterTnJc2CandidatesStep(
-        classified_tnjc2s=sample_classified_tnjc2,
+        linked_tnjc2s=sample_classified_tnjc2,
         output_dir=tmp_path,
         min_amplicon_length=10,  # Keep all
         max_amplicon_length=1_000_000,

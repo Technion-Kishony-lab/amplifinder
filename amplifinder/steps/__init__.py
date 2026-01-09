@@ -8,7 +8,7 @@ from amplifinder.steps.run_breseq import BreseqStep, AncBreseqStep
 from amplifinder.steps.create_reference_junctions import CreateRefTnJcStep
 from amplifinder.steps.create_tnjc import CreateTnJcStep
 from amplifinder.steps.pair_tnjc import PairTnJcToRawTnJc2Step
-from amplifinder.steps.classify_structure import ClassifyTnJc2StructureStep
+from amplifinder.steps.classify_structure import LinkTnJc2ToSingleLocusPairsStep
 from amplifinder.steps.filter_candidates import FilterTnJc2CandidatesStep
 from amplifinder.steps.amplicon_coverage import CalcTnJc2AmpliconCoverageStep
 from amplifinder.steps.synthetic_junctions import CreateSyntheticJunctionsStep, AncCreateSyntheticJunctionsStep
@@ -32,7 +32,7 @@ __all__ = [
     "CreateTnJcStep",
     "PairTnJcToRawTnJc2Step",
     "CalcTnJc2AmpliconCoverageStep",
-    "ClassifyTnJc2StructureStep",
+    "LinkTnJc2ToSingleLocusPairsStep",
     "FilterTnJc2CandidatesStep",
     "CreateSyntheticJunctionsStep",
     "AncCreateSyntheticJunctionsStep",

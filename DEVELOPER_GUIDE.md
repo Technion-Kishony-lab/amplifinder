@@ -424,7 +424,7 @@ Organized by: reference → ancestor → isolate
 | 5 | `CreateTnJcStep` | Matches breseq JC to TN elements | `assign_potential_ISs.m` |
 | 6 | `PairTnJcToRawTnJc2Step` | Pairs junctions into RawTnJc2 | `combine_ISJC_pairs.m`, `calculate_amplicon_length.m` |
 | 7 | `CalcTnJc2AmpliconCoverageStep` | Calculates amplicon coverage | `calc_coverage_ISJC2.m` |
-| 8 | `ClassifyTnJc2StructureStep` | Classifies junction pairs | `classify_ISJC2.m`, `directed_IS.m` |
+| 8 | `LinkTnJc2ToSingleLocusPairsStep` | Classifies junction pairs | `classify_ISJC2.m`, `directed_IS.m` |
 | 9 | `FilterTnJc2CandidatesStep` | Filters by amplicon length | `curate_candidate_amplicons.m` |
 | 10 | `CreateSyntheticJunctionsStep` | Creates synthetic junction FASTA | `junction2fasta.m` |
 | 11 | `AlignReadsToJunctionsStep` | Aligns reads to junctions | `bowtie2_alignment.m` |

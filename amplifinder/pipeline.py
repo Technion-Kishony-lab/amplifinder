@@ -19,7 +19,7 @@ from amplifinder.steps import (
     CreateTnJcStep,
     PairTnJcToRawTnJc2Step,
     CalcTnJc2AmpliconCoverageStep,
-    ClassifyTnJc2StructureStep,
+    LinkTnJc2ToSingleLocusPairsStep,
     FilterTnJc2CandidatesStep,
     CreateSyntheticJunctionsStep, AncCreateSyntheticJunctionsStep,
     AlignReadsToJunctionsStep, AncAlignReadsToJunctionsStep,
@@ -59,22 +59,19 @@ class Pipeline:
         # Load reference genome (needed for ancestor breseq and isolate pipeline)
         genome = self._load_reference()
 
-        # Handle ancestor breseq if needed
-        self._ancestor_breseq(genome, anc_output)
-
-        # Run isolate pipeline
+        # Run pipeline
         ref_tns = self._locate_tns_in_reference(genome)
         ref_tnjcs = self._create_ref_tn_junctions(ref_tns, genome, iso_output)
-        breseq_jcs = self._run_breseq(genome, iso_output)
-        tnjcs = self._create_tnjc(breseq_jcs, ref_tnjcs, genome, iso_output)
-        raw_tnjc2s = self._create_tnjc2(tnjcs, genome, iso_output)
+        breseq_jcs = self._run_breseq(genome)
+        tnjcs = self._create_tnjcs(breseq_jcs, ref_tnjcs, genome, iso_output)
+        raw_tnjc2s = self._create_tnjc2s(tnjcs, genome, iso_output)
         covered_tnjc2s = self._calc_amplicon_coverage(raw_tnjc2s, genome, iso_output)
-        struct_classified_tnjc2s = self._classify_structure(covered_tnjc2s, genome, ref_tns, iso_output)
-        filtered_tnjc2s = self._filter_candidates(struct_classified_tnjc2s, iso_output)
+        linked_tnjc2s = self._link_side_of_tnjc2s_to_single_locus_pairs(covered_tnjc2s, genome, ref_tns, iso_output)
+        filtered_tnjc2s = self._filter_candidates(linked_tnjc2s, iso_output)
         read_lengths = self._calc_read_lengths()
-        syn_tnjc2s = self._create_synthetic_junctions(filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
-        self._align_reads(syn_tnjc2s, iso_output, anc_output)
-        analyzed_tnjc2s = self._analyze_alignments(syn_tnjc2s, iso_output, anc_output, read_lengths)
+        synjct_tnjc2s = self._create_synthetic_junctions(filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
+        self._align_reads(synjct_tnjc2s, iso_output, anc_output)
+        analyzed_tnjc2s = self._analyze_alignments(synjct_tnjc2s, iso_output, anc_output, read_lengths)
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
         self._export(classified_tnjc2s, genome, iso_output)
 
@@ -82,31 +79,9 @@ class Pipeline:
 
     def run_breseq_only(self) -> None:
         """Run only breseq steps (ancestor and isolate), then exit."""
-        iso_output, anc_output = self._initialize()
         genome = self._load_reference()
-        self._ancestor_breseq(genome, anc_output)
-        self._run_breseq(genome, iso_output)
+        self._run_breseq(genome)
         info("breseq-only mode completed")
-
-    def _ancestor_breseq(self, genome: Genome, anc_output: Path) -> None:
-        """Ensure ancestor breseq output exists, run breseq if needed."""
-        if not self.config.has_ancestor:
-            return
-
-        # Determine breseq path (provided or default)
-        if self.config.anc_breseq_path:
-            anc_breseq_path = Path(self.config.anc_breseq_path)
-        else:
-            anc_breseq_path = anc_output / "breseq"
-
-        # Run breseq (BreseqStep handles caching - skips if output exists)
-        AncBreseqStep(
-            breseq_path=anc_breseq_path,
-            fastq_path=self.config.anc_path,
-            ref_file=genome.genbank_path or genome.fasta_path,
-            docker=self.config.breseq_docker,
-            threads=self.config.threads,
-        ).run()
 
     @property
     def ref_tn_source(self) -> str:
@@ -171,19 +146,29 @@ class Pipeline:
             reference_tn_out_span=cfg.reference_IS_out_span,
         ).run()
 
-    def _run_breseq(self, genome: Genome, iso_output: Path) -> RecordTypedDf[BreseqJunction]:
+    def _run_breseq(self, genome: Genome) -> RecordTypedDf[BreseqJunction]:
         """Step 4: Run breseq on isolate to get junctions."""
         cfg = self.config
+
+        if cfg.has_ancestor:
+            AncBreseqStep(
+                fastq_path=cfg.anc_path,
+                ref_file=genome.genbank_path or genome.fasta_path,
+                breseq_path=cfg.get_anc_breseq_path(),
+                docker=cfg.breseq_docker,
+                threads=cfg.threads,
+            ).run()
 
         return BreseqStep(
             fastq_path=cfg.iso_path,
             ref_file=genome.genbank_path or genome.fasta_path,
-            breseq_path=cfg.iso_breseq_path or iso_output / "breseq",
+            breseq_path=cfg.get_iso_breseq_path(),
             docker=cfg.breseq_docker,
             threads=cfg.threads,
         ).run()
 
-    def _create_tnjc(
+
+    def _create_tnjcs(
         self,
         breseq_jcs: RecordTypedDf[BreseqJunction],
         ref_tnjcs: RecordTypedDf[RefTnJunction],
@@ -205,7 +190,7 @@ class Pipeline:
             trim_jc_flanking=cfg.trim_jc_flanking,
         ).run()
 
-    def _create_tnjc2(
+    def _create_tnjc2s(
         self,
         tnjcs: RecordTypedDf[TnJunction],
         genome: Genome,
@@ -254,7 +239,7 @@ class Pipeline:
             max_amplicon_length=cfg.max_amplicon_length,
         ).run()
 
-    def _classify_structure(
+    def _link_side_of_tnjc2s_to_single_locus_pairs(
         self,
         covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
         genome: Genome,
@@ -262,7 +247,7 @@ class Pipeline:
         iso_output: Path,
     ) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
         """Step 8: Classify junction pair structures."""
-        return ClassifyTnJc2StructureStep(
+        return LinkTnJc2ToSingleLocusPairsStep(
             covered_tnjc2s=covered_tnjc2s,
             genome=genome,
             tn_locs=tn_loc,
@@ -272,12 +257,12 @@ class Pipeline:
 
     def _filter_candidates(
         self,
-        classified_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
+        linked_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
         iso_output: Path,
     ) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
         """Step 9: Filter candidates by amplicon length."""
         return FilterTnJc2CandidatesStep(
-            classified_tnjc2s=classified_tnjc2s,
+            linked_tnjc2s=linked_tnjc2s,
             output_dir=iso_output,
             min_amplicon_length=self.config.min_amplicon_length,
             max_amplicon_length=self.config.max_amplicon_length,
@@ -343,14 +328,14 @@ class Pipeline:
 
     def _analyze_alignments(
         self,
-        syn_tnjc2s: RecordTypedDf[SynJctsTnJc2],
+        synjct_tnjc2s: RecordTypedDf[SynJctsTnJc2],
         iso_output: Path,
         anc_output: Optional[Path],
         read_lengths: ReadLengths,
     ) -> RecordTypedDf[AnalyzedTnJc2]:
         """Step 12: Analyze read alignments."""
         return AnalyzeTnJc2AlignmentsStep(
-            synjct_tnjc2s=syn_tnjc2s,
+            synjct_tnjc2s=synjct_tnjc2s,
             output_dir=iso_output,
             anc_output_dir=anc_output,
             iso_read_length=read_lengths.iso_read_length,
