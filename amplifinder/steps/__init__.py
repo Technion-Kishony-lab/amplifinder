@@ -16,6 +16,7 @@ from amplifinder.steps.align_reads import AlignReadsToJunctionsStep, AncAlignRea
 from amplifinder.steps.analyze_alignments import AnalyzeTnJc2AlignmentsStep
 from amplifinder.steps.classify_candidates import ClassifyTnJc2CandidatesStep
 from amplifinder.steps.export import ExportTnJc2Step
+from amplifinder.steps.read_length import ReadLenStep, ReadLengths
 
 __all__ = [
     "Step",
@@ -40,4 +41,6 @@ __all__ = [
     "AnalyzeTnJc2AlignmentsStep",
     "ClassifyTnJc2CandidatesStep",
     "ExportTnJc2Step",
+    "ReadLenStep",
+    "ReadLengths",
 ]

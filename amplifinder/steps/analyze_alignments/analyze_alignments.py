@@ -56,12 +56,12 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         analyzed_records = []
         for synjct_tnjc2 in self.synjct_tnjc2s:
             # Get isolate junction coverage (required)
-            jc_cov = self._get_cov(synjct_tnjc2, self._iso_output_dir, self.iso_read_length, label="iso")
+            jc_cov = self._get_cov(synjct_tnjc2, self._iso_output_dir, self.iso_read_length)
 
             # Get ancestor junction coverage if available (optional)
             jc_cov_anc = None
             if self.has_ancestor:
-                jc_cov_anc = self._get_cov(synjct_tnjc2, self._anc_output_dir, self.anc_read_length, label="anc")
+                jc_cov_anc = self._get_cov(synjct_tnjc2, self._anc_output_dir, self.anc_read_length)
 
             analyzed_tnjc2 = AnalyzedTnJc2.from_other(
                 synjct_tnjc2,

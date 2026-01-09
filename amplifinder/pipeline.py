@@ -1,18 +1,14 @@
 """Pipeline orchestration for AmpliFinder."""
-import shutil
-import pandas as pd
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Tuple, Optional
 
 from amplifinder.config import Config
 from amplifinder.data_types import (
-    Genome, RecordTypedDf, RefTn, RefTnJunction, Junction, BreseqJunction, TnJunction, RawTnJc2,
+    Genome, RecordTypedDf, RefTn, RefTnJunction, BreseqJunction, TnJunction, RawTnJc2,
     CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2,
 )
-from amplifinder.logger import info, warning
-from amplifinder.utils.file_utils import ensure_dir
-from amplifinder.utils.fasta import get_read_length_stats
+from amplifinder.logger import info
 from amplifinder.steps import (
     InitializingStep,
     GetRefGenomeStep,
@@ -30,12 +26,10 @@ from amplifinder.steps import (
     AnalyzeTnJc2AlignmentsStep,
     ClassifyTnJc2CandidatesStep,
     ExportTnJc2Step,
+    ReadLenStep, ReadLengths,
 )
 from amplifinder.data import get_builtin_isfinder_db_path
 from amplifinder.steps.locate_tns import compare_tn_locations
-
-
-JUNCTION_LENGTH_TOLERANCE: float = 0.10
 
 
 @dataclass
@@ -43,64 +37,15 @@ class Pipeline:
     """AmpliFinder pipeline with phased execution."""
 
     config: Config
-    _iso_read_length: Optional[int] = None
-    _anc_read_length: Optional[int] = None
 
-    @staticmethod
-    def _calc_read_length(fastq_dir: Path, provided_length: Optional[int], sample_type: str) -> int:
-        """Calculate read length from FASTQ files."""
-        if provided_length is not None:
-            return provided_length
-        
-        stats = get_read_length_stats(fastq_dir)
-        info(f"{sample_type}: read-length stats: {stats}")
-        if not stats.is_uniform:
-            warning(f"{sample_type.capitalize()} read length is not uniform - may affect junction coverage accuracy")
-        return stats.max_length
-
-    def _get_iso_read_length(self) -> int:
-        """Get isolate read length from config or auto-detect from FASTQ."""
-        if self._iso_read_length is None:
-            self._iso_read_length = self._calc_read_length(
-                self.config.iso_path,
-                self.config.iso_read_length,
-                "isolate",
-            )
-        return self._iso_read_length
-
-    def _get_anc_read_length(self) -> int:
-        """Get ancestor read length from config or auto-detect from FASTQ."""
-        if self._anc_read_length is None:
-            self._anc_read_length = self._calc_read_length(
-                self.config.anc_path,
-                self.config.anc_read_length,
-                "ancestor",
-            )
-        return self._anc_read_length
-
-    def _get_junction_lengths(self) -> tuple[int, Optional[int]]:
-        """Determine junction flank length for iso/anc with 10% tolerance."""
-        iso_len = self._get_iso_read_length()
-        if not self.config.has_ancestor:
-            info(f"Junction length: no ancestor; using isolate length {iso_len} for isolate junctions")
-            return iso_len, None
-
-        anc_len = self._get_anc_read_length()
-        delta = abs(iso_len - anc_len)
-        threshold = int(anc_len * JUNCTION_LENGTH_TOLERANCE)
-
-        def _log_decision(prefix: str, using_len: int, func: callable) -> None:
-            msg = f"{prefix} iso={iso_len}, anc={anc_len}, diff={delta}, " \
-                f"10% threshold (anc)={threshold}; using {using_len}"
-            func(msg)
-
-        if delta <= threshold:
-            iso_jc_len = anc_len
-            _log_decision("isolate-ancestor read lengths within threshold;", iso_jc_len, info)
-        else:
-            iso_jc_len = iso_len
-            _log_decision("isolate-ancestor read lengths exceed threshold;", iso_jc_len, warning)    
-        return iso_jc_len, anc_len
+    def _calc_read_lengths(self) -> ReadLengths:
+        """Calculate read lengths and junction lengths."""
+        return ReadLenStep(
+            iso_fastq_path=self.config.iso_path,
+            anc_fastq_path=self.config.anc_path if self.config.has_ancestor else None,
+            iso_read_length=self.config.iso_read_length,
+            anc_read_length=self.config.anc_read_length,
+        ).run()
 
     def run(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Run full pipeline, return analyzed candidates."""
@@ -126,9 +71,10 @@ class Pipeline:
         covered_tnjc2s = self._calc_amplicon_coverage(raw_tnjc2s, genome, iso_output)
         classified_tnjc2s = self._classify_structure(covered_tnjc2s, genome, ref_tns, iso_output)
         filtered_tnjc2s = self._filter_candidates(classified_tnjc2s, iso_output)
-        syn_tnjc2s = self._create_synthetic_junctions(filtered_tnjc2s, genome, ref_tns, iso_output, anc_output)
+        read_lengths = self._calc_read_lengths()
+        syn_tnjc2s = self._create_synthetic_junctions(filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
         self._align_reads(syn_tnjc2s, iso_output, anc_output)
-        analyzed_tnjc2s = self._analyze_alignments(syn_tnjc2s, iso_output, anc_output)
+        analyzed_tnjc2s = self._analyze_alignments(syn_tnjc2s, iso_output, anc_output, read_lengths)
         analyzed_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
         self._export(analyzed_tnjc2s, genome, iso_output)
 
@@ -344,9 +290,9 @@ class Pipeline:
         ref_tns: RecordTypedDf[RefTn],
         iso_output: Path,
         anc_output: Optional[Path],
+        read_lengths: ReadLengths,
     ) -> RecordTypedDf[SynJctsTnJc2]:
         """Step 10: Create synthetic junction sequences."""
-        iso_jc_len, anc_jc_len = self._get_junction_lengths()
 
         # Create junctions for isolate
         syn_tnjc2s = CreateSyntheticJunctionsStep(
@@ -354,7 +300,7 @@ class Pipeline:
             genome=genome,
             ref_tns=ref_tns,
             output_dir=iso_output,
-            junction_length=iso_jc_len,
+            junction_length=read_lengths.iso_junction_length,
         ).run()
         
         # Create junctions for ancestor if needed
@@ -364,7 +310,7 @@ class Pipeline:
                 genome=genome,
                 ref_tns=ref_tns,
                 output_dir=anc_output,
-                junction_length=anc_jc_len,
+                junction_length=read_lengths.anc_junction_length,
             ).run()
 
         return syn_tnjc2s
@@ -400,14 +346,15 @@ class Pipeline:
         syn_tnjc2s: RecordTypedDf[SynJctsTnJc2],
         iso_output: Path,
         anc_output: Optional[Path],
+        read_lengths: ReadLengths,
     ) -> RecordTypedDf[AnalyzedTnJc2]:
         """Step 12: Analyze read alignments."""
         return AnalyzeTnJc2AlignmentsStep(
             synjct_tnjc2s=syn_tnjc2s,
             output_dir=iso_output,
             anc_output_dir=anc_output,
-            iso_read_length=self._get_iso_read_length(),
-            anc_read_length=self._get_anc_read_length() if self.config.has_ancestor else None,
+            iso_read_length=read_lengths.iso_read_length,
+            anc_read_length=read_lengths.anc_read_length,
             min_overlap=self.config.min_overlap,
         ).run()
 
