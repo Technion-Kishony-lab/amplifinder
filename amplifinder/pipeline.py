@@ -8,7 +8,7 @@ from typing import Tuple, Optional
 from amplifinder.config import Config
 from amplifinder.data_types import (
     Genome, RecordTypedDf, RefTn, RefTnJunction, Junction, BreseqJunction, TnJunction, RawTnJc2,
-    CoveredTnJc2, ClassifiedTnJc2, SynJctsTnJc2, AnalyzedTnJc2,
+    CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2,
 )
 from amplifinder.logger import info, warning
 from amplifinder.utils.file_utils import ensure_dir
@@ -314,7 +314,7 @@ class Pipeline:
         genome: Genome,
         tn_loc: RecordTypedDf[RefTn],
         iso_output: Path,
-    ) -> RecordTypedDf[ClassifiedTnJc2]:
+    ) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
         """Step 8: Classify junction pair structures."""
         return ClassifyTnJc2StructureStep(
             covered_tnjc2s=covered_tnjc2s,
@@ -326,9 +326,9 @@ class Pipeline:
 
     def _filter_candidates(
         self,
-        classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
+        classified_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
         iso_output: Path,
-    ) -> RecordTypedDf[ClassifiedTnJc2]:
+    ) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
         """Step 9: Filter candidates by amplicon length."""
         return FilterTnJc2CandidatesStep(
             classified_tnjc2s=classified_tnjc2s,
@@ -339,7 +339,7 @@ class Pipeline:
 
     def _create_synthetic_junctions(
         self,
-        filtered_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
+        filtered_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
         genome: Genome,
         ref_tns: RecordTypedDf[RefTn],
         iso_output: Path,
@@ -403,14 +403,12 @@ class Pipeline:
     ) -> RecordTypedDf[AnalyzedTnJc2]:
         """Step 12: Analyze read alignments."""
         return AnalyzeTnJc2AlignmentsStep(
-            filtered_tnjc2s=syn_tnjc2s,
+            synjct_tnjc2s=syn_tnjc2s,
             output_dir=iso_output,
-            anc_output_dir=anc_output,  # Ancestor BAM files are read from here
-            read_length=self._get_iso_read_length(),
+            anc_output_dir=anc_output,
+            iso_read_length=self._get_iso_read_length(),
             anc_read_length=self._get_anc_read_length() if self.config.has_ancestor else None,
             min_overlap=self.config.min_overlap,
-            min_jct_cov=self.config.min_jct_cov,
-            has_ancestor=self.config.has_ancestor,
         ).run()
 
     def _classify_candidates(

@@ -21,7 +21,7 @@ legend:
 from pathlib import Path
 from typing import Optional, NamedTuple
 
-from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, SynJctsTnJc2, Genome, JunctionType, RefTn, \
+from amplifinder.data_types import RecordTypedDf, SingleLocusLinkedTnJc2, SynJctsTnJc2, Genome, JunctionType, RefTn, \
     Junction, Side, JcArm, Orientation
 
 from amplifinder.steps.base import RecordTypedDfStep
@@ -85,7 +85,7 @@ def _build_7_junctions_from_6_arms(
     }
 
 
-def create_synthetic_junctions_and_name(tnjc2: ClassifiedTnJc2, jc_width: int, ref_tns: RecordTypedDf[RefTn]) -> tuple[dict[JunctionType, Junction], str]:
+def create_synthetic_junctions_and_name(tnjc2: SingleLocusLinkedTnJc2, jc_width: int, ref_tns: RecordTypedDf[RefTn]) -> tuple[dict[JunctionType, Junction], str]:
 
     # Get TN sides that S and E junctions connect to (with offsets)
     tn_side_left_amp, tn_side_right_amp = tnjc2.get_sides_of_chosen_tn()
@@ -133,7 +133,7 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
 
     def __init__(
         self,
-        filtered_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
+        filtered_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
         genome: Genome,
         ref_tns: RecordTypedDf[RefTn],
         output_dir: Path,

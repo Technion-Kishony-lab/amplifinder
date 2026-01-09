@@ -143,14 +143,14 @@ Record
         ├── copy_number: float
         └── copy_number_vs_anc: Optional[float]
         │
-        └── ClassifiedTnJc2(CoveredTnJc2)
+        └── SingleLocusLinkedTnJc2(CoveredTnJc2)
             ├── [inherits all CoveredTnJc2 fields]
             ├── raw_event: RawEvent
             ├── shared_tn_ids: List[int]
             └── chosen_tn_id: Optional[int]
             │
-            └── SynJctsTnJc2(ClassifiedTnJc2)
-                ├── [inherits all ClassifiedTnJc2 fields]
+            └── SynJctsTnJc2(SingleLocusLinkedTnJc2)
+                ├── [inherits all SingleLocusLinkedTnJc2 fields]
                 ├── analysis_dir: str
                 └── analysis_dir_anc: Optional[str]
                 │
@@ -233,12 +233,12 @@ Record
 - Extends: `RawTnJc2`
 - Fields use: `Average` (iso_amplicon_coverage, iso_scaf_coverage, anc_amplicon_coverage, anc_scaf_coverage)
 
-#### ClassifiedTnJc2
+#### SingleLocusLinkedTnJc2
 - Extends: `CoveredTnJc2`
 - Fields use: `RawEvent` (raw_event), `List[int]` (shared_tn_ids, chosen_tn_id)
 
 #### SynJctsTnJc2
-- Extends: `ClassifiedTnJc2`
+- Extends: `SingleLocusLinkedTnJc2`
 - No additional type dependencies (analysis_dir, analysis_dir_anc are strings)
 
 #### AnalyzedTnJc2
@@ -261,7 +261,7 @@ Record
 - Used in: `Junction.dir1`, `Junction.dir2`, `RawTnJc2.dir_scaf_L`, `RawTnJc2.dir_scaf_R`, `RawTnJc2.dir_tn_L`, `RawTnJc2.dir_tn_R`, `RawTnJc2.tn_orientations`
 
 #### RawEvent
-- Used in: `ClassifiedTnJc2.raw_event`, `AnalyzedTnJc2.isolate_architecture`, `AnalyzedTnJc2.ancestor_architecture`
+- Used in: `SingleLocusLinkedTnJc2.raw_event`, `AnalyzedTnJc2.isolate_architecture`, `AnalyzedTnJc2.ancestor_architecture`
 
 #### JunctionType
 - Not used as field (used for indexing junction coverage lists)
@@ -276,9 +276,9 @@ Step 1-6: RawTnJc2
     ↓
 Step 7: CoveredTnJc2 (adds coverage)
     ↓
-Step 8: ClassifiedTnJc2 (adds raw_event classification)
+Step 8: SingleLocusLinkedTnJc2 (adds raw_event classification)
     ↓
-Step 9: Filter by amplicon length (still ClassifiedTnJc2)
+Step 9: Filter by amplicon length (still SingleLocusLinkedTnJc2)
     ↓
 Step 10: SynJctsTnJc2 (adds analysis_dir, analysis_dir_anc)
     ↓

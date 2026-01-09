@@ -7,7 +7,7 @@ from pydantic import ConfigDict, field_validator
 import numpy as np
 
 from amplifinder.data_types.records import Record
-from amplifinder.data_types.enums import BaseRawEvent, RawEvent, Side, Orientation, EventModifier
+from amplifinder.data_types.enums import BaseRawEvent, RawEvent, Side, Orientation, EventModifier, JunctionType, JunctionReadCounts
 from amplifinder.data_types.scaffold import SegmentScaffold, JcArm, SeqScaffold, SeqSegmentScaffold
 
 TnId = int
@@ -389,7 +389,7 @@ class CoveredTnJc2(RawTnJc2):
         return self.avg_norm_cov if self.avg_norm_cov is not None else self.iso_scaf_norm_copy_number
 
 
-class ClassifiedTnJc2(CoveredTnJc2):
+class SingleLocusLinkedTnJc2(CoveredTnJc2):
     """CoveredTnJc2 with structural classification (Step 8 output)."""
     NAME: ClassVar[str] = "Classified Amplicons"
     single_locus_tnjc2_matching_left: Optional[CoveredTnJc2] = None
@@ -456,7 +456,7 @@ class ClassifiedTnJc2(CoveredTnJc2):
         return None
 
 
-class SynJctsTnJc2(ClassifiedTnJc2):
+class SynJctsTnJc2(SingleLocusLinkedTnJc2):
     """Candidate with synthetic junction folder names."""
     NAME: ClassVar[str] = "Synthetic Junction Amplicons"
     analysis_dir: str
@@ -476,32 +476,28 @@ class SynJctsTnJc2(ClassifiedTnJc2):
 
     def bam_path(self, base_dir: Path, *, is_ancestor: bool = False) -> Path:
         """Path to BAM for this candidate."""
-        filename = "anc.sorted.bam" if is_ancestor else "iso.sorted.bam"
-        return self.analysis_dir_path(base_dir, is_ancestor=is_ancestor) / filename
+        return self.analysis_dir_path(base_dir, is_ancestor=is_ancestor) / "sorted.bam"
 
 
 class AnalyzedTnJc2(SynJctsTnJc2):
     """Candidate with junction coverage analysis (Step 12 output).
 
     Junction coverage fields depend on run type:
-    - anc_path=None: jc_cov only, anc_jc_cov is None
-    - anc_path=set: both jc_cov and anc_jc_cov present
+    - anc_path=None: jc_cov only, jc_cov_anc is None
+    - anc_path=set: both jc_cov and jc_cov_anc present
     """
     NAME: ClassVar[str] = "Analyzed Amplicons"
-    # Junction coverage (7 elements, one per JunctionType)
-    jc_cov_left: List[int]      # left-side read counts per junction
-    jc_cov_right: List[int]     # right-side read counts per junction
-    jc_cov_spanning: List[int]  # spanning read counts per junction
+    # Junction coverage: JunctionType -> JunctionReadCounts
+    jc_cov: Dict[JunctionType, JunctionReadCounts]
+    jc_cov_anc: Optional[Dict[JunctionType, JunctionReadCounts]] = None
 
-    # Ancestor junction coverage (only when anc_path is set)
-    anc_jc_cov_left: Optional[List[int]] = None
-    anc_jc_cov_right: Optional[List[int]] = None
-    anc_jc_cov_spanning: Optional[List[int]] = None
 
+class ClassifiedTnJc2(AnalyzedTnJc2):
+    """AnalyzedTnJc2 with architecture/event classification (Step 13 output)."""
+    NAME: ClassVar[str] = "Classified Amplicons"
     # Architecture classification
     isolate_architecture: RawEvent
     ancestor_architecture: Optional[RawEvent] = None  # only when anc_path is set
-
     # Final event classification
     event: str                              # full event description
     event_modifiers: List[EventModifier]    # de novo, ancestral, etc.

@@ -1,7 +1,7 @@
 """Enum definitions for AmpliFinder."""
 
+from dataclasses import dataclass
 from enum import Enum
-from typing import NamedTuple
 
 
 class ReversibleIntEnum(int, Enum):
@@ -84,8 +84,10 @@ class EventModifier(str, Enum):
     LOW_COVERAGE = "low coverage near junction"
 
 
-class JunctionCoverage(NamedTuple):
-    """Read coverage at a synthetic junction."""
-    spanning: int  # reads crossing junction
-    left: int      # reads ending at junction
-    right: int     # reads starting at junction
+@dataclass
+class JunctionReadCounts:
+    """Read counts at a junction."""
+    left: int = 0      # reads on left side of junction
+    right: int = 0     # reads on right side of junction
+    spanning: int = 0  # reads spanning the junction
+    other: int = 0     # reads partially overlapping the junction

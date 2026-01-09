@@ -10,7 +10,7 @@ try:
 except ImportError:
     MATPLOTLIB_AVAILABLE = False
 
-from amplifinder.data_types import AnalyzedTnJc2, ClassifiedTnJc2, RecordTypedDf, Genome
+from amplifinder.data_types import AnalyzedTnJc2, SingleLocusLinkedTnJc2, RecordTypedDf, Genome
 from amplifinder.config import Config
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.steps.amplicon_coverage import get_scaffold_coverage
@@ -133,7 +133,7 @@ def visualize_candidates(
     # Load analyzed candidates
     analyzed_file = default_path(run_dir, AnalyzedTnJc2)
     if not analyzed_file.exists():
-        analyzed_file = default_path(run_dir, ClassifiedTnJc2)
+        analyzed_file = default_path(run_dir, SingleLocusLinkedTnJc2)
 
     if not analyzed_file.exists():
         raise FileNotFoundError(f"Analyzed candidates file not found in {run_dir}")

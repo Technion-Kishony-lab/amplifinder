@@ -7,7 +7,7 @@ from amplifinder.data_types import (
     RecordTypedDf,
     RefTnSide, OffsetRefTnSide, RefTn, BlastHit,
     Junction, RefTnJunction, TnJunction,
-    RawTnJc2, CoveredTnJc2, ClassifiedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ExportedTnJc2,
+    RawTnJc2, CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ExportedTnJc2,
     Side, Orientation, RawEvent, EventModifier, SeqScaffold,
 )
 
@@ -162,10 +162,10 @@ def make_covered_tnjc2() -> CoveredTnJc2:
     )
 
 
-def make_classified_tnjc2() -> ClassifiedTnJc2:
-    """Create sample ClassifiedTnJc2."""
+def make_classified_tnjc2() -> SingleLocusLinkedTnJc2:
+    """Create sample SingleLocusLinkedTnJc2."""
     covered = make_covered_tnjc2()
-    return ClassifiedTnJc2.from_other(
+    return SingleLocusLinkedTnJc2.from_other(
         covered,
         raw_event=RawEvent.FLANKED,
         shared_tn_ids=[1],
@@ -231,7 +231,7 @@ def make_exported_tnjc2() -> ExportedTnJc2:
     # and can't be round-tripped through CSV (complex nested objects not exported)
     # ("RawTnJc2", lambda: [make_raw_tnjc2()]),
     # ("CoveredTnJc2", lambda: [make_covered_tnjc2()]),
-    # ("ClassifiedTnJc2", lambda: [make_classified_tnjc2()]),
+    # ("SingleLocusLinkedTnJc2", lambda: [make_classified_tnjc2()]),
     # ("SynJctsTnJc2", lambda: [make_syn_jcts_tnjc2()]),
     # ("AnalyzedTnJc2", lambda: [make_analyzed_tnjc2()]),
     ("ExportedTnJc2", lambda: [make_exported_tnjc2()]),
@@ -249,7 +249,7 @@ def test_record_csv_save_load(record_type, make_func):
         "TnJunction": TnJunction,
         "RawTnJc2": RawTnJc2,
         "CoveredTnJc2": CoveredTnJc2,
-        "ClassifiedTnJc2": ClassifiedTnJc2,
+        "SingleLocusLinkedTnJc2": SingleLocusLinkedTnJc2,
         "SynJctsTnJc2": SynJctsTnJc2,
         "AnalyzedTnJc2": AnalyzedTnJc2,
         "ExportedTnJc2": ExportedTnJc2,

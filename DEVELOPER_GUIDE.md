@@ -72,14 +72,14 @@ xxx[]  array
    │                          │ 8. ClassifyTnJc2Structure │                  │
    │                          └─────────────┬─────────────┘                  │
    │                                        ▼                                │
-   │                                 ClassifiedTnJc2[] (`RawEvent`)          │
+   │                                 SingleLocusLinkedTnJc2[] (`RawEvent`)   │
    │                                        │                                │
    │                                        ▼                                │
    │                          ┌───────────────────────────┐                  │
    │                          │ 9. FilterTnJc2Candidates  │                  │
    │                          └─────────────┬─────────────┘                  │
    │                                        ▼                                │
-   │                                 ClassifiedTnJc2[]                       │
+   │                                 SingleLocusLinkedTnJc2[]                │
    │                                        │                                │
    │                                        ▼                                │
    │                         ┌──────────────────────────────┐                │
@@ -230,12 +230,12 @@ CoveredTnJc2(RawTnJc2)  # Step 7: Coverage added
 ├── copy_number: float
 └── copy_number_vs_anc: Optional[float]
 
-ClassifiedTnJc2(CoveredTnJc2)  # Step 8: Structure classified
+SingleLocusLinkedTnJc2(CoveredTnJc2)  # Step 8: Structure classified
 ├── raw_event: RawEvent
 ├── shared_tn_ids: List[int]
 └── chosen_tn_id: Optional[int]
 
-SynJctsTnJc2(ClassifiedTnJc2)  # Step 10: Synthetic junctions with analysis dirs
+SynJctsTnJc2(SingleLocusLinkedTnJc2)  # Step 10: Synthetic junctions with analysis dirs
 ├── analysis_dir: str
 └── analysis_dir_anc: Optional[str]
 
@@ -361,7 +361,7 @@ Organized by: reference → ancestor → isolate
         │   │   └── output/output.gd    # ancestor breseq output (Step 7)
         │   └── jc_{start}_{end}_{tn_id}_L{read_len}/  # per-candidate (from isolate runs)
         │       ├── junctions.fasta     # copied from isolate run
-        │       └── iso.sorted.bam      # ancestor reads aligned to junctions
+        │       └── sorted.bam          # ancestor reads aligned to junctions
         │
         │ # Isolate runs (normalized coverage: iso/anc ratio)
         ├── {iso_name_1}/               # isolate 1 vs this ancestor
@@ -373,15 +373,13 @@ Organized by: reference → ancestor → isolate
         │   ├── candidate_amplifications.csv
         │   └── jc_{start}_{end}_{tn_id}_L{read_len}/  # per-candidate
         │       ├── junctions.fasta     # created from isolate candidates
-        │       ├── iso.sorted.bam      # isolate reads aligned to junctions
-        │       ├── anc.sorted.bam      # copied from {anc_name}/jc_.../iso.sorted.bam
+        │       ├── sorted.bam          # isolate reads aligned to junctions
         │       └── coverage_plot.png   # (if --save-plots)
         │
         └── {iso_name_2}/               # isolate 2 vs this ancestor
             └── jc_{start}_{end}_{tn_id}_L{read_len}/
                 ├── junctions.fasta     # created from isolate candidates
-                ├── iso.sorted.bam      # isolate reads aligned to junctions
-                └── anc.sorted.bam      # copied from {anc_name}/jc_.../iso.sorted.bam (shared)
+                └── sorted.bam          # isolate reads aligned to junctions
 ```
 
 **Per-candidate folder naming:** `jc_{start}_{end}_{tn_id}_L{read_len}`
@@ -395,11 +393,9 @@ Organized by: reference → ancestor → isolate
 2. Junction files are copied to ancestor folder (in `{anc_name}/jc_.../`):
    - `junctions.fasta` (copied from isolate, allows ancestor alignments to be shared)
 3. Ancestor reads are aligned in ancestor folder:
-   - `{anc_name}/jc_.../iso.sorted.bam` (ancestor reads aligned to junctions)
-4. Ancestor alignments are copied back to isolate folder:
-   - `{anc_name}/jc_.../iso.sorted.bam` → `{iso_name}/jc_.../anc.sorted.bam`
-5. Isolate reads are aligned in isolate folder:
-   - `{iso_name}/jc_.../iso.sorted.bam` (isolate reads aligned to junctions)
+   - `{anc_name}/jc_.../sorted.bam` (ancestor reads aligned to junctions)
+4. Isolate reads are aligned in isolate folder:
+   - `{iso_name}/jc_.../sorted.bam` (isolate reads aligned to junctions)
 
 **Key design:**
 - Junction files are created from isolate candidates (not from ancestor)
@@ -583,12 +579,11 @@ jc_name = f"jc_{start}_{end}_{tn_id:03d}_L{read_len}"
 # Ancestor run's candidate dir (stores ancestor alignments for sharing)
 anc_jc_dir = anc_run_dir / jc_name
 anc_jc_dir / "junctions.fasta"           # copied from isolate run
-anc_jc_dir / "iso.sorted.bam"            # ancestor reads aligned to junctions
+anc_jc_dir / "sorted.bam"                # ancestor reads aligned to junctions
 
 # Isolate run's candidate dir
 iso_jc_dir = iso_run_dir / jc_name
 iso_jc_dir / "junctions.fasta"           # created from isolate candidates
-iso_jc_dir / "anc.sorted.bam"            # copied from anc_jc_dir/iso.sorted.bam
-iso_jc_dir / "iso.sorted.bam"            # isolate reads aligned to junctions
+iso_jc_dir / "sorted.bam"                # isolate reads aligned to junctions
 iso_jc_dir / "coverage_plot.png"         # (if --save-plots)
 ```
