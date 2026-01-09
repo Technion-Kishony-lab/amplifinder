@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.data_types import RecordTypedDf, AnalyzedTnJc2, ExportedTnJc2, Orientation, Genome
+from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, ExportedTnJc2, Orientation, Genome
 from amplifinder.steps.base import OutputStep
 
 
@@ -17,7 +17,7 @@ class ExportTnJc2Step(OutputStep[RecordTypedDf[ExportedTnJc2]]):
 
     def __init__(
         self,
-        analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
+        classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
         genome: Genome,
         output_dir: Path,
         ref_name: str,
@@ -28,7 +28,7 @@ class ExportTnJc2Step(OutputStep[RecordTypedDf[ExportedTnJc2]]):
         filter_amplicon_length: int = 100,
         force: Optional[bool] = None,
     ):
-        self.analyzed_tnjc2s = analyzed_tnjc2s
+        self.analyzed_tnjc2s = classified_tnjc2s
         self.genome = genome
         self.output_dir = Path(output_dir)
         self.ref_name = ref_name

@@ -6,7 +6,7 @@ from typing import Tuple, Optional
 from amplifinder.config import Config
 from amplifinder.data_types import (
     Genome, RecordTypedDf, RefTn, RefTnJunction, BreseqJunction, TnJunction, RawTnJc2,
-    CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2,
+    CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ClassifiedTnJc2,
 )
 from amplifinder.logger import info
 from amplifinder.steps import (
@@ -47,8 +47,8 @@ class Pipeline:
             anc_read_length=self.config.anc_read_length,
         ).run()
 
-    def run(self) -> RecordTypedDf[AnalyzedTnJc2]:
-        """Run full pipeline, return analyzed candidates."""
+    def run(self) -> RecordTypedDf[ClassifiedTnJc2]:
+        """Run full pipeline, return classified candidates."""
 
         info(
             f"Running AmpliFinder pipeline, reference: {self.config.ref_name}, "
@@ -69,16 +69,16 @@ class Pipeline:
         tnjcs = self._create_tnjc(breseq_jcs, ref_tnjcs, genome, iso_output)
         raw_tnjc2s = self._create_tnjc2(tnjcs, genome, iso_output)
         covered_tnjc2s = self._calc_amplicon_coverage(raw_tnjc2s, genome, iso_output)
-        classified_tnjc2s = self._classify_structure(covered_tnjc2s, genome, ref_tns, iso_output)
-        filtered_tnjc2s = self._filter_candidates(classified_tnjc2s, iso_output)
+        struct_classified_tnjc2s = self._classify_structure(covered_tnjc2s, genome, ref_tns, iso_output)
+        filtered_tnjc2s = self._filter_candidates(struct_classified_tnjc2s, iso_output)
         read_lengths = self._calc_read_lengths()
         syn_tnjc2s = self._create_synthetic_junctions(filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
         self._align_reads(syn_tnjc2s, iso_output, anc_output)
         analyzed_tnjc2s = self._analyze_alignments(syn_tnjc2s, iso_output, anc_output, read_lengths)
-        analyzed_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
-        self._export(analyzed_tnjc2s, genome, iso_output)
+        classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
+        self._export(classified_tnjc2s, genome, iso_output)
 
-        return analyzed_tnjc2s
+        return classified_tnjc2s
 
     def run_breseq_only(self) -> None:
         """Run only breseq steps (ancestor and isolate), then exit."""
@@ -362,7 +362,7 @@ class Pipeline:
         self,
         analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
         iso_output: Path,
-    ) -> RecordTypedDf[AnalyzedTnJc2]:
+    ) -> RecordTypedDf[ClassifiedTnJc2]:
         """Step 13: Final classification of candidates."""
         return ClassifyTnJc2CandidatesStep(
             analyzed_tnjc2s=analyzed_tnjc2s,
@@ -373,13 +373,13 @@ class Pipeline:
 
     def _export(
         self,
-        analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
+        classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
         genome: Genome,
         iso_output: Path,
     ) -> None:
         """Step 14: Export results to CSV."""
         ExportTnJc2Step(
-            analyzed_tnjc2s=analyzed_tnjc2s,
+            classified_tnjc2s=classified_tnjc2s,
             genome=genome,
             output_dir=iso_output,
             ref_name=self.config.ref_name,
@@ -391,6 +391,6 @@ class Pipeline:
         ).run()
 
 
-def run_pipeline(config: Config) -> RecordTypedDf[AnalyzedTnJc2]:
+def run_pipeline(config: Config) -> RecordTypedDf[ClassifiedTnJc2]:
     """Run the AmpliFinder pipeline."""
     return Pipeline(config).run()
