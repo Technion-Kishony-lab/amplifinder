@@ -94,6 +94,20 @@ def isolate_srr25242906():
     }
 
 
+def _clear_except(directory: Path, exclude: list[str]):
+    """Recursively delete all files/dirs except 'junctions' folders."""
+    for item in directory.iterdir():
+        if item.name in exclude:
+            continue  # skip items in exclude
+        if item.is_dir():
+            _clear_except(item, exclude)
+            # remove dir if empty after cleanup
+            if not any(item.iterdir()):
+                item.rmdir()
+        else:
+            item.unlink()
+
+
 @pytest.fixture
 def cleared_output_dir():
     """Clear output directory based on OUTPUT_CLEANUP_MODE.
@@ -114,11 +128,11 @@ def cleared_output_dir():
         ensure_dir(output_dir, cleanup=False)
     elif OUTPUT_CLEANUP_MODE == "keep_junctions":
         if output_dir.exists():
-            for item in output_dir.iterdir():
-                if item.name != "junctions":
-                    remove_file_or_dir(item)
+            _clear_except(output_dir, exclude=['junctions'])
         else:
             ensure_dir(output_dir)
+    else:
+        raise ValueError(f"Invalid OUTPUT_CLEANUP_MODE: {OUTPUT_CLEANUP_MODE}")
 
     return output_dir
 

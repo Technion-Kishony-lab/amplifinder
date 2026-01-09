@@ -142,16 +142,17 @@ class Step(ABC):
             # Fast path: skip artifact generation if already present
             if not self.force and self.has_artifact_files():
                 artifacts_cached = True
-                self._log_run_status("artifacts ready, skipping generation")
+                self._log_run_status("artifacts exist, skipping generation")
             else:
                 # Acquire lock and re-check (TOCTOU)
                 lock_target = self._get_lock_target()
                 with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
                     if not self.force and self.has_artifact_files():
                         artifacts_cached = True
-                        self._log_run_status("artifacts ready (verified under lock)")
+                        self._log_run_status("artifacts exist (verified under lock)")
                     else:
-                        self._clean_artifacts()
+                        if self.force:
+                            self._clean_artifacts()
                         self._log_run_status("generating artifacts (under lock)")
                         if self.should_profile:
                             lp = self._create_profiler()
@@ -171,7 +172,7 @@ class Step(ABC):
         if missing_input := self.missing_input_files():
             raise FileNotFoundError(f"{self.name}: missing inputs: {missing_input}")
 
-        with self.print_timer("=" * 90 + " ", use_log=True, end_msg=" ========\n"):
+        with self.print_timer("=" * 92 + " ", use_log=True, end_msg=" ========\n"):
             return self._generate_artifacts_if_needed()
 
     def _log_run_status(self, log_msg: str) -> None:
@@ -443,5 +444,4 @@ class RecordTypedDfStep(OutputStep[RecordTypedDf[R]], Generic[R]):
     def report_output_message(self, output: RecordTypedDf[R], *, from_cache: bool) -> Optional[str]:
         """Uniform record count logging for RecordTypedDf steps."""
         record_cls = self._get_record_cls()
-        prefix = 'Artifacts cached,' if from_cache else 'Artifacts created,'
-        return f"{prefix} computed {len(output)} {record_cls.NAME}."
+        return f"Created {len(output)} {record_cls.NAME}."

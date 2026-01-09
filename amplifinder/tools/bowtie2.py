@@ -9,11 +9,6 @@ from amplifinder.utils.file_utils import ensure_parent_dir
 from amplifinder.utils.timing import print_timer
 
 
-def _folder_label(path: Path) -> str:
-    """Return the parent folder name for concise logging."""
-    return Path(path).parent.name
-
-
 def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
     """Build bowtie2 index from FASTA file.
 
@@ -175,16 +170,6 @@ def align_reads_to_fasta(
         local: Use local alignment (default True for junction alignment)
         keep_sam: Keep intermediate SAM file (default False)
     """
-    # Skip if output already exists
-    if output_bam.exists() and (output_bam.parent / f"{output_bam.name}.bai").exists():
-        return
-
-    # Get junction name from output path
-    junction_name = _folder_label(output_bam)
-
-    # Start printing the junction name
-    print(f"junction '{junction_name}':  ", end="", flush=True)
-
     # Paths
     work_dir = output_bam.parent
     index_prefix = work_dir / "bowtie2_index"
