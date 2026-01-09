@@ -179,8 +179,8 @@ class TestPipelineStepByStep:
             f"Pipeline found 0 candidates. Expected to match MATLAB output with {len(matlab_isjc2)} junctions. " \
             f"Check pipeline parameters and matching logic. Run dir: {run_dir}"
 
-        isjc2_file = run_dir / "ISJC2.csv"
-        assert isjc2_file.exists(), f"ISJC2.csv not found in {run_dir}"
+        isjc2_file = run_dir / "tnjc2_exported.csv"
+        assert isjc2_file.exists(), f"tnjc2_exported.csv not found in {run_dir}"
         candidate_file = run_dir / "candidate_amplifications.csv"
         assert candidate_file.exists(), f"candidate_amplifications.csv not found in {run_dir}"
 
@@ -244,10 +244,8 @@ class TestPipelineStepByStep:
         print(f"\nFinal result: {len(result)} candidates")
 
         # Verify output file exists
-        python_isjc2_file = run_dir / "ISJC2.csv"
-        assert python_isjc2_file.exists(), f"ISJC2.csv not found in {run_dir}"
+        python_isjc2_file = run_dir / "tnjc2_exported.csv"
+        assert python_isjc2_file.exists(), f"tnjc2_exported.csv not found in {run_dir}"
 
         print("\n=== Final Comparison ===")
         print("✓ Comparison done in _create_tnjc2 step")
-
-        return result

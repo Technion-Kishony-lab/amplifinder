@@ -4,9 +4,10 @@ from pathlib import Path
 from typing import Optional, List, Tuple
 
 from amplifinder.data_types import (
-    RecordTypedDf, AnalyzedTnJc2, RawEvent, EventModifier,
+    RecordTypedDf, AnalyzedTnJc2, ClassifiedTnJc2, RawEvent, EventModifier, JunctionType,
 )
 from amplifinder.steps.base import RecordTypedDfStep
+from amplifinder.steps.analyze_alignments.classify import classify_architecture
 
 
 # Iso/Anc pattern transition rules (from MATLAB classify_candidates.m)
@@ -73,7 +74,7 @@ def classify_iso_vs_anc(
     return " ".join(event_parts), modifiers
 
 
-class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
+class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[ClassifiedTnJc2]):
     """Final classification of candidates based on iso/anc comparison.
 
     This step refines the event classification from AnalyzeAlignmentsStep
@@ -101,30 +102,39 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[AnalyzedTnJc2]):
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDf[AnalyzedTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[ClassifiedTnJc2]:
         """Reclassify events based on iso/anc comparison."""
         classified_records = []
 
         for analyzed_tnjc2 in self.analyzed_tnjc2s:
-            iso_arch = analyzed_tnjc2.isolate_architecture
-            anc_arch = analyzed_tnjc2.ancestor_architecture if self.has_ancestor else None
+            # Compute architectures from junction coverage
+            iso_cov_list = [analyzed_tnjc2.jc_cov[jt] for jt in sorted(JunctionType, key=lambda x: x.value)]
+            iso_arch = classify_architecture(iso_cov_list, self.min_jct_cov)
+
+            anc_arch = None
+            if self.has_ancestor and analyzed_tnjc2.jc_cov_anc:
+                anc_cov_list = [analyzed_tnjc2.jc_cov_anc[jt] for jt in sorted(JunctionType, key=lambda x: x.value)]
+                anc_arch = classify_architecture(anc_cov_list, self.min_jct_cov)
 
             # Reclassify
             event, modifiers = classify_iso_vs_anc(iso_arch, anc_arch, self.min_jct_cov)
 
-            # Update record with new classification
-            classified = analyzed_tnjc2.model_copy(update={
-                "event": event,
-                "event_modifiers": modifiers,
-            })
+            # Create ClassifiedTnJc2 with architecture and classification
+            classified = ClassifiedTnJc2.from_other(
+                analyzed_tnjc2,
+                isolate_architecture=iso_arch,
+                ancestor_architecture=anc_arch,
+                event=event,
+                event_modifiers=modifiers,
+            )
 
             classified_records.append(classified)
 
-        result = RecordTypedDf.from_records(classified_records, AnalyzedTnJc2)
+        result = RecordTypedDf.from_records(classified_records, ClassifiedTnJc2)
 
         return result
 
-    def report_output_message(self, output: RecordTypedDf[AnalyzedTnJc2], *, from_cache: bool) -> Optional[str]:
+    def report_output_message(self, output: RecordTypedDf[ClassifiedTnJc2], *, from_cache: bool) -> Optional[str]:
         if self.has_ancestor:
             ancestral = sum(1 for r in output if EventModifier.ANCESTRAL in r.event_modifiers)
             de_novo = sum(1 for r in output if EventModifier.DE_NOVO in r.event_modifiers)

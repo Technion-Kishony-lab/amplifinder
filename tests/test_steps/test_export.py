@@ -34,7 +34,7 @@ def sample_analyzed(analyzed_tnjc2_record):
 def test_export_creates_files(sample_analyzed, tmp_path, tiny_genome):
     """Should create tnjc2_exported.csv and candidate_amplifications.csv."""
     step = ExportTnJc2Step(
-        analyzed_tnjc2s=sample_analyzed,
+        classified_tnjc2s=sample_analyzed,
         genome=tiny_genome,
         output_dir=tmp_path,
         ref_name="U00096",
