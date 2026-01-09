@@ -10,7 +10,7 @@ from amplifinder.data_types.genome import Genome
 from .base import RecordTypedDfStep
 
 
-class ClassifyTnJc2StructureStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
+class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
     """Classify junction pair structures based on TN relationships.
 
     This step analyzes how junction pairs relate to reference TN elements

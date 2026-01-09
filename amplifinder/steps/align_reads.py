@@ -48,7 +48,7 @@ class AlignReadsToJunctionsStep(Step):
     def _artifact_labels(self) -> list[str]:
         """Summarize outputs as count."""
         n = len(self.synjcs_tnjc2s)
-        return [f"{n} junctions"]
+        return [f"{n} BAM files of synthetic junctions"]
 
     def _generate_artifacts(self) -> None:
         """Align reads to synthetic junctions; skip BAMs that already exist."""

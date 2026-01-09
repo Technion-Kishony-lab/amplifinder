@@ -55,14 +55,14 @@ class TestPipeline(Pipeline):
         result = super()._create_ref_tn_junctions(tn_loc, genome, iso_output)
         return result
 
-    def _run_breseq(self, genome, iso_output):
+    def _run_breseq(self, genome):
         """Step 4: Parse breseq - compare with MATLAB."""
-        result = super()._run_breseq(genome, iso_output)
+        result = super()._run_breseq(genome)
         return result
 
-    def _create_tnjc(self, breseq_jc, ref_tnjc, genome, iso_output):
+    def _create_tnjcs(self, breseq_jc, ref_tnjc, genome, iso_output):
         """Step 5: Match junctions to TN elements."""
-        result = super()._create_tnjc(breseq_jc, ref_tnjc, genome, iso_output)
+        result = super()._create_tnjcs(breseq_jc, ref_tnjc, genome, iso_output)
 
         # Ensure single-locus TNJCs cover all MATLAB ISJC2 sides
         matlab_df = self._load_matlab_isjc2()
@@ -82,9 +82,9 @@ class TestPipeline(Pipeline):
 
         return result
 
-    def _create_tnjc2(self, tnjc, genome, iso_output):
+    def _create_tnjc2s(self, tnjc, genome, iso_output):
         """Step 6: Combine junction pairs - compare RawTnJc2 with MATLAB ISJC2."""
-        result = super()._create_tnjc2(tnjc, genome, iso_output)
+        result = super()._create_tnjc2s(tnjc, genome, iso_output)
 
         # Compare RawTnJc2 with MATLAB ISJC2.xlsx (positions, length, IS elements)
         matlab_df = self._load_matlab_isjc2()

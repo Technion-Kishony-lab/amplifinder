@@ -1,7 +1,7 @@
-"""Tests for ClassifyTnJc2StructureStep."""
+"""Tests for LinkTnJc2ToSingleLocusPairsStep."""
 
 import pytest
-from amplifinder.steps import ClassifyTnJc2StructureStep
+from amplifinder.steps import LinkTnJc2ToSingleLocusPairsStep
 from amplifinder.data_types import (
     RecordTypedDf, CoveredTnJc2, RefTn, RawEvent,
 )
@@ -82,7 +82,7 @@ def sample_tn_locs(ref_tn_record):
 
 def test_classify_structure(sample_covered_tnjc2, sample_tn_locs, tmp_path, tiny_genome):
     """Should classify junction pairs."""
-    step = ClassifyTnJc2StructureStep(
+    step = LinkTnJc2ToSingleLocusPairsStep(
         covered_tnjc2s=sample_covered_tnjc2,
         genome=tiny_genome,
         tn_locs=sample_tn_locs,
@@ -116,7 +116,7 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_r
         CoveredTnJc2
     )
 
-    step = ClassifyTnJc2StructureStep(
+    step = LinkTnJc2ToSingleLocusPairsStep(
         covered_tnjc2s=all_records,
         genome=tiny_genome,
         tn_locs=sample_tn_locs,

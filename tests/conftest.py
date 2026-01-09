@@ -389,17 +389,15 @@ def filtered_tnjc2_record(classified_tnjc2_record):
 @pytest.fixture
 def analyzed_tnjc2_record(filtered_tnjc2_record):
     """AnalyzedTnJc2 with junction coverage."""
-    from amplifinder.data_types import AnalyzedTnJc2, RawEvent
+    from amplifinder.data_types import AnalyzedTnJc2, JunctionType, JunctionReadCounts
+
+    # Create jc_cov dict with all junction types having zero counts
+    jc_cov = {jt: JunctionReadCounts() for jt in JunctionType}
 
     return AnalyzedTnJc2.from_other(
         filtered_tnjc2_record,
-        jc_cov_left=[0] * 7,
-        jc_cov_right=[0] * 7,
-        jc_cov_spanning=[0] * 7,
-        isolate_architecture=RawEvent.FLANKED,
-        ancestor_architecture=None,
-        event="flanked",
-        event_modifiers=[],
+        jc_cov=jc_cov,
+        jc_cov_anc=None,
     )
 
 
