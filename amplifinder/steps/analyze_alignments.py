@@ -57,15 +57,15 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             # Get isolate junction coverage (required)
             jc_cov, alignment_data, jct_lengths = self._get_cov(synjct_tnjc2, self._iso_output_dir, self.iso_read_length, is_ancestor=False)
             
-            # Generate visualization for isolate
-            self._generate_alignment_plot(synjct_tnjc2, alignment_data, jct_lengths, is_ancestor=False)
-
             # Get ancestor junction coverage if available (optional)
             jc_cov_anc = None
+            alignment_data_anc = None
             if self.has_ancestor:
                 jc_cov_anc, alignment_data_anc, jct_lengths_anc = self._get_cov(synjct_tnjc2, self._anc_output_dir, self.anc_read_length, is_ancestor=True)
-                # Generate visualization for ancestor
-                self._generate_alignment_plot(synjct_tnjc2, alignment_data_anc, jct_lengths_anc, is_ancestor=True)
+            
+            # Generate combined visualization (isolate above, ancestor below x-axis)
+            self._generate_alignment_plot(synjct_tnjc2, alignment_data, jct_lengths, 
+                                        alignment_data_anc=alignment_data_anc, is_ancestor=False)
 
             analyzed_tnjc2 = AnalyzedTnJc2.from_other(
                 synjct_tnjc2,
@@ -159,14 +159,16 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         synjct_tnjc2: SynJctsTnJc2,
         alignment_data: dict[JunctionType, list[tuple[int, int, str]]],
         jct_lengths: dict[JunctionType, int],
-        is_ancestor: bool,
+        alignment_data_anc: dict[JunctionType, list[tuple[int, int, str]]] | None = None,
+        is_ancestor: bool = False,
     ) -> None:
         """Generate PNG plot showing read alignment coverage for all junction types.
         
         Args:
             synjct_tnjc2: Synthetic junction record
-            alignment_data: Dict mapping JunctionType to list of (start, end, read_type) tuples
+            alignment_data: Dict mapping JunctionType to list of (start, end, read_type) tuples for isolate
             jct_lengths: Dict mapping JunctionType to junction length
+            alignment_data_anc: Optional dict for ancestor reads (plotted below x-axis)
             is_ancestor: Whether processing ancestor (True) or isolate (False) data
         """
         title = f'Read Alignment Coverage - {synjct_tnjc2.analysis_dir_name(is_ancestor=is_ancestor)}'
@@ -178,4 +180,5 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             jct_lengths=jct_lengths,
             title=title,
             output_path=output_path,
+            alignment_data_anc=alignment_data_anc,
         )
