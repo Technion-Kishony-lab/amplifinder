@@ -161,7 +161,7 @@ class Record(BaseModel):
     def __repr__(self) -> str:
         """Custom repr that excludes sequence fields."""
         fields = []
-        for field_name in self.model_fields.keys():
+        for field_name in self.__class__.model_fields.keys():
             # Skip sequence fields
             value = getattr(self, field_name, None)
             if ('sequence' in field_name.lower() or 'seq' in field_name.lower()) and isinstance(value, str):

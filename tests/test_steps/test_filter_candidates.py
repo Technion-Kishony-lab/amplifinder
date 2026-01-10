@@ -34,6 +34,8 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
         base_raw_event=BaseRawEvent.TRANSPOSITION,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=1.5,
+        single_locus_tnjc2_left_matchings=[],
+        single_locus_tnjc2_right_matchings=[],
     )
 
     # Medium amplicon (101bp) - from base fixture
@@ -42,6 +44,8 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
         base_raw_event=BaseRawEvent.LOCUS_JOINING,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=2.0,
+        single_locus_tnjc2_left_matchings=[],
+        single_locus_tnjc2_right_matchings=[],
     )
 
     # Long amplicon (500bp)
@@ -65,6 +69,8 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
         base_raw_event=BaseRawEvent.LOCUS_JOINING,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=3.0,
+        single_locus_tnjc2_left_matchings=[],
+        single_locus_tnjc2_right_matchings=[],
     )
 
     return RecordTypedDf.from_records([short, medium, long], SingleLocusLinkedTnJc2)
