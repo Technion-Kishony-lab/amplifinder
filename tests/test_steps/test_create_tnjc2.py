@@ -79,25 +79,31 @@ def tnjc(locate_tns_step, tiny_genome, tmp_output):
 
 
 @pytest.fixture
-def tnjc2_step(tnjc, tiny_genome, tmp_output):
-    """Create TnJc2 step."""
-    return PairTnJcToRawTnJc2Step(
-        tnjcs=tnjc,
-        genome=tiny_genome,
-        output_dir=tmp_output,
-    )
+def tnjc2_step_factory(tnjc, tiny_genome, tmp_output):
+    """Factory to create new PairTnJcToRawTnJc2Step steps."""
+
+    def make():
+        return PairTnJcToRawTnJc2Step(
+            tnjcs=tnjc,
+            genome=tiny_genome,
+            output_dir=tmp_output,
+        )
+
+    return make
 
 
-def test_runs_without_error(tnjc2_step):
+def test_runs_without_error(tnjc2_step_factory):
     """Should run and produce output file."""
+    tnjc2_step = tnjc2_step_factory()
     raw_tnjc2s = tnjc2_step.run()
 
     assert isinstance(raw_tnjc2s, RecordTypedDf)
     assert tnjc2_step.output_file.exists()
 
 
-def test_output_has_correct_columns(tnjc2_step):
+def test_output_has_correct_columns(tnjc2_step_factory):
     """RawTnJc2 output should have expected properties accessible."""
+    tnjc2_step = tnjc2_step_factory()
     raw_tnjc2s = tnjc2_step.run()
 
     # Check that expected properties are accessible on records
@@ -116,13 +122,16 @@ def test_output_has_correct_columns(tnjc2_step):
             getattr(record, prop)  # Access to ensure no errors
 
 
-def test_skips_if_exists(tnjc2_step):
+def test_skips_if_exists(tnjc2_step_factory):
     """Should skip if output exists."""
-    tnjc2_step.run()
-    assert tnjc2_step.run_count == 1
-    tnjc2_step.run()
-    # Artifacts are cached on second run, so run_count doesn't increment
-    assert tnjc2_step.run_count == 1
+    step1 = tnjc2_step_factory()
+    step1.run()
+    assert step1._artifacts_generated is True
+
+    # New instance sees cached artifacts and skips generation
+    step2 = tnjc2_step_factory()
+    step2.run()
+    assert step2._artifacts_generated is False
 
 
 def test_pairs_opposing_junctions(tiny_genome, tmp_output):

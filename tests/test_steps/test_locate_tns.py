@@ -64,12 +64,15 @@ def test_extracts_tn_elements(locate_tns_step):
     assert list(tn_loc.df["join"]) == [False, False]
 
 
-def test_skips_if_output_exists(locate_tns_step):
+def test_skips_if_output_exists(locate_tns_step, step_factory):
     """Should skip execution if output already exists."""
     locate_tns_step.run()
-    assert locate_tns_step.run_count == 1  # first run
-    locate_tns_step.run()
-    assert locate_tns_step.run_count == 1  # second run skips
+    assert locate_tns_step._artifacts_generated is True  # first run
+
+    # New instance should skip due to cached artifacts
+    step2 = step_factory()
+    step2.run()
+    assert step2._artifacts_generated is False  # skipped
 
 
 def test_force_reruns(step_factory):
@@ -77,7 +80,7 @@ def test_force_reruns(step_factory):
     step_factory().run()
     step = step_factory(force=True)
     step.run()
-    assert step.run_count == 1
+    assert step._artifacts_generated is True
 
 
 # =============================================================================

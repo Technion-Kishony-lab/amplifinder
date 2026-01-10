@@ -25,4 +25,7 @@ def test_step_initialization(sample_analyzed, tmp_path):
 
     assert step.analyzed_tnjc2s == analyzed_tnjc2s
     assert step.has_ancestor is False
-    assert step.output_file == tmp_path / "tnjc2_classified_final.csv"
+    from amplifinder.steps.io_naming import default_filename
+    from amplifinder.data_types import ClassifiedTnJc2
+
+    assert step.output_file == tmp_path / default_filename(ClassifiedTnJc2)

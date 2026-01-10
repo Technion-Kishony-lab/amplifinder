@@ -1,70 +1,11 @@
 """Step 12: Analyze read alignments to synthetic junctions."""
-
 import pysam
 
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Optional
 
 from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
 from amplifinder.steps.base import RecordTypedDfStep
-
-
-def get_junction_coverage(
-    bam_path: Path,
-    read_length: int,
-    read_length_tolerance: float = 0.1,
-    min_overlap: int = 12,
-) -> Dict[str, JunctionReadCounts]:
-    """Parse BAM and get coverage for all 7 junction types.
-
-    Args:
-        bam_path: Path to sorted BAM file
-        read_length: Read length for filtering
-        read_length_tolerance: Tolerance for read length filtering (default 0.1 = 10%)
-        min_overlap: Minimum overlap to count as spanning
-
-    Returns:
-        dict mapping reference name -> JunctionReadCounts
-    """
-    if not bam_path.exists():
-        raise FileNotFoundError(f"BAM file not found: {bam_path}")
-
-    read_length_factor = 1 + read_length_tolerance
-    min_len = read_length / read_length_factor
-    max_len = read_length * read_length_factor
-
-    with pysam.AlignmentFile(str(bam_path), "rb") as bam:
-        ref_lengths = dict(zip(bam.references, bam.lengths))
-        junction_points = {name: length // 2 for name, length in ref_lengths.items()}
-
-        # [left, right, spanning] for each junction type
-        counts = {name: JunctionReadCounts() for name in ref_lengths.keys()}
-
-        for read in bam.fetch():
-            if read.is_unmapped:
-                continue
-
-            ref_name = read.reference_name
-            assert ref_name in junction_points, f"Reference name {ref_name} not found in junction points"
-            length = read.query_alignment_length
-            if not (min_len <= length <= max_len):
-                continue
-
-            start = read.reference_start
-            end = read.reference_end
-            junction_point = junction_points[ref_name]
-
-            if end <= junction_point:
-                counts[ref_name].left += 1      # left of the junction
-            elif start > junction_point:
-                counts[ref_name].right += 1     # right of the junction
-            elif start <= junction_point - min_overlap and end >= junction_point + min_overlap:
-                counts[ref_name].spanning += 1  # spanning the junction
-            else:
-                counts[ref_name].other += 1     # other (partial overlap)
-
-    return counts
-
 
 
 class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
@@ -96,10 +37,10 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         # Input files are the BAM files from alignment step
         input_files = []
         for synjct_tnjc2 in synjct_tnjc2s:
-            iso_bam = synjct_tnjc2.bam_path(self._iso_output_dir)
+            iso_bam = synjct_tnjc2.bam_path(self._iso_output_dir, is_ancestor=False)
             input_files.append(iso_bam)
             if self.has_ancestor:
-                anc_bam = synjct_tnjc2.bam_path(self._anc_output_dir)
+                anc_bam = synjct_tnjc2.bam_path(self._anc_output_dir, is_ancestor=True)
                 input_files.append(anc_bam)
 
         super().__init__(
@@ -113,12 +54,12 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         analyzed_records = []
         for synjct_tnjc2 in self.synjct_tnjc2s:
             # Get isolate junction coverage (required)
-            jc_cov = self._get_cov(synjct_tnjc2, self._iso_output_dir, self.iso_read_length)
+            jc_cov = self._get_cov(synjct_tnjc2, self._iso_output_dir, self.iso_read_length, is_ancestor=False)
 
             # Get ancestor junction coverage if available (optional)
             jc_cov_anc = None
             if self.has_ancestor:
-                jc_cov_anc = self._get_cov(synjct_tnjc2, self._anc_output_dir, self.anc_read_length)
+                jc_cov_anc = self._get_cov(synjct_tnjc2, self._anc_output_dir, self.anc_read_length, is_ancestor=True)
 
             analyzed_tnjc2 = AnalyzedTnJc2.from_other(
                 synjct_tnjc2,
@@ -130,9 +71,63 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         return RecordTypedDf.from_records(analyzed_records, AnalyzedTnJc2)
 
     def _get_cov(
-        self, synjct_tnjc2: SynJctsTnJc2, base_dir: Path, read_length: int
+        self,
+        synjct_tnjc2: SynJctsTnJc2,
+        base_dir: Path,
+        avg_read_length: int,
+        is_ancestor: bool,
+        read_length_tolerance: float = 0.1,
     ) -> dict[JunctionType, JunctionReadCounts]:
-        """Load junction coverage for iso/anc BAM and convert to dict."""
-        bam = synjct_tnjc2.bam_path(base_dir)
-        cov_map = get_junction_coverage(bam, read_length, min_overlap=self.min_overlap)
-        return {JunctionType[name]: jc for name, jc in cov_map.items()}
+        """Parse BAM and get coverage for all 7 junction types.
+
+        Args:
+            synjct_tnjc2: Synthetic junction record
+            base_dir: Base directory containing BAM file
+            read_length: Read length for filtering
+            is_ancestor: Whether processing ancestor (True) or isolate (False) data
+            read_length_tolerance: Tolerance for read length filtering (default 0.1 = 10%)
+
+        Returns:
+            dict mapping JunctionType -> JunctionReadCounts
+        """
+        bam_path = synjct_tnjc2.bam_path(base_dir, is_ancestor=is_ancestor)
+        if not bam_path.exists():
+            raise FileNotFoundError(f"BAM file not found: {bam_path}")
+
+        read_length_factor = 1 + read_length_tolerance
+        min_alignment_length = avg_read_length / read_length_factor
+        max_alignment_length = avg_read_length * read_length_factor
+
+        counts = {jt: JunctionReadCounts() for jt in JunctionType.sorted()}
+
+        with pysam.AlignmentFile(str(bam_path), "rb") as bam:
+            jct_lengths = dict(zip(bam.references, bam.lengths))
+            jct_middles = {name: length // 2 for name, length in jct_lengths.items()}
+
+            # [left, right, spanning] for each junction type
+
+            for read in bam.fetch():
+                if read.is_unmapped:
+                    continue
+
+                jct_name = read.reference_name
+                jct_type = JunctionType[jct_name]
+                alignment_length = read.query_alignment_length
+                if not (min_alignment_length <= alignment_length <= max_alignment_length):
+                    continue
+
+                start = read.reference_start
+                end = read.reference_end
+                assert start <= end
+                junction_point = jct_middles[jct_name]
+
+                if end <= junction_point:
+                    counts[jct_type].left += 1      # left of the junction
+                elif start > junction_point:
+                    counts[jct_type].right += 1     # right of the junction
+                elif start <= junction_point - self.min_overlap and end >= junction_point + self.min_overlap:
+                    counts[jct_type].spanning += 1  # spanning the junction
+                else:
+                    counts[jct_type].other += 1     # other (partial overlap)
+
+        return counts

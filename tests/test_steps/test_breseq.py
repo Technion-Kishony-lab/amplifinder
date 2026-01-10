@@ -52,7 +52,7 @@ def test_breseq_step_skips_if_output_exists(breseq_step):
     (breseq_step.breseq_path / "output" / "output.gd").touch()
 
     breseq_step.run()
-    assert breseq_step.run_count == 0  # skipped (artifacts cached)
+    assert breseq_step._artifacts_generated is False  # skipped (artifacts cached)
 
 
 def test_breseq_step_read_outputs():

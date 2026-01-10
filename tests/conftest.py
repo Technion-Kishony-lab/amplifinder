@@ -296,13 +296,23 @@ def tiny_genome(tiny_ref_gbk, tiny_ref_fasta):
 
 
 @pytest.fixture
-def locate_tns_step(tmp_output, tiny_genome):
-    """Create TN location step (genbank-based)."""
+def locate_tns_step_factory(tmp_output, tiny_genome):
+    """Factory for TN location steps (genbank-based)."""
     from amplifinder.steps import LocateTNsUsingGenbankStep
-    return LocateTNsUsingGenbankStep(
-        genome=tiny_genome,
-        output_dir=tmp_output / "tn_loc" / tiny_genome.name,
-    )
+
+    def make():
+        return LocateTNsUsingGenbankStep(
+            genome=tiny_genome,
+            output_dir=tmp_output / "tn_loc" / tiny_genome.name,
+        )
+
+    return make
+
+
+@pytest.fixture
+def locate_tns_step(locate_tns_step_factory):
+    """Single TN location step instance (kept for compatibility)."""
+    return locate_tns_step_factory()
 
 
 # =============================================================================

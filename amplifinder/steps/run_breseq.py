@@ -83,10 +83,9 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
 
         return RecordTypedDf(jc_df, BreseqJunction)
 
-    def report_output_message(self, output: RecordTypedDf[BreseqJunction], *, from_cache: bool) -> Optional[str]:
+    def report_output_message(self, output: RecordTypedDf[BreseqJunction]) -> Optional[str]:
         """Report junction count."""
-        prefix = 'Artifacts cached,' if from_cache else 'Artifacts created,'
-        return f"{prefix} {len(output)} breseq junctions."
+        return f"Found {len(output)} breseq junctions."
 
 
 class AncBreseqStep(BreseqStep):

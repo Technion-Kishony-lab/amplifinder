@@ -154,7 +154,7 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
 
         return self._build_ref_tns_dict(items)
 
-    def report_output_message(self, output: Optional[RecordTypedDf[RefTn]], *, from_cache: bool) -> Optional[str]:
+    def report_output_message(self, output: Optional[RecordTypedDf[RefTn]]) -> Optional[str]:
         if output is None:
             return "No GenBank file provided - skipping GenBank TN annotation."
         return f"GenBank: found {len(output)} TN elements"
@@ -207,7 +207,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
             evalue=self.evalue,
         )
 
-    def report_output_message(self, output: RecordTypedDf[RefTn], *, from_cache: bool) -> Optional[str]:
+    def report_output_message(self, output: RecordTypedDf[RefTn]) -> Optional[str]:
         return f"ISfinder: found {len(output)} TN elements"
 
     def _calculate_output(self) -> RecordTypedDf[RefTn]:
