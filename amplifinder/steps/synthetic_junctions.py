@@ -21,7 +21,7 @@ legend:
 from pathlib import Path
 from typing import Optional, NamedTuple
 
-from amplifinder.data_types import RecordTypedDf, SingleLocusLinkedTnJc2, SynJctsTnJc2, Genome, JunctionType, RefTn, \
+from amplifinder.data_types import BaseRawEvent, RecordTypedDf, SingleLocusLinkedTnJc2, SynJctsTnJc2, Genome, JunctionType, RefTn, \
     Junction, Side, JcArm, Orientation
 
 from amplifinder.steps.base import RecordTypedDfStep
@@ -38,6 +38,9 @@ class RudimentaryJunctionValues(NamedTuple):
     tn_scaf: str
     tn_side_left_amp_side: Side
     flank: int
+    # Optional: chr positions in case of flanked TNJC2. Otherwise, we use the mirror of the amplicon arms
+    chr_left_pos: Optional[int] = None
+    chr_right_pos: Optional[int] = None
 
     def create_syn_junctions(self) -> dict[JunctionType, Junction]:
         """Create 7 synthetic junctions from primitive coordinates and strands."""
@@ -45,9 +48,16 @@ class RudimentaryJunctionValues(NamedTuple):
         amp_left_arm = JcArm(scaf=self.amp_scaf, start=self.amp_left_pos, dir=Orientation.FORWARD, flank=self.flank)
         amp_right_arm = JcArm(scaf=self.amp_scaf, start=self.amp_right_pos, dir=Orientation.REVERSE, flank=self.flank)
 
-        # Chromosome outward arms (mirror of amplicon)
-        chr_left_arm = amp_left_arm.mirror()
-        chr_right_arm = amp_right_arm.mirror()
+        # Chromosome outward arms; mirror of amplicon if not flanked by ancestral TN
+        if self.chr_left_pos is None:
+            chr_left_arm = amp_left_arm.mirror()
+        else:
+            chr_left_arm = JcArm(scaf=self.amp_scaf, start=self.chr_left_pos, dir=Orientation.REVERSE, flank=self.flank)
+
+        if self.chr_right_pos is None:
+            chr_right_arm = amp_right_arm.mirror()
+        else:
+            chr_right_arm = JcArm(scaf=self.amp_scaf, start=self.chr_right_pos, dir=Orientation.FORWARD, flank=self.flank)
 
         # TN inward arms
         tn_orientation = Orientation.FORWARD if self.tn_start_pos < self.tn_end_pos else Orientation.REVERSE
@@ -64,8 +74,11 @@ class RudimentaryJunctionValues(NamedTuple):
 
     def get_name(self) -> str:
         side_str = "S" if self.tn_side_left_amp_side == Side.START else "E"
+        chr_left_pos_str = f"chrL={self.chr_left_pos}_" if self.chr_left_pos is not None else ""
+        chr_right_pos_str = f"chrR={self.chr_right_pos}_" if self.chr_right_pos is not None else ""
         return (f"jc_{self.amp_scaf}_{self.amp_left_pos}-{self.amp_right_pos}_"
                 f"{self.tn_scaf}_{self.tn_start_pos}-{self.tn_end_pos}_"
+                f"{chr_left_pos_str}{chr_right_pos_str}"
                 f"{side_str}_{self.flank}bp")
 
 
@@ -93,7 +106,7 @@ def create_synthetic_junctions_and_name(
     # Get TN sides that S and E junctions connect to (with offsets)
     tn_side_left_amp, tn_side_right_amp = tnjc2.get_sides_of_chosen_tn()
 
-    # Get RefTn from chosen_tn_id (O(1) lookup using indexed ref_tns)
+    # Get the chosen RefTn from chosen_tn_id (O(1) lookup using indexed ref_tns)
     chosen_tn_id = tnjc2.chosen_tn_id
     ref_tn = ref_tns[chosen_tn_id]
     assert ref_tn.tn_id == chosen_tn_id
@@ -103,6 +116,17 @@ def create_synthetic_junctions_and_name(
 
     # Get chromosome arms (outward amplicon arms)
     chr_left_arm, chr_right_arm = tnjc2.get_outward_arms(flank=jc_width)
+
+    # Handle tnjc2 flanked by ancestral TN
+    paired_left = tnjc2.single_locus_tnjc2_matching_left
+    is_left_ref_tn = paired_left is not None and paired_left.raw_event == BaseRawEvent.REFERENCE    
+    if is_left_ref_tn:
+        chr_left_arm = paired_left.get_outward_arms(flank=jc_width)[0]
+
+    paired_right = tnjc2.single_locus_tnjc2_matching_right
+    is_right_ref_tn = paired_right is not None and paired_right.raw_event == BaseRawEvent.REFERENCE
+    if is_right_ref_tn:
+        chr_right_arm = paired_right.get_outward_arms(flank=jc_width)[1]
 
     # Get inward arms for RefTn with offset adjustments via ref_tn_side
     # The right-side of the TN is one that connects to the left-side of the amplicon
@@ -121,6 +145,8 @@ def create_synthetic_junctions_and_name(
         tn_end_pos=tn_right_arm.start if tn_side_left_amp_side == Side.END else tn_left_arm.start,
         tn_scaf=tn_left_arm.scaf,
         tn_side_left_amp_side=tn_side_left_amp_side,
+        chr_left_pos=chr_left_arm.start if is_left_ref_tn else None,
+        chr_right_pos=chr_right_arm.start if is_right_ref_tn else None,
         flank=jc_width,
     )
 
