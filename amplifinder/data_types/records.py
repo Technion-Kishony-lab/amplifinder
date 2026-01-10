@@ -112,6 +112,9 @@ class Record(BaseModel):
 
     # CSV export control: None = export all fields, List[str] = export only specified fields/properties
     CSV_EXPORT_FIELDS: ClassVar[Optional[List[str]]] = None
+    
+    # CSV field formatting: Dict[field_name, format_spec] (e.g., {' copy_number': '.1f', 'score': '.3f'})
+    CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {}
 
     @classmethod
     def schema(cls) -> Schema:
