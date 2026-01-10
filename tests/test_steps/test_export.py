@@ -3,32 +3,26 @@
 import pytest
 from amplifinder.steps import ExportTnJc2Step
 from amplifinder.data_types import (
-    RecordTypedDf, AnalyzedTnJc2, RawEvent,
+    RecordTypedDf, ClassifiedTnJc2, RawEvent, EventModifier,
 )
 
 
 @pytest.fixture
 def sample_analyzed(analyzed_tnjc2_record):
-    """Create sample AnalyzedTnJc2 records."""
-    first = AnalyzedTnJc2.from_other(
+    """Create sample ClassifiedTnJc2 records."""
+    first = ClassifiedTnJc2.from_other(
         analyzed_tnjc2_record,
-        iso_scaf_avg=1.0,
-        iso_amplicon_avg=2.5,
-        analysis_dir="jc_100_200_001_L150",
         isolate_architecture=RawEvent.FLANKED,
-        event="flanked",
+        event_modifiers=[EventModifier.DENOVO_LEFT],
     )
 
-    second = AnalyzedTnJc2.from_other(
+    second = ClassifiedTnJc2.from_other(
         analyzed_tnjc2_record,
-        iso_scaf_avg=1.0,
-        iso_amplicon_avg=0.2,
-        analysis_dir="jc_300_400_002_L150",
         isolate_architecture=RawEvent.UNFLANKED,
-        event="unflanked",
+        event_modifiers=[EventModifier.DENOVO_LEFT],
     )
 
-    return RecordTypedDf.from_records([first, second], AnalyzedTnJc2)
+    return RecordTypedDf.from_records([first, second], ClassifiedTnJc2)
 
 
 def test_export_creates_files(sample_analyzed, tmp_path, tiny_genome):

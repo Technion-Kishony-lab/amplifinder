@@ -155,8 +155,8 @@ class TestPipelineStepByStep:
 
         return Config(**config_kwargs)
 
-    def test_full_pipeline_matches_matlab(self, isolate_srr25242877, cleared_output_dir):
-        """Run full pipeline and compare with MATLAB outputs."""
+    def test_pipeline_without_ancestor(self, isolate_srr25242877, cleared_output_dir):
+        """Pipeline on isolate only - compare with MATLAB."""
         matlab_output_dir = isolate_srr25242877["matlab_output"]
 
         # Check MATLAB output exists
@@ -187,44 +187,12 @@ class TestPipelineStepByStep:
         print("\n=== Final ISJC2 Comparison ===")
         print("✓ Comparison done in _create_tnjc2 step")
 
-    def test_isolate_pipeline_steps_without_ancestor(self, isolate_srr25242877, tmp_path, cleared_output_dir):
-        """Test isolate pipeline step-by-step without ancestor (no MATLAB comparison)."""
-        matlab_output_dir = isolate_srr25242877["matlab_output"]
-        config = self._create_config(isolate_srr25242877, cleared_output_dir)
-
-        # Setup pipeline
-        self._setup_pipeline(config)
-
-        print("\n=== Testing Isolate Pipeline (no ancestor) ===")
-        pipeline = TestPipeline(config, matlab_output_dir)
-        result = pipeline.run()
-
-        print(f"\nFinal result: {len(result)} candidates")
-        return result
-
-    def test_ancestor_as_isolate_pipeline_steps(self, isolate_srr25242906, tmp_path, cleared_output_dir):
-        """Test ancestor run as isolate (self-ancestor) - step-by-step comparison."""
-        matlab_output_dir = isolate_srr25242906["matlab_output"]
-        config = self._create_config(isolate_srr25242906, cleared_output_dir)
-        config.anc_name = isolate_srr25242906["iso_name"]  # Self-ancestor
-
-        # Setup pipeline
-        self._setup_pipeline(config)
-
-        print("\n=== Testing Ancestor Pipeline ===")
-        pipeline = TestPipeline(config, matlab_output_dir)
-        result = pipeline.run()
-
-        print(f"\nFinal result: {len(result)} candidates")
-        return result
-
-    def test_isolate_pipeline_with_ancestor_steps(
+    def test_pipeline_with_ancestor(
             self,
             isolate_srr25242877,
             isolate_srr25242906,
-            tmp_path,
             cleared_output_dir):
-        """Test isolate pipeline with ancestor - step-by-step comparison with MATLAB."""
+        """Pipeline on isolate + ancestor - compare with MATLAB."""
         matlab_output_dir = isolate_srr25242877["matlab_output"]
 
         # Check MATLAB output exists
