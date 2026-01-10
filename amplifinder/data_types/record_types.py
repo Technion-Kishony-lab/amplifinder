@@ -414,19 +414,19 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
         'single_locus_left_pair_id', 'single_locus_right_pair_id', 'raw_event', 'chosen_tn_id'
     ]
-    single_locus_tnjc2_left_matchings: List[CoveredTnJc2]
-    single_locus_tnjc2_right_matchings: List[CoveredTnJc2]
+    single_locus_tnjc2_left_matchings: List[tuple[SingleLocusLinkedTnJc2, Side]]
+    single_locus_tnjc2_right_matchings: List[tuple[SingleLocusLinkedTnJc2, Side]]
     base_raw_event: BaseRawEvent
 
     @property
-    def single_locus_tnjc2_matching_left(self) -> Optional[CoveredTnJc2]:
+    def single_locus_tnjc2_matching_left(self) -> Optional[SingleLocusLinkedTnJc2]:
         """First single-locus TN junction matching the left junction."""
-        return self.single_locus_tnjc2_left_matchings[0] if self.single_locus_tnjc2_left_matchings else None
+        return self.single_locus_tnjc2_left_matchings[0][0] if self.single_locus_tnjc2_left_matchings else None
 
     @property
-    def single_locus_tnjc2_matching_right(self) -> Optional[CoveredTnJc2]:
+    def single_locus_tnjc2_matching_right(self) -> Optional[SingleLocusLinkedTnJc2]:
         """First single-locus TN junction matching the right junction."""
-        return self.single_locus_tnjc2_right_matchings[0] if self.single_locus_tnjc2_right_matchings else None
+        return self.single_locus_tnjc2_right_matchings[0][0] if self.single_locus_tnjc2_right_matchings else None
 
     @property
     def is_multiple_single_locus_tnjc2_left(self) -> bool:

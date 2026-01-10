@@ -18,6 +18,10 @@ class Side(ReversibleIntEnum):
     START = -1
     END = 1
 
+    # Aliases:
+    LEFT = START
+    RIGHT = END
+
 
 class Orientation(ReversibleIntEnum):
     """Orientation relative to reference (forward, reverse, or both/mixed)."""
