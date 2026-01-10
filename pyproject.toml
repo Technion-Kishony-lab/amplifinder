@@ -46,6 +46,9 @@ markers = [
     "integration: integration tests using real data",
     "slow: slow tests (e.g., runs breseq)",
 ]
+filterwarnings = [
+    "ignore::DeprecationWarning:line_profiler.*",
+]
 
 [project.scripts]
 amplifinder = "amplifinder.cli:main"

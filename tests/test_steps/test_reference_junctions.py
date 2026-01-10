@@ -15,7 +15,7 @@ def ref_jc_step(locate_tns_step, tiny_genome, tmp_output):
         genome=tiny_genome,
         output_dir=tmp_output,
         source="isfinder",
-        reference_tn_out_span=50,
+        reference_IS_out_span=50,
     )
 
 

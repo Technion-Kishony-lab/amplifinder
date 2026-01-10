@@ -24,7 +24,8 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
         genome: Genome,
         output_dir: Path,
         source: str,
-        reference_tn_out_span: int,
+        reference_IS_out_span: int,
+        reference_IS_in_span: Optional[int] = None,
         force: Optional[bool] = None,
     ):
         """Initialize step.
@@ -34,12 +35,15 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
             genome: Reference genome
             output_dir: Directory to write output
             source: Source name (genbank/isfinder) for filename prefix
-            reference_tn_out_span: bp outside TN for unique chromosome seq
+            reference_IS_out_span: bp outside IS for unique chromosome seq
+            reference_IS_in_span: bp into IS element for junction flanking sequence
+                                  None means use the entire IS element (default)
             force: Force re-run even if output exists
         """
         self.ref_tn_locs = ref_tn_locs
         self.genome = genome
-        self.reference_tn_out_span = reference_tn_out_span
+        self.reference_IS_out_span = reference_IS_out_span
+        self.reference_IS_in_span = reference_IS_in_span
         output_file = output_dir / f"{source}_ref_tnjc.csv"
         super().__init__(output_file=output_file, force=force)
 
@@ -47,7 +51,10 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
         """Create synthetic junction records from TN locations."""
         ref_tnjcs = []
         for tn in self.ref_tn_locs:
-            left_jc, right_jc = tn.get_junctions(self.reference_tn_out_span)
+            left_jc, right_jc = tn.get_junctions(
+                out_flanks=self.reference_IS_out_span,
+                in_flanks=self.reference_IS_in_span,
+            )
             ref_tnjcs.append(left_jc)
             ref_tnjcs.append(right_jc)
 

@@ -144,7 +144,8 @@ class Pipeline:
             genome=genome,
             output_dir=iso_output,
             source=self.ref_tn_source,
-            reference_tn_out_span=cfg.reference_IS_out_span,
+            reference_IS_out_span=cfg.reference_IS_out_span,
+            reference_IS_in_span=cfg.reference_IS_in_span,
         ).run()
 
     def _run_breseq(self, genome: Genome) -> RecordTypedDf[BreseqJunction]:

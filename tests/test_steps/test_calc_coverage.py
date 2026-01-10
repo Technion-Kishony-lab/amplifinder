@@ -79,10 +79,10 @@ def test_calc_coverage_step(tiny_genome, sample_tnjc2, mock_breseq_output, tmp_p
 
     # First candidate should have coverage calculated
     first_row = result_df.iloc[0]
-    cov_col = 'amplicon_coverage' if 'amplicon_coverage' in schema.column_names else None
-    copy_col = 'copy_number' if 'copy_number' in schema.column_names else None
-    ref_col = 'ref_name' if 'ref_name' in schema.column_names else None
-    iso_col = 'iso_name' if 'iso_name' in schema.column_names else None
+    cov_col = 'amplicon_coverage' if 'amplicon_coverage' in result_df.columns else None
+    copy_col = 'copy_number' if 'copy_number' in result_df.columns else None
+    ref_col = 'ref_name' if 'ref_name' in result_df.columns else None
+    iso_col = 'iso_name' if 'iso_name' in result_df.columns else None
 
     if cov_col:
         assert first_row[cov_col] > 0 or not pd.isna(first_row[cov_col])

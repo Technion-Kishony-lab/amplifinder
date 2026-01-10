@@ -22,7 +22,7 @@ DEFAULT_CONFIG = {
     # IS/TN detection parameters
     "max_dist_to_IS": 10,
     "trim_jc_flanking": 5,
-    "length_seq_into_is": 200,
+    "reference_IS_in_span": None,
     "reference_IS_out_span": 100,
     "isfinder_evalue": 1e-4,
     "isfinder_critical_coverage": 0.9,
@@ -52,11 +52,13 @@ DEFAULT_CONFIG = {
     "mismatch_penalty": (5, 5),
 
     # File size thresholds
+    # TODO: These are not used yet
     "breseq_output_size_threshold": 10_000,
     "max_fastq_size": 500_000_000,
     "min_num_bases": 80_000_000,
 
     # Filtering options
+    # TODO: These are not used yet
     "shortest_amplicon": 1,
     "true_transposition_length": 0,
     "remove_jc_breseq_reject": False,
@@ -105,7 +107,7 @@ class Config:
     # IS/TN detection parameters
     max_dist_to_IS: int = 10
     trim_jc_flanking: int = 5
-    length_seq_into_is: int = 200
+    reference_IS_in_span: Optional[int] = None  # None = use the entire IS element
     reference_IS_out_span: int = 100
     isfinder_evalue: float = 1e-4
     isfinder_critical_coverage: float = 0.9
@@ -135,11 +137,13 @@ class Config:
     mismatch_penalty: Tuple[int, int] = (5, 5)
 
     # File size thresholds
+    # TODO: These are not used yet
     breseq_output_size_threshold: int = 10_000
     max_fastq_size: int = 500_000_000
     min_num_bases: int = 80_000_000
 
     # Filtering options
+    # TODO: These are not used yet
     shortest_amplicon: int = 1
     true_transposition_length: int = 0
     remove_jc_breseq_reject: bool = False
