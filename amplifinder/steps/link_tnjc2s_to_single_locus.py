@@ -5,7 +5,7 @@ from typing import Optional
 
 from amplifinder.data_types.enums import BaseRawEvent, RawEvent
 from amplifinder.data_types.genome import Genome
-from amplifinder.data_types import RecordTypedDf, CoveredTnJc2, RefTn, SingleLocusLinkedTnJc2, TnJunction
+from amplifinder.data_types import RecordTypedDf, CoveredTnJc2, RefTn, Side, SingleLocusLinkedTnJc2, TnJunction
 
 from .base import RecordTypedDfStep
 
@@ -42,17 +42,27 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
         """Classify junction pairs."""
         tnjc2s = self.covered_tnjc2s.to_records()
         base_raw_events = [self._compute_base_raw_event(tnjc2) for tnjc2 in tnjc2s]
-        classified_tnjc2s = []
+        
+        # First pass: create all SingleLocusLinkedTnJc2 objects with empty matchings
+        linked_tnjc2s: list[SingleLocusLinkedTnJc2] = []
         for i, tncj2_i in enumerate(tnjc2s):
-            classified_tnjc2s.append(SingleLocusLinkedTnJc2.from_other(
+            linked_tnjc2s.append(SingleLocusLinkedTnJc2.from_other(
                 tncj2_i,
-                single_locus_tnjc2_left_matchings=self._find_all_single_locus_matching_tnjc2s(
-                    tncj2_i.tnjc_left, tnjc2s, base_raw_events, exclude_idx=i),
-                single_locus_tnjc2_right_matchings=self._find_all_single_locus_matching_tnjc2s(
-                    tncj2_i.tnjc_right, tnjc2s, base_raw_events, exclude_idx=i),
+                single_locus_tnjc2_left_matchings=[],
+                single_locus_tnjc2_right_matchings=[],
                 base_raw_event=base_raw_events[i],
             ))
-        return RecordTypedDf.from_records(classified_tnjc2s, SingleLocusLinkedTnJc2)
+        
+        # Second pass: populate the matchings with SingleLocusLinkedTnJc2 objects
+        for i, linked_i in enumerate(linked_tnjc2s):
+            left_matches = self._find_all_single_locus_matching_tnjc2s(
+                linked_i.tnjc_left, linked_tnjc2s, base_raw_events, exclude_idx=i)
+            right_matches = self._find_all_single_locus_matching_tnjc2s(
+                linked_i.tnjc_right, linked_tnjc2s, base_raw_events, exclude_idx=i)
+            linked_i.single_locus_tnjc2_left_matchings = left_matches
+            linked_i.single_locus_tnjc2_right_matchings = right_matches
+        
+        return RecordTypedDf.from_records(linked_tnjc2s, SingleLocusLinkedTnJc2)
 
     def _compute_base_raw_event(self, tnjc2: CoveredTnJc2) -> BaseRawEvent:
         if tnjc2.tnjc_left.is_ref_tn_junction() and \
@@ -65,17 +75,19 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
             return BaseRawEvent.LOCUS_JOINING
 
     def _find_all_single_locus_matching_tnjc2s(
-        self, tnjc_i: TnJunction, tnjc2s: list[CoveredTnJc2],
+        self, tnjc_i: TnJunction, tnjc2s: list[SingleLocusLinkedTnJc2],
         base_raw_events: list[BaseRawEvent], exclude_idx: int
-    ) -> list[CoveredTnJc2]:
+    ) -> list[tuple[SingleLocusLinkedTnJc2, Side]]:
         matches = []
         for j, tnjc2_j in enumerate(tnjc2s):
             if j == exclude_idx:  # Don't match with self
                 continue
             if not base_raw_events[j].is_single_locus():
                 continue
-            if tnjc_i == tnjc2_j.tnjc_left or tnjc_i == tnjc2_j.tnjc_right:
-                matches.append(tnjc2_j)
+            if tnjc_i == tnjc2_j.tnjc_left:
+                matches.append((tnjc2_j, Side.LEFT))
+            elif tnjc_i == tnjc2_j.tnjc_right:
+                matches.append((tnjc2_j, Side.RIGHT))
         return matches
 
     def report_output_message(self, output: RecordTypedDf[SingleLocusLinkedTnJc2]) -> Optional[str]:
