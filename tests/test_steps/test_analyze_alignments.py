@@ -18,9 +18,9 @@ def test_step_initialization(filtered_tnjc2_record, tmp_path):
         synjct_tnjc2s=filtered_tnjc2s,
         output_dir=tmp_path,
         iso_read_length=150,
-        has_ancestor=False,
+        anc_output_dir=None,
     )
 
     assert step.synjct_tnjc2s == filtered_tnjc2s
-    assert step.ido_read_length == 150
+    assert step.iso_read_length == 150
     assert step.has_ancestor is False
