@@ -101,6 +101,9 @@ class RefTn(SegmentScaffold):
 class BlastHit(Record):
     """BLAST alignment hit record."""
     NAME: ClassVar[str] = "BLAST hits"
+    CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
+        'evalue': '.6e',  # Scientific notation for e-values
+    }
     query: str
     subject: str
     percent_identical: float

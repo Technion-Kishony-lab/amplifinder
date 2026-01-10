@@ -368,6 +368,8 @@ def classified_tnjc2_record(covered_tnjc2_record):
     return SingleLocusLinkedTnJc2.from_other(
         covered_tnjc2_record,
         base_raw_event=BaseRawEvent.LOCUS_JOINING,
+        single_locus_tnjc2_left_matchings=[],
+        single_locus_tnjc2_right_matchings=[],
     )
 
 
