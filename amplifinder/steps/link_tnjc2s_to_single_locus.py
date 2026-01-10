@@ -78,9 +78,7 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
                 matches.append(tnjc2_j)
         return matches
 
-    def report_output_message(
-        self, output: RecordTypedDf[SingleLocusLinkedTnJc2], *, from_cache: bool
-    ) -> Optional[str]:
+    def report_output_message(self, output: RecordTypedDf[SingleLocusLinkedTnJc2]) -> Optional[str]:
         records: list[SingleLocusLinkedTnJc2] = output.to_records()
         counts: dict[RawEvent, int] = {name: 0 for name in RawEvent}
         for record in records:

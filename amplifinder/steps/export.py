@@ -87,7 +87,7 @@ class ExportTnJc2Step(OutputStep[RecordTypedDf[ExportedTnJc2]]):
         filtered = self._filter_export_df(output)
         filtered.to_csv(self.candidates_file, index=False)
 
-    def report_output_message(self, output: RecordTypedDf[ExportedTnJc2], *, from_cache: bool) -> Optional[str]:
+    def report_output_message(self, output: RecordTypedDf[ExportedTnJc2]) -> Optional[str]:
         filtered_len = len(self._filter_export_df(output))
         return (
             f"Exported {len(output)} candidates to {self.isjc2_file}; "

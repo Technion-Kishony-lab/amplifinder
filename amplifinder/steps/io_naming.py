@@ -13,13 +13,13 @@ from amplifinder.data_types.records import Record
 DEFAULT_FILENAMES: Dict[Type[Record], str] = {
     RefTnJunction: "ref_tnjc.csv",
     TnJunction: "tnjc.csv",
-    RawTnJc2: "tnjc2_raw.csv",
-    CoveredTnJc2: "tnjc2_covered.csv",
-    SingleLocusLinkedTnJc2: "tnjc2_classified.csv",
-    SynJctsTnJc2: "tnjc2_syn_jcts.csv",
-    AnalyzedTnJc2: "tnjc2_analyzed.csv",
-    ClassifiedTnJc2: "tnjc2_classified_final.csv",
-    ExportedTnJc2: "tnjc2_exported.csv",
+    RawTnJc2: "tnjc2_A_raw.csv",
+    CoveredTnJc2: "tnjc2_B_covered.csv",
+    SingleLocusLinkedTnJc2: "tnjc2_C_linked.csv",
+    SynJctsTnJc2: "tnjc2_D_syn_jcts.csv",
+    AnalyzedTnJc2: "tnjc2_E_analyzed.csv",
+    ClassifiedTnJc2: "tnjc2_F_classified.csv",
+    ExportedTnJc2: "tnjc2_G_final.csv",
 }
 
 

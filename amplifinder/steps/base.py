@@ -1,5 +1,4 @@
 """Pipeline step base class with caching logic."""
-
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Generic, List, Optional, TypeVar, get_args, get_origin, Type
@@ -58,7 +57,9 @@ class Step(ABC):
         self.input_files: List[Path] = [Path(p) for p in input_files] if input_files else []
         self.artifact_files: Optional[List[Path]] = [Path(p) for p in artifact_files] if artifact_files else None
         self._force = force
-        self.run_count = 0
+
+        # Whether artifacts were created (True if created, False if skipped, None if not run yet)
+        self._artifacts_generated: Optional[bool] = None
 
     """ Logging """
 
@@ -136,41 +137,45 @@ class Step(ABC):
 
     def _generate_artifacts_if_needed(self):
         """Generate artifacts if needed. Subclasses override to return computed output."""
-        artifacts_cached = False
+        self._artifacts_generated = False
 
         if self.artifact_files:
             # Fast path: skip artifact generation if already present
             if not self.force and self.has_artifact_files():
-                artifacts_cached = True
-                self._log_run_status("artifacts exist, skipping generation")
+                self._log_run_status("skip artifacts")
             else:
                 # Acquire lock and re-check (TOCTOU)
                 lock_target = self._get_lock_target()
                 with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
                     if not self.force and self.has_artifact_files():
-                        artifacts_cached = True
-                        self._log_run_status("artifacts exist (verified under lock)")
+                        self._log_run_status("skip artifacts")
                     else:
                         if self.force:
                             self._clean_artifacts()
-                        self._log_run_status("generating artifacts (under lock)")
-                        if self.should_profile:
-                            lp = self._create_profiler()
-                            lp.add_function(self._generate_artifacts)
-                            lp.runcall(self._generate_artifacts)
-                            self._save_profiler_stats(lp, suffix="artifacts")
-                        else:
-                            self._generate_artifacts()
+                        self._log_run_status("create artifacts")
+                        self._run_generate_artifacts()
         else:
             self._log_run_status("no artifacts to generate")
 
-        self._artifacts_cached = artifacts_cached
+    def _run_generate_artifacts(self):
+        """Run the creation of artifacts."""
+        if self.should_profile:
+            lp = self._create_profiler()
+            lp.add_function(self._generate_artifacts)
+            lp.runcall(self._generate_artifacts)
+            self._save_profiler_stats(lp, suffix="artifacts")
+        else:
+            self._generate_artifacts()
+        self._artifacts_generated = True
 
     def run(self):
         """Execute step: generate artifacts with caching and optional locking."""
         # Check inputs exist
         if missing_input := self.missing_input_files():
             raise FileNotFoundError(f"{self.name}: missing inputs: {missing_input}")
+
+        if self._artifacts_generated is not None:
+            raise RuntimeError(f"{self.name}: already ran; cannot run again")
 
         with self.print_timer("=" * 92 + " ", use_log=True, end_msg=" ========\n"):
             return self._generate_artifacts_if_needed()
@@ -308,13 +313,14 @@ class OutputStep(Step, Generic[T]):
         )
 
         self.output_files = output_files
+        self._output_calculated: Optional[bool] = None
 
     @abstractmethod
     def _calculate_output(self) -> T:
         """Calculate output using existing artifacts and step attributes."""
         pass
 
-    def report_output_message(self, output: T, *, from_cache: bool) -> Optional[str]:
+    def report_output_message(self, output: T) -> Optional[str]:
         """Message to report after producing/loading output. Override per step."""
         return None
 
@@ -328,9 +334,7 @@ class OutputStep(Step, Generic[T]):
         super()._generate_artifacts_if_needed()
 
         # Calculate output (always - we need to return it)
-        # Only increment run_count when artifacts were freshly generated
-        if not self._artifacts_cached:
-            self.run_count += 1
+        self._log_run_status("calculating output")
         if self.should_profile:
             lp = self._create_profiler()
             lp.add_function(self._calculate_output)
@@ -338,13 +342,14 @@ class OutputStep(Step, Generic[T]):
             self._save_profiler_stats(lp, suffix="calculation")
         else:
             output = self._calculate_output()
+        self._output_calculated = True
 
         # Save output files if artifacts were just generated (not cached)
-        if not self._artifacts_cached:
+        if self._artifacts_generated:
             self._save_output(output)
 
         # Report
-        msg = self.report_output_message(output, from_cache=self._artifacts_cached)
+        msg = self.report_output_message(output)
         if msg:
             self.log(msg, verbose_only=False)
 
@@ -441,7 +446,7 @@ class RecordTypedDfStep(OutputStep[RecordTypedDf[R]], Generic[R]):
         ensure_dir(self.output_file.parent)
         output.to_csv(self.output_file)
 
-    def report_output_message(self, output: RecordTypedDf[R], *, from_cache: bool) -> Optional[str]:
+    def report_output_message(self, output: RecordTypedDf[R]) -> Optional[str]:
         """Uniform record count logging for RecordTypedDf steps."""
         record_cls = self._get_record_cls()
         return f"Created {len(output)} {record_cls.NAME}."

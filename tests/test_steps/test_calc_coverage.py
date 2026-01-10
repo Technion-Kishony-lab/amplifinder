@@ -75,8 +75,6 @@ def test_calc_coverage_step(tiny_genome, sample_tnjc2, mock_breseq_output, tmp_p
 
     # Access records directly from DataFrame to avoid NaN->None conversion
     result_df = result.df
-    schema = result.schema
-
     # First candidate should have coverage calculated
     first_row = result_df.iloc[0]
     cov_col = 'amplicon_coverage' if 'amplicon_coverage' in result_df.columns else None

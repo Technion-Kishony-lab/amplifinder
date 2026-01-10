@@ -164,7 +164,7 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[ClassifiedTnJc2]):
 
         return RecordTypedDf.from_records(classified_records, ClassifiedTnJc2)
 
-    def report_output_message(self, output: RecordTypedDf[ClassifiedTnJc2], *, from_cache: bool) -> Optional[str]:
+    def report_output_message(self, output: RecordTypedDf[ClassifiedTnJc2]) -> Optional[str]:
         if self.has_ancestor:
             ancestral = sum(1 for r in output if EventModifier.ANCESTRAL in r.event_modifiers)
             de_novo = sum(1 for r in output if EventModifier.DENOVO_LEFT in r.event_modifiers

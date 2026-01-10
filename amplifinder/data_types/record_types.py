@@ -1,6 +1,5 @@
 """Record type definitions for AmpliFinder."""
 from __future__ import annotations
-
 from typing import Any, ClassVar, Dict, List, Optional, TypeVar
 from pathlib import Path
 from pydantic import ConfigDict, field_validator
@@ -303,13 +302,6 @@ class RawTnJc2(Record):
         return self.tnjc_right.pos2
 
     @property
-    def span_origin(self) -> bool:
-        """True if amplicon segment spans the origin of the scaffold."""
-        tf = self.get_segment_scaffold().span_origin
-        assert tf is (self.left > self.right)
-        return tf
-
-    @property
     def tn_ids(self) -> List[int]:
         """Matching TN element IDs."""
         return [tn_side_S.tn_id for tn_side_S, tn_side_E in self._find_matching_tn_sides()]
@@ -378,7 +370,6 @@ class CoveredTnJc2(RawTnJc2):
         'avg_norm_cov': '.1f',
         'copy_number': '.1f',
     }
-    
     iso_scaf_avg: float
     iso_amplicon_avg: float
     anc_scaf_avg: Optional[float] = None  # None if no ancestor
@@ -549,7 +540,7 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     @property
     def jc_cov_vector(self) -> List[tuple[int, int, int]]:
         """Junction coverage vector."""
-        return [(self.jc_cov[jt].left, self.jc_cov[jt].spanning, self.jc_cov[jt].right) 
+        return [(self.jc_cov[jt].left, self.jc_cov[jt].spanning, self.jc_cov[jt].right)
                 for jt in JunctionType.sorted()]
 
     @property
@@ -557,7 +548,7 @@ class AnalyzedTnJc2(SynJctsTnJc2):
         """Ancestor junction coverage vector."""
         if self.jc_cov_anc is None:
             return None
-        return [(self.jc_cov_anc[jt].left, self.jc_cov_anc[jt].spanning, self.jc_cov_anc[jt].right) 
+        return [(self.jc_cov_anc[jt].left, self.jc_cov_anc[jt].spanning, self.jc_cov_anc[jt].right)
                 for jt in JunctionType.sorted()]
 
 
