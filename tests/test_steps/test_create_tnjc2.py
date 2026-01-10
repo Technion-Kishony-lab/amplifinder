@@ -107,7 +107,7 @@ def test_output_has_correct_columns(tnjc2_step):
         "tn_ids", "tn_offsets",
         "amplicon_length",
     }
-    
+
     # Verify properties work by accessing them on first record
     if len(raw_tnjc2s) > 0:
         record = raw_tnjc2s.to_records()[0]

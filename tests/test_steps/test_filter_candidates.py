@@ -1,18 +1,17 @@
 """Tests for FilterTnJc2CandidatesStep."""
 
-from amplifinder.data_types.enums import BaseRawEvent
 import pytest
+
+from amplifinder.data_types.enums import BaseRawEvent
 from amplifinder.steps import FilterTnJc2CandidatesStep
-from amplifinder.data_types import (
-    RecordTypedDf, SingleLocusLinkedTnJc2, RawEvent,
-)
+from amplifinder.data_types import RecordTypedDf, SingleLocusLinkedTnJc2
 
 
 @pytest.fixture
 def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
     """Create sample SingleLocusLinkedTnJc2 records with different amplicon lengths."""
     from amplifinder.data_types import TnJunction, Orientation, OffsetRefTnSide, Side, RawTnJc2
-    
+
     # Short amplicon (20bp) - should be filtered out
     tn_jc_S_short = TnJunction(
         num=1, scaf1="tiny", pos1=10, dir1=Orientation.FORWARD,
@@ -102,7 +101,7 @@ def test_keeps_all_when_no_length_filter(sample_classified_tnjc2, tmp_path):
 
     assert len(result) == 3  # All pass length filter
     result_list = list(result)
-    
+
     # Check all have expected amplicon lengths
     lengths = sorted([r.amplicon_length for r in result_list])
     assert lengths == [20, 101, 500]

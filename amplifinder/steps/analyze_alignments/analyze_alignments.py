@@ -72,7 +72,9 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
         return RecordTypedDf.from_records(analyzed_records, AnalyzedTnJc2)
 
-    def _get_cov(self, synjct_tnjc2: SynJctsTnJc2, base_dir: Path, read_length: int) -> dict[JunctionType, JunctionReadCounts]:
+    def _get_cov(
+        self, synjct_tnjc2: SynJctsTnJc2, base_dir: Path, read_length: int
+    ) -> dict[JunctionType, JunctionReadCounts]:
         """Load junction coverage for iso/anc BAM and convert to dict."""
         bam = synjct_tnjc2.bam_path(base_dir)
         cov_map = get_junction_coverage(bam, read_length, min_overlap=self.min_overlap)

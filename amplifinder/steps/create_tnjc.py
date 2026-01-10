@@ -66,8 +66,11 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
 
             # If this is a reference TN junction, assert we get an offset==0 match on arm 1 (TN side)
             if isinstance(jc, RefTnJunction):
-                ref_tn_side_matches = [m for m in tn_sides_matching_arm1 if m.offset == 0 and m.is_same_side(jc.ref_tn_side)]
-                assert len(ref_tn_side_matches) == 1, f"Reference TN junction {jc} should match itself with offset==0"
+                ref_tn_side_matches = [
+                    m for m in tn_sides_matching_arm1
+                    if m.offset == 0 and m.is_same_side(jc.ref_tn_side)]
+                assert len(ref_tn_side_matches) == 1, \
+                    f"Reference TN junction {jc} should match itself with offset==0"
 
             is_arm1_tn = len(tn_sides_matching_arm1) > 0
             is_arm2_tn = len(tn_sides_matching_arm2) > 0

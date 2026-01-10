@@ -123,7 +123,7 @@ class Record(BaseModel):
     @classmethod
     def schema(cls) -> Schema:
         """Extract schema (Column definitions) for CSV read/write.
-        
+
         If CSV_EXPORT_FIELDS is set, schema includes only those fields/properties.
         Otherwise includes all model fields.
         """
@@ -132,7 +132,7 @@ class Record(BaseModel):
             field_names = cls.CSV_EXPORT_FIELDS
         else:
             field_names = list(cls.model_fields.keys())
-        
+
         columns = []
         for name in field_names:
             if name in cls.model_fields:
@@ -144,7 +144,7 @@ class Record(BaseModel):
                 # It's a property - infer type from property return annotation
                 from amplifinder.data_types.type_inference import infer_property_type
                 dtype, is_optional = infer_property_type(cls, name)
-            
+
             columns.append(Column(name=name, dtype=dtype, optional=is_optional))
 
         return Schema(columns=tuple(columns), allow_extra=cls.ALLOW_EXTRA)
@@ -173,5 +173,5 @@ class Record(BaseModel):
             else:
                 s = f"{field_name}={repr(value)}"
             fields.append(s)
-        
+
         return f"{self.__class__.__name__}({', '.join(fields)})"

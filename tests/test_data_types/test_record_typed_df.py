@@ -2,7 +2,7 @@
 
 import pytest
 from enum import Enum
-from typing import List, NamedTuple, Tuple
+from typing import List, NamedTuple, Tuple, ClassVar
 
 from amplifinder.data_types import RecordTypedDf
 from amplifinder.data_types.records import Record
@@ -166,13 +166,13 @@ def test_to_records_round_trip(sample_records):
     """Test round-trip: records → from_records() → to_records() → same records."""
     # Convert to DataFrame
     df = RecordTypedDf.from_records(sample_records, SampleRecord)
-    
+
     # Convert back to records
     records2 = df.to_records()
-    
+
     # Verify count
     assert len(records2) == len(sample_records)
-    
+
     # Verify each record matches field-by-field
     for orig, loaded in zip(sample_records, records2):
         assert orig.name == loaded.name
@@ -185,43 +185,42 @@ def test_to_records_round_trip(sample_records):
 
 def test_csv_export_fields(tmp_path):
     """Test CSV_EXPORT_FIELDS functionality."""
-    from typing import ClassVar, List, Optional
-    
+
     class InnerRecord(Record):
         """Inner record for testing nested objects."""
         x: int
         y: str
-    
+
     class RecordWithComplexFields(Record):
         """Record with complex objects and CSV_EXPORT_FIELDS."""
         name: str
         inner: InnerRecord
         value: int
-        
+
         CSV_EXPORT_FIELDS: ClassVar[List[str]] = ['name', 'value']  # Exclude 'inner'
-    
+
     # Create records with complex objects
     records = [
         RecordWithComplexFields(name="a", inner=InnerRecord(x=1, y="foo"), value=10),
         RecordWithComplexFields(name="b", inner=InnerRecord(x=2, y="bar"), value=20),
     ]
-    
+
     # Convert to DataFrame
     df = RecordTypedDf.from_records(records, RecordWithComplexFields)
-    
+
     # Verify DataFrame contains all fields (including complex objects)
     assert 'name' in df.df.columns
     assert 'inner' in df.df.columns
     assert 'value' in df.df.columns
-    
+
     # Verify inner is stored as object (not serialized)
     assert df.df['inner'].dtype == object
     assert isinstance(df.df.iloc[0]['inner'], InnerRecord)
-    
+
     # Save to CSV
     csv_path = tmp_path / "test_csv_export.csv"
     df.to_csv(csv_path)
-    
+
     # Verify CSV contains only CSV_EXPORT_FIELDS columns
     import pandas as pd
     csv_df = pd.read_csv(csv_path)
@@ -229,15 +228,15 @@ def test_csv_export_fields(tmp_path):
     assert len(csv_df) == 2
     assert csv_df.iloc[0]['name'] == 'a'
     assert csv_df.iloc[0]['value'] == 10
-    
+
     # Verify step can detect artifact files exist
     from amplifinder.steps.base import RecordTypedDfStep
-    
+
     # Create a minimal step instance to test has_artifact_files
     class TestStep(RecordTypedDfStep[RecordWithComplexFields]):
         def _calculate_output(self):
             return RecordTypedDf.from_records([], RecordWithComplexFields)
-    
+
     step = TestStep(output_file=csv_path)
     # has_artifact_files returns True when output file exists
     assert step.has_artifact_files()
@@ -246,30 +245,30 @@ def test_csv_export_fields(tmp_path):
 def test_csv_export_fields_with_property(tmp_path):
     """Test CSV_EXPORT_FIELDS with properties."""
     from typing import ClassVar, List
-    
+
     class RecordWithProperty(Record):
         """Record with property included in CSV_EXPORT_FIELDS."""
         base_value: int
-        
+
         CSV_EXPORT_FIELDS: ClassVar[List[str]] = ['base_value', 'computed_value']
-        
+
         @property
         def computed_value(self) -> int:
             """Computed property."""
             return self.base_value * 2
-    
+
     records = [
         RecordWithProperty(base_value=5),
         RecordWithProperty(base_value=10),
     ]
-    
+
     # Convert to DataFrame
     df = RecordTypedDf.from_records(records, RecordWithProperty)
-    
+
     # Save to CSV
     csv_path = tmp_path / "test_property_export.csv"
     df.to_csv(csv_path)
-    
+
     # Verify CSV contains both field and property
     import pandas as pd
     csv_df = pd.read_csv(csv_path)
@@ -284,15 +283,15 @@ def test_backward_compatibility(sample_records, tmp_path):
     """Test that existing Record classes without CSV_EXPORT_FIELDS still work."""
     # SampleRecord doesn't have CSV_EXPORT_FIELDS set (defaults to None)
     # Verify it works as before
-    
+
     # Convert to DataFrame
     df = RecordTypedDf.from_records(sample_records, SampleRecord)
-    
+
     # Verify round-trip works
     records2 = df.to_records()
     assert len(records2) == len(sample_records)
     assert records2[0].name == sample_records[0].name
-    
+
     # Verify CSV save/load still works
     csv_path = tmp_path / "test_backward.csv"
     df.to_csv(csv_path)

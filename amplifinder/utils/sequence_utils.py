@@ -16,4 +16,3 @@ def concatenate_sequence(seq1: T, seq2: T) -> T:
     if isinstance(seq1, list) and isinstance(seq2, list):
         return seq1 + seq2
     raise ValueError("Invalid sequence type")
-

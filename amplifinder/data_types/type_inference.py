@@ -4,11 +4,11 @@ from typing import Any, Type, get_origin, get_args, Union, get_type_hints
 
 def infer_property_type(cls: Type, property_name: str) -> tuple[Type, bool]:
     """Infer type and optionality from a property's return annotation.
-    
+
     Args:
         cls: The class containing the property
         property_name: Name of the property
-        
+
     Returns:
         Tuple of (dtype, is_optional) where:
         - dtype: The inferred type (or Any if inference fails)
@@ -26,4 +26,3 @@ def infer_property_type(cls: Type, property_name: str) -> tuple[Type, bool]:
     except (AttributeError, TypeError):
         # Fallback if property doesn't exist or can't get hints
         return Any, True
-

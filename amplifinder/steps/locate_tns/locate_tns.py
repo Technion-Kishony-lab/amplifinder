@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional
 import re
 
 from Bio.SeqFeature import SeqFeature
@@ -14,9 +14,8 @@ from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.data_types import Orientation, RecordTypedDf, RefTn, Genome
 from amplifinder.steps.base import OutputStep
-from amplifinder.data_types.record_types import TnId
 
- 
+
 # Base class for TN location steps
 
 class LocateTNsStep(OutputStep[Optional[RecordTypedDf[RefTn]]]):
@@ -54,17 +53,17 @@ class LocateTNsStep(OutputStep[Optional[RecordTypedDf[RefTn]]]):
         start_id: int = 1,
     ) -> RecordTypedDf[RefTn]:
         """Build ref_tns dict from list of (scaf, left, right, orientation, tn_name) tuples.
-        
+
         Args:
             items: List of tuples (scaffold_name, left, right, orientation, tn_name)
             start_id: Starting tn_id (default 1)
-        
+
         Returns:
             RecordTypedDf[RefTn] indexed by tn_id
         """
         ref_tns: dict[TnId, RefTn] = {}
         tn_id = start_id
-        
+
         for scaf, left, right, orientation, tn_name in items:
             scaffold = self.genome.get_scaffold(scaf)
             ref_tns[tn_id] = RefTn.from_scaffold_left_right_orientation(
@@ -72,7 +71,7 @@ class LocateTNsStep(OutputStep[Optional[RecordTypedDf[RefTn]]]):
                 tn_id=tn_id, tn_name=tn_name, join=False
             )
             tn_id += 1
-        
+
         return RecordTypedDf.from_dict(ref_tns, RefTn)
 
 
@@ -134,9 +133,9 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
         """Parse GenBank file and extract TN locations."""
         if self.genome.gb_records is None:
             return None
-            
+
         items = []
-        
+
         for record in self.genome.gb_records:
             scaf = record.name
             scaffold = self.genome.get_scaffold(scaf)
@@ -242,5 +241,5 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
             is_complement = row["sstart"] > row["send"]
             orientation = Orientation.REVERSE if is_complement else Orientation.FORWARD
             items.append((row["query"], row["qstart"], row["qend"], orientation, row["subject"]))
-        
+
         return self._build_ref_tns_dict(items)

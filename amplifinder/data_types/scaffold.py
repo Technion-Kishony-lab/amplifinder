@@ -87,13 +87,13 @@ class JcArm(Record):
     def end(self) -> int:
         """Compute end position based on start position, flank length, and direction."""
         return self.start + (self.flank - 1) * self.dir
-    
+
     def shift_by_offset(self, offset: int) -> 'JcArm':
         """Shift arm by offset in the direction of the arm.
-        
+
         Args:
             offset: Distance to shift (positive = in arm direction, negative = opposite)
-            
+
         Returns:
             New JcArm with shifted start position
         """
@@ -103,7 +103,7 @@ class JcArm(Record):
             dir=self.dir,
             flank=self.flank
         )
-    
+
     def mirror(self) -> 'JcArm':
         """Create a mirror arm at the adjacent position.
         ~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~
@@ -129,9 +129,9 @@ class Scaffold(Record):
         return self.length
 
     def circular_normalize_range(
-            self, start: int, end: int,
-            orientation: Orientation = Orientation.FORWARD
-            ) -> tuple[int, int, bool | None]:
+        self, start: int, end: int,
+        orientation: Orientation = Orientation.FORWARD
+    ) -> tuple[int, int, bool | None]:
         """Normalize coordinates for range extraction (1-based inclusive).
         Returns:
             start_norm: Circularly normalized start coordinate (modulo)
@@ -214,11 +214,11 @@ class SegmentMixin:
     @classmethod
     def from_scaffold_and_jc_arm(cls, scaffold: Scaffold | SeqScaffold, jc_arm: JcArm):
         """Create SegmentScaffold from JcArm.
-        
+
         Args:
             scaffold: Scaffold (or SeqScaffold) providing circularity, length, and optionally seq
             jc_arm: Junction arm with start, direction, and flank
-            
+
         Returns:
             SegmentScaffold or SeqSegmentScaffold with JcArm coordinates
         """
@@ -231,9 +231,12 @@ class SegmentMixin:
         )
 
     @classmethod
-    def from_scaffold_left_right_orientation(cls, scaffold: Scaffold | SeqScaffold, left: int, right: int, orientation: Orientation, **kwargs) -> SegmentScaffold | SeqSegmentScaffold:
+    def from_scaffold_left_right_orientation(
+        cls, scaffold: Scaffold | SeqScaffold, left: int, right: int,
+        orientation: Orientation, **kwargs
+    ) -> SegmentScaffold | SeqSegmentScaffold:
         """Create SegmentScaffold from scaffold, left, right, and orientation.
-        
+
         Additional kwargs are passed to from_other for subclass-specific fields.
         """
         if orientation == Orientation.FORWARD:
@@ -262,8 +265,10 @@ class SegmentMixin:
         start, end, orientation = self._resolve_params(start, end, orientation)
         return super().slice(start, end, orientation, seq)
 
-    def circular_normalize_range(self, start: int | None = None, end: int | None = None,
-                        orientation: Orientation | None = None) -> tuple[int, int, bool | None]:
+    def circular_normalize_range(
+        self, start: int | None = None, end: int | None = None,
+        orientation: Orientation | None = None
+    ) -> tuple[int, int, bool | None]:
         start, end, orientation = self._resolve_params(start, end, orientation)
         return super().circular_normalize_range(start, end, orientation)
 
@@ -292,11 +297,11 @@ class SegmentMixin:
 
     def get_inward_arms(self, flanks: int | tuple[int, int]) -> tuple[JcArm, JcArm]:
         """Creates inward pointing arms at the segment start and end positions.
-        
+
         Args:
             flanks:  Flank length(s) for arms. Single int applies to both arms,
                      tuple of (start_flank, end_flank) for different lengths.
-             
+
         Returns:
             Tuple of (arm_start, arm_end)
         """
@@ -306,7 +311,7 @@ class SegmentMixin:
         arm_S = JcArm(scaf=self.scaf, start=self.start, dir=self.orientation, flank=start_flank)
         arm_E = JcArm(scaf=self.scaf, start=self.end, dir=self.orientation.opposite(), flank=end_flank)
         return arm_S, arm_E
-    
+
     def get_outward_arms(self, flanks: int | tuple[int, int]) -> tuple[JcArm, JcArm]:
         """Creates outward pointing arms at the segment start and end positions.
         Args, as in get_inward_arms
@@ -317,16 +322,16 @@ class SegmentMixin:
     def get_junctions(self, out_flanks: int | tuple[int, int],
                       in_flanks: int | tuple[int, int],
                       junction_class=None):
-        """Creates junctions at the segment start and end positions, 
+        """Creates junctions at the segment start and end positions,
         In each junction arm1 is inward and arm2 is outward.
         """
         if junction_class is None:
             from amplifinder.data_types.record_types import Junction
             junction_class = Junction
-        
+
         inward_arms = self.get_inward_arms(flanks=in_flanks)
         outward_arms = self.get_outward_arms(flanks=out_flanks)
-        
+
         return (
             junction_class.from_jc_arms(inward_arms[0], outward_arms[0]),
             junction_class.from_jc_arms(inward_arms[1], outward_arms[1]),

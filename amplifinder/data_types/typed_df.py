@@ -69,7 +69,7 @@ class TypedDF:
 
     def to_csv(self, path: Path, index: Optional[bool] = None) -> None:
         """Save DataFrame to CSV. Auto-detects meaningful indices if index=None.
-        
+
         Only serializes columns defined in schema.
         """
         from amplifinder.data_types.validate_and_cast_df import _is_optional
@@ -113,9 +113,9 @@ class TypedDF:
 
     @classmethod
     def from_csv(
-            cls: Type[SelfTypedDF], path: Path, schema: Schema,
-            headers: bool = True, index_col: Optional[int] = None
-            ) -> SelfTypedDF:
+        cls: Type[SelfTypedDF], path: Path, schema: Schema,
+        headers: bool = True, index_col: Optional[int] = None
+    ) -> SelfTypedDF:
         df = cls._read_csv_df(path, schema, headers, index_col=index_col)
         return cls(df, schema, headers)
 
@@ -207,15 +207,15 @@ class RecordTypedDf(TypedDF, Generic[T]):
 
     def to_records(self) -> List[T]:
         """Convert DataFrame to list of Record objects.
-        
+
         Provides explicit round-trip: from_records() → to_records() should recreate same records.
         Uses existing __iter__() which calls model_validate() on each row.
         """
         return list(self)
-    
+
     def to_dict(self) -> Dict[Any, T]:
         """Convert DataFrame to dict of Record objects using index as keys.
-        
+
         Provides explicit round-trip: from_dict() → to_dict() should recreate same dict.
         Useful when DataFrame has meaningful index (e.g., tn_id).
         """
@@ -223,7 +223,7 @@ class RecordTypedDf(TypedDF, Generic[T]):
 
     def to_csv(self, path: Path, index: Optional[bool] = None) -> None:
         """Save DataFrame to CSV.
-        
+
         If schema includes properties not in DataFrame, computes them first.
         Otherwise delegates to parent (which filters to schema columns).
         """

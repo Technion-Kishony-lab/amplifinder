@@ -11,13 +11,9 @@ from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
 from pathlib import Path
+
 from amplifinder.data_types import RefTn, RecordTypedDf
-from amplifinder.utils.file_utils import ensure_dir, remove_file_or_dir
-
-# =============================================================================
-# Assertion helpers
-# =============================================================================
-
+from amplifinder.utils.file_utils import ensure_dir
 
 # =============================================================================
 # Test configuration
@@ -54,14 +50,14 @@ TEST_GENOMES_CACHE = Path(__file__).parent / "test_outputs" / "integration" / "g
 @pytest.fixture(scope="session")
 def u00096_genome():
     """Load U00096 reference genome (session-scoped, cached across all tests).
-    
+
     Downloads from NCBI only if not already cached. All integration tests
     share the same genome instance.
     """
     from amplifinder.steps import GetRefGenomeStep
-    
+
     ref_path = ensure_dir(TEST_GENOMES_CACHE)
-    
+
     step = GetRefGenomeStep(
         ref_name="U00096",
         ref_path=ref_path,
@@ -422,7 +418,7 @@ def ref_tn_record():
 @pytest.fixture
 def ref_tns_indexed(ref_tn_record):
     """RefTn RecordTypedDf with tn_id as index (for O(1) lookup in synthetic junctions)."""
-    
+
     ref_tn_df = pd.DataFrame([ref_tn_record.model_dump()])
     ref_tn_df = ref_tn_df.set_index('tn_id', drop=False)  # Keep tn_id column
     return RecordTypedDf(ref_tn_df, RefTn)

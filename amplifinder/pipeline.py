@@ -69,7 +69,8 @@ class Pipeline:
         linked_tnjc2s = self._link_side_of_tnjc2s_to_single_locus_pairs(covered_tnjc2s, genome, ref_tns, iso_output)
         filtered_tnjc2s = self._filter_candidates(linked_tnjc2s, iso_output)
         read_lengths = self._calc_read_lengths()
-        synjct_tnjc2s = self._create_synthetic_junctions(filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
+        synjct_tnjc2s = self._create_synthetic_junctions(
+            filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
         self._align_reads(synjct_tnjc2s, iso_output, anc_output)
         analyzed_tnjc2s = self._analyze_alignments(synjct_tnjc2s, iso_output, anc_output, read_lengths)
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
@@ -166,7 +167,6 @@ class Pipeline:
             docker=cfg.breseq_docker,
             threads=cfg.threads,
         ).run()
-
 
     def _create_tnjcs(
         self,
@@ -287,7 +287,7 @@ class Pipeline:
             output_dir=iso_output,
             junction_length=read_lengths.iso_junction_length,
         ).run()
-        
+
         # Create junctions for ancestor if needed
         if anc_output:
             syn_tnjc2s = AncCreateSyntheticJunctionsStep(

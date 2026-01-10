@@ -75,10 +75,14 @@ class TestPipeline(Pipeline):
             tnjc_positions = result.df["pos2"].to_numpy()
             closest_diffs = np.array([int(np.min(np.abs(matlab_positions - pos))) for pos in tnjc_positions])
             closest_diffs_matlab = np.array([int(np.min(np.abs(tnjc_positions - pos))) for pos in matlab_positions])
-            
+
             # Assert perfect matching
-            assert np.all(closest_diffs == 0), f"Python TNJC positions not matching MATLAB: {np.sum(closest_diffs > 0)} mismatches"
-            assert np.all(closest_diffs_matlab == 0), f"MATLAB positions not found in Python: {np.sum(closest_diffs_matlab > 0)} missing"
+            assert np.all(closest_diffs == 0), \
+                f"Python TNJC positions not matching MATLAB: " \
+                f"{np.sum(closest_diffs > 0)} mismatches"
+            assert np.all(closest_diffs_matlab == 0), \
+                f"MATLAB positions not found in Python: " \
+                f"{np.sum(closest_diffs_matlab > 0)} missing"
 
         return result
 
@@ -89,14 +93,14 @@ class TestPipeline(Pipeline):
         # Compare RawTnJc2 with MATLAB ISJC2.xlsx (positions, length, IS elements)
         matlab_df = self._load_matlab_isjc2()
         if matlab_df is not None:
-            print(f"\nStep 6: Comparing RawTnJc2 with MATLAB ISJC2")
-            
+            print("\nStep 6: Comparing RawTnJc2 with MATLAB ISJC2")
+
             # Convert both to standard format
             records = result.to_records()
             ref_tns_dict = self.ref_tns.to_dict()
             python_std = convert_python_records_to_standard(records, ref_tns_dict)
             matlab_std = convert_matlab_to_standard(matlab_df)
-            
+
             compare_amplifications(python_std, matlab_std)
             print("Step 6: ✓ Comparison complete")
         else:

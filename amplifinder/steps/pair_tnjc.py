@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import Optional, List
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.data_types import RecordTypedDf, RefTnJunction, TnJunction, RawTnJc2, Orientation
 from amplifinder.data_types.genome import Genome
+from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, Orientation
 
 
 class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):

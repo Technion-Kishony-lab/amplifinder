@@ -43,10 +43,10 @@ def load_matlab_candidate(matlab_output_dir: Path, require_files: bool = None) -
 
 def convert_matlab_to_standard(matlab_df: pd.DataFrame) -> pd.DataFrame:
     """Convert MATLAB ISJC2 format to standard comparison format.
-    
-    Expected MATLAB columns: Reference, Positions_in_chromosome_1, Positions_in_chromosome_2, 
+
+    Expected MATLAB columns: Reference, Positions_in_chromosome_1, Positions_in_chromosome_2,
                              Direction_in_chromosome_1, amplicon_length, IS_element
-    
+
     Returns: DataFrame with columns: scaf, pos1, pos2, span_origin, amp_len, IS_elements
     """
     df = pd.DataFrame()
@@ -60,22 +60,22 @@ def convert_matlab_to_standard(matlab_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def convert_python_records_to_standard(
-    records: List[RawTnJc2], 
+    records: List[RawTnJc2],
     ref_tns: Dict[int, RefTn]
 ) -> pd.DataFrame:
     """Convert Python ISJC2 records to standard comparison format.
-    
+
     Args:
         records: List of RawTnJc2 (or subclass) records
         ref_tns: Dictionary mapping tn_id to RefTn objects
-    
+
     Returns: DataFrame with columns: scaf, pos1, pos2, span_origin, amp_len, IS_elements
     """
     data = []
     for rec in records:
         # Map tn_ids to tn_names (IS element names)
         is_names = [ref_tns[tid].tn_name for tid in rec.tn_ids if tid in ref_tns]
-        
+
         data.append({
             'scaf': rec.scaf,
             'pos1': min(rec.left, rec.right),
@@ -84,60 +84,60 @@ def convert_python_records_to_standard(
             'amp_len': rec.amplicon_length,
             'IS_elements': ','.join(is_names) if is_names else ''
         })
-    
+
     return pd.DataFrame(data)
 
 
 def compare_amplifications(python_df: pd.DataFrame, matlab_df: pd.DataFrame):
     """Compare Python and MATLAB amplification outputs.
-    
+
     Expected columns: scaf, pos1, pos2, span_origin, amp_len, IS_elements
     """
     # Create position keys for matching (include span_origin)
     python_df['_key'] = python_df.apply(lambda x: (x['scaf'], x['pos1'], x['pos2'], x['span_origin']), axis=1)
     matlab_df['_key'] = matlab_df.apply(lambda x: (x['scaf'], x['pos1'], x['pos2'], x['span_origin']), axis=1)
-    
+
     python_keys = set(python_df['_key'])
     matlab_keys = set(matlab_df['_key'])
-    
+
     matched_keys = python_keys & matlab_keys
     python_only_keys = python_keys - matlab_keys
     matlab_only_keys = matlab_keys - python_keys
-    
+
     # Print totals
-    print(f"\n=== Totals ===")
+    print("\n=== Totals ===")
     print(f"Python total: {len(python_df)}")
     print(f"MATLAB total: {len(matlab_df)}")
     print(f"Matched: {len(matched_keys)}")
     print(f"Python only: {len(python_only_keys)}")
     print(f"MATLAB only: {len(matlab_only_keys)}")
-    
+
     # Print non-matching python rows
     if python_only_keys:
         print(f"\n=== Non-matching Python rows ({len(python_only_keys)}) ===")
         python_only = python_df[python_df['_key'].isin(python_only_keys)].drop(columns=['_key'])
         print(python_only.to_string())
-    
+
     # Print non-matching matlab rows
     if matlab_only_keys:
         print(f"\n=== Non-matching MATLAB rows ({len(matlab_only_keys)}) ===")
         matlab_only = matlab_df[matlab_df['_key'].isin(matlab_only_keys)].drop(columns=['_key'])
         print(matlab_only.to_string())
-    
+
     # Compare IS_elements for matched rows (order-independent)
     if matched_keys:
-        print(f"\n=== IS_elements comparison for matched rows ===")
+        print("\n=== IS_elements comparison for matched rows ===")
         differences = []
         for key in sorted(matched_keys):
             py_row = python_df[python_df['_key'] == key].iloc[0]
             mat_row = matlab_df[matlab_df['_key'] == key].iloc[0]
-            
+
             # Parse as sets (order-independent)
             py_is_str = str(py_row['IS_elements'])
             mat_is_str = str(mat_row['IS_elements'])
             py_is_set = set(x.strip() for x in py_is_str.split(',') if x.strip())
             mat_is_set = set(x.strip() for x in mat_is_str.split(',') if x.strip())
-            
+
             if py_is_set != mat_is_set:
                 differences.append({
                     'scaf': key[0],
@@ -147,14 +147,14 @@ def compare_amplifications(python_df: pd.DataFrame, matlab_df: pd.DataFrame):
                     'python_IS': py_is_str,
                     'matlab_IS': mat_is_str
                 })
-        
+
         if differences:
             print(f"Found {len(differences)} IS_elements differences:")
             diff_df = pd.DataFrame(differences)
             print(diff_df.to_string())
         else:
             print("All IS_elements match!")
-    
+
     # Clean up temp columns
     python_df.drop(columns=['_key'], inplace=True)
     matlab_df.drop(columns=['_key'], inplace=True)
