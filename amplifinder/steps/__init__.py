@@ -8,7 +8,7 @@ from amplifinder.steps.run_breseq import BreseqStep, AncBreseqStep
 from amplifinder.steps.create_reference_junctions import CreateRefTnJcStep
 from amplifinder.steps.create_tnjc import CreateTnJcStep
 from amplifinder.steps.pair_tnjc import PairTnJcToRawTnJc2Step
-from amplifinder.steps.classify_structure import LinkTnJc2ToSingleLocusPairsStep
+from amplifinder.steps.link_tnjc2s_to_single_locus import LinkTnJc2ToSingleLocusPairsStep
 from amplifinder.steps.filter_candidates import FilterTnJc2CandidatesStep
 from amplifinder.steps.amplicon_coverage import CalcTnJc2AmpliconCoverageStep
 from amplifinder.steps.synthetic_junctions import CreateSyntheticJunctionsStep, AncCreateSyntheticJunctionsStep
