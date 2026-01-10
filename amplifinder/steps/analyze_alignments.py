@@ -6,6 +6,7 @@ from typing import Optional
 
 from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
 from amplifinder.steps.base import RecordTypedDfStep
+from amplifinder.visualization.plot_alignments import plot_alignment_coverage
 
 
 class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
@@ -54,12 +55,17 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         analyzed_records = []
         for synjct_tnjc2 in self.synjct_tnjc2s:
             # Get isolate junction coverage (required)
-            jc_cov = self._get_cov(synjct_tnjc2, self._iso_output_dir, self.iso_read_length, is_ancestor=False)
+            jc_cov, alignment_data, jct_lengths = self._get_cov(synjct_tnjc2, self._iso_output_dir, self.iso_read_length, is_ancestor=False)
+            
+            # Generate visualization for isolate
+            self._generate_alignment_plot(synjct_tnjc2, alignment_data, jct_lengths, is_ancestor=False)
 
             # Get ancestor junction coverage if available (optional)
             jc_cov_anc = None
             if self.has_ancestor:
-                jc_cov_anc = self._get_cov(synjct_tnjc2, self._anc_output_dir, self.anc_read_length, is_ancestor=True)
+                jc_cov_anc, alignment_data_anc, jct_lengths_anc = self._get_cov(synjct_tnjc2, self._anc_output_dir, self.anc_read_length, is_ancestor=True)
+                # Generate visualization for ancestor
+                self._generate_alignment_plot(synjct_tnjc2, alignment_data_anc, jct_lengths_anc, is_ancestor=True)
 
             analyzed_tnjc2 = AnalyzedTnJc2.from_other(
                 synjct_tnjc2,
@@ -77,18 +83,21 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         avg_read_length: int,
         is_ancestor: bool,
         read_length_tolerance: float = 0.1,
-    ) -> dict[JunctionType, JunctionReadCounts]:
+    ) -> tuple[dict[JunctionType, JunctionReadCounts], dict[JunctionType, list[tuple[int, int, str]]], dict[JunctionType, int]]:
         """Parse BAM and get coverage for all 7 junction types.
 
         Args:
             synjct_tnjc2: Synthetic junction record
             base_dir: Base directory containing BAM file
-            read_length: Read length for filtering
+            avg_read_length: Read length for filtering
             is_ancestor: Whether processing ancestor (True) or isolate (False) data
             read_length_tolerance: Tolerance for read length filtering (default 0.1 = 10%)
 
         Returns:
-            dict mapping JunctionType -> JunctionReadCounts
+            tuple of:
+                - dict mapping JunctionType -> JunctionReadCounts
+                - dict mapping JunctionType -> list of (start, end, read_type) tuples
+                - dict mapping JunctionType -> junction length
         """
         bam_path = synjct_tnjc2.bam_path(base_dir, is_ancestor=is_ancestor)
         if not bam_path.exists():
@@ -99,12 +108,17 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         max_alignment_length = avg_read_length * read_length_factor
 
         counts = {jt: JunctionReadCounts() for jt in JunctionType.sorted()}
+        alignment_data = {jt: [] for jt in JunctionType.sorted()}
+        jct_lengths = {}
 
         with pysam.AlignmentFile(str(bam_path), "rb") as bam:
-            jct_lengths = dict(zip(bam.references, bam.lengths))
-            jct_middles = {name: length // 2 for name, length in jct_lengths.items()}
-
-            # [left, right, spanning] for each junction type
+            jct_lengths_raw = dict(zip(bam.references, bam.lengths))
+            jct_middles = {name: length // 2 for name, length in jct_lengths_raw.items()}
+            
+            # Store lengths by JunctionType
+            for jct_name, length in jct_lengths_raw.items():
+                jct_type = JunctionType[jct_name]
+                jct_lengths[jct_type] = length
 
             for read in bam.fetch():
                 if read.is_unmapped:
@@ -121,13 +135,47 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 assert start <= end
                 junction_point = jct_middles[jct_name]
 
+                # Determine read type and update counts
                 if end <= junction_point:
-                    counts[jct_type].left += 1      # left of the junction
+                    read_type = 'left'
+                    counts[jct_type].left += 1
                 elif start > junction_point:
-                    counts[jct_type].right += 1     # right of the junction
+                    read_type = 'right'
+                    counts[jct_type].right += 1
                 elif start <= junction_point - self.min_overlap and end >= junction_point + self.min_overlap:
-                    counts[jct_type].spanning += 1  # spanning the junction
+                    read_type = 'spanning'
+                    counts[jct_type].spanning += 1
                 else:
-                    counts[jct_type].other += 1     # other (partial overlap)
+                    read_type = 'other'
+                    counts[jct_type].other += 1
 
-        return counts
+                # Store alignment data for plotting
+                alignment_data[jct_type].append((start, end, read_type))
+
+        return counts, alignment_data, jct_lengths
+
+    def _generate_alignment_plot(
+        self,
+        synjct_tnjc2: SynJctsTnJc2,
+        alignment_data: dict[JunctionType, list[tuple[int, int, str]]],
+        jct_lengths: dict[JunctionType, int],
+        is_ancestor: bool,
+    ) -> None:
+        """Generate PNG plot showing read alignment coverage for all junction types.
+        
+        Args:
+            synjct_tnjc2: Synthetic junction record
+            alignment_data: Dict mapping JunctionType to list of (start, end, read_type) tuples
+            jct_lengths: Dict mapping JunctionType to junction length
+            is_ancestor: Whether processing ancestor (True) or isolate (False) data
+        """
+        title = f'Read Alignment Coverage - {synjct_tnjc2.analysis_dir_name(is_ancestor=is_ancestor)}'
+        base_dir = self._anc_output_dir if is_ancestor else self._iso_output_dir
+        output_path = synjct_tnjc2.alignment_plot_path(base_dir, is_ancestor=is_ancestor)
+        
+        plot_alignment_coverage(
+            alignment_data=alignment_data,
+            jct_lengths=jct_lengths,
+            title=title,
+            output_path=output_path,
+        )

@@ -334,7 +334,7 @@ class OutputStep(Step, Generic[T]):
         super()._generate_artifacts_if_needed()
 
         # Calculate output (always - we need to return it)
-        self._log_run_status("calculating output")
+        self.log("calculating output")
         if self.should_profile:
             lp = self._create_profiler()
             lp.add_function(self._calculate_output)
