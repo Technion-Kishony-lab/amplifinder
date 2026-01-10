@@ -43,12 +43,13 @@ def _serialize_for_csv(v: Any) -> Any:
 class TypedDF:
     """Base class for typed DataFrames."""
 
-    __slots__ = ("df", "schema", "headers")
+    __slots__ = ("df", "schema", "headers", "_csv_field_formats")
 
     def __init__(self, df: pd.DataFrame, schema: Schema, headers: bool = True):
         self.df = df
         self.schema = schema
         self.headers = headers
+        self._csv_field_formats = {}  # Dict[field_name, format_spec]
 
     def __len__(self) -> int:
         return len(self.df)
@@ -93,6 +94,12 @@ class TypedDF:
         for col in df.columns:
             if df[col].dtype == object:
                 df[col] = df[col].apply(_serialize_for_csv)
+
+        # Format float columns: field-specific formats first, then default to 1 decimal
+        for col in df.columns:
+            if df[col].dtype in [float, 'float64', 'float32']:
+                fmt = self._csv_field_formats.get(col, '.1f')  # Default: 1 decimal place
+                df[col] = df[col].apply(lambda x: f"{x:{fmt}}" if pd.notna(x) else x)
 
         # Auto-detect if index should be saved
 
@@ -226,6 +233,7 @@ class RecordTypedDf(TypedDF, Generic[T]):
 
         If schema includes properties not in DataFrame, computes them first.
         Otherwise delegates to parent (which filters to schema columns).
+        Applies field-specific formatting from record_type.CSV_FIELD_FORMATS if defined.
         """
         # Check if all schema columns are in DataFrame
         if not set(self.schema.column_names).issubset(set(self.df.columns)):
@@ -233,9 +241,15 @@ class RecordTypedDf(TypedDF, Generic[T]):
             records = self.to_records()
             filtered_data = [{col: getattr(record, col) for col in self.schema.column_names} for record in records]
             temp_df = TypedDF(pd.DataFrame(filtered_data), self.schema, self.headers)
+            # Pass record type's formats to parent
+            if hasattr(self._record_type, 'CSV_FIELD_FORMATS'):
+                temp_df._csv_field_formats = self._record_type.CSV_FIELD_FORMATS
             temp_df.to_csv(path, index)
         else:
             # All schema columns are in DataFrame - parent filters to schema columns
+            # Pass record type's formats to parent
+            if hasattr(self._record_type, 'CSV_FIELD_FORMATS'):
+                self._csv_field_formats = self._record_type.CSV_FIELD_FORMATS
             super().to_csv(path, index)
 
     def __getitem__(self, key: Any) -> T:

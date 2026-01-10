@@ -237,6 +237,9 @@ class RawTnJc2(Record):
     """
     NAME: ClassVar[str] = "Junction Pairs"
 
+    # Unique identifier
+    pair_id: Optional[int] = None
+
     # Core fields: the two junctions
     tnjc_left: TnJunction  # Left junction (dir2 == FORWARD)
     tnjc_right: TnJunction  # Right junction (dir2 == REVERSE)
@@ -246,7 +249,7 @@ class RawTnJc2(Record):
 
     # CSV export: only export derived properties, not the complex TnJunction/Scaffold objects
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = [
-        'jc_num_left', 'jc_num_right', 'scaf', 'left', 'right',
+        'pair_id', 'jc_num_left', 'jc_num_right', 'scaf', 'left', 'right',
         'tn_ids', 'tn_offsets', 'amplicon_length'
     ]
 
@@ -364,6 +367,14 @@ class CoveredTnJc2(RawTnJc2):
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = RawTnJc2.CSV_EXPORT_FIELDS + [
         'iso_scaf_avg', 'iso_amplicon_avg', 'anc_scaf_avg', 'anc_amplicon_avg', 'avg_norm_cov', 'copy_number'
     ]
+    CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
+        'iso_scaf_avg': '.1f',
+        'iso_amplicon_avg': '.1f',
+        'anc_scaf_avg': '.1f',
+        'anc_amplicon_avg': '.1f',
+        'avg_norm_cov': '.1f',
+        'copy_number': '.1f',
+    }
     
     iso_scaf_avg: float
     iso_amplicon_avg: float
@@ -407,11 +418,43 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
     """CoveredTnJc2 with structural classification (Step 8 output)."""
     NAME: ClassVar[str] = "Classified Amplicons"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
-        'raw_event', 'chosen_tn_id'
+        'single_locus_left_pair_id', 'single_locus_right_pair_id', 'raw_event', 'chosen_tn_id'
     ]
-    single_locus_tnjc2_matching_left: Optional[CoveredTnJc2] = None
-    single_locus_tnjc2_matching_right: Optional[CoveredTnJc2] = None
+    single_locus_tnjc2_left_matchings: List[CoveredTnJc2]
+    single_locus_tnjc2_right_matchings: List[CoveredTnJc2]
     base_raw_event: BaseRawEvent
+
+    @property
+    def single_locus_tnjc2_matching_left(self) -> Optional[CoveredTnJc2]:
+        """First single-locus TN junction matching the left junction."""
+        return self.single_locus_tnjc2_left_matchings[0] if self.single_locus_tnjc2_left_matchings else None
+
+    @property
+    def single_locus_tnjc2_matching_right(self) -> Optional[CoveredTnJc2]:
+        """First single-locus TN junction matching the right junction."""
+        return self.single_locus_tnjc2_right_matchings[0] if self.single_locus_tnjc2_right_matchings else None
+
+    @property
+    def is_multiple_single_locus_tnjc2_left(self) -> bool:
+        """Whether there are multiple single-locus matchings for the left junction."""
+        # TODO: This is not used yet
+        return len(self.single_locus_tnjc2_left_matchings) > 1
+
+    @property
+    def is_multiple_single_locus_tnjc2_right(self) -> bool:
+        """Whether there are multiple single-locus matchings for the right junction."""
+        # TODO: This is not used yet
+        return len(self.single_locus_tnjc2_right_matchings) > 1
+
+    @property
+    def single_locus_left_pair_id(self) -> Optional[int]:
+        """Pair ID of the single-locus TN junction matching the left junction."""
+        return self.single_locus_tnjc2_matching_left.pair_id if self.single_locus_tnjc2_matching_left else None
+
+    @property
+    def single_locus_right_pair_id(self) -> Optional[int]:
+        """Pair ID of the single-locus TN junction matching the right junction."""
+        return self.single_locus_tnjc2_matching_right.pair_id if self.single_locus_tnjc2_matching_right else None
 
     @property
     def raw_event(self) -> RawEvent:
@@ -462,6 +505,9 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
 class SynJctsTnJc2(SingleLocusLinkedTnJc2):
     """Candidate with synthetic junction folder names."""
     NAME: ClassVar[str] = "Synthetic Junction Amplicons"
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = SingleLocusLinkedTnJc2.CSV_EXPORT_FIELDS + [
+        'analysis_dir', 'analysis_dir_anc'
+    ]
     analysis_dir: str
     analysis_dir_anc: Optional[str] = None
 
@@ -490,14 +536,34 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     - anc_path=set: both jc_cov and jc_cov_anc present
     """
     NAME: ClassVar[str] = "Analyzed Amplicons"
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = SingleLocusLinkedTnJc2.CSV_EXPORT_FIELDS + [
+        'jc_cov_vector', 'jc_cov_anc_vector'
+    ]
     # Junction coverage: JunctionType -> JunctionReadCounts
     jc_cov: Dict[JunctionType, JunctionReadCounts]
     jc_cov_anc: Optional[Dict[JunctionType, JunctionReadCounts]] = None
+
+    @property
+    def jc_cov_vector(self) -> List[tuple[int, int, int]]:
+        """Junction coverage vector."""
+        return [(self.jc_cov[jt].left, self.jc_cov[jt].spanning, self.jc_cov[jt].right) 
+                for jt in JunctionType.sorted()]
+
+    @property
+    def jc_cov_anc_vector(self) -> Optional[List[tuple[int, int, int]]]:
+        """Ancestor junction coverage vector."""
+        if self.jc_cov_anc is None:
+            return None
+        return [(self.jc_cov_anc[jt].left, self.jc_cov_anc[jt].spanning, self.jc_cov_anc[jt].right) 
+                for jt in JunctionType.sorted()]
 
 
 class ClassifiedTnJc2(AnalyzedTnJc2):
     """AnalyzedTnJc2 with architecture/event classification (Step 13 output)."""
     NAME: ClassVar[str] = "Classified Amplicons"
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = AnalyzedTnJc2.CSV_EXPORT_FIELDS + [
+        'event'
+    ]
     # Architecture classification
     isolate_architecture: RawEvent
     ancestor_architecture: Optional[RawEvent] = None  # only when anc_path is set

@@ -59,6 +59,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
 
         pairs = []
         n = len(junctions)
+        pair_num = 1
 
         for i in range(n - 1):
             for j in range(i + 1, n):
@@ -86,8 +87,9 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
                     continue
 
                 # Create pair record
-                pair = self._create_pair(jc_i, jc_j)
+                pair = self._create_pair(jc_i, jc_j, pair_id=pair_num)
                 pairs.append(pair)
+                pair_num += 1
 
         return pairs
 
@@ -95,6 +97,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         self,
         jc_i: TnJunction,
         jc_j: TnJunction,
+        pair_id: int,
     ) -> RawTnJc2:
         """Create a junction pair record.
 
@@ -112,5 +115,5 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         scaffold = self.genome.get_scaffold(tnjc_left.scaf2)
 
         # Create RawTnJc2 with the two junction objects and scaffold
-        pair = RawTnJc2(tnjc_left=tnjc_left, tnjc_right=tnjc_right, scaffold=scaffold)
+        pair = RawTnJc2(pair_id=pair_id, tnjc_left=tnjc_left, tnjc_right=tnjc_right, scaffold=scaffold)
         return pair

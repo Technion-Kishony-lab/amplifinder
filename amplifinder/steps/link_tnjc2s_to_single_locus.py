@@ -46,9 +46,9 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
         for i, tncj2_i in enumerate(tnjc2s):
             classified_tnjc2s.append(SingleLocusLinkedTnJc2.from_other(
                 tncj2_i,
-                single_locus_tnjc2_matching_left=self._find_single_locus_matching_tnjc2(
+                single_locus_tnjc2_left_matchings=self._find_all_single_locus_matching_tnjc2s(
                     tncj2_i.tnjc_left, tnjc2s, base_raw_events, exclude_idx=i),
-                single_locus_tnjc2_matching_right=self._find_single_locus_matching_tnjc2(
+                single_locus_tnjc2_right_matchings=self._find_all_single_locus_matching_tnjc2s(
                     tncj2_i.tnjc_right, tnjc2s, base_raw_events, exclude_idx=i),
                 base_raw_event=base_raw_events[i],
             ))
@@ -64,18 +64,19 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
         else:
             return BaseRawEvent.LOCUS_JOINING
 
-    def _find_single_locus_matching_tnjc2(
+    def _find_all_single_locus_matching_tnjc2s(
         self, tnjc_i: TnJunction, tnjc2s: list[CoveredTnJc2],
         base_raw_events: list[BaseRawEvent], exclude_idx: int
-    ) -> Optional[CoveredTnJc2]:
+    ) -> list[CoveredTnJc2]:
+        matches = []
         for j, tnjc2_j in enumerate(tnjc2s):
             if j == exclude_idx:  # Don't match with self
                 continue
             if not base_raw_events[j].is_single_locus():
                 continue
             if tnjc_i == tnjc2_j.tnjc_left or tnjc_i == tnjc2_j.tnjc_right:
-                return tnjc2_j
-        return None
+                matches.append(tnjc2_j)
+        return matches
 
     def report_output_message(
         self, output: RecordTypedDf[SingleLocusLinkedTnJc2], *, from_cache: bool
