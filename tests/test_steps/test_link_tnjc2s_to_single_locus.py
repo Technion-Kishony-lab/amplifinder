@@ -1,4 +1,4 @@
-"""Tests for LinkTnJc2ToSingleLocusPairsStep."""
+"""Tests for link_tnjc2s_to_single_locus module."""
 
 import pytest
 from amplifinder.steps import LinkTnJc2ToSingleLocusPairsStep
@@ -80,7 +80,7 @@ def sample_tn_locs(ref_tn_record):
     return RecordTypedDf.from_records([first, second], RefTn)
 
 
-def test_classify_structure(sample_covered_tnjc2, sample_tn_locs, tmp_path, tiny_genome):
+def test_link_tnjc2s_to_single_locus(sample_covered_tnjc2, sample_tn_locs, tmp_path, tiny_genome):
     """Should classify junction pairs."""
     step = LinkTnJc2ToSingleLocusPairsStep(
         covered_tnjc2s=sample_covered_tnjc2,
