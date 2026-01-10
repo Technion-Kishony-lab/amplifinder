@@ -124,6 +124,8 @@ def create_synthetic_junctions_and_name(
         flank=jc_width,
     )
 
+    assert direct_jc == rudimentary.create_syn_junctions()
+
     return direct_jc, rudimentary.get_name()
 
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 import pandas as pd
 
 from pathlib import Path
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel
 from typing import Any, ClassVar, Dict, List, NamedTuple, Optional, Tuple, Type, TypeVar, get_origin, get_args, Union
 
 T = TypeVar("T", bound="Record")
@@ -62,11 +62,6 @@ class Schema(NamedTuple):
         return tuple(col.name for col in self.columns if not col.optional)
 
     @property
-    def optional_columns(self) -> Tuple[str, ...]:
-        """Names of optional columns (optional=True)."""
-        return tuple(col.name for col in self.columns if col.optional)
-
-    @property
     def dtypes(self) -> Dict[str, Column]:
         """Dictionary of column names to Column objects."""
         return {col.name: col for col in self.columns}
@@ -109,8 +104,6 @@ class Record(BaseModel):
         #    Column('value', int, False),
         #    Column('notes', Optional[str], True))
     """
-
-    model_config = ConfigDict(extra='forbid')
 
     NAME: ClassVar[str] = "records"  # Display name for logging
 

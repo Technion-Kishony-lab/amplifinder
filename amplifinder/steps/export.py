@@ -50,24 +50,23 @@ class ExportTnJc2Step(OutputStep[RecordTypedDf[ExportedTnJc2]]):
         """Build export dataframe (writing handled in _save_output)."""
         # Build export records by iterating over typed records
         export_records = []
-        for analyzed_tnjc2 in self.classified_tnjc2s:
+        for tnjc2 in self.classified_tnjc2s:
             # Get span_origin from segment scaffold
-            seg_scaf = analyzed_tnjc2.get_segment_scaffold()
-            span_origin = seg_scaf.span_origin
+            span_origin = tnjc2.span_origin
             export_records.append(ExportedTnJc2(
                 isolate=self.iso_name,
                 Reference=self.ref_name,
                 Ancestor=self.anc_name,
-                Positions_in_chromosome=f"{analyzed_tnjc2.left}-{analyzed_tnjc2.right}",
+                Positions_in_chromosome=f"{tnjc2.left}-{tnjc2.right}",
                 Direction_in_chromosome=(
                     f"{Orientation.REVERSE if span_origin else Orientation.FORWARD}/"
                     f"{Orientation.FORWARD if span_origin else Orientation.REVERSE}"),
-                amplicon_length=analyzed_tnjc2.amplicon_length,
-                IS_element=','.join(map(str, analyzed_tnjc2.tn_ids)) if analyzed_tnjc2.tn_ids else None,
-                median_copy_number=analyzed_tnjc2.copy_number,
-                mode_copy_number=analyzed_tnjc2.copy_number,
-                event=analyzed_tnjc2.event,
-                isolate_architecture=str(analyzed_tnjc2.isolate_architecture),
+                amplicon_length=tnjc2.amplicon_length,
+                IS_element=','.join(map(str, tnjc2.tn_ids)) if tnjc2.tn_ids else None,
+                median_copy_number=tnjc2.copy_number,
+                mode_copy_number=tnjc2.copy_number,
+                event=tnjc2.event,
+                isolate_architecture=str(tnjc2.isolate_architecture),
             ))
 
         export_df = RecordTypedDf.from_records(export_records, ExportedTnJc2)

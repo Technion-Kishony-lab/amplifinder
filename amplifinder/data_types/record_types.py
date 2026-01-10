@@ -55,7 +55,7 @@ class RefTn(SegmentScaffold):
         )
 
     def get_junctions(self, out_flanks: int | tuple[int, int],
-                      in_flanks: int | tuple[int, int] = None,
+                      in_flanks: int | tuple[int, int] | None = None,
                       junction_class=None):
         """Get start and end reference TN junctions.
 
@@ -318,6 +318,13 @@ class RawTnJc2(Record):
         """Amplicon length computed from segment scaffold."""
         return self.get_segment_scaffold().segment_length
 
+    @property
+    def span_origin(self) -> bool:
+        """True if amplicon segment spans the origin of the scaffold."""
+        span_origin = self.left > self.right
+        assert span_origin == self.get_segment_scaffold().span_origin
+        return span_origin
+
     def get_segment_scaffold(self) -> SeqSegmentScaffold:
         """Get SegmentScaffold for this amplicon segment.
 
@@ -354,6 +361,10 @@ class CoveredTnJc2(RawTnJc2):
     np.nan = value not calculated (amplicon too short/long)
     """
     NAME: ClassVar[str] = "Covered Junction Pairs"
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = RawTnJc2.CSV_EXPORT_FIELDS + [
+        'iso_scaf_avg', 'iso_amplicon_avg', 'anc_scaf_avg', 'anc_amplicon_avg', 'avg_norm_cov', 'copy_number'
+    ]
+    
     iso_scaf_avg: float
     iso_amplicon_avg: float
     anc_scaf_avg: Optional[float] = None  # None if no ancestor
@@ -395,6 +406,9 @@ class CoveredTnJc2(RawTnJc2):
 class SingleLocusLinkedTnJc2(CoveredTnJc2):
     """CoveredTnJc2 with structural classification (Step 8 output)."""
     NAME: ClassVar[str] = "Classified Amplicons"
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
+        'raw_event', 'chosen_tn_id'
+    ]
     single_locus_tnjc2_matching_left: Optional[CoveredTnJc2] = None
     single_locus_tnjc2_matching_right: Optional[CoveredTnJc2] = None
     base_raw_event: BaseRawEvent
@@ -443,20 +457,6 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
             if tn_side_left_amplicon.tn_id == chosen_id:
                 return tn_side_left_amplicon, tn_side_right_amplicon
         assert False
-
-    @property
-    def chosen_tn_side_left(self) -> Optional[Side]:
-        """Side of chosen TN that the left junction connects to."""
-        chosen_id = self.chosen_tn_id
-        if chosen_id is None:
-            return None
-        matching_tns = self._find_matching_tn_sides()
-        for tn_side_S, tn_side_E in matching_tns:
-            assert tn_side_S.side == -tn_side_E.side
-            assert tn_side_S.tn_id == tn_side_E.tn_id
-            if tn_side_S.tn_id == chosen_id:
-                return tn_side_S.side
-        return None
 
 
 class SynJctsTnJc2(SingleLocusLinkedTnJc2):

@@ -23,7 +23,7 @@ class Orientation(ReversibleIntEnum):
     """Orientation relative to reference (forward, reverse, or both/mixed)."""
     FORWARD = 1
     REVERSE = -1
-    BOTH = 0
+    BOTH = 0   # TODO: This is not used yet
 
 
 class AverageMethod(str, Enum):
@@ -53,7 +53,7 @@ class RawEvent(str, Enum):
     HEMI_FLANKED_LEFT = "hemi-flanked left"
     HEMI_FLANKED_RIGHT = "hemi-flanked right"
     FLANKED = "flanked"
-    MULTIPLE_SINGLE_LOCUS = "multiple single locus"
+    MULTIPLE_SINGLE_LOCUS = "multiple single locus"  # TODO: This is not used yet
     UNRESOLVED = "unresolved"
 
 
@@ -88,7 +88,7 @@ class EventModifier(str, Enum):
     ANCESTRAL = "ancestral"
     DENOVO_LEFT = "de novo left"
     DENOVO_RIGHT = "de novo right"
-    LOW_COVERAGE = "low coverage near junction"
+    LOW_COVERAGE = "low coverage near junction"  # TODO: This is not used yet
 
 
 @dataclass
