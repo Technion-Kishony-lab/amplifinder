@@ -1,11 +1,9 @@
 """Tests for TN element location steps (Genbank and ISfinder)."""
 
-import pandas as pd
 import pytest
 
 from amplifinder.steps import LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep
 from amplifinder.data_types import Orientation, RecordTypedDf
-from amplifinder.utils.file_utils import ensure_dir
 from tests.env import RUN_BLAST_TESTS
 
 
@@ -53,7 +51,7 @@ def test_extracts_tn_elements(locate_tns_step):
 
     # Check that we found the right number of TNs
     assert len(tn_loc) == 2
-    
+
     # Check specific fields
     assert list(tn_loc.df["tn_name"]) == ["IS_test1", "IS_test2"]
     assert list(tn_loc.df["scaf"]) == ["tiny", "tiny"]

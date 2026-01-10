@@ -43,7 +43,7 @@ class ReadLenStep(OutputStep[ReadLengths]):
         """Calculate read length from FASTQ files."""
         if provided_length is not None:
             return provided_length
-        
+
         stats = get_read_length_stats(fastq_dir, sample_per_file=SAMPLE_PER_FILE)
         info(f"{sample_type:<9}: {stats}")
         if not stats.is_uniform:
@@ -69,19 +69,19 @@ class ReadLenStep(OutputStep[ReadLengths]):
             _log_decision("isolate-ancestor read lengths within threshold;", iso_jc_len, info)
         else:
             iso_jc_len = iso_len
-            _log_decision("isolate-ancestor read lengths exceed threshold;", iso_jc_len, warning)    
+            _log_decision("isolate-ancestor read lengths exceed threshold;", iso_jc_len, warning)
         return iso_jc_len, anc_len
 
     def _calculate_output(self) -> ReadLengths:
         """Calculate read lengths and junction lengths."""
         iso_read_len = self._calc_read_length(self.iso_fastq_path, self._iso_read_length, "isolate")
-        
+
         anc_read_len = None
         if self.anc_fastq_path:
             anc_read_len = self._calc_read_length(self.anc_fastq_path, self._anc_read_length, "ancestor")
-        
+
         iso_jc_len, anc_jc_len = self._determine_junction_lengths(iso_read_len, anc_read_len)
-        
+
         return ReadLengths(
             iso_read_length=iso_read_len,
             anc_read_length=anc_read_len,

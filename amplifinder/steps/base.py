@@ -19,12 +19,12 @@ T = TypeVar("T")
 
 class Step(ABC):
     """Pipeline step that creates artifacts via external tools.
-    
+
     Base class for steps that:
     - Generate artifact files (BAMs, indexes, databases, etc.)
     - Use caching: skip generation if artifacts exist and not force
     - Don't return data to next step (use OutputStep for that)
-    
+
     For steps that also return data to next step, use OutputStep.
     """
 
@@ -79,10 +79,10 @@ class Step(ABC):
             print(msg, end=end, flush=True)
 
     def print_timer(
-            self, start_msg: str, end_msg: Optional[str] = None,
-            time_format: str = "{:7.1f} sec", seperate_prints: bool = False,
-            use_log: bool = False
-            ):
+        self, start_msg: str, end_msg: Optional[str] = None,
+        time_format: str = "{:7.1f} sec", seperate_prints: bool = False,
+        use_log: bool = False
+    ):
         """Context manager for timing code blocks."""
         return _print_timer(
             start_msg, end_msg=end_msg, time_format=time_format,
@@ -163,7 +163,7 @@ class Step(ABC):
                             self._generate_artifacts()
         else:
             self._log_run_status("no artifacts to generate")
-        
+
         self._artifacts_cached = artifacts_cached
 
     def run(self):
@@ -265,19 +265,19 @@ class Step(ABC):
 
 class OutputStep(Step, Generic[T]):
     """Step that creates artifacts AND returns output data to next step.
-    
+
     Output files (CSVs, etc.) are treated as artifacts - included in artifact_files.
     Overrides _generate_artifacts_if_needed to also compute and return output.
-    
+
     Extends Step with:
     - _calculate_output() -> T: Compute output from artifacts
     - _generate_artifacts_if_needed() -> T: Returns calculated output (not None)
     - _save_output(output): Called after artifacts are generated to save output files
-    
+
     Use this when step needs to:
     - Generate artifacts (BAMs, CSVs, etc.)
     - Return data to next pipeline step
-    
+
     Note: run() is inherited from Step and automatically returns the result of
     _generate_artifacts_if_needed(), which is T for OutputStep.
     """
@@ -300,7 +300,7 @@ class OutputStep(Step, Generic[T]):
         # Merge output_files into artifact_files
         if output_files is not None:
             artifact_files = (artifact_files or []) + output_files
-        
+
         super().__init__(
             input_files=input_files,
             artifact_files=artifact_files,
@@ -326,7 +326,7 @@ class OutputStep(Step, Generic[T]):
         """Generate artifacts AND compute/save output. Returns calculated output."""
         # Generate external artifacts (BAMs, indexes, etc.)
         super()._generate_artifacts_if_needed()
-        
+
         # Calculate output (always - we need to return it)
         # Only increment run_count when artifacts were freshly generated
         if not self._artifacts_cached:
@@ -338,16 +338,16 @@ class OutputStep(Step, Generic[T]):
             self._save_profiler_stats(lp, suffix="calculation")
         else:
             output = self._calculate_output()
-        
+
         # Save output files if artifacts were just generated (not cached)
         if not self._artifacts_cached:
             self._save_output(output)
-        
+
         # Report
         msg = self.report_output_message(output, from_cache=self._artifacts_cached)
         if msg:
             self.log(msg, verbose_only=False)
-        
+
         return output
 
 

@@ -123,4 +123,3 @@ def write_fasta(
         items = sorted(items)
     records = [SeqRecord(Seq(seq), id=seq_id, description="") for seq_id, seq in items]
     SeqIO.write(records, output_path, "fasta")
-

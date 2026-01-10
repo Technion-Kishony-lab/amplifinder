@@ -4,8 +4,9 @@ import pytest
 from unittest.mock import patch
 
 from amplifinder.steps import BreseqStep
-from amplifinder.data_types import RecordTypedDf, BreseqJunction
+from amplifinder.data_types import RecordTypedDf
 from amplifinder.utils.file_utils import ensure_dir
+
 from tests.conftest import FIXTURES_DIR
 
 

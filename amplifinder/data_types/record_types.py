@@ -1,13 +1,14 @@
 """Record type definitions for AmpliFinder."""
 from __future__ import annotations
 
-from typing import Any, ClassVar, Dict, List, Optional, TypeVar, TYPE_CHECKING
+from typing import Any, ClassVar, Dict, List, Optional, TypeVar
 from pathlib import Path
 from pydantic import ConfigDict, field_validator
 import numpy as np
 
 from amplifinder.data_types.records import Record
-from amplifinder.data_types.enums import BaseRawEvent, RawEvent, Side, Orientation, EventModifier, JunctionType, JunctionReadCounts
+from amplifinder.data_types.enums import BaseRawEvent, RawEvent, Side, Orientation, EventModifier, JunctionType, \
+    JunctionReadCounts
 from amplifinder.data_types.scaffold import SegmentScaffold, JcArm, SeqScaffold, SeqSegmentScaffold
 
 TnId = int
@@ -64,13 +65,13 @@ class RefTn(SegmentScaffold):
         """
         if in_flanks is None:
             in_flanks = self.segment_length
-        
+
         # Get base junctions from parent
         jc_start, jc_end = super().get_junctions(out_flanks=out_flanks, in_flanks=in_flanks)
-        
+
         # Add TN-specific fields
         tn_side_start, tn_side_end = self.get_ref_tn_sides()
-        
+
         return (
             RefTnJunction.from_other(
                 jc_start,
@@ -88,10 +89,10 @@ class RefTn(SegmentScaffold):
         """Get inward arm by reference TN side with optional offset."""
         ref_arms = self.get_inward_arms(flanks=flank)
         arm = ref_arms[0] if ref_tn_side.side == Side.START else ref_arms[1]
-        
+
         if isinstance(ref_tn_side, OffsetRefTnSide):
             return arm.shift_by_offset(ref_tn_side.offset)
-        
+
         return arm
 
 
@@ -150,7 +151,7 @@ class Junction(Record):
         jc_arms = self.get_jc_arms()
         extra_kwargs = self._get_extra_kwargs()
         extra_kwargs.update(kwargs)
-        return self.from_jc_arms(jc_arms[1], jc_arms[0], **extra_kwargs) 
+        return self.from_jc_arms(jc_arms[1], jc_arms[0], **extra_kwargs)
 
     def get_jc_arm(self, arm: int) -> JcArm:
         """Get scaffold, position, direction, and flanking length for an arm."""
@@ -166,7 +167,7 @@ class Junction(Record):
     @classmethod
     def from_jc_arms(cls, arm1: JcArm, arm2: JcArm, **kwargs) -> Junction:
         """Create a Junction from junction arm coordinates."""
-        return cls(scaf1=arm1.scaf, pos1=arm1.start, dir1=arm1.dir, flanking1=arm1.flank, 
+        return cls(scaf1=arm1.scaf, pos1=arm1.start, dir1=arm1.dir, flanking1=arm1.flank,
                    scaf2=arm2.scaf, pos2=arm2.start, dir2=arm2.dir, flanking2=arm2.flank,
                    **kwargs)
 
@@ -174,7 +175,8 @@ class Junction(Record):
 class NumJunction(Junction):
     """Junction with identifier."""
     NAME: ClassVar[str] = "Numbered Junctions"
-    num: Optional[int] = None  # Junction identifier: breseq junction number (positive), or negative for reference junctions
+    # Junction identifier: breseq junction number (positive), or negative for reference junctions
+    num: Optional[int] = None
 
 
 class BreseqJunction(NumJunction):
@@ -234,14 +236,14 @@ class RawTnJc2(Record):
 
     """
     NAME: ClassVar[str] = "Junction Pairs"
-    
+
     # Core fields: the two junctions
     tnjc_left: TnJunction  # Left junction (dir2 == FORWARD)
     tnjc_right: TnJunction  # Right junction (dir2 == REVERSE)
-    
+
     # Scaffold object (not exported to CSV)
     scaffold: SeqScaffold
-    
+
     # CSV export: only export derived properties, not the complex TnJunction/Scaffold objects
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = [
         'jc_num_left', 'jc_num_right', 'scaf', 'left', 'right',
@@ -254,7 +256,7 @@ class RawTnJc2(Record):
         j_ref_tn_sides: List[OffsetRefTnSide],
     ) -> List[tuple[OffsetRefTnSide, OffsetRefTnSide]]:
         """Find TN elements that match both junctions on different sides.
-        
+
         Returns list of OffsetRefTnSide objects from the first junction (i) that match
         the second junction (j) on different sides.
         """
@@ -263,7 +265,7 @@ class RawTnJc2(Record):
 
     def _find_matching_tn_sides(self) -> List[tuple[OffsetRefTnSide, OffsetRefTnSide]]:
         """Instance method: find matching TNs using this record's junctions.
-        
+
         Returns list of (left_tn_side, right_tn_side) tuples where both sides match the same TN ID.
         """
         return self.find_matching_tn_sides(self.tnjc_left.ref_tn_sides, self.tnjc_right.ref_tn_sides)
@@ -340,7 +342,8 @@ class RawTnJc2(Record):
     def __str__(self) -> str:
         """String representation of RawTnJc2."""
         cls_name = self.__class__.__name__
-        return f"{cls_name}({self.left}-{self.right}, scaf={self.scaf}, len={self.amplicon_length}, tn_ids={self.tn_ids})"
+        return (f"{cls_name}({self.left}-{self.right}, scaf={self.scaf}, "
+                f"len={self.amplicon_length}, tn_ids={self.tn_ids})")
 
 
 class CoveredTnJc2(RawTnJc2):
@@ -404,7 +407,7 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
         elif self.base_raw_event == BaseRawEvent.TRANSPOSITION:
             return RawEvent.TRANSPOSITION
         assert self.base_raw_event == BaseRawEvent.LOCUS_JOINING
-        has_match_left = self.single_locus_tnjc2_matching_left is not None 
+        has_match_left = self.single_locus_tnjc2_matching_left is not None
         has_match_right = self.single_locus_tnjc2_matching_right is not None
         if has_match_left and has_match_right:
             return RawEvent.FLANKED
@@ -414,19 +417,19 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
             return RawEvent.HEMI_FLANKED_RIGHT
         else:
             return RawEvent.UNFLANKED
-    
+
     @property
     def chosen_tn_id(self) -> Optional[TnId]:
         """Selected TN for analysis."""
         # Start with TN IDs from this tnjc2
         tn_id_set = set(self.tn_ids)
-        
+
         # Intersect with matching left/right tnjc2 if exists
         if self.single_locus_tnjc2_matching_left is not None:
             tn_id_set &= set(self.single_locus_tnjc2_matching_left.tn_ids)
         if self.single_locus_tnjc2_matching_right is not None:
             tn_id_set &= set(self.single_locus_tnjc2_matching_right.tn_ids)
-        
+
         # Return first if available, otherwise None
         return list(tn_id_set)[0] if tn_id_set else None
 

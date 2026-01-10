@@ -2,10 +2,9 @@
 
 import pytest
 import pandas as pd
+
 from amplifinder.steps import CalcTnJc2AmpliconCoverageStep
-from amplifinder.data_types import (
-    RecordTypedDf, RawTnJc2, Genome,
-)
+from amplifinder.data_types import RecordTypedDf
 from amplifinder.utils.file_utils import ensure_dir
 
 
@@ -13,7 +12,7 @@ from amplifinder.utils.file_utils import ensure_dir
 def sample_tnjc2(tiny_genome):
     """Create sample RawTnJc2 records."""
     from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, Side
-    
+
     tn_jc_S = TnJunction(
         num=1, scaf1="tiny", pos1=10, dir1=Orientation.FORWARD,
         scaf2="tiny", pos2=200, dir2=Orientation.FORWARD,
@@ -30,7 +29,7 @@ def sample_tnjc2(tiny_genome):
     )
     scaffold = tiny_genome.get_scaffold("tiny")
     record = RawTnJc2(tnjc_left=tn_jc_S, tnjc_right=tn_jc_E, scaffold=scaffold)
-    
+
     return RecordTypedDf.from_records([record, record], RawTnJc2)
 
 
@@ -188,7 +187,7 @@ def test_skips_coverage_for_too_long_amplicons(tiny_genome, sample_tnjc2, mock_b
 
     # Candidates should still be in result, but with NaN coverage
     assert len(result) == 2
-    
+
     # Check that coverage values are NaN
     for rec in result:
         assert pd.isna(rec.iso_amplicon_avg)

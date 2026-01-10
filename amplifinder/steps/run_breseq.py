@@ -11,7 +11,7 @@ from amplifinder.data_types.typed_df import RecordTypedDf
 
 class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
     """Run breseq alignment pipeline.
-    
+
     Output is breseq run directory (output.gd), not a saved CSV.
     Returns RecordTypedDf[BreseqJunction] from parsed breseq output.
     """
@@ -70,17 +70,17 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
         """
         outputs = parse_breseq_output(self.breseq_path)
         jc_df = outputs.get("JC")
-        
+
         if jc_df is None or jc_df.empty:
             # Return empty RecordTypedDf
             return RecordTypedDf.from_records([], BreseqJunction)
-        
+
         # Rename breseq columns to our naming convention
         jc_df = jc_df.rename(columns={
             'flanking_left': 'flanking1',
             'flanking_right': 'flanking2'
         })
-        
+
         return RecordTypedDf(jc_df, BreseqJunction)
 
     def report_output_message(self, output: RecordTypedDf[BreseqJunction], *, from_cache: bool) -> Optional[str]:

@@ -32,7 +32,7 @@ class AlignReadsToJunctionsStep(Step):
         # Build list of expected output BAM files
         output_files = []
         input_files = [fastq_path]
-        
+
         for filtered_tnjc2 in synjcs_tnjc2s:
             # Junction FASTA file is input
             input_files.append(filtered_tnjc2.fasta_path(self.output_dir, is_ancestor=self.is_ancestor))
@@ -59,7 +59,8 @@ class AlignReadsToJunctionsStep(Step):
             assert junctions_fasta.exists()
 
             bam_path = filtered_tnjc2.bam_path(self.output_dir, is_ancestor=self.is_ancestor)
-            print(f"{filtered_tnjc2.analysis_dir_name(is_ancestor=self.is_ancestor):<{max_name_length}}: ", end="", flush=True)
+            name = filtered_tnjc2.analysis_dir_name(is_ancestor=self.is_ancestor)
+            print(f"{name:<{max_name_length}}: ", end="", flush=True)
             if bam_path.exists():
                 print("file exists, skipping")
                 continue

@@ -1,10 +1,7 @@
 """Tests for CreateSyntheticJunctionsStep."""
 
 from amplifinder.steps import CreateSyntheticJunctionsStep
-from amplifinder.data_types import (
-    RecordTypedDf, SynJctsTnJc2, Orientation,
-)
-from amplifinder.utils.file_utils import ensure_parent_dir
+from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2
 
 
 def test_creates_junctions_fasta(tiny_genome, filtered_tnjc2_record, ref_tns_indexed, tmp_path):

@@ -28,7 +28,7 @@ class ExportTnJc2Step(OutputStep[RecordTypedDf[ExportedTnJc2]]):
         filter_amplicon_length: int = 100,
         force: Optional[bool] = None,
     ):
-        self.analyzed_tnjc2s = classified_tnjc2s
+        self.classified_tnjc2s = classified_tnjc2s
         self.genome = genome
         self.output_dir = Path(output_dir)
         self.ref_name = ref_name
@@ -50,7 +50,7 @@ class ExportTnJc2Step(OutputStep[RecordTypedDf[ExportedTnJc2]]):
         """Build export dataframe (writing handled in _save_output)."""
         # Build export records by iterating over typed records
         export_records = []
-        for analyzed_tnjc2 in self.analyzed_tnjc2s:
+        for analyzed_tnjc2 in self.classified_tnjc2s:
             # Get span_origin from segment scaffold
             seg_scaf = analyzed_tnjc2.get_segment_scaffold()
             span_origin = seg_scaf.span_origin

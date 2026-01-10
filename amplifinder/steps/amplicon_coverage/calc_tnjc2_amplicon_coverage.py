@@ -81,11 +81,12 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             self._calc_candidate_coverage,
         ]
 
-    def _load_coverage_and_calc_scaffold_stats(self, breseq_path: Path, label: str, unique_scaffolds: list[str]
-                                              ) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, float]]:
+    def _load_coverage_and_calc_scaffold_stats(
+        self, breseq_path: Path, label: str, unique_scaffolds: list[str]
+    ) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, float]]:
         """Load coverage and calculate scaffold statistics."""
         self.print(f"{label} breseq: {breseq_path}")
-        with self.print_timer(f"loading coverage ... ", end_msg="\n", seperate_prints=True):
+        with self.print_timer("loading coverage ... ", end_msg="\n", seperate_prints=True):
             cov = load_breseq_coverage(breseq_path, self.genome.name)
         with self.print_timer(f"calculating scaffold stats ({len(unique_scaffolds)} scaffolds) ... ",
                               end_msg="\n", seperate_prints=True):
@@ -100,13 +101,16 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         unique_scaffolds = list(set(raw_tnjc2.scaf for raw_tnjc2 in self.raw_tnjc2s))
 
         # Load isolate coverage
-        iso_cov, iso_scaf_covs, iso_scaf_avgs = self._load_coverage_and_calc_scaffold_stats(self.iso_breseq_path, "iso", unique_scaffolds)
+        iso_cov, iso_scaf_covs, iso_scaf_avgs = (
+            self._load_coverage_and_calc_scaffold_stats(
+                self.iso_breseq_path, "iso", unique_scaffolds))
 
         # Load ancestor coverage if provided
         if self.has_ancestor:
-            anc_cov, anc_scaf_covs, anc_scaf_avgs = self._load_coverage_and_calc_scaffold_stats(self.anc_breseq_path, "anc", unique_scaffolds)
+            anc_cov, anc_scaf_covs, anc_scaf_avgs = (
+                self._load_coverage_and_calc_scaffold_stats(
+                    self.anc_breseq_path, "anc", unique_scaffolds))
         else:
-            anc_cov = None
             anc_scaf_covs = {}
             anc_scaf_avgs = {}
 
@@ -124,7 +128,9 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                 covered_records.append(covered)
                 self.print(".", end="")
 
-        self.print(f"\nTotal amplicons: {len(self.raw_tnjc2s)}, too long: {self._too_long_amplicons}, too short: {self._too_short_amplicons}")
+        self.print(f"\nTotal amplicons: {len(self.raw_tnjc2s)}, "
+                   f"too long: {self._too_long_amplicons}, "
+                   f"too short: {self._too_short_amplicons}")
 
         df = RecordTypedDf.from_records(covered_records, CoveredTnJc2)
         return df
@@ -156,7 +162,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                 anc_amplicon_avg=np.nan if self.has_ancestor else None,
                 avg_norm_cov=np.nan,
             )
-        
+
         # Get segment scaffold for this amplicon
         seg_scaf = raw_tnjc2.get_segment_scaffold()
 

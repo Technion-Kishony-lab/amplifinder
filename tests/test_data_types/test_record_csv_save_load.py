@@ -116,8 +116,7 @@ def make_tn_junction() -> TnJunction:
 
 def make_raw_tnjc2() -> RawTnJc2:
     """Create sample RawTnJc2."""
-    from amplifinder.data_types import OffsetRefTnSide, Side, Scaffold
-    
+
     tn_jc_S = TnJunction(
         num=1,
         scaf1="chr1",

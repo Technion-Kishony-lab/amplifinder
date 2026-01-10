@@ -1,7 +1,7 @@
 """
 Create synthetic junction sequences for alignment.
 
-Amplicon structure: 
+Amplicon structure:
 
 ~~~~~~~~~>>>======>>>======>>>~~~~~~~~~
 
@@ -29,7 +29,6 @@ from amplifinder.utils.file_utils import ensure_dir, remove_file_or_dir
 from amplifinder.utils.fasta import write_fasta
 
 
-
 class RudimentaryJunctionValues(NamedTuple):
     amp_left_pos: int
     amp_right_pos: int
@@ -54,18 +53,20 @@ class RudimentaryJunctionValues(NamedTuple):
         tn_orientation = Orientation.FORWARD if self.tn_start_pos < self.tn_end_pos else Orientation.REVERSE
         tn_start_arm = JcArm(scaf=self.tn_scaf, start=self.tn_start_pos, dir=tn_orientation, flank=self.flank)
         tn_end_arm = JcArm(scaf=self.tn_scaf, start=self.tn_end_pos, dir=tn_orientation.opposite(), flank=self.flank)
-        
+
         if self.tn_side_left_amp_side == Side.START:
             tn_left_arm, tn_right_arm = tn_end_arm, tn_start_arm
         else:
             tn_left_arm, tn_right_arm = tn_start_arm, tn_end_arm
-    
+
         return _build_7_junctions_from_6_arms(
             chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
 
     def get_name(self) -> str:
         side_str = "S" if self.tn_side_left_amp_side == Side.START else "E"
-        return f"jc_{self.amp_scaf}_{self.amp_left_pos}-{self.amp_right_pos}_{self.tn_scaf}_{self.tn_start_pos}-{self.tn_end_pos}_{side_str}_{self.flank}bp"
+        return (f"jc_{self.amp_scaf}_{self.amp_left_pos}-{self.amp_right_pos}_"
+                f"{self.tn_scaf}_{self.tn_start_pos}-{self.tn_end_pos}_"
+                f"{side_str}_{self.flank}bp")
 
 
 def _build_7_junctions_from_6_arms(
@@ -75,41 +76,43 @@ def _build_7_junctions_from_6_arms(
 ) -> dict[JunctionType, Junction]:
     """Create Junction objects for each junction type."""
     return {
-        JunctionType.CHR_TO_AMP_LEFT:       Junction.from_jc_arms(chr_left,  amp_left),
-        JunctionType.CHR_TO_TN_LEFT:        Junction.from_jc_arms(chr_left,  tn_left ),
-        JunctionType.AMP_RIGHT_TO_TN_LEFT:  Junction.from_jc_arms(amp_right, tn_left ),
+        JunctionType.CHR_TO_AMP_LEFT: Junction.from_jc_arms(chr_left, amp_left),
+        JunctionType.CHR_TO_TN_LEFT: Junction.from_jc_arms(chr_left, tn_left),
+        JunctionType.AMP_RIGHT_TO_TN_LEFT: Junction.from_jc_arms(amp_right, tn_left),
         JunctionType.AMP_RIGHT_TO_AMP_LEFT: Junction.from_jc_arms(amp_right, amp_left),
-        JunctionType.TN_RIGHT_TO_AMP_LEFT:  Junction.from_jc_arms(tn_right,  amp_left),
-        JunctionType.TN_RIGHT_TO_CHR:       Junction.from_jc_arms(tn_right,  chr_right),
-        JunctionType.AMP_RIGHT_TO_CHR:      Junction.from_jc_arms(amp_right, chr_right),
+        JunctionType.TN_RIGHT_TO_AMP_LEFT: Junction.from_jc_arms(tn_right, amp_left),
+        JunctionType.TN_RIGHT_TO_CHR: Junction.from_jc_arms(tn_right, chr_right),
+        JunctionType.AMP_RIGHT_TO_CHR: Junction.from_jc_arms(amp_right, chr_right),
     }
 
 
-def create_synthetic_junctions_and_name(tnjc2: SingleLocusLinkedTnJc2, jc_width: int, ref_tns: RecordTypedDf[RefTn]) -> tuple[dict[JunctionType, Junction], str]:
+def create_synthetic_junctions_and_name(
+    tnjc2: SingleLocusLinkedTnJc2, jc_width: int, ref_tns: RecordTypedDf[RefTn]
+) -> tuple[dict[JunctionType, Junction], str]:
 
     # Get TN sides that S and E junctions connect to (with offsets)
     tn_side_left_amp, tn_side_right_amp = tnjc2.get_sides_of_chosen_tn()
-    
+
     # Get RefTn from chosen_tn_id (O(1) lookup using indexed ref_tns)
     chosen_tn_id = tnjc2.chosen_tn_id
     ref_tn = ref_tns[chosen_tn_id]
     assert ref_tn.tn_id == chosen_tn_id
-    
+
     # Get inward arms for Amplicon
     amp_left_arm, amp_right_arm = tnjc2.get_inward_arms(flank=jc_width)
 
     # Get chromosome arms (outward amplicon arms)
     chr_left_arm, chr_right_arm = tnjc2.get_outward_arms(flank=jc_width)
-   
+
     # Get inward arms for RefTn with offset adjustments via ref_tn_side
     # The right-side of the TN is one that connects to the left-side of the amplicon
     tn_right_arm = ref_tn.get_inward_arm_by_ref_tn_side(tn_side_left_amp, jc_width)
     tn_left_arm = ref_tn.get_inward_arm_by_ref_tn_side(tn_side_right_amp, jc_width)
-    
+
     # Create Junction objects for each junction type
     direct_jc = _build_7_junctions_from_6_arms(
         chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
-    
+
     # Create rudimentary junction values for naming
     tn_side_left_amp_side = tn_side_left_amp.side
     rudimentary = RudimentaryJunctionValues(
@@ -151,7 +154,9 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
             tnjc2 = SynJctsTnJc2.from_other(tnjc2, **{self.dir_field: analysis_dir_name})
             self._tnjc2s_and_junctions.append((tnjc2, junctions))
 
-        artifact_files = [tnjc2.fasta_path(output_dir, is_ancestor=self.is_ancestor) for tnjc2, _ in self._tnjc2s_and_junctions]
+        artifact_files = [
+            tnjc2.fasta_path(output_dir, is_ancestor=self.is_ancestor)
+            for tnjc2, _ in self._tnjc2s_and_junctions]
         super().__init__(
             input_files=[genome.fasta_path],
             artifact_files=artifact_files,
