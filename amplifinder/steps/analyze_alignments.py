@@ -10,9 +10,21 @@ from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.visualization.plot_alignments import plot_alignment_coverage
 
 
-def is_covered(cov: JunctionReadCounts, max_num_spanning_reads: int, 
+def is_covered(cov: JunctionReadCounts, min_jct_cov: int, 
                jc_len: int, read_len: int, min_overlap_len: int, num_std: int = 3) -> Optional[bool]:
-
+    """Determine if junction is covered based on spanning read statistics.
+    
+    Args:
+        cov: Junction read counts (left, right, spanning)
+        min_jct_cov: Minimum expected spanning reads threshold
+        jc_len: Junction length
+        read_len: Read length
+        min_overlap_len: Minimum overlap length for spanning reads
+        num_std: Number of standard deviations for coverage threshold (default 3)
+    
+    Returns:
+        True if junction is covered, False if not covered, None if ambiguous
+    """
     arm_len = jc_len // 2
 
     # num options of read-alignments for the left or right side
@@ -37,22 +49,17 @@ def is_covered(cov: JunctionReadCounts, max_num_spanning_reads: int,
     total_err = np.sqrt(err_expected_num_spanning**2 + err_num_spanning_reads**2)
 
     is_above_minimal_expected = num_spanning_reads >= expected_num_spanning - num_std * total_err
-    is_below_max_num_spanning_reads = num_spanning_reads <= max_num_spanning_reads
+    is_below_min_jct_cov = num_spanning_reads <= min_jct_cov
 
-    if is_above_minimal_expected and not is_below_max_num_spanning_reads:
+    if is_above_minimal_expected and not is_below_min_jct_cov:
         return True
-    if not is_above_minimal_expected and is_below_max_num_spanning_reads:
+    if not is_above_minimal_expected and is_below_min_jct_cov:
         return False
     return None  # ambiguous
 
 
 class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
-    """Analyze read alignments to get junction coverage.
-
-    Analysis depends on run type:
-    - has_ancestor=False: analyze isolate BAM only
-    - has_ancestor=True: analyze both isolate and ancestor BAMs
-    """
+    """Analyze read alignments to get junction coverage."""
 
     def __init__(
         self,
@@ -62,7 +69,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         iso_read_length: int = 150,
         anc_read_length: Optional[int] = None,
         min_overlap_len: int = 12,
-        max_num_spanning_reads: int = 10,
+        min_jct_cov: int = 10,
         force: Optional[bool] = None,
     ):
         self.synjct_tnjc2s = synjct_tnjc2s
@@ -71,7 +78,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         self.iso_read_length = iso_read_length
         self.anc_read_length = anc_read_length if anc_read_length else iso_read_length
         self.min_overlap_len = min_overlap_len
-        self.max_num_spanning_reads = max_num_spanning_reads
+        self.min_jct_cov = min_jct_cov
         self.has_ancestor = self._anc_output_dir is not None
 
         # Input files are the BAM files from alignment step
@@ -95,10 +102,20 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         jct_lengths: dict[JunctionType, int],
         read_len: int,
     ) -> dict[JunctionType, Optional[bool]]:
+        """Calculate junction coverage calls for all junction types.
+        
+        Args:
+            jc_cov: Dict mapping JunctionType to JunctionReadCounts
+            jct_lengths: Dict mapping JunctionType to junction length
+            read_len: Read length
+        
+        Returns:
+            Dict mapping JunctionType to coverage call (True/False/None)
+        """
         return {
             jt: is_covered(
                 jc_cov[jt],
-                max_num_spanning_reads=self.max_num_spanning_reads,
+                min_jct_cov=self.min_jct_cov,
                 jc_len=jct_lengths[jt],
                 read_len=read_len,
                 min_overlap_len=self.min_overlap_len
@@ -107,7 +124,11 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         }
 
     def _calculate_output(self) -> RecordTypedDf[AnalyzedTnJc2]:
-        """Analyze alignments for each candidate."""
+        """Analyze alignments for each candidate.
+        
+        Returns:
+            RecordTypedDf containing AnalyzedTnJc2 records with coverage data and calls
+        """
         analyzed_records = []
         for synjct_tnjc2 in self.synjct_tnjc2s:
             # Get isolate junction coverage (required)
