@@ -3,7 +3,7 @@
 from amplifinder.data_types.typed_df import RecordTypedDf, TypedDF
 from amplifinder.data_types.genome import Genome, GenomeRegistry, get_genome
 from amplifinder.data_types.records import Column, Schema, Record
-from amplifinder.data_types.enums import Terminal, Orientation, AverageMethod, JunctionType, \
+from amplifinder.data_types.enums import Terminal, Side, Orientation, AverageMethod, JunctionType, \
     EventModifier, JunctionReadCounts, BaseRawEvent
 from amplifinder.data_types.scaffold import JcArm, Scaffold, SeqScaffold
 from amplifinder.data_types.record_types import RefTn, BlastHit, Junction, BreseqJunction, \
@@ -13,6 +13,7 @@ from amplifinder.data_types.record_types import RefTn, BlastHit, Junction, Brese
 
 __all__ = [
     "Terminal",
+    "Side",
     "Orientation",
     "AverageMethod",
     "Column",
