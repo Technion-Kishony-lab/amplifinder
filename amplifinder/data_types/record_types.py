@@ -541,6 +541,10 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     jc_cov: Dict[JunctionType, JunctionReadCounts]
     jc_cov_anc: Optional[Dict[JunctionType, JunctionReadCounts]] = None
 
+    # For each junction type, whether it is covered (True), ambiguous (None), or not covered (False)
+    jc_calls: Dict[JunctionType, Optional[bool]] = None
+    jc_calls_anc: Optional[Dict[JunctionType, Optional[bool]]] = None
+
     @property
     def jc_cov_vector(self) -> List[tuple[int, int, int]]:
         """Junction coverage vector."""
@@ -565,6 +569,7 @@ class ClassifiedTnJc2(AnalyzedTnJc2):
     # Architecture classification
     isolate_architecture: RawEvent
     ancestor_architecture: Optional[RawEvent] = None  # only when anc_path is set
+
     # Final event classification
     event_modifiers: List[EventModifier]    # de novo left/right, ancestral, etc.
 
