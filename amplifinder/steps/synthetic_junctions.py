@@ -119,12 +119,12 @@ def create_synthetic_junctions_and_name(
 
     # Handle tnjc2 flanked by ancestral TN
     paired_left = tnjc2.single_locus_tnjc2_matching_left
-    is_left_ref_tn = paired_left is not None and paired_left.raw_event == BaseRawEvent.REFERENCE    
+    is_left_ref_tn = paired_left is not None and paired_left.base_raw_event == BaseRawEvent.REFERENCE    
     if is_left_ref_tn:
         chr_left_arm = paired_left.get_outward_arms(flank=jc_width)[0]
 
     paired_right = tnjc2.single_locus_tnjc2_matching_right
-    is_right_ref_tn = paired_right is not None and paired_right.raw_event == BaseRawEvent.REFERENCE
+    is_right_ref_tn = paired_right is not None and paired_right.base_raw_event == BaseRawEvent.REFERENCE
     if is_right_ref_tn:
         chr_right_arm = paired_right.get_outward_arms(flank=jc_width)[1]
 

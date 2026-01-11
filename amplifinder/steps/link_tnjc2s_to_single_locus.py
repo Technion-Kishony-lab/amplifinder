@@ -67,7 +67,8 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
     def _compute_base_raw_event(self, tnjc2: CoveredTnJc2) -> BaseRawEvent:
         if tnjc2.tnjc_left.is_ref_tn_junction() and \
                 tnjc2.tnjc_right.is_ref_tn_junction() and \
-                tnjc2.tnjc_left.ref_tn_side.tn_id == tnjc2.tnjc_right.ref_tn_side.tn_id:
+                tnjc2.tnjc_left.ref_tn_side.tn_id == tnjc2.tnjc_right.ref_tn_side.tn_id and \
+                    not tnjc2.span_origin:
             return BaseRawEvent.REFERENCE
         elif abs(tnjc2.left - tnjc2.right) < self.transposition_threshold:
             return BaseRawEvent.TRANSPOSITION
