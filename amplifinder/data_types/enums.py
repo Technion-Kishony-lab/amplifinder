@@ -64,6 +64,13 @@ class RawEvent(str, Enum):
     UNRESOLVED = "unresolved"
 
 
+class Element(str, Enum):
+    """Elements (chromosome, cassette, IS)."""
+    CHR = "chr"  # chromosome
+    AMP = "amp"  # cassette
+    TN = "tn"    # IS
+
+
 class JunctionType(int, Enum):
     """The 7 synthetic junction types.
 
