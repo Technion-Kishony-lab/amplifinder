@@ -146,8 +146,8 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                     read_type = 'spanning'
                     counts[jct_type].spanning += 1
                 else:
-                    read_type = 'other'
-                    counts[jct_type].other += 1
+                    read_type = 'undetermined'
+                    counts[jct_type].undetermined += 1
 
                 # Store alignment data for plotting
                 alignment_data[jct_type].append((start, end, read_type))

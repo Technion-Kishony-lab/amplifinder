@@ -15,6 +15,7 @@ class ArrowHead(str, Enum):
     ROUND = "round"                      # ======)
     INNER_ROUND = "inner_round"          # ======(
     WAVE = "wave"                        # ======s
+    INNER_WAVE = "inner_wave"            # ======(
 
 
 y = np.linspace(0, 1, 15)
@@ -22,11 +23,18 @@ y = np.linspace(0, 1, 15)
 ARROW_HEAD_TO_VERTICES = {
     ArrowHead.BLUNT: np.array([[0, 0], [0, 1]]),
     ArrowHead.TRIANGLE: np.array([[-1, 0], [0, 0.5], [-1, 1]]),
-    ArrowHead.INNER_TRIANGLE: np.array([[0, 0], [-1, 0.5], [0, 1]]),
     ArrowHead.ROUND: np.array([-1 + np.sin(y * np.pi), y]).T,
-    ArrowHead.INNER_ROUND: np.array([-np.sin(y * np.pi), y]).T,
-    ArrowHead.WAVE: np.array([-1 + np.sin(y * 5 * np.pi), y]).T,
+    ArrowHead.WAVE: np.array([-0.5 + 0.5 * np.sin(y * 5 * np.pi), y]).T,
 }
+
+for inner, outer in [
+    (ArrowHead.INNER_TRIANGLE, ArrowHead.TRIANGLE),
+    (ArrowHead.INNER_ROUND, ArrowHead.ROUND),
+    (ArrowHead.INNER_WAVE, ArrowHead.WAVE),
+]:
+    vertices = ARROW_HEAD_TO_VERTICES[outer].copy()
+    vertices[:, 0] = -1 - vertices[:, 0]
+    ARROW_HEAD_TO_VERTICES[inner] = vertices
 
 
 class GeneticElementType(str, Enum):
@@ -44,7 +52,9 @@ GENETIC_ELEMENT_TYPE_TO_ARROW_PARAMS = {
     GeneticElementType.AMPLICON: {
         'color': 'lightblue',
         'head': ArrowHead.ROUND,
-        'tail': ArrowHead.BLUNT,
+        'head_width_ratio': 0.8,
+        'tail': ArrowHead.INNER_ROUND,
+        'tail_width_ratio': 0.3,
     },
     GeneticElementType.TN_ELEMENT: {
         'color': 'goldenrod',
@@ -75,25 +85,20 @@ def draw_horizontal_arrow(ax, y, x1, x2, h_pixels, color,
 
     length = x2 - x1
     
-    # Convert h_pixels from pixels to data coordinates
+    # Convert h_pixels to data values
     inv_trans = ax.transData.inverted()
-    y_bottom_display = ax.transData.transform([[0, y]])[0][1]
-    y_top_display = y_bottom_display + h_pixels
-    y_top_data = inv_trans.transform([[0, y_top_display]])[0][1]
-    h = y_top_data - y
-    
-    # Calculate arrow widths in data coordinates
-    x_origin = inv_trans.transform([[0, 0]])[0][0]
-    h_in_x_data = abs(inv_trans.transform([[h_pixels, 0]])[0][0] - x_origin)
-        
+    origin = inv_trans.transform([[0, 0]])[0]
+    h_in_y_data = abs(inv_trans.transform([[0, h_pixels]])[0][1] - origin[1])
+    h_in_x_data = abs(inv_trans.transform([[h_pixels, 0]])[0][0] - origin[0])
+
     # Build vertices: tail (bottom-up) -> head (bottom->top) -> close
     coords1 = ARROW_HEAD_TO_VERTICES[tail][::-1]  # reverse to allow concatenation with head vertices
     coords2 = ARROW_HEAD_TO_VERTICES[head]
 
     dir = np.sign(length)
     
-    coords1 = coords1 * np.array([[-h_in_x_data * tail_width_ratio * dir, h]]) + np.array([[x1, y]])
-    coords2 = coords2 * np.array([[+h_in_x_data * head_width_ratio * dir, h]]) + np.array([[x2, y]])
+    coords1 = coords1 * np.array([[-h_in_x_data * tail_width_ratio * dir, h_in_y_data]]) + np.array([[x1, y]])
+    coords2 = coords2 * np.array([[+h_in_x_data * head_width_ratio * dir, h_in_y_data]]) + np.array([[x2, y]])
 
     vertices = np.vstack([coords1, coords2])
     polygon = Polygon(vertices, facecolor=color, edgecolor='black', linewidth=0.5)
@@ -115,11 +120,11 @@ def draw_genetic_element(ax, y, x1, x2, element_type: GeneticElementType, h_pixe
     """
     params = GENETIC_ELEMENT_TYPE_TO_ARROW_PARAMS[element_type].copy()
     if wave_tail:
-        params['tail'] = ArrowHead.WAVE
-        params['tail_width_ratio'] = 0.2
+        params['tail'] = ArrowHead.INNER_WAVE
+        params['tail_width_ratio'] = 0.5
     if wave_head:
         params['head'] = ArrowHead.WAVE
-        params['head_width_ratio'] = 0.2
+        params['head_width_ratio'] = 0.5
     params.update(kwargs)
     draw_horizontal_arrow(ax, y, x1, x2, h_pixels, **params)
 
