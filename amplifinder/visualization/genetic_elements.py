@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from matplotlib.patches import Polygon, Rectangle
 
-from enum import Enum
+from amplifinder.data_types.enums import Element
 
 
 class ArrowHead(str, Enum):
@@ -37,26 +37,20 @@ for inner, outer in [
     ARROW_HEAD_TO_VERTICES[inner] = vertices
 
 
-class GeneticElementType(str, Enum):
-    CHROMOSOME = "chromosome"
-    AMPLICON = "amplicon"
-    TN_ELEMENT = "tn_element"
-
-
 GENETIC_ELEMENT_TYPE_TO_ARROW_PARAMS = {
-    GeneticElementType.CHROMOSOME: {
+    Element.CHR: {
         'color': 'lightgrey',
         'head': ArrowHead.BLUNT,
         'tail': ArrowHead.BLUNT,
     },
-    GeneticElementType.AMPLICON: {
+    Element.AMP: {
         'color': 'lightblue',
         'head': ArrowHead.ROUND,
         'head_width_ratio': 0.8,
         'tail': ArrowHead.INNER_ROUND,
         'tail_width_ratio': 0.3,
     },
-    GeneticElementType.TN_ELEMENT: {
+    Element.TN: {
         'color': 'goldenrod',
         'head': ArrowHead.TRIANGLE,
         'tail': ArrowHead.BLUNT,
@@ -105,7 +99,7 @@ def draw_horizontal_arrow(ax, y, x1, x2, h_pixels, color,
     ax.add_patch(polygon)
 
 
-def draw_genetic_element(ax, y, x1, x2, element_type: GeneticElementType, h_pixels=10, 
+def draw_genetic_element(ax, y, x1, x2, element_type: Element, h_pixels=10, 
                          wave_tail: bool = False, wave_head: bool = False, **kwargs):
     """Draw a genetic element.
     
@@ -162,21 +156,21 @@ def draw_amplicon_structure(
     x = 0
     
     # Left chromosome
-    draw_genetic_element(ax, y, x, (x := x + chr_left_len), GeneticElementType.CHROMOSOME, h_pixels, wave_tail=True)
+    draw_genetic_element(ax, y, x, (x := x + chr_left_len), Element.CHR, h_pixels, wave_tail=True)
     
     # TN element
-    draw_genetic_element(ax, y, x, (x := x + tn_len), GeneticElementType.TN_ELEMENT, h_pixels)
+    draw_genetic_element(ax, y, x, (x := x + tn_len), Element.TN, h_pixels)
 
     # Amplicon copies (each with TN inside)
     for i in range(n_amplicon_copies):
         # Amplicon
-        draw_genetic_element(ax, y, x, (x := x + amp_len), GeneticElementType.AMPLICON, h_pixels)
+        draw_genetic_element(ax, y, x, (x := x + amp_len), Element.AMP, h_pixels)
         
         # TN element
-        draw_genetic_element(ax, y, x, (x := x + tn_len), GeneticElementType.TN_ELEMENT, h_pixels)
+        draw_genetic_element(ax, y, x, (x := x + tn_len), Element.TN, h_pixels)
         
     # Right chromosome
-    draw_genetic_element(ax, y, x, (x := x + chr_right_len), GeneticElementType.CHROMOSOME, h_pixels, wave_head=True)
+    draw_genetic_element(ax, y, x, (x := x + chr_right_len), Element.CHR, h_pixels, wave_head=True)
 
     return total_length
 

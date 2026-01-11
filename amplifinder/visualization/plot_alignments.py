@@ -9,7 +9,8 @@ from pathlib import Path
 from typing import Dict, List, Tuple
 
 from amplifinder.data_types import JunctionType
-from amplifinder.visualization.genetic_elements import draw_genetic_element, draw_amplicon_structure, GeneticElementType
+from amplifinder.data_types.enums import Element
+from amplifinder.visualization.genetic_elements import draw_genetic_element, draw_amplicon_structure
 
 
 READ_TYPES_TO_COLORS = {
@@ -32,13 +33,13 @@ JUNCTION_TYPES_TO_PLOT_POSITIONS = {
 
 
 JUNCTION_TYPES_TO_LEFT_RIGHT_ELEMENTS = {
-    JunctionType.CHR_TO_AMP_LEFT: (GeneticElementType.CHROMOSOME, GeneticElementType.AMPLICON),
-    JunctionType.CHR_TO_TN_LEFT: (GeneticElementType.CHROMOSOME, GeneticElementType.TN_ELEMENT),
-    JunctionType.AMP_RIGHT_TO_TN_LEFT: (GeneticElementType.AMPLICON, GeneticElementType.TN_ELEMENT),
-    JunctionType.AMP_RIGHT_TO_AMP_LEFT: (GeneticElementType.AMPLICON, GeneticElementType.AMPLICON),
-    JunctionType.TN_RIGHT_TO_AMP_LEFT: (GeneticElementType.TN_ELEMENT, GeneticElementType.AMPLICON),
-    JunctionType.TN_RIGHT_TO_CHR: (GeneticElementType.TN_ELEMENT, GeneticElementType.CHROMOSOME),
-    JunctionType.AMP_RIGHT_TO_CHR: (GeneticElementType.AMPLICON, GeneticElementType.CHROMOSOME),
+    JunctionType.CHR_TO_AMP_LEFT: (Element.CHR, Element.AMP),
+    JunctionType.CHR_TO_TN_LEFT: (Element.CHR, Element.TN),
+    JunctionType.AMP_RIGHT_TO_TN_LEFT: (Element.AMP, Element.TN),
+    JunctionType.AMP_RIGHT_TO_AMP_LEFT: (Element.AMP, Element.AMP),
+    JunctionType.TN_RIGHT_TO_AMP_LEFT: (Element.TN, Element.AMP),
+    JunctionType.TN_RIGHT_TO_CHR: (Element.TN, Element.CHR),
+    JunctionType.AMP_RIGHT_TO_CHR: (Element.AMP, Element.CHR),
 }
 
 
@@ -263,25 +264,25 @@ def plot_alignment_coverage(
     
     # Chromosome
     draw_genetic_element(ax_legend, y_start, left_start, left_end, 
-                        GeneticElementType.CHROMOSOME, h_pixels=h_pixels, wave_tail=True)
+                        Element.CHR, h_pixels=h_pixels, wave_tail=True)
     draw_genetic_element(ax_legend, y_start, right_start, right_end, 
-                        GeneticElementType.CHROMOSOME, h_pixels=h_pixels, wave_head=True)
+                        Element.CHR, h_pixels=h_pixels, wave_head=True)
     ax_legend.text(label_x, y_start, 'chromosome', fontsize=10, va='bottom')
     
     # Amplicon
     y_amp = y_start - element_height - 0.05
     draw_genetic_element(ax_legend, y_amp, left_start, left_end, 
-                        GeneticElementType.AMPLICON, h_pixels=h_pixels, wave_head=True)
+                        Element.AMP, h_pixels=h_pixels, wave_head=True)
     draw_genetic_element(ax_legend, y_amp, right_start, right_end, 
-                        GeneticElementType.AMPLICON, h_pixels=h_pixels, wave_tail=True)
+                        Element.AMP, h_pixels=h_pixels, wave_tail=True)
     ax_legend.text(label_x, y_amp, 'amplicon', fontsize=10, va='bottom')
     
     # IS element
     y_is = y_amp - element_height - 0.05
     draw_genetic_element(ax_legend, y_is, left_start, left_end, 
-                        GeneticElementType.TN_ELEMENT, h_pixels=h_pixels, wave_head=True)
+                        Element.TN, h_pixels=h_pixels, wave_head=True)
     draw_genetic_element(ax_legend, y_is, right_start, right_end, 
-                        GeneticElementType.TN_ELEMENT, h_pixels=h_pixels, wave_tail=True)
+                        Element.TN, h_pixels=h_pixels, wave_tail=True)
     ax_legend.text(label_x, y_is, 'IS', fontsize=10, va='bottom')
     
     # Read type legend at bottom (combine left/right since they share the same color)
