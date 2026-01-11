@@ -42,6 +42,23 @@ JUNCTION_TYPES_TO_LEFT_RIGHT_ELEMENTS = {
 }
 
 
+def _get_jc_call_color(jc_call: bool | None) -> str:
+    """Get color for junction coverage call.
+    
+    Args:
+        jc_call: Coverage call value (True/False/None)
+        
+    Returns:
+        Color string: 'green' for True, 'red' for False, 'grey' for None
+    """
+    if jc_call is True:
+        return 'green'
+    elif jc_call is False:
+        return 'red'
+    else:  # None
+        return 'grey'
+
+
 def plot_alignment_coverage(
     alignment_data: Dict[JunctionType, List[Tuple[int, int, str]]],
     jct_lengths: Dict[JunctionType, int],
@@ -49,6 +66,8 @@ def plot_alignment_coverage(
     output_path: Path | str ,
     max_reads_per_plot: int = 200,
     alignment_data_anc: Dict[JunctionType, List[Tuple[int, int, str]]] | None = None,
+    jc_calls: Dict[JunctionType, bool | None] | None = None,
+    jc_calls_anc: Dict[JunctionType, bool | None] | None = None,
 ) -> None:
     """Plot read alignments as horizontal lines (coverage plot).
     
@@ -59,7 +78,13 @@ def plot_alignment_coverage(
         output_path: Path to save the PNG file
         max_reads_per_plot: Maximum reads to show per plot (downsampling)
         alignment_data_anc: Optional dict for ancestor reads (plotted below x-axis with negative y)
+        jc_calls: Optional dict mapping JunctionType to coverage call (True/False/None) for isolate
+        jc_calls_anc: Optional dict mapping JunctionType to coverage call for ancestor
     """
+    with_calls = jc_calls is not None
+    if with_calls:
+        if alignment_data_anc and not jc_calls_anc:
+            raise ValueError("Cannot plot with junction calls for isolate and no ancestor calls")
 
     h_pixels = 18
 
@@ -174,16 +199,22 @@ def plot_alignment_coverage(
                     ax.plot(x_arr, y_arr, color=READ_TYPES_TO_COLORS[read_type], 
                             linewidth=1.5, solid_capstyle='butt', alpha=0.7)
         
-        # Add vertical line at junction point
-        ax.axvline(0, color='black', linestyle='--', linewidth=2, alpha=0.5)
-        
-        # Add horizontal line at y=0 if ancestor data exists
-        if alignment_data_anc:
-            ax.axhline(0, color='black', linestyle='-', linewidth=1, alpha=0.3)
-        
         # Set consistent y-axis (extend to negative if ancestor data exists)
         y_min = -max_reads_anc_after_downsample - 1 if alignment_data_anc else 0
         y_max = max_reads_iso_after_downsample + 1
+        
+        # Add vertical line at junction point with color based on jc_calls (isolate) - from y=0 to y_max
+        jc_call_color = _get_jc_call_color(jc_calls[jt]) if with_calls else 'black'
+        ax.plot([0, 0], [0, y_max], color=jc_call_color, linestyle='--', linewidth=2.5)
+        
+        # Add vertical line for jc_calls_anc (ancestor) if available - from y=0 to y_min
+        if alignment_data_anc:
+            jc_call_anc_color = _get_jc_call_color(jc_calls_anc[jt]) if with_calls else 'black'
+            ax.plot([0, 0], [y_min, 0], color=jc_call_anc_color, linestyle='--', linewidth=2.5)
+        
+        # Add horizontal line at y=0 if ancestor data exists
+        if alignment_data_anc:
+            ax.axhline(0, color='black', linestyle='-', linewidth=0.5)
         ax.set_ylim(y_min, y_max)
         ax.set_ylabel('Read number (iso +, anc -)' if alignment_data_anc else 'Read number')
         
@@ -259,6 +290,15 @@ def plot_alignment_coverage(
         Line2D([0], [0], color=READ_TYPES_TO_COLORS['left'], linewidth=2, label='left/right'),
         Line2D([0], [0], color=READ_TYPES_TO_COLORS['undetermined'], linewidth=2, label='undetermined')
     ]
+    
+    # Add jc_calls color legend if available (applies to both jc_calls and jc_calls_anc)
+    if with_calls:
+        jc_legend_elements = [
+            Line2D([0], [0], color='green', linestyle='--', linewidth=2.5, label='Positive'),
+            Line2D([0], [0], color='red', linestyle='--', linewidth=2.5, label='Negative'),
+            Line2D([0], [0], color='grey', linestyle='--', linewidth=2.5, label='Undetermined'),
+        ]
+        legend_elements.extend(jc_legend_elements)
     
     # Set legend title based on downsampling
     legend_title = None

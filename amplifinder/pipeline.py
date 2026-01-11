@@ -341,7 +341,7 @@ class Pipeline:
             anc_output_dir=anc_output,
             iso_read_length=read_lengths.iso_read_length,
             anc_read_length=read_lengths.anc_read_length,
-            min_overlap=self.config.min_overlap,
+            min_overlap_len=self.config.min_overlap,
         ).run()
 
     def _classify_candidates(
@@ -353,8 +353,6 @@ class Pipeline:
         return ClassifyTnJc2CandidatesStep(
             analyzed_tnjc2s=analyzed_tnjc2s,
             output_dir=iso_output,
-            has_ancestor=self.config.has_ancestor,
-            min_jct_cov=self.config.min_jct_cov,
         ).run()
 
     def _export(

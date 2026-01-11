@@ -68,6 +68,9 @@ class JunctionType(int, Enum):
 
     ~~~~~~~~~>>>======>>>======>>>~~~~~~~~~
 
+    ~~-==  ~~->>  ==->>  ==-==  >>-==  >>-~~  ==-~~
+      1      2      3      4      5      6      7
+
     legend:
     ~~~    chromosome
     >>>    IS
@@ -102,3 +105,19 @@ class JunctionReadCounts:
     right: int = 0     # reads on right side of junction
     spanning: int = 0  # reads spanning the junction
     undetermined: int = 0     # reads partially overlapping the junction
+
+    def add_read(self, start: int, end: int, junction_point: int, min_overlap_len: int) -> str:
+        # Determine read type and update counts
+        if end <= junction_point:
+            read_type = 'left'
+            self.left += 1
+        elif start > junction_point:
+            read_type = 'right'
+            self.right += 1
+        elif start <= junction_point - min_overlap_len and end >= junction_point + min_overlap_len:
+            read_type = 'spanning'
+            self.spanning += 1
+        else:
+            read_type = 'undetermined'
+            self.undetermined += 1
+        return read_type
