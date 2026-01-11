@@ -31,7 +31,6 @@ DEFAULT_CONFIG = {
     "threads": 4,
 
     # Junction filtering
-    "min_jct_cov": 5,
     "min_amplicon_length": 30,
     "max_amplicon_length": 1_000_000,
     "filter_amplicon_length": 100,
@@ -47,7 +46,8 @@ DEFAULT_CONFIG = {
     "del_copy_number_threshold": 0.3,
 
     # Alignment parameters
-    "min_overlap": 12,
+    "min_overlap_len": 12,
+    "min_jct_cov": 5,
     "score_min": (0, -0.1),
     "mismatch_penalty": (5, 5),
 
@@ -116,7 +116,6 @@ class Config:
     threads: int = 4
 
     # Junction filtering
-    min_jct_cov: int = 5
     min_amplicon_length: int = 30
     max_amplicon_length: int = 1_000_000
     filter_amplicon_length: int = 100
@@ -132,7 +131,8 @@ class Config:
     del_copy_number_threshold: float = 0.3
 
     # Alignment parameters
-    min_overlap: int = 12
+    min_overlap_len: int = 12
+    min_jct_cov: int = 5
     score_min: Tuple[float, float] = (0, -0.1)
     mismatch_penalty: Tuple[int, int] = (5, 5)
 

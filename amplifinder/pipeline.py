@@ -341,7 +341,8 @@ class Pipeline:
             anc_output_dir=anc_output,
             iso_read_length=read_lengths.iso_read_length,
             anc_read_length=read_lengths.anc_read_length,
-            min_overlap_len=self.config.min_overlap,
+            min_overlap_len=self.config.min_overlap_len,
+            min_jct_cov=self.config.min_jct_cov,
         ).run()
 
     def _classify_candidates(
