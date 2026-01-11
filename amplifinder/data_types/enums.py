@@ -14,20 +14,23 @@ class ReversibleIntEnum(int, Enum):
 
 
 class Terminal(ReversibleIntEnum):
-    """Side of a TN element (start or end)."""
+    """Ends of a genetic element (start or end)."""
     START = -1
     END = 1
 
-    # Aliases:
-    LEFT = START
-    RIGHT = END
+
+class Side(ReversibleIntEnum):
+    """Side of a junction (left, middle, or right)."""
+    LEFT = -1
+    MIDDLE = 0
+    RIGHT = 1
 
 
 class Orientation(ReversibleIntEnum):
     """Orientation relative to reference (forward, reverse, or both/mixed)."""
-    FORWARD = 1
     REVERSE = -1
     BOTH = 0   # TODO: This is not used yet
+    FORWARD = 1
 
 
 class AverageMethod(str, Enum):
