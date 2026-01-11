@@ -1,5 +1,6 @@
 """Enum definitions for AmpliFinder."""
 from __future__ import annotations
+import numpy as np
 
 from dataclasses import dataclass
 from enum import Enum
@@ -71,33 +72,56 @@ class Element(str, Enum):
     TN = "tn"    # IS
 
 
-class JunctionType(int, Enum):
+class JunctionType(Enum):
     """The 7 synthetic junction types.
 
     Amplicon structure:
 
     ~~~~~~~~~>>>======>>>======>>>~~~~~~~~~
 
-    ~~-==  ~~->>  ==->>  ==-==  >>-==  >>-~~  ==-~~
-      1      2      3      4      5      6      7
-
     legend:
     ~~~    chromosome
     >>>    IS
     ====== cassette (amplicon)
+
     """
-    CHR_TO_AMP_LEFT = 1          # (1) ~~-==  left reference (chromosome-cassette)
-    CHR_TO_TN_LEFT = 2           # (2) ~~->>  left IS transposition (chromosome-IS)
-    AMP_RIGHT_TO_TN_LEFT = 3     # (3) ==->>  left of mid IS (cassette-IS)
-    AMP_RIGHT_TO_AMP_LEFT = 4    # (4) ==-==  lost IS (cassette-cassette, no IS)
-    TN_RIGHT_TO_AMP_LEFT = 5     # (5) >>-==  right of mid IS (IS-cassette)
-    TN_RIGHT_TO_CHR = 6          # (6) >>-~~  right IS transposition (IS-chromosome)
-    AMP_RIGHT_TO_CHR = 7         # (7) ==-~~  right reference (cassette-chromosome)
+    CHR_TO_AMP_LEFT       = (1, '~~-==', Element.CHR, Element.AMP, -1)
+    CHR_TO_TN_LEFT        = (2, '~~->>', Element.CHR, Element.TN , -2)
+    AMP_RIGHT_TO_TN_LEFT  = (3, '==->>', Element.AMP, Element.TN , +3)
+    AMP_RIGHT_TO_AMP_LEFT = (4, '==-==', Element.AMP, Element.AMP,  0)
+    TN_RIGHT_TO_AMP_LEFT  = (5, '>>-==', Element.TN,  Element.AMP, -3)
+    TN_RIGHT_TO_CHR       = (6, '>>-~~', Element.TN,  Element.CHR, +2)
+    AMP_RIGHT_TO_CHR      = (7, '==-~~', Element.AMP, Element.CHR, +1)
 
     @classmethod
     def sorted(cls) -> list[JunctionType]:
         """Return the JunctionType enum members sorted by value."""
-        return sorted(cls, key=lambda x: x.value)
+        return sorted(cls, key=lambda x: x.num)
+
+    @property
+    def num(self) -> int:
+        """Return the number of the junction. (1-7, matlab legacy)"""
+        return self.value[0]
+
+    @property
+    def symbol(self) -> str:
+        """Return the symbol of the junction."""
+        return self.value[1]
+
+    @property
+    def elements(self) -> tuple[Element, Element]:
+        """Return the elements of the junction."""
+        return self.value[2], self.value[3]
+
+    @property
+    def order(self) -> int:
+        """Return the number of the junction."""
+        return self.value[4]
+
+    @property
+    def side(self) -> Side:
+        """Return the side of the junction."""
+        return Side(np.sign(self.order))
 
 
 class EventModifier(str, Enum):
