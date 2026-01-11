@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from pathlib import Path
 from matplotlib.patches import Polygon, Rectangle
 
+from enum import Enum
+
 from amplifinder.data_types.enums import Element
 
 
@@ -37,7 +39,7 @@ for inner, outer in [
     ARROW_HEAD_TO_VERTICES[inner] = vertices
 
 
-GENETIC_ELEMENT_TYPE_TO_ARROW_PARAMS = {
+GENETIC_ELEMENT_TO_ARROW_PARAMS = {
     Element.CHR: {
         'color': 'lightgrey',
         'head': ArrowHead.BLUNT,
@@ -112,7 +114,7 @@ def draw_genetic_element(ax, y, x1, x2, element_type: Element, h_pixels=10,
         wave_tail: if True, add a wave to the tail
         wave_head: if True, add a wave to the head
     """
-    params = GENETIC_ELEMENT_TYPE_TO_ARROW_PARAMS[element_type].copy()
+    params = GENETIC_ELEMENT_TO_ARROW_PARAMS[element_type].copy()
     if wave_tail:
         params['tail'] = ArrowHead.INNER_WAVE
         params['tail_width_ratio'] = 0.5

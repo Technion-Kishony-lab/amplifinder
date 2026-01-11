@@ -21,28 +21,6 @@ READ_TYPES_TO_COLORS = {
 }
 
 
-JUNCTION_TYPES_TO_PLOT_POSITIONS = {
-    JunctionType.CHR_TO_AMP_LEFT: (1, 1),
-    JunctionType.CHR_TO_TN_LEFT: (2, 1),
-    JunctionType.AMP_RIGHT_TO_TN_LEFT: (1, 2),
-    JunctionType.AMP_RIGHT_TO_AMP_LEFT: (1, 4),
-    JunctionType.TN_RIGHT_TO_AMP_LEFT: (2, 2),
-    JunctionType.TN_RIGHT_TO_CHR: (2, 3),
-    JunctionType.AMP_RIGHT_TO_CHR: (1, 3),
-}
-
-
-JUNCTION_TYPES_TO_LEFT_RIGHT_ELEMENTS = {
-    JunctionType.CHR_TO_AMP_LEFT: (Element.CHR, Element.AMP),
-    JunctionType.CHR_TO_TN_LEFT: (Element.CHR, Element.TN),
-    JunctionType.AMP_RIGHT_TO_TN_LEFT: (Element.AMP, Element.TN),
-    JunctionType.AMP_RIGHT_TO_AMP_LEFT: (Element.AMP, Element.AMP),
-    JunctionType.TN_RIGHT_TO_AMP_LEFT: (Element.TN, Element.AMP),
-    JunctionType.TN_RIGHT_TO_CHR: (Element.TN, Element.CHR),
-    JunctionType.AMP_RIGHT_TO_CHR: (Element.AMP, Element.CHR),
-}
-
-
 def _get_jc_call_color(jc_call: bool | None) -> str:
     """Get color for junction coverage call.
     
@@ -121,7 +99,10 @@ def plot_alignment_coverage(
     
     junction_types = JunctionType.sorted()
     for jt in junction_types:
-        row, col = JUNCTION_TYPES_TO_PLOT_POSITIONS[jt]
+        if jt.order == 0:
+            row, col = 1, 0
+        else:
+            row, col = (jt.side.value + 1) // 2, abs(jt.order)
         
         # Create sub-gridspec for this position: [genetic_element_axes, alignment_axes]
         # Make genetic element axes ~10% of height
@@ -225,7 +206,7 @@ def plot_alignment_coverage(
         ax.grid(True, alpha=0.3, axis='x')
         
         # Draw genetic elements in the narrow axes above
-        left_elem_type, right_elem_type = JUNCTION_TYPES_TO_LEFT_RIGHT_ELEMENTS[jt]
+        left_elem_type, right_elem_type = jt.elements
         
         # Set up genetic element axes
         ax_gene.set_xlim(-midpoint, midpoint)
