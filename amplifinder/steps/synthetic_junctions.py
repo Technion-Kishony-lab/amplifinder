@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Optional, NamedTuple
 
 from amplifinder.data_types import BaseRawEvent, RecordTypedDf, SingleLocusLinkedTnJc2, SynJctsTnJc2, Genome, JunctionType, RefTn, \
-    Junction, Side, JcArm, Orientation
+    Junction, Terminal, JcArm, Orientation
 
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.utils.file_utils import ensure_dir, remove_file_or_dir
@@ -36,7 +36,7 @@ class RudimentaryJunctionValues(NamedTuple):
     tn_start_pos: int
     tn_end_pos: int
     tn_scaf: str
-    tn_side_left_amp_side: Side
+    tn_side_left_amp_side: Terminal
     flank: int
     # Optional: chr positions in case of flanked TNJC2. Otherwise, we use the mirror of the amplicon arms
     chr_left_pos: Optional[int] = None
@@ -64,7 +64,7 @@ class RudimentaryJunctionValues(NamedTuple):
         tn_start_arm = JcArm(scaf=self.tn_scaf, start=self.tn_start_pos, dir=tn_orientation, flank=self.flank)
         tn_end_arm = JcArm(scaf=self.tn_scaf, start=self.tn_end_pos, dir=tn_orientation.opposite(), flank=self.flank)
 
-        if self.tn_side_left_amp_side == Side.START:
+        if self.tn_side_left_amp_side == Terminal.START:
             tn_left_arm, tn_right_arm = tn_end_arm, tn_start_arm
         else:
             tn_left_arm, tn_right_arm = tn_start_arm, tn_end_arm
@@ -73,7 +73,7 @@ class RudimentaryJunctionValues(NamedTuple):
             chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
 
     def get_name(self) -> str:
-        side_str = "S" if self.tn_side_left_amp_side == Side.START else "E"
+        side_str = "S" if self.tn_side_left_amp_side == Terminal.START else "E"
         chr_left_pos_str = f"chrL={self.chr_left_pos}_" if self.chr_left_pos is not None else ""
         chr_right_pos_str = f"chrR={self.chr_right_pos}_" if self.chr_right_pos is not None else ""
         return (f"jc_{self.amp_scaf}_{self.amp_left_pos}-{self.amp_right_pos}_"
@@ -141,8 +141,8 @@ def create_synthetic_junctions_and_name(
     tn_side_left_amp_side = tn_side_left_amp.side
     rudimentary = RudimentaryJunctionValues(
         amp_left_pos=amp_left_arm.start, amp_right_pos=amp_right_arm.start, amp_scaf=amp_left_arm.scaf,
-        tn_start_pos=tn_left_arm.start if tn_side_left_amp_side == Side.END else tn_right_arm.start,
-        tn_end_pos=tn_right_arm.start if tn_side_left_amp_side == Side.END else tn_left_arm.start,
+        tn_start_pos=tn_left_arm.start if tn_side_left_amp_side == Terminal.END else tn_right_arm.start,
+        tn_end_pos=tn_right_arm.start if tn_side_left_amp_side == Terminal.END else tn_left_arm.start,
         tn_scaf=tn_left_arm.scaf,
         tn_side_left_amp_side=tn_side_left_amp_side,
         chr_left_pos=chr_left_arm.start if is_left_ref_tn else None,
