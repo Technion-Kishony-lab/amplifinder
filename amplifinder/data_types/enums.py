@@ -101,4 +101,4 @@ class JunctionReadCounts:
     left: int = 0      # reads on left side of junction
     right: int = 0     # reads on right side of junction
     spanning: int = 0  # reads spanning the junction
-    other: int = 0     # reads partially overlapping the junction
+    undetermined: int = 0     # reads partially overlapping the junction
