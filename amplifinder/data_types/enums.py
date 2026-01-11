@@ -13,7 +13,7 @@ class ReversibleIntEnum(int, Enum):
         return type(self)(-self.value)
 
 
-class Side(ReversibleIntEnum):
+class Terminal(ReversibleIntEnum):
     """Side of a TN element (start or end)."""
     START = -1
     END = 1

@@ -6,7 +6,7 @@ from pydantic import ConfigDict, field_validator
 import numpy as np
 
 from amplifinder.data_types.records import Record
-from amplifinder.data_types.enums import BaseRawEvent, RawEvent, Side, Orientation, EventModifier, JunctionType, \
+from amplifinder.data_types.enums import BaseRawEvent, RawEvent, Terminal, Orientation, EventModifier, JunctionType, \
     JunctionReadCounts
 from amplifinder.data_types.scaffold import SegmentScaffold, JcArm, SeqScaffold, SeqSegmentScaffold
 
@@ -19,7 +19,7 @@ class RefTnSide(Record):
     """A reference TN element side."""
     NAME: ClassVar[str] = "Reference TN sides"
     tn_id: TnId
-    side: Side
+    side: Terminal
 
     def is_same_side(self, other: RefTnSide) -> bool:
         """Check if two RefTnSide objects are the same side."""
@@ -49,8 +49,8 @@ class RefTn(SegmentScaffold):
     def get_ref_tn_sides(self) -> tuple[RefTnSide, RefTnSide]:
         """Get start and end sides of the TN."""
         return (
-            RefTnSide(tn_id=self.tn_id, side=Side.START),
-            RefTnSide(tn_id=self.tn_id, side=Side.END),
+            RefTnSide(tn_id=self.tn_id, side=Terminal.START),
+            RefTnSide(tn_id=self.tn_id, side=Terminal.END),
         )
 
     def get_junctions(self, out_flanks: int | tuple[int, int],
@@ -87,7 +87,7 @@ class RefTn(SegmentScaffold):
     def get_inward_arm_by_ref_tn_side(self, ref_tn_side: RefTnSide, flank: int) -> JcArm:
         """Get inward arm by reference TN side with optional offset."""
         ref_arms = self.get_inward_arms(flanks=flank)
-        arm = ref_arms[0] if ref_tn_side.side == Side.START else ref_arms[1]
+        arm = ref_arms[0] if ref_tn_side.side == Terminal.START else ref_arms[1]
 
         if isinstance(ref_tn_side, OffsetRefTnSide):
             return arm.shift_by_offset(ref_tn_side.offset)
@@ -197,12 +197,12 @@ class RefTnJunction(NumJunction):
     NAME: ClassVar[str] = "Reference TN junctions"
 
     #   chr      TN       chr
-    # ~~~~~~~|>>>>>>>>>|~~~~~~~    ref_tn_side.side == Side.START
+    # ~~~~~~~|>>>>>>>>>|~~~~~~~    ref_tn_side.side == Terminal.START
     #        |------>              arm1, flanking1 (into TN)
     #     <--|                     arm2, flanking2 (out of TN)
 
     #   chr      TN       chr
-    # ~~~~~~~|>>>>>>>>>|~~~~~~~    ref_tn_side.side == Side.END
+    # ~~~~~~~|>>>>>>>>>|~~~~~~~    ref_tn_side.side == Terminal.END
     #           <------|           arm1, flanking1 (into TN)
     #                  |-->        arm2, flanking2 (out of TN)
 
@@ -414,8 +414,8 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
         'single_locus_left_pair_id', 'single_locus_right_pair_id', 'raw_event', 'chosen_tn_id'
     ]
-    single_locus_tnjc2_left_matchings: List[tuple[SingleLocusLinkedTnJc2, Side]]
-    single_locus_tnjc2_right_matchings: List[tuple[SingleLocusLinkedTnJc2, Side]]
+    single_locus_tnjc2_left_matchings: List[tuple[SingleLocusLinkedTnJc2, Terminal]]
+    single_locus_tnjc2_right_matchings: List[tuple[SingleLocusLinkedTnJc2, Terminal]]
     base_raw_event: BaseRawEvent
 
     @property

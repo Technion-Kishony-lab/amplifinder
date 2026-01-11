@@ -12,7 +12,7 @@ Record (from amplifinder.data_types.records)
 ### Enum Types
 ```
 ReversibleIntEnum(int, Enum)
-├── Side
+├── Terminal
 │   ├── LEFT = -1
 │   └── RIGHT = 1
 └── Orientation
@@ -65,7 +65,7 @@ JunctionCoverage(NamedTuple)
 Record
 ├── RefTnSide
 │   ├── tn_id: TnId (int)
-│   ├── side: Side
+│   ├── side: Terminal
 │   └── offset: Optional[int]
 │
 └── SeqRefTnSide(RefTnSide)
@@ -254,7 +254,7 @@ Record
 #### JunctionCoverage
 - Not used as field in any Record type (standalone data structure)
 
-#### Side
+#### Terminal
 - Used in: `RefTnSide.side`, `RefTnJunction.ref_tn_side.side`
 
 #### Orientation

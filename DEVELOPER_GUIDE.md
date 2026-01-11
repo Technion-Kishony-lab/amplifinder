@@ -163,7 +163,7 @@ RefTn(Record)
 
 RefTnSide(Record)
 ├── tn_id: int
-├── side: Side
+├── side: Terminal
 └── offset: Optional[int]
 
 BlastHit(Record)
@@ -272,7 +272,7 @@ class JunctionCoverage(NamedTuple):
 ### Key Enums
 
 ```python
-class Side(int, Enum):
+class Terminal(int, Enum):
     """Side of a TN element (left or right)."""
     LEFT = -1
     RIGHT = 1

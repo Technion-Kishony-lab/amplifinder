@@ -11,20 +11,20 @@ from amplifinder.utils.file_utils import ensure_dir
 @pytest.fixture
 def sample_tnjc2(tiny_genome):
     """Create sample RawTnJc2 records."""
-    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, Side
+    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, Terminal
 
     tn_jc_S = TnJunction(
         num=1, scaf1="tiny", pos1=10, dir1=Orientation.FORWARD,
         scaf2="tiny", pos2=200, dir2=Orientation.FORWARD,
         flanking1=50, flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.START, offset=0)],
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.START, offset=0)],
         swapped=False,
     )
     tn_jc_E = TnJunction(
         num=2, scaf1="tiny", pos1=20, dir1=Orientation.REVERSE,
         scaf2="tiny", pos2=300, dir2=Orientation.REVERSE,
         flanking1=50, flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Side.END, offset=0)],
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.END, offset=0)],
         swapped=False,
     )
     scaffold = tiny_genome.get_scaffold("tiny")

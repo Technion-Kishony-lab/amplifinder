@@ -10,13 +10,13 @@ from amplifinder.data_types import (
 @pytest.fixture
 def sample_covered_tnjc2(tiny_genome):
     """Create sample CoveredTnJc2 records - one of each major type."""
-    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, Side
+    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, Terminal
 
     scaffold = tiny_genome.get_scaffold("tiny")
 
     # Helper to create TnJunction with less boilerplate
     def make_jc(num, pos1, pos2, side, tn_id=1):
-        is_left = (side == Side.START)
+        is_left = (side == Terminal.START)
         return TnJunction(
             num=num, scaf1="tiny", pos1=pos1, scaf2="tiny", pos2=pos2,
             dir1=Orientation.FORWARD if is_left else Orientation.REVERSE,
@@ -27,8 +27,8 @@ def sample_covered_tnjc2(tiny_genome):
         )
 
     # FLANKED: both junctions match other single-locus pairs
-    jc_flank_left = make_jc(1, 10, 200, Side.START)
-    jc_flank_right = make_jc(2, 20, 300, Side.END)
+    jc_flank_left = make_jc(1, 10, 200, Terminal.START)
+    jc_flank_right = make_jc(2, 20, 300, Terminal.END)
     flanked = CoveredTnJc2.from_other(
         RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=jc_flank_right, scaffold=scaffold),
         iso_scaf_avg=1.0, iso_amplicon_avg=2.0,
@@ -39,20 +39,20 @@ def sample_covered_tnjc2(tiny_genome):
     # pos2 difference must be < 30 for transposition classification
     single_locus_left = CoveredTnJc2.from_other(
         # 210-200=10 < 30
-        RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=make_jc(3, 30, 210, Side.END), scaffold=scaffold),
+        RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=make_jc(3, 30, 210, Terminal.END), scaffold=scaffold),
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
     single_locus_right = CoveredTnJc2.from_other(
         # 300-290=10 < 30
-        RawTnJc2(tnjc_left=make_jc(4, 40, 290, Side.START), tnjc_right=jc_flank_right, scaffold=scaffold),
+        RawTnJc2(tnjc_left=make_jc(4, 40, 290, Terminal.START), tnjc_right=jc_flank_right, scaffold=scaffold),
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
 
     # TRANSPOSITION: junctions < 30bp apart (500 to 515 = 15bp)
     transposition = CoveredTnJc2.from_other(
         RawTnJc2(
-            tnjc_left=make_jc(10, 100, 500, Side.START),
-            tnjc_right=make_jc(11, 110, 515, Side.END),
+            tnjc_left=make_jc(10, 100, 500, Terminal.START),
+            tnjc_right=make_jc(11, 110, 515, Terminal.END),
             scaffold=scaffold,
         ),
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
@@ -61,8 +61,8 @@ def sample_covered_tnjc2(tiny_genome):
     # UNFLANKED: unique junctions
     unflanked = CoveredTnJc2.from_other(
         RawTnJc2(
-            tnjc_left=make_jc(20, 150, 700, Side.START, tn_id=2),
-            tnjc_right=make_jc(21, 160, 900, Side.END, tn_id=2),
+            tnjc_left=make_jc(20, 150, 700, Terminal.START, tn_id=2),
+            tnjc_right=make_jc(21, 160, 900, Terminal.END, tn_id=2),
             scaffold=scaffold,
         ),
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
