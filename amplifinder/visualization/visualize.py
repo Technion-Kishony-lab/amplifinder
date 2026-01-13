@@ -1,7 +1,7 @@
 """Step 15: Visualize candidate amplicons with coverage plots."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 import numpy as np
 
 try:
@@ -13,7 +13,6 @@ except ImportError:
 from amplifinder.data_types import AnalyzedTnJc2, SingleLocusLinkedTnJc2, RecordTypedDf, Genome
 from amplifinder.config import Config
 from amplifinder.tools.breseq import load_breseq_coverage
-from amplifinder.steps.amplicon_coverage import get_scaffold_coverage
 from amplifinder.steps.io_naming import default_path
 from amplifinder.utils.file_utils import ensure_parent_dir
 from amplifinder.logger import info, warning
@@ -22,8 +21,8 @@ from amplifinder.data_types.genome import get_genome
 
 def plot_candidate_coverage(
     candidate: AnalyzedTnJc2,
-    iso_coverage: np.ndarray,
-    anc_coverage: Optional[np.ndarray],
+    iso_coverage: Dict[str, np.ndarray],
+    anc_coverage: Optional[Dict[str, np.ndarray]],
     genome: Genome,
     output_path: Optional[Path] = None,
     flank_fraction: float = 0.2,
@@ -33,8 +32,8 @@ def plot_candidate_coverage(
 
     Args:
         candidate: Analyzed candidate record
-        iso_coverage: Full isolate coverage array (concatenated by scaffold)
-        anc_coverage: Full ancestor coverage array (optional, concatenated by scaffold)
+        iso_coverage: Dictionary mapping scaffold names to isolate coverage arrays
+        anc_coverage: Dictionary mapping scaffold names to ancestor coverage arrays (optional)
         genome: Genome object for scaffold information
         output_path: Path to save plot (optional)
         flank_fraction: Fraction of amplicon length to show as flanking region
@@ -44,7 +43,7 @@ def plot_candidate_coverage(
         raise ImportError("matplotlib is required for visualization. Install with: pip install matplotlib")
 
     # Extract scaffold-specific coverage
-    iso_scaf_cov = get_scaffold_coverage(iso_coverage, candidate.scaf, genome)
+    iso_scaf_cov = iso_coverage[candidate.scaf]
     scaf_length = len(iso_scaf_cov)
 
     # Calculate plot range (scaffold-relative, 1-based)
@@ -60,7 +59,7 @@ def plot_candidate_coverage(
 
     anc_plot_cov = None
     if anc_coverage is not None:
-        anc_scaf_cov = get_scaffold_coverage(anc_coverage, candidate.scaf, genome)
+        anc_scaf_cov = anc_coverage[candidate.scaf]
         anc_plot_cov = scaf_obj.slice(plot_start, plot_end, seq=anc_scaf_cov)
 
     # Create plot
@@ -150,13 +149,13 @@ def visualize_candidates(
 
     # Load coverage data
     iso_breseq_path = config.iso_breseq_path or (run_dir / "breseq")
-    iso_coverage = load_breseq_coverage(iso_breseq_path, config.ref_name)
+    iso_coverage = load_breseq_coverage(iso_breseq_path)
 
     anc_coverage = None
     if config.has_ancestor:
         anc_breseq_path = config.anc_breseq_path or (run_dir / "breseq")
         try:
-            anc_coverage = load_breseq_coverage(anc_breseq_path, config.ref_name)
+            anc_coverage = load_breseq_coverage(anc_breseq_path)
         except FileNotFoundError:
             warning(f"Ancestor coverage not found at {anc_breseq_path}")
 
@@ -196,8 +195,8 @@ def visualize_candidates(
 
 def _interactive_visualization(
     analyzed_tnjc2s: RecordTypedDf[AnalyzedTnJc2],
-    iso_coverage: np.ndarray,
-    anc_coverage: Optional[np.ndarray],
+    iso_coverage: Dict[str, np.ndarray],
+    anc_coverage: Optional[Dict[str, np.ndarray]],
     genome: Genome,
     flank_fraction: float,
 ) -> None:

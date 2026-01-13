@@ -318,42 +318,31 @@ def _convert_value(value: str, dtype: type, none_values: Tuple[str, ...] = ("NA"
     return int(float(value)) if dtype is int else dtype(value)
 
 
-def load_breseq_coverage(breseq_path: Path, genome: "Genome") -> np.ndarray:
+def load_breseq_coverage(breseq_path: Path) -> Dict[str, np.ndarray]:
     """Load coverage from breseq output for entire genome.
     
     Args:
         breseq_path: Path to breseq output directory
-        genome: Genome object with scaffold information
         
     Returns:
-        1D array of coverage values concatenated by scaffold order
-        (matches order in genome.scaffolds)
+        Dictionary mapping scaffold names to coverage arrays
     """
-    # Load coverage for each scaffold in order and concatenate
-    cov_arrays = [
-        _load_scaffold_coverage(breseq_path, scaffold_name)
-        for scaffold_name in genome.scaffolds.keys()
-    ]
+    cov_dir = Path(breseq_path) / "08_mutation_identification"
     
-    return np.concatenate(cov_arrays)
-
-
-def _load_scaffold_coverage(breseq_path: Path, scaffold_name: str) -> np.ndarray:
-    """Load coverage for a single scaffold (internal).
-
-    Args:
-        breseq_path: Path to breseq output directory
-        scaffold_name: Scaffold name (used in coverage file name)
-
-    Returns:
-        1D array of coverage values (top + bottom strand combined)
-    """
-    cov_file = Path(breseq_path) / "08_mutation_identification" / f"{scaffold_name}.coverage.tab"
-
-    if not cov_file.exists():
-        raise FileNotFoundError(f"Coverage file not found: {cov_file}")
-
-    return _load_cov_file(cov_file)
+    if not cov_dir.exists():
+        raise FileNotFoundError(f"Coverage directory not found: {cov_dir}")
+    
+    # Load all *.coverage.tab files
+    scafs_to_covs = {}
+    for cov_file in cov_dir.glob("*.coverage.tab"):
+        # Extract scaffold name from filename (stem is "scaffold.coverage", remove ".coverage")
+        scaffold_name = cov_file.stem.removesuffix(".coverage")
+        scafs_to_covs[scaffold_name] = _load_cov_file(cov_file)
+    
+    if not scafs_to_covs:
+        raise FileNotFoundError(f"No coverage files found in {cov_dir}")
+    
+    return scafs_to_covs
 
 
 def _load_cov_file(cov_file: Path) -> np.ndarray:

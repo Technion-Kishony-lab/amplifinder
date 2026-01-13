@@ -225,7 +225,6 @@ class Pipeline:
 
         return CalcTnJc2AmpliconCoverageStep(
             raw_tnjc2s=raw_tnjc2s,
-            genome=genome,
             output_dir=iso_output,
             ref_name=cfg.ref_name,
             iso_breseq_path=iso_breseq_path,

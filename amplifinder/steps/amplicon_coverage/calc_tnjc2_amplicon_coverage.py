@@ -5,12 +5,12 @@ from typing import Optional
 
 import numpy as np
 
-from amplifinder.data_types import RecordTypedDf, RawTnJc2, CoveredTnJc2, Genome, AverageMethod
+from amplifinder.data_types import RecordTypedDf, RawTnJc2, CoveredTnJc2, AverageMethod
 
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.tools.breseq import load_breseq_coverage
 
-from .coverage import get_scaffold_coverage, calc_average, calc_scaffold_coverages_and_averages
+from .coverage import calc_average, calc_scaffold_coverages_and_averages
 from .statistics import calc_distribution_mode
 
 
@@ -25,7 +25,6 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
     def __init__(
         self,
         raw_tnjc2s: RecordTypedDf[RawTnJc2],
-        genome: Genome,
         output_dir: Path,
         ref_name: str,
         iso_breseq_path: Path,
@@ -41,7 +40,6 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         force: Optional[bool] = None,
     ):
         self.raw_tnjc2s = raw_tnjc2s
-        self.genome = genome
         self.ref_name = ref_name
         self.iso_breseq_path = Path(iso_breseq_path)
         self.iso_name = iso_name
@@ -74,7 +72,6 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
     def _get_profiler_functions(self) -> list:
         """Functions to profile when profiling is enabled."""
         return [
-            get_scaffold_coverage,
             calc_average,
             calc_scaffold_coverages_and_averages,
             calc_distribution_mode,
@@ -83,16 +80,16 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
 
     def _load_coverage_and_calc_scaffold_stats(
         self, breseq_path: Path, label: str, unique_scaffolds: list[str]
-    ) -> tuple[np.ndarray, dict[str, np.ndarray], dict[str, float]]:
+    ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, float]]:
         """Load coverage and calculate scaffold statistics."""
         self.print(f"{label} breseq: {breseq_path}")
         with self.print_timer("loading coverage ... ", end_msg="\n", seperate_prints=True):
-            cov = load_breseq_coverage(breseq_path, self.genome)
+            scafs_to_covs = load_breseq_coverage(breseq_path)
         with self.print_timer(f"calculating scaffold stats ({len(unique_scaffolds)} scaffolds) ... ",
                               end_msg="\n", seperate_prints=True):
             scaf_covs, scaf_avgs = calc_scaffold_coverages_and_averages(
-                cov, unique_scaffolds, self.genome, self.average_method)
-        return cov, scaf_covs, scaf_avgs
+                scafs_to_covs, unique_scaffolds, self.average_method)
+        return scafs_to_covs, scaf_covs, scaf_avgs
 
     def _calculate_output(self) -> RecordTypedDf[CoveredTnJc2]:
         """Calculate coverage for each TnJc2 candidate."""
@@ -101,13 +98,13 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         unique_scaffolds = list(set(raw_tnjc2.scaf for raw_tnjc2 in self.raw_tnjc2s))
 
         # Load isolate coverage
-        iso_cov, iso_scaf_covs, iso_scaf_avgs = (
+        iso_scafs_to_covs, iso_scaf_covs, iso_scaf_avgs = (
             self._load_coverage_and_calc_scaffold_stats(
                 self.iso_breseq_path, "iso", unique_scaffolds))
 
         # Load ancestor coverage if provided
         if self.has_ancestor:
-            anc_cov, anc_scaf_covs, anc_scaf_avgs = (
+            anc_scafs_to_covs, anc_scaf_covs, anc_scaf_avgs = (
                 self._load_coverage_and_calc_scaffold_stats(
                     self.anc_breseq_path, "anc", unique_scaffolds))
         else:
