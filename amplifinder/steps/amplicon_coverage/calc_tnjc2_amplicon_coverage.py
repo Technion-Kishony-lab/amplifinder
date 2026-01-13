@@ -87,7 +87,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         """Load coverage and calculate scaffold statistics."""
         self.print(f"{label} breseq: {breseq_path}")
         with self.print_timer("loading coverage ... ", end_msg="\n", seperate_prints=True):
-            cov = load_breseq_coverage(breseq_path, self.genome.name)
+            cov = load_breseq_coverage(breseq_path, self.genome)
         with self.print_timer(f"calculating scaffold stats ({len(unique_scaffolds)} scaffolds) ... ",
                               end_msg="\n", seperate_prints=True):
             scaf_covs, scaf_avgs = calc_scaffold_coverages_and_averages(
