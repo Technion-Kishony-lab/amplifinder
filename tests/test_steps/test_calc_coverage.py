@@ -61,7 +61,6 @@ def test_calc_coverage_step(tiny_genome, sample_tnjc2, mock_breseq_output, tmp_p
     """Should calculate coverage for candidates."""
     step = CalcTnJc2AmpliconCoverageStep(
         raw_tnjc2s=sample_tnjc2,
-        genome=tiny_genome,
         iso_breseq_path=mock_breseq_output,
         output_dir=tmp_path,
         ref_name="tiny",
@@ -112,7 +111,6 @@ def test_calc_coverage_with_ancestor(tiny_genome, sample_tnjc2, mock_breseq_outp
 
     step = CalcTnJc2AmpliconCoverageStep(
         raw_tnjc2s=sample_tnjc2,
-        genome=tiny_genome,
         iso_breseq_path=mock_breseq_output,
         anc_breseq_path=tmp_path / "anc_breseq",
         output_dir=tmp_path,
@@ -144,7 +142,6 @@ def test_calculates_coverage_for_all_lengths(tiny_genome, sample_tnjc2, mock_bre
     """Should calculate coverage for all candidates regardless of length."""
     step = CalcTnJc2AmpliconCoverageStep(
         raw_tnjc2s=sample_tnjc2,
-        genome=tiny_genome,
         iso_breseq_path=mock_breseq_output,
         output_dir=tmp_path,
         ref_name="tiny",
@@ -172,7 +169,6 @@ def test_skips_coverage_for_too_long_amplicons(tiny_genome, sample_tnjc2, mock_b
     # Set max_amplicon_length to 50, which is less than the sample amplicon length (100)
     step = CalcTnJc2AmpliconCoverageStep(
         raw_tnjc2s=sample_tnjc2,
-        genome=tiny_genome,
         iso_breseq_path=mock_breseq_output,
         output_dir=tmp_path,
         ref_name="tiny",

@@ -6,10 +6,13 @@ import numpy as np
 
 def test_plot_candidate_coverage(analyzed_tnjc2_record, tmp_path, tiny_genome):
     """Should create coverage plot."""
-    # Create dummy coverage arrays
-    genome_length = len(tiny_genome)
-    iso_coverage = np.random.poisson(10, genome_length).astype(float)
-    anc_coverage = np.random.poisson(10, genome_length).astype(float)
+    # Create dummy coverage dict (scaffold name -> coverage array)
+    iso_coverage = {}
+    anc_coverage = {}
+    for scaffold_name, scaffold in tiny_genome.scaffolds.items():
+        scaffold_length = len(scaffold)
+        iso_coverage[scaffold_name] = np.random.poisson(10, scaffold_length).astype(float)
+        anc_coverage[scaffold_name] = np.random.poisson(10, scaffold_length).astype(float)
 
     output_path = tmp_path / "coverage_plot.png"
 
