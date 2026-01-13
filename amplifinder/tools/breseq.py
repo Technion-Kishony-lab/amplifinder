@@ -318,21 +318,46 @@ def _convert_value(value: str, dtype: type, none_values: Tuple[str, ...] = ("NA"
     return int(float(value)) if dtype is int else dtype(value)
 
 
-def load_breseq_coverage(breseq_path: Path, ref_name: str) -> np.ndarray:
-    """Load coverage from breseq output.
+def load_breseq_coverage(breseq_path: Path, genome: "Genome") -> np.ndarray:
+    """Load coverage from breseq output for entire genome.
+    
+    Args:
+        breseq_path: Path to breseq output directory
+        genome: Genome object with scaffold information
+        
+    Returns:
+        1D array of coverage values concatenated by scaffold order
+        (matches order in genome.scaffolds)
+    """
+    # Load coverage for each scaffold in order and concatenate
+    cov_arrays = [
+        _load_scaffold_coverage(breseq_path, scaffold_name)
+        for scaffold_name in genome.scaffolds.keys()
+    ]
+    
+    return np.concatenate(cov_arrays)
+
+
+def _load_scaffold_coverage(breseq_path: Path, scaffold_name: str) -> np.ndarray:
+    """Load coverage for a single scaffold (internal).
 
     Args:
         breseq_path: Path to breseq output directory
-        ref_name: Reference genome name (used in coverage file name)
+        scaffold_name: Scaffold name (used in coverage file name)
 
     Returns:
         1D array of coverage values (top + bottom strand combined)
     """
-    cov_file = Path(breseq_path) / "08_mutation_identification" / f"{ref_name}.coverage.tab"
+    cov_file = Path(breseq_path) / "08_mutation_identification" / f"{scaffold_name}.coverage.tab"
 
     if not cov_file.exists():
         raise FileNotFoundError(f"Coverage file not found: {cov_file}")
 
+    return _load_cov_file(cov_file)
+
+
+def _load_cov_file(cov_file: Path) -> np.ndarray:
+    """Load coverage from a single .coverage.tab file."""
     fast = _load_cov_pyarrow(cov_file)
     if fast is not None:
         return fast
