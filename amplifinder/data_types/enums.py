@@ -27,7 +27,7 @@ class Side(ReversibleIntEnum):
     LEFT = -1
     MIDDLE = 0
     RIGHT = 1
- 
+
 
 class Orientation(ReversibleIntEnum):
     """Orientation relative to reference (forward, reverse, or both/mixed)."""
@@ -156,11 +156,11 @@ class JunctionReadCounts:
     """Read counts at a junction.
     Order: LEFT, LEFT_MARGINAL, MIDDLE, RIGHT_MARGINAL, RIGHT.
     """
-    left: int = 0           # reads on left side of junction
-    left_marginal: int = 0  # reads partially overlapping from left
-    spanning: int = 0       # reads spanning the junction (MIDDLE)
-    right_marginal: int = 0 # reads partially overlapping from right
-    right: int = 0          # reads on right side of junction
+    left: int = 0            # reads on left side of junction
+    left_marginal: int = 0   # reads partially overlapping from left
+    spanning: int = 0        # reads spanning the junction (MIDDLE)
+    right_marginal: int = 0  # reads partially overlapping from right
+    right: int = 0           # reads on right side of junction
 
     _FIELD_MAP: ClassVar[dict[ReadType, str]] = {
         ReadType.LEFT: "left",
@@ -178,7 +178,7 @@ class JunctionReadCounts:
     def __getitem__(self, read_type: ReadType) -> int:
         """Get count for a read type."""
         return getattr(self, self.get_field(read_type))
-    
+
     def __setitem__(self, read_type: ReadType, value: int) -> None:
         """Set count for a read type."""
         setattr(self, self.get_field(read_type), value)
@@ -241,7 +241,9 @@ class JunctionReadCounts:
     @classmethod
     def from_scalar(cls, scalar: int | float) -> JunctionReadCounts:
         """Create a JunctionReadCounts object from a scalar."""
-        return JunctionReadCounts(left=scalar, left_marginal=scalar, spanning=scalar, right_marginal=scalar, right=scalar)
+        return JunctionReadCounts(
+            left=scalar, left_marginal=scalar, spanning=scalar, right_marginal=scalar, right=scalar
+        )
 
     def _apply_op(self, other: JunctionReadCounts | int | float, op) -> JunctionReadCounts:
         """Apply a binary operation to all fields."""

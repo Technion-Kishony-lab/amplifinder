@@ -21,8 +21,10 @@ legend:
 from pathlib import Path
 from typing import Optional, NamedTuple
 
-from amplifinder.data_types import BaseRawEvent, RecordTypedDf, SingleLocusLinkedTnJc2, SynJctsTnJc2, Genome, JunctionType, RefTn, \
-    Junction, Terminal, JcArm, Orientation
+from amplifinder.data_types import (
+    BaseRawEvent, RecordTypedDf, SingleLocusLinkedTnJc2, SynJctsTnJc2, Genome,
+    JunctionType, RefTn, Junction, Terminal, JcArm, Orientation
+)
 
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.utils.file_utils import ensure_dir, remove_file_or_dir
@@ -57,7 +59,9 @@ class RudimentaryJunctionValues(NamedTuple):
         if self.chr_right_pos is None:
             chr_right_arm = amp_right_arm.mirror()
         else:
-            chr_right_arm = JcArm(scaf=self.amp_scaf, start=self.chr_right_pos, dir=Orientation.FORWARD, flank=self.flank)
+            chr_right_arm = JcArm(
+                scaf=self.amp_scaf, start=self.chr_right_pos, dir=Orientation.FORWARD, flank=self.flank
+            )
 
         # TN inward arms
         tn_orientation = Orientation.FORWARD if self.tn_start_pos < self.tn_end_pos else Orientation.REVERSE
@@ -119,7 +123,7 @@ def create_synthetic_junctions_and_name(
 
     # Handle tnjc2 flanked by ancestral TN
     paired_left = tnjc2.single_locus_tnjc2_matching_left
-    is_left_ref_tn = paired_left is not None and paired_left.base_raw_event == BaseRawEvent.REFERENCE    
+    is_left_ref_tn = paired_left is not None and paired_left.base_raw_event == BaseRawEvent.REFERENCE
     if is_left_ref_tn:
         chr_left_arm = paired_left.get_outward_arms(flank=jc_width)[0]
 

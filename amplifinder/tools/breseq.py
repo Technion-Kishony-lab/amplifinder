@@ -320,28 +320,28 @@ def _convert_value(value: str, dtype: type, none_values: Tuple[str, ...] = ("NA"
 
 def load_breseq_coverage(breseq_path: Path) -> Dict[str, np.ndarray]:
     """Load coverage from breseq output for entire genome.
-    
+
     Args:
         breseq_path: Path to breseq output directory
-        
+
     Returns:
         Dictionary mapping scaffold names to coverage arrays
     """
     cov_dir = Path(breseq_path) / "08_mutation_identification"
-    
+
     if not cov_dir.exists():
         raise FileNotFoundError(f"Coverage directory not found: {cov_dir}")
-    
+
     # Load all *.coverage.tab files
     scafs_to_covs = {}
     for cov_file in cov_dir.glob("*.coverage.tab"):
         # Extract scaffold name from filename (stem is "scaffold.coverage", remove ".coverage")
         scaffold_name = cov_file.stem.removesuffix(".coverage")
         scafs_to_covs[scaffold_name] = _load_cov_file(cov_file)
-    
+
     if not scafs_to_covs:
         raise FileNotFoundError(f"No coverage files found in {cov_dir}")
-    
+
     return scafs_to_covs
 
 

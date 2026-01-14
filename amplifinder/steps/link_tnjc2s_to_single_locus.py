@@ -42,7 +42,7 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
         """Classify junction pairs."""
         tnjc2s = self.covered_tnjc2s.to_records()
         base_raw_events = [self._compute_base_raw_event(tnjc2) for tnjc2 in tnjc2s]
-        
+
         # First pass: create all SingleLocusLinkedTnJc2 objects with empty matchings
         linked_tnjc2s: list[SingleLocusLinkedTnJc2] = []
         for i, tncj2_i in enumerate(tnjc2s):
@@ -52,7 +52,7 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
                 single_locus_tnjc2_right_matchings=[],
                 base_raw_event=base_raw_events[i],
             ))
-        
+
         # Second pass: populate the matchings with SingleLocusLinkedTnJc2 objects
         for i, linked_i in enumerate(linked_tnjc2s):
             left_matches = self._find_all_single_locus_matching_tnjc2s(
@@ -61,14 +61,14 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
                 linked_i.tnjc_right, linked_tnjc2s, base_raw_events, exclude_idx=i)
             linked_i.single_locus_tnjc2_left_matchings = left_matches
             linked_i.single_locus_tnjc2_right_matchings = right_matches
-        
+
         return RecordTypedDf.from_records(linked_tnjc2s, SingleLocusLinkedTnJc2)
 
     def _compute_base_raw_event(self, tnjc2: CoveredTnJc2) -> BaseRawEvent:
         if tnjc2.tnjc_left.is_ref_tn_junction() and \
                 tnjc2.tnjc_right.is_ref_tn_junction() and \
                 tnjc2.tnjc_left.ref_tn_side.tn_id == tnjc2.tnjc_right.ref_tn_side.tn_id and \
-                    not tnjc2.span_origin:
+                not tnjc2.span_origin:
             return BaseRawEvent.REFERENCE
         elif abs(tnjc2.left - tnjc2.right) < self.transposition_threshold:
             return BaseRawEvent.TRANSPOSITION

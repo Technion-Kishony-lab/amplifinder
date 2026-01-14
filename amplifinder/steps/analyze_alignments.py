@@ -14,10 +14,10 @@ from amplifinder.visualization.plot_coverage import plot_amplicon_coverage
 from amplifinder.visualization.plot_alignments import plot_junctions_coverage
 
 
-def is_covered(cov: JunctionReadCounts, min_jct_cov: int, 
+def is_covered(cov: JunctionReadCounts, min_jct_cov: int,
                jc_len: int, read_len: int, min_overlap_len: int, num_std: int = 3) -> Optional[bool]:
     """Determine if junction is covered based on spanning read statistics.
-    
+
     Args:
         cov: Junction read counts (left, right, spanning)
         min_jct_cov: Minimum expected spanning reads threshold
@@ -25,28 +25,28 @@ def is_covered(cov: JunctionReadCounts, min_jct_cov: int,
         read_len: Read length
         min_overlap_len: Minimum overlap length for spanning reads
         num_std: Number of standard deviations for coverage threshold (default 3)
-    
+
     Returns:
         True if junction is covered, False if not covered, None if ambiguous
     """
     arm_len = jc_len // 2
 
     # num options of read-alignments for the left or right side
-    num_options_side_aligned_reads = arm_len - read_len  
+    num_options_side_aligned_reads = arm_len - read_len
 
     # num options of read-alignments spanning the junction
     num_options_spanning_reads = read_len - 2 * min_overlap_len
 
     ratio_spanning_reads = num_options_spanning_reads / num_options_side_aligned_reads
 
-    # if the junction connects a single-copy region with a multi-copy region, 
+    # if the junction connects a single-copy region with a multi-copy region,
     # the junction, if exists, should be covered as expected based on the low-copy region
     min_num_reads_left_right = min(cov.left, cov.right)
 
     # expected number of spanning reads, and std err
     expected_num_spanning = min_num_reads_left_right * ratio_spanning_reads
     err_expected_num_spanning = np.sqrt(min_num_reads_left_right) * ratio_spanning_reads
-    
+
     num_spanning_reads = cov.spanning
     err_num_spanning_reads = np.sqrt(num_spanning_reads)
 
@@ -122,12 +122,12 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         read_len: int,
     ) -> dict[JunctionType, Optional[bool]]:
         """Calculate junction coverage calls for all junction types.
-        
+
         Args:
             jc_cov: Dict mapping JunctionType to JunctionReadCounts
             jct_lengths: Dict mapping JunctionType to junction length
             read_len: Read length
-        
+
         Returns:
             Dict mapping JunctionType to coverage call (True/False/None)
         """
@@ -144,7 +144,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
     def _load_coverage_for_plotting(self) -> tuple[Optional[Dict[str, np.ndarray]], Optional[Dict[str, np.ndarray]]]:
         """Load genome coverage data for plotting (if enabled).
-        
+
         Returns:
             Tuple of (iso_coverage, anc_coverage) dicts, or (None, None) if plotting disabled
         """
@@ -152,13 +152,13 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         anc_scafs_to_covs = None
         if self.has_ancestor and self.anc_breseq_path:
             anc_scafs_to_covs = load_breseq_coverage(self.anc_breseq_path)
-        
+
         return iso_scafs_to_covs, anc_scafs_to_covs
 
 
     def _calculate_output(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Analyze alignments for each candidate.
-        
+
         Returns:
             RecordTypedDf containing AnalyzedTnJc2 records with coverage data and calls
         """
@@ -166,11 +166,13 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         if self.create_plots:
             iso_scafs_to_covs, anc_scafs_to_covs = self._load_coverage_for_plotting()
             print(f'Creating coverage plots (n={len(self.synjct_tnjc2s)}) ', end='', flush=True)
-        
+
         analyzed_records = []
         for synjct_tnjc2 in self.synjct_tnjc2s:
             # Get isolate junction coverage (required)
-            jc_covs, alignment_data, jct_lengths = self._get_cov(synjct_tnjc2, self._iso_output_dir, self.iso_read_length, is_ancestor=False)
+            jc_covs, alignment_data, jct_lengths = self._get_cov(
+                synjct_tnjc2, self._iso_output_dir, self.iso_read_length, is_ancestor=False
+            )
             jc_calls = self._calculate_jc_calls(jc_covs, jct_lengths, self.iso_read_length)
 
             # Get ancestor junction coverage if available (optional)
@@ -178,7 +180,9 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             alignment_data_anc = None
             jc_calls_anc = None
             if self.has_ancestor:
-                jc_covs_anc, alignment_data_anc, jct_lengths_anc = self._get_cov(synjct_tnjc2, self._anc_output_dir, self.anc_read_length, is_ancestor=True)
+                jc_covs_anc, alignment_data_anc, jct_lengths_anc = self._get_cov(
+                    synjct_tnjc2, self._anc_output_dir, self.anc_read_length, is_ancestor=True
+                )
                 jc_calls_anc = self._calculate_jc_calls(jc_covs_anc, jct_lengths_anc, self.anc_read_length)
 
             analyzed_tnjc2 = AnalyzedTnJc2.from_other(
@@ -189,7 +193,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 jc_calls_anc=jc_calls_anc,
             )
             analyzed_records.append(analyzed_tnjc2)
-            
+
             if self.create_plots:
                 plot_junctions_coverage(
                     jc_lengths=jct_lengths,
@@ -208,7 +212,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                     output_path=analyzed_tnjc2.analysis_dir_path(self._iso_output_dir) / "amplicon_coverage.png",
                 )
                 print('.', end='', flush=True)
-        
+
         if self.create_plots:
             print('\n', flush=True)
 
@@ -221,7 +225,11 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         avg_read_length: int,
         is_ancestor: bool,
         read_length_tolerance: float = 0.1,
-    ) -> tuple[dict[JunctionType, JunctionReadCounts], dict[JunctionType, list[tuple[int, int, str]]], dict[JunctionType, int]]:
+    ) -> tuple[
+        dict[JunctionType, JunctionReadCounts],
+        dict[JunctionType, list[tuple[int, int, str]]],
+        dict[JunctionType, int]
+    ]:
         """Parse BAM and get coverage for all 7 junction types.
 
         Args:
@@ -250,7 +258,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         jct_lengths = {}
 
         with pysam.AlignmentFile(str(bam_path), "rb") as bam:
-            
+
             # Store lengths by JunctionType
             jct_lengths_raw = dict(zip(bam.references, bam.lengths))
             jct_lengths = {JunctionType[jct_name]: length for jct_name, length in jct_lengths_raw.items()}
@@ -269,7 +277,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 start, end = read.reference_start, read.reference_end
                 assert start <= end
 
-                read_type = counts[jct_type].add_read(start, end, arm_len=jct_lengths[jct_type] // 2, 
+                read_type = counts[jct_type].add_read(start, end, arm_len=jct_lengths[jct_type] // 2,
                                                       min_overlap_len=self.min_overlap_len)
 
                 # Store alignment data (for plotting, etc)

@@ -328,7 +328,7 @@ class Pipeline:
         """Step 12: Analyze read alignments."""
         cfg = self.config
         iso_breseq_path, anc_breseq_path = cfg.get_breseq_paths()
-        
+
         return AnalyzeTnJc2AlignmentsStep(
             synjct_tnjc2s=synjct_tnjc2s,
             output_dir=iso_output,

@@ -13,7 +13,7 @@ def test_step_initialization(filtered_tnjc2_record, tiny_genome, tmp_path):
     bam_file = tmp_path / "junctions" / filtered_tnjc2_record.analysis_dir / "sorted.bam"
     ensure_parent_dir(bam_file)
     bam_file.write_text("dummy")
-    
+
     # Create dummy breseq path
     iso_breseq_path = tmp_path / "breseq"
     iso_breseq_path.mkdir(exist_ok=True)
