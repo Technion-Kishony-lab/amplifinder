@@ -198,6 +198,8 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                     jc_calls=jc_calls, jc_calls_anc=jc_calls_anc,
                     title=f'Jcts coverage - {synjct_tnjc2.analysis_dir_name(is_ancestor=False)}',
                     output_path=synjct_tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png",
+                    min_overlap_len=self.min_overlap_len,
+                    read_len=self.iso_read_length,
                 )
                 plot_amplicon_coverage(
                     tnjc2=analyzed_tnjc2,
@@ -267,11 +269,10 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 start, end = read.reference_start, read.reference_end
                 assert start <= end
 
-                read_type = counts[jct_type].add_read(start, end, junction_point=jct_lengths[jct_type] // 2, 
+                read_type = counts[jct_type].add_read(start, end, arm_len=jct_lengths[jct_type] // 2, 
                                                       min_overlap_len=self.min_overlap_len)
 
                 # Store alignment data (for plotting, etc)
                 alignment_data[jct_type].append((start, end, read_type))
 
         return counts, alignment_data, jct_lengths
-
