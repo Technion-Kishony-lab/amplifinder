@@ -1,48 +1,87 @@
 """Plotting utilities for read alignment visualization."""
 import numpy as np
 
-import matplotlib.pyplot as plt
+from amplifinder.optional_deps import plt
 import matplotlib.gridspec as gridspec
 from matplotlib.lines import Line2D
 
 from pathlib import Path
 from typing import Dict, List, Tuple
 
-from amplifinder.data_types import JunctionType
-from amplifinder.data_types.enums import Element
+from amplifinder.data_types import JunctionReadCounts, JunctionType
+from amplifinder.data_types.enums import Element, Side, ReadType, JcCall
 from amplifinder.visualization.genetic_elements import draw_genetic_element, draw_amplicon_structure
 
 
 READ_TYPES_TO_COLORS = {
-    'spanning': 'green',
-    'left': 'red',
-    'right': 'red',
-    'undetermined': 'lightgrey'
+    Side.LEFT: 'red',
+    Side.MIDDLE: 'green',
+    Side.RIGHT: 'red',
+    None: 'lightgrey'
 }
 
 
-def _get_jc_call_color(jc_call: bool | None) -> str:
-    """Get color for junction coverage call.
+JC_CALLS_TO_COLORS = {
+    True: 'green',
+    False: 'red',
+    None: 'grey'
+}
+
+
+def format_read_info(jc_cov: JunctionReadCounts, scales: JunctionReadCounts) -> str:
+    """Format downsampling info text."""
+    lines = []
+    lines.append(f"L={jc_cov.left}, 1:{scales.left}")
+    lines.append(f"R={jc_cov.right}, 1:{scales.right}")
+    lines.append(f"S={jc_cov.spanning}, 1:{scales.spanning}")
+    lines.append(f"U={jc_cov.undetermined}, 1:{scales.undetermined}")
+    return "\n".join(lines)
+
+
+def _down_sample_alignments(alignments: List[Tuple[int, int, ReadType]], jc_cov: JunctionReadCounts, max_reads_per_plot: int) -> tuple[List[Tuple[int, int, ReadType]], JunctionReadCounts]:
+    """Downsample alignments to a maximum number of reads per plot.
     
-    Args:
-        jc_call: Coverage call value (True/False/None)
-        
+    Left and right alignments are scaled independently to max_reads_per_plot.
+    Spanning and undetermined alignments are scaled by the minimum of left/right scaling factors.
+    
     Returns:
-        Color string: 'green' for True, 'red' for False, 'grey' for None
+        Tuple of (downsampled_alignments, scales)
+        where scales is a JunctionReadCounts with left/right/spanning/undetermined as scaling factors
     """
-    if jc_call is True:
-        return 'green'
-    elif jc_call is False:
-        return 'red'
-    else:  # None
-        return 'grey'
+    # Calculate scaling factors
+    max_reads_per_side = max_reads_per_plot // 2
+    if jc_cov.left > jc_cov.right:
+        left_scale = max(1, jc_cov.left // max_reads_per_side)
+        right_scale = max(1, (jc_cov.right + jc_cov.spanning + jc_cov.undetermined) // max_reads_per_side)
+        spanning_scale = right_scale
+    else:
+        right_scale = max(1, jc_cov.right // max_reads_per_side)
+        left_scale = max(1, (jc_cov.left + jc_cov.spanning + jc_cov.undetermined) // max_reads_per_side)
+        spanning_scale = left_scale
+    
+    scales = JunctionReadCounts(left=left_scale, right=right_scale, spanning=spanning_scale, undetermined=spanning_scale)
+    
+    counters = JunctionReadCounts()
+    
+    downsampled = []
+    for start, end, read_type in alignments:
+        count = counters.counts[read_type]
+        scale = scales.counts[read_type]
+        if count % scale == 0:
+            downsampled.append((start, end, read_type))
+        counters.increment(read_type)
+    
+    return downsampled, scales
 
 
 def plot_junctions_coverage(
-    alignment_data: Dict[JunctionType, List[Tuple[int, int, str]]],
-    alignment_data_anc: Dict[JunctionType, List[Tuple[int, int, str]]] | None = None,
-    jc_calls: Dict[JunctionType, bool | None] | None = None,
-    jc_calls_anc: Dict[JunctionType, bool | None] | None = None,
+    jc_lengths: Dict[JunctionType, int],
+    alignment_data: Dict[JunctionType, List[Tuple[int, int, ReadType]]],
+    alignment_data_anc: Dict[JunctionType, List[Tuple[int, int, ReadType]]] | None = None,
+    jc_covs: Dict[JunctionType, JunctionReadCounts] | None = None,
+    jc_covs_anc: Dict[JunctionType, JunctionReadCounts] | None = None,
+    jc_calls: Dict[JunctionType, JcCall] | None = None,
+    jc_calls_anc: Dict[JunctionType, JcCall] | None = None,
     title: str | None = None,
     output_path: Path | str = 'junctions_coverage.png',
     max_reads_per_plot: int = 200,
@@ -50,8 +89,8 @@ def plot_junctions_coverage(
     """Plot junctions coverage by reads as horizontal lines (coverage plot).
     
     Args:
-        alignment_data: Dict mapping JunctionType to list of (start, end, read_type) tuples for isolate
-        jct_lengths: Dict mapping JunctionType to junction length
+        alignment_data: Dict mapping JunctionType to list of (start, end, ReadType) tuples for isolate
+        jc_lengths: Dict mapping JunctionType to junction length
         title: Plot title
         output_path: Path to save the PNG file
         max_reads_per_plot: Maximum reads to show per plot (downsampling)
@@ -66,38 +105,14 @@ def plot_junctions_coverage(
 
     h_pixels = 18
 
-    # Find max number of reads across all junction types for isolate and ancestor
-    max_reads_iso = max(len(alignments) for alignments in alignment_data.values())
-    if max_reads_iso == 0:
-        max_reads_iso = 1
-    
-    max_reads_anc = 0
-    if alignment_data_anc:
-        max_reads_anc = max(len(alignments) for alignments in alignment_data_anc.values())
-        if max_reads_anc == 0:
-            max_reads_anc = 1
-    
-    # Determine separate downsampling factors for isolate and ancestor
-    downsample_factor_iso = max(1, max_reads_iso // max_reads_per_plot)
-    downsample_factor_anc = max(1, max_reads_anc // max_reads_per_plot) if max_reads_anc > 0 else 1
-    max_reads_iso_after_downsample = max_reads_iso // downsample_factor_iso
-    max_reads_anc_after_downsample = max_reads_anc // downsample_factor_anc if max_reads_anc > 0 else 0
-    
     # Create figure with 7 subplots (each with genetic element axes above)
     fig = plt.figure(figsize=(15, 11))
-    
-    # Add narrow amplicon structure axes at top using explicit positioning
-    # [left, bottom, width, height] in figure coordinates
-    # ax_amplicon = fig.add_axes([0.08, 0.85, 0.84, 0.04])
-    # ax_amplicon.axis('off')
-    # draw_amplicon_structure(ax_amplicon, h_pixels=20, y=0.1)
     
     # Junction plots grid - adjust to leave room for top axes
     gs = gridspec.GridSpec(2, 4, figure=fig, hspace=0.1, wspace=0.3,
                            top=0.95, bottom=0.05, left=0.08, right=0.92)
     
-    junction_types = JunctionType.sorted()
-    for jt in junction_types:
+    for jt in JunctionType:
         if jt.order == 0:
             row, col = 1, 0
         else:
@@ -118,14 +133,15 @@ def plot_junctions_coverage(
         ax = fig.add_subplot(inner_gs[1])
         
         alignments = alignment_data[jt]
-        jct_length = jct_lengths[jt]
-        midpoint = jct_length // 2
+        jc_length = jc_lengths[jt]  # TODO: what happen when anc/iso have different lengths?
+        jc_cov = jc_covs[jt]
+        midpoint = jc_length // 2
         
         # Sort alignments by start position
         sorted_alignments = sorted(alignments, key=lambda x: x[0])
         
         # Downsample isolate
-        downsampled = sorted_alignments[::downsample_factor_iso]
+        downsampled, scales_iso = _down_sample_alignments(sorted_alignments, jc_cov, max_reads_per_plot)
         
         # Group by read type for efficient plotting (isolate - positive y)
         segments_by_type = {read_type: {'x': [], 'y': []} for read_type in READ_TYPES_TO_COLORS}
@@ -160,8 +176,10 @@ def plot_junctions_coverage(
         # Plot ancestor reads below x-axis (negative y) if available
         if alignment_data_anc:
             alignments_anc = alignment_data_anc[jt]
+            jc_cov_anc = jc_covs_anc[jt]
             sorted_alignments_anc = sorted(alignments_anc, key=lambda x: x[0])
-            downsampled_anc = sorted_alignments_anc[::downsample_factor_anc]
+            
+            downsampled_anc, scales_anc = _down_sample_alignments(sorted_alignments_anc, jc_cov_anc, max_reads_per_plot)
             
             segments_by_type_anc = {read_type: {'x': [], 'y': []} for read_type in READ_TYPES_TO_COLORS}
             
@@ -181,16 +199,16 @@ def plot_junctions_coverage(
                             linewidth=1.5, solid_capstyle='butt', alpha=0.7)
         
         # Set consistent y-axis (extend to negative if ancestor data exists)
-        y_min = -max_reads_anc_after_downsample - 1 if alignment_data_anc else 0
-        y_max = max_reads_iso_after_downsample + 1
+        y_min = -(max_reads_per_plot + 1) if alignment_data_anc else 0
+        y_max = max_reads_per_plot + 1
         
         # Add vertical line at junction point with color based on jc_calls (isolate) - from y=0 to y_max
-        jc_call_color = _get_jc_call_color(jc_calls[jt]) if with_calls else 'black'
+        jc_call_color = JC_CALLS_TO_COLORS[jc_calls[jt]] if with_calls else 'black'
         ax.plot([0, 0], [0, y_max], color=jc_call_color, linestyle='--', linewidth=2.5)
         
         # Add vertical line for jc_calls_anc (ancestor) if available - from y=0 to y_min
         if alignment_data_anc:
-            jc_call_anc_color = _get_jc_call_color(jc_calls_anc[jt]) if with_calls else 'black'
+            jc_call_anc_color = JC_CALLS_TO_COLORS[jc_calls_anc[jt]] if with_calls else 'black'
             ax.plot([0, 0], [y_min, 0], color=jc_call_anc_color, linestyle='--', linewidth=2.5)
         
         # Add horizontal line at y=0 if ancestor data exists
@@ -216,10 +234,13 @@ def plot_junctions_coverage(
         # ax_gene.set_title(f'{jt.name}
 
         if alignment_data_anc:
-            ax.text(0.05, 0.95, f'iso (n={len(alignments)})', fontsize=10, transform=ax.transAxes, ha='left', va='top')
-            ax.text(0.05, 0.05, f'anc (n={len(alignment_data_anc[jt])})', fontsize=10, transform=ax.transAxes, ha='left', va='bottom')
+            iso_text = "iso:\n" + format_read_info(jc_cov, scales_iso)
+            anc_text = "anc:\n" + format_read_info(jc_cov_anc, scales_anc)
+            ax.text(0.05, 0.95, iso_text, fontsize=7, transform=ax.transAxes, ha='left', va='top', verticalalignment='top')
+            ax.text(0.05, 0.05, anc_text, fontsize=7, transform=ax.transAxes, ha='left', va='bottom', verticalalignment='bottom')
         else:
-            ax.text(0.05, 0.95, f'n={len(alignments)}', fontsize=10, transform=ax.transAxes, ha='left', va='top')
+            iso_text = format_read_info(jc_cov, scales_iso)
+            ax.text(0.05, 0.95, iso_text, fontsize=7, transform=ax.transAxes, ha='left', va='top', verticalalignment='top')
 
         # Draw left element (ending at x=0)
         draw_genetic_element(ax_gene, 0.1, -midpoint, 0, left_elem_type, h_pixels=h_pixels, wave_tail=True)
@@ -267,9 +288,9 @@ def plot_junctions_coverage(
     
     # Read type legend at bottom (combine left/right since they share the same color)
     legend_elements = [
-        Line2D([0], [0], color=READ_TYPES_TO_COLORS['spanning'], linewidth=2, label='spanning'),
-        Line2D([0], [0], color=READ_TYPES_TO_COLORS['left'], linewidth=2, label='left/right'),
-        Line2D([0], [0], color=READ_TYPES_TO_COLORS['undetermined'], linewidth=2, label='undetermined')
+        Line2D([0], [0], color=READ_TYPES_TO_COLORS[Side.MIDDLE], linewidth=2, label='spanning'),
+        Line2D([0], [0], color=READ_TYPES_TO_COLORS[Side.LEFT], linewidth=2, label='left/right'),
+        Line2D([0], [0], color=READ_TYPES_TO_COLORS[None], linewidth=2, label='undetermined')
     ]
     
     # Add jc_calls color legend if available (applies to both jc_calls and jc_calls_anc)
@@ -283,11 +304,6 @@ def plot_junctions_coverage(
     
     # Set legend title based on downsampling
     legend_title = None
-    if downsample_factor_iso > 1 or downsample_factor_anc > 1:
-        if downsample_factor_iso == downsample_factor_anc:
-            legend_title = f'downsampled 1:{downsample_factor_iso}'
-        else:
-            legend_title = f'iso 1:{downsample_factor_iso}, anc 1:{downsample_factor_anc}'
     
     ax_legend.legend(handles=legend_elements, loc='lower center', fontsize=11, frameon=True, title=legend_title)
     
@@ -307,7 +323,7 @@ if __name__ == '__main__':
     
     plot_junctions_coverage(
         alignment_data=alignment_data,
-        jct_lengths=jct_lengths,
+        jc_lengths=jct_lengths,
         title='Alignment Coverage Demo (No Reads)',
         output_path='alignment_coverage_demo.png'
     )

@@ -4,6 +4,7 @@ import numpy as np
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import TypeAlias
 
 
 class ReversibleIntEnum(int, Enum):
@@ -25,6 +26,10 @@ class Side(ReversibleIntEnum):
     LEFT = -1
     MIDDLE = 0
     RIGHT = 1
+
+
+ReadType: TypeAlias = Side | None
+JcCall: TypeAlias = bool | None
 
 
 class Orientation(ReversibleIntEnum):
@@ -140,18 +145,36 @@ class JunctionReadCounts:
     spanning: int = 0  # reads spanning the junction
     undetermined: int = 0     # reads partially overlapping the junction
 
-    def add_read(self, start: int, end: int, junction_point: int, min_overlap_len: int) -> str:
+    @property
+    def counts(self) -> dict[ReadType, int]:
+        """Return counts as a dict mapping ReadType to count."""
+        return {
+            Side.LEFT: self.left,
+            Side.RIGHT: self.right,
+            Side.MIDDLE: self.spanning,
+            None: self.undetermined
+        }
+
+    def increment(self, read_type: ReadType) -> None:
+        """Increment the count for the given read type."""
+        if read_type == Side.LEFT:
+            self.left += 1
+        elif read_type == Side.RIGHT:
+            self.right += 1
+        elif read_type == Side.MIDDLE:
+            self.spanning += 1
+        else:  # None (undetermined)
+            self.undetermined += 1
+
+    def add_read(self, start: int, end: int, junction_point: int, min_overlap_len: int) -> ReadType:
         # Determine read type and update counts
         if end <= junction_point:
-            read_type = 'left'
-            self.left += 1
+            read_type = Side.LEFT
         elif start > junction_point:
-            read_type = 'right'
-            self.right += 1
+            read_type = Side.RIGHT
         elif start <= junction_point - min_overlap_len and end >= junction_point + min_overlap_len:
-            read_type = 'spanning'
-            self.spanning += 1
+            read_type = Side.MIDDLE
         else:
-            read_type = 'undetermined'
-            self.undetermined += 1
+            read_type = None
+        self.increment(read_type)
         return read_type

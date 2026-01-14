@@ -170,21 +170,21 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         analyzed_records = []
         for synjct_tnjc2 in self.synjct_tnjc2s:
             # Get isolate junction coverage (required)
-            jc_cov, alignment_data, jct_lengths = self._get_cov(synjct_tnjc2, self._iso_output_dir, self.iso_read_length, is_ancestor=False)
-            jc_calls = self._calculate_jc_calls(jc_cov, jct_lengths, self.iso_read_length)
+            jc_covs, alignment_data, jct_lengths = self._get_cov(synjct_tnjc2, self._iso_output_dir, self.iso_read_length, is_ancestor=False)
+            jc_calls = self._calculate_jc_calls(jc_covs, jct_lengths, self.iso_read_length)
 
             # Get ancestor junction coverage if available (optional)
-            jc_cov_anc = None
+            jc_covs_anc = None
             alignment_data_anc = None
             jc_calls_anc = None
             if self.has_ancestor:
-                jc_cov_anc, alignment_data_anc, jct_lengths_anc = self._get_cov(synjct_tnjc2, self._anc_output_dir, self.anc_read_length, is_ancestor=True)
-                jc_calls_anc = self._calculate_jc_calls(jc_cov_anc, jct_lengths_anc, self.anc_read_length)
+                jc_covs_anc, alignment_data_anc, jct_lengths_anc = self._get_cov(synjct_tnjc2, self._anc_output_dir, self.anc_read_length, is_ancestor=True)
+                jc_calls_anc = self._calculate_jc_calls(jc_covs_anc, jct_lengths_anc, self.anc_read_length)
 
             analyzed_tnjc2 = AnalyzedTnJc2.from_other(
                 synjct_tnjc2,
-                jc_cov=jc_cov,
-                jc_cov_anc=jc_cov_anc,
+                jc_covs=jc_covs,
+                jc_covs_anc=jc_covs_anc,
                 jc_calls=jc_calls,
                 jc_calls_anc=jc_calls_anc,
             )
@@ -192,9 +192,9 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             
             if self.create_plots:
                 plot_junctions_coverage(
-                    jct_lengths=jct_lengths,
+                    jc_lengths=jct_lengths,
                     alignment_data=alignment_data, alignment_data_anc=alignment_data_anc,
-                    jc_cov=jc_cov, jc_cov_anc=jc_cov_anc,
+                    jc_covs=jc_covs, jc_covs_anc=jc_covs_anc,
                     jc_calls=jc_calls, jc_calls_anc=jc_calls_anc,
                     title=f'Jcts coverage - {synjct_tnjc2.analysis_dir_name(is_ancestor=False)}',
                     output_path=synjct_tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png",
