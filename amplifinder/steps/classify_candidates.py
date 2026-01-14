@@ -1,11 +1,9 @@
 """Step 13: Final classification of candidates based on junction analysis."""
 
-import numpy as np
-
 from pathlib import Path
 from typing import Optional, List, Dict
 
-from amplifinder.data_types import JunctionReadCounts, RecordTypedDf, AnalyzedTnJc2, ClassifiedTnJc2, RawEvent, \
+from amplifinder.data_types import RecordTypedDf, AnalyzedTnJc2, ClassifiedTnJc2, RawEvent, \
     EventModifier, JunctionType
 from amplifinder.steps.base import RecordTypedDfStep
 
@@ -74,17 +72,17 @@ def classify_architecture(jc_calls: Dict[JunctionType, Optional[bool]]) -> RawEv
     """
 
     # Amplicon structure:
-    # 
+    #
     # ~~~~~~~~~>>>======>>>======>>>~~~~~~~~~
-    # 
+    #
     # ~~-==  ~~->>  ==->>  ==-==  >>-==  >>-~~  ==-~~
     #   1      2      3      4      5      6      7
-    # 
+    #
     # Junction patterns (1=covered, 0=not):
 
     architecture_patterns: Dict[tuple[int, int, int, int, int, int, int], RawEvent] = {
-    #    -- Junction Type --
-    #    1  2  3  4  5  6  7   event
+        #-- Junction Type --
+        #1  2  3  4  5  6  7   event
         (0, 1, 1, 0, 1, 1, 0): RawEvent.FLANKED,
         (0, 1, 1, 0, 1, 0, 1): RawEvent.HEMI_FLANKED_LEFT,
         (1, 0, 1, 0, 1, 1, 0): RawEvent.HEMI_FLANKED_RIGHT,

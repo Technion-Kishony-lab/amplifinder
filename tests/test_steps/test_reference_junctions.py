@@ -38,8 +38,12 @@ def test_junction_positions_correct(ref_jc_factory, locate_tns_step_factory):
     tn_loc = locate_tns_step_factory().run()  # run() returns output
 
     tn1 = tn_loc.df.iloc[0]
-    start_jc = next(jc for jc in ref_jc if jc.ref_tn_side.tn_id == tn1["tn_id"] and jc.ref_tn_side.side == Terminal.START)
-    end_jc = next(jc for jc in ref_jc if jc.ref_tn_side.tn_id == tn1["tn_id"] and jc.ref_tn_side.side == Terminal.END)
+    start_jc = next(
+        jc for jc in ref_jc if jc.ref_tn_side.tn_id == tn1["tn_id"] and jc.ref_tn_side.side == Terminal.START
+    )
+    end_jc = next(
+        jc for jc in ref_jc if jc.ref_tn_side.tn_id == tn1["tn_id"] and jc.ref_tn_side.side == Terminal.END
+    )
 
     assert start_jc.pos1 == tn1["start"]
     assert end_jc.pos1 == tn1["end"]

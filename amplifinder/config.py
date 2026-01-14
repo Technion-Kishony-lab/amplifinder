@@ -66,7 +66,7 @@ DEFAULT_CONFIG = {
 
     # Logging
     "log_path": "amplifinder.log",
-    
+
     # Plotting
     "create_plots": True,
 }
@@ -154,7 +154,7 @@ class Config:
 
     # Logging
     log_path: str = "amplifinder.log"
-    
+
     # Plotting
     create_plots: bool = True
 
@@ -181,7 +181,7 @@ class Config:
 
     def get_anc_breseq_path(self) -> Optional[Path]:
         """Return ancestor breseq path (provided or default run dir).
-        
+
         Returns:
             Path to ancestor breseq directory, or None if no ancestor configured.
         """
@@ -195,10 +195,10 @@ class Config:
 
     def get_anc_name(self) -> Optional[str]:
         """Return ancestor name, or None if no ancestor configured.
-        
+
         Note: anc_name property is set to iso_name when no ancestor (for folder structure),
         but this method returns None for semantic correctness when passing to steps.
-        
+
         Returns:
             Ancestor name, or None if no ancestor.
         """

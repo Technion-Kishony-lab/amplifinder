@@ -2,8 +2,7 @@ import numpy as np
 
 from amplifinder.optional_deps import plt
 from pathlib import Path
-from matplotlib.patches import Polygon, Rectangle
-
+from matplotlib.patches import Polygon
 from enum import Enum
 
 from amplifinder.data_types.enums import Element
@@ -60,11 +59,11 @@ GENETIC_ELEMENT_TO_ARROW_PARAMS = {
 }
 
 
-def draw_horizontal_arrow(ax, y, x1, x2, h_pixels, color, 
-        head: ArrowHead | str = ArrowHead.BLUNT, tail: ArrowHead | str = ArrowHead.BLUNT, 
-        head_width_ratio: float = 0.5, tail_width_ratio: float = 0.5):
+def draw_horizontal_arrow(ax, y, x1, x2, h_pixels, color,
+                          head: ArrowHead | str = ArrowHead.BLUNT, tail: ArrowHead | str = ArrowHead.BLUNT,
+                          head_width_ratio: float = 0.5, tail_width_ratio: float = 0.5):
     """Draw a horizontal arrow.
-    
+
     Args:
         ax: matplotlib axes object
         y: y-coordinate (bottom of element)
@@ -80,7 +79,7 @@ def draw_horizontal_arrow(ax, y, x1, x2, h_pixels, color,
     tail = ArrowHead(tail) if isinstance(tail, str) else tail
 
     length = x2 - x1
-    
+
     # Convert h_pixels to data values
     inv_trans = ax.transData.inverted()
     origin = inv_trans.transform([[0, 0]])[0]
@@ -92,7 +91,7 @@ def draw_horizontal_arrow(ax, y, x1, x2, h_pixels, color,
     coords2 = ARROW_HEAD_TO_VERTICES[head]
 
     dir = np.sign(length)
-    
+
     coords1 = coords1 * np.array([[-h_in_x_data * tail_width_ratio * dir, h_in_y_data]]) + np.array([[x1, y]])
     coords2 = coords2 * np.array([[+h_in_x_data * head_width_ratio * dir, h_in_y_data]]) + np.array([[x2, y]])
 
@@ -101,10 +100,10 @@ def draw_horizontal_arrow(ax, y, x1, x2, h_pixels, color,
     ax.add_patch(polygon)
 
 
-def draw_genetic_element(ax, y, x1, x2, element_type: Element, h_pixels=10, 
+def draw_genetic_element(ax, y, x1, x2, element_type: Element, h_pixels=10,
                          wave_tail: bool = False, wave_head: bool = False, **kwargs):
     """Draw a genetic element.
-    
+
     Args:
         ax: matplotlib axes object
         y: y-coordinate (bottom of element)
@@ -136,7 +135,7 @@ def draw_amplicon_structure(
     n_amplicon_copies: int = 2,
 ) -> float:
     """Draw amplicon structure into existing axes: ~~~~~~~~~>>>======>>>======>>>~~~~~~~~~
-    
+
     Args:
         ax: matplotlib axes to draw into
         chr_left_len: Length of left chromosome region (in sequence coordinates)
@@ -149,17 +148,17 @@ def draw_amplicon_structure(
     """
     # Calculate total length
     total_length = chr_left_len + tn_len + n_amplicon_copies * (amp_len + tn_len) + chr_right_len
-    
+
     # Set axis limits BEFORE drawing (needed for arrow width calculation)
     ax.set_xlim(0, total_length)
     ax.set_ylim(0, 10)
-    
+
     # Build structure from left to right
     x = 0
-    
+
     # Left chromosome
     draw_genetic_element(ax, y, x, (x := x + chr_left_len), Element.CHR, h_pixels, wave_tail=True)
-    
+
     # TN element
     draw_genetic_element(ax, y, x, (x := x + tn_len), Element.TN, h_pixels)
 
@@ -167,10 +166,10 @@ def draw_amplicon_structure(
     for i in range(n_amplicon_copies):
         # Amplicon
         draw_genetic_element(ax, y, x, (x := x + amp_len), Element.AMP, h_pixels)
-        
+
         # TN element
         draw_genetic_element(ax, y, x, (x := x + tn_len), Element.TN, h_pixels)
-        
+
     # Right chromosome
     draw_genetic_element(ax, y, x, (x := x + chr_right_len), Element.CHR, h_pixels, wave_head=True)
 
@@ -189,7 +188,7 @@ def plot_amplicon_structure(
     figsize: tuple[float, float] = (12, 3)
 ) -> None:
     """Plot amplicon structure: ~~~~~~~~~>>>======>>>======>>>~~~~~~~~~
-    
+
     Args:
         output_path: Path to save the PNG file
         chr_left_len: Length of left chromosome region (in sequence coordinates)
@@ -203,7 +202,7 @@ def plot_amplicon_structure(
     """
     fig, ax = plt.subplots(figsize=figsize)
     draw_amplicon_structure(ax, chr_left_len, amp_len, tn_len, h_pixels, y, chr_right_len, n_amplicon_copies)
-    
+
     # Save figure
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(output_path, dpi=150, bbox_inches='tight')
@@ -212,14 +211,4 @@ def plot_amplicon_structure(
 
 if __name__ == '__main__':
     # Demo: plot amplicon structure
-    plot_amplicon_structure(
-        output_path='amplicon_structure_demo.png',
-    )
-    fig, ax = plt.subplots(figsize=(12, 3))
-    plt.axis([0, 1000, 0, 10])
-    draw_horizontal_arrow(ax, 2, 100, 800, h_pixels=10, color='lightblue', head=ArrowHead.TRIANGLE, tail=ArrowHead.INNER_TRIANGLE)
-    draw_horizontal_arrow(ax, 3, 100, 800, h_pixels=10, color='lightblue', head=ArrowHead.INNER_TRIANGLE, tail=ArrowHead.TRIANGLE)
-    draw_horizontal_arrow(ax, 4, 600, 200, h_pixels=10, color='lightblue', head=ArrowHead.ROUND, tail=ArrowHead.INNER_ROUND)
-    draw_horizontal_arrow(ax, 5, 600, 200, h_pixels=10, color='lightblue', head=ArrowHead.INNER_TRIANGLE, tail=ArrowHead.TRIANGLE)
-    plt.savefig('genetic_elements_demo.png', dpi=150, bbox_inches='tight')
-    
+    plot_amplicon_structure(output_path='amplicon_structure_demo.png')
