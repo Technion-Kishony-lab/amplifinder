@@ -72,7 +72,7 @@ class Pipeline:
         synjct_tnjc2s = self._create_synthetic_junctions(
             filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
         self._align_reads(synjct_tnjc2s, iso_output, anc_output)
-        analyzed_tnjc2s = self._analyze_alignments(synjct_tnjc2s, iso_output, anc_output, read_lengths)
+        analyzed_tnjc2s = self._analyze_alignments(synjct_tnjc2s, genome, iso_output, anc_output, read_lengths)
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
         self._export(classified_tnjc2s, genome, iso_output)
 
@@ -212,16 +212,7 @@ class Pipeline:
     ) -> RecordTypedDf[CoveredTnJc2]:
         """Step 7: Calculate amplicon coverage."""
         cfg = self.config
-
-        # Get ancestor breseq path if ancestor exists
-        if cfg.has_ancestor:
-            anc_breseq_path = cfg.get_anc_breseq_path()
-            anc_name = cfg.anc_name
-        else:
-            anc_breseq_path = None
-            anc_name = None
-
-        iso_breseq_path = cfg.get_iso_breseq_path()
+        iso_breseq_path, anc_breseq_path = cfg.get_breseq_paths()
 
         return CalcTnJc2AmpliconCoverageStep(
             raw_tnjc2s=raw_tnjc2s,
@@ -230,7 +221,7 @@ class Pipeline:
             iso_breseq_path=iso_breseq_path,
             iso_name=cfg.iso_name,
             anc_breseq_path=anc_breseq_path,
-            anc_name=anc_name,
+            anc_name=cfg.get_anc_name(),
             ncp_min=cfg.ncp_min,
             ncp_max=cfg.ncp_max,
             ncp_n=cfg.ncp_n,
@@ -329,19 +320,27 @@ class Pipeline:
     def _analyze_alignments(
         self,
         synjct_tnjc2s: RecordTypedDf[SynJctsTnJc2],
+        genome: Genome,
         iso_output: Path,
         anc_output: Optional[Path],
         read_lengths: ReadLengths,
     ) -> RecordTypedDf[AnalyzedTnJc2]:
         """Step 12: Analyze read alignments."""
+        cfg = self.config
+        iso_breseq_path, anc_breseq_path = cfg.get_breseq_paths()
+        
         return AnalyzeTnJc2AlignmentsStep(
             synjct_tnjc2s=synjct_tnjc2s,
             output_dir=iso_output,
+            genome=genome,
+            iso_breseq_path=iso_breseq_path,
             anc_output_dir=anc_output,
+            anc_breseq_path=anc_breseq_path,
             iso_read_length=read_lengths.iso_read_length,
             anc_read_length=read_lengths.anc_read_length,
             min_overlap_len=self.config.min_overlap_len,
             min_jct_cov=self.config.min_jct_cov,
+            create_plots=cfg.create_plots,
         ).run()
 
     def _classify_candidates(
@@ -368,7 +367,7 @@ class Pipeline:
             output_dir=iso_output,
             ref_name=self.config.ref_name,
             iso_name=self.config.iso_name,
-            anc_name=self.config.anc_name,
+            anc_name=self.config.get_anc_name(),
             copy_number_threshold=self.config.copy_number_threshold,
             del_copy_number_threshold=self.config.del_copy_number_threshold,
             filter_amplicon_length=self.config.filter_amplicon_length,

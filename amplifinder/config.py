@@ -66,6 +66,9 @@ DEFAULT_CONFIG = {
 
     # Logging
     "log_path": "amplifinder.log",
+    
+    # Plotting
+    "create_plots": True,
 }
 
 
@@ -151,6 +154,9 @@ class Config:
 
     # Logging
     log_path: str = "amplifinder.log"
+    
+    # Plotting
+    create_plots: bool = True
 
     @property
     def has_ancestor(self) -> bool:
@@ -173,15 +179,37 @@ class Config:
         """
         return self.output_dir / self.ref_name / self.anc_name / self.anc_name
 
-    def get_anc_breseq_path(self) -> Path:
-        """Return ancestor breseq path (provided or default run dir)."""
+    def get_anc_breseq_path(self) -> Optional[Path]:
+        """Return ancestor breseq path (provided or default run dir).
+        
+        Returns:
+            Path to ancestor breseq directory, or None if no ancestor configured.
+        """
         if not self.has_ancestor:
-            raise ValueError("Ancestor breseq path requested but no ancestor configured.")
+            return None
         return self.anc_breseq_path or (self.anc_run_dir / "breseq")
 
     def get_iso_breseq_path(self) -> Path:
         """Return isolate breseq path (provided or default run dir)."""
         return self.iso_breseq_path or (self.iso_run_dir / "breseq")
+
+    def get_anc_name(self) -> Optional[str]:
+        """Return ancestor name, or None if no ancestor configured.
+        
+        Note: anc_name property is set to iso_name when no ancestor (for folder structure),
+        but this method returns None for semantic correctness when passing to steps.
+        
+        Returns:
+            Ancestor name, or None if no ancestor.
+        """
+        if not self.has_ancestor:
+            return None
+        return self.anc_name
+
+    def get_breseq_paths(self) -> tuple[Path, Optional[Path]]:
+        """Get isolate and ancestor breseq paths.
+        """
+        return self.get_iso_breseq_path(), self.get_anc_breseq_path()
 
     def save(self, run_dir: Path) -> None:
         """Save config to run_config.yaml in run directory."""

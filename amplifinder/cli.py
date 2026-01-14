@@ -101,22 +101,15 @@ from amplifinder.utils.file_utils import ensure_dir
     help="Only run through breseq step, then exit.",
 )
 @click.option(
-    "--visualize",
-    type=click.Path(path_type=Path),
-    default=None,
-    help="Visualize results from a completed run directory.",
-)
-@click.option(
-    "--save-plots",
-    is_flag=True,
-    default=False,
-    help="Save plots to PNG files instead of displaying (use with --visualize).",
-)
-@click.option(
     "--verbose",
     is_flag=True,
     default=False,
     help="Report which step is running and its output files.",
+)
+@click.option(
+    "--create-plots/--no-create-plots",
+    default=True,
+    help="Create junction and amplicon coverage plots (default: True).",
 )
 @click.version_option(version=__version__)
 def main(
@@ -134,9 +127,8 @@ def main(
     config_file: Optional[Path],
     log_level: str,
     breseq_only: bool,
-    visualize: Optional[Path],
-    save_plots: bool,
     verbose: bool,
+    create_plots: bool,
 ) -> None:
     """AmpliFinder: Detect IS-mediated gene amplifications from WGS data."""
     # Setup logger early
@@ -145,21 +137,9 @@ def main(
     setup_logger(log_path=log_dir / "amplifinder.log", level=getattr(logging, log_level.upper()))
 
     info(f"AmpliFinder v{__version__}")
+    info(f"Reference: {ref_name}")
 
     try:
-        # Visualization mode
-        if visualize is not None:
-            info(f"Visualizing results from: {visualize}")
-            from amplifinder.visualization import visualize_candidates
-            visualize_candidates(
-                run_dir=visualize,
-                save_plots=save_plots,
-                interactive=not save_plots,
-            )
-            info("Done")
-            return
-
-        info(f"Reference: {ref_name}")
 
         # Full pipeline modes require iso_path
         if iso_path is None:
@@ -183,6 +163,7 @@ def main(
             "anc_breseq_path": anc_breseq_path,
             "ncbi": ncbi,
             "use_isfinder": use_isfinder,
+            "create_plots": create_plots,
         }
 
         # Merge configurations

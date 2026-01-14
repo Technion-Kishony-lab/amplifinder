@@ -1,10 +1,10 @@
 """Tests for visualization module."""
 
-from amplifinder.visualization import plot_candidate_coverage
+from amplifinder.visualization import plot_amplicon_coverage
 import numpy as np
 
 
-def test_plot_candidate_coverage(analyzed_tnjc2_record, tmp_path, tiny_genome):
+def test_plot_amplicon_coverage(analyzed_tnjc2_record, tmp_path, tiny_genome):
     """Should create coverage plot."""
     # Create dummy coverage dict (scaffold name -> coverage array)
     iso_coverage = {}
@@ -16,13 +16,11 @@ def test_plot_candidate_coverage(analyzed_tnjc2_record, tmp_path, tiny_genome):
 
     output_path = tmp_path / "coverage_plot.png"
 
-    plot_candidate_coverage(
-        candidate=analyzed_tnjc2_record,
-        iso_coverage=iso_coverage,
-        anc_coverage=anc_coverage,
-        genome=tiny_genome,
+    plot_amplicon_coverage(
+        iso_scafs_to_covs=iso_coverage,
+        anc_scafs_to_covs=anc_coverage,
+        tnjc2=analyzed_tnjc2_record,
         output_path=output_path,
-        show=False,
     )
 
     assert output_path.exists()

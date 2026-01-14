@@ -1,6 +1,6 @@
 import numpy as np
 
-import matplotlib.pyplot as plt
+from amplifinder.optional_deps import plt
 from pathlib import Path
 from matplotlib.patches import Polygon, Rectangle
 

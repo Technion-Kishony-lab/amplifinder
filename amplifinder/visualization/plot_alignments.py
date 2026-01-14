@@ -38,17 +38,16 @@ def _get_jc_call_color(jc_call: bool | None) -> str:
         return 'grey'
 
 
-def plot_alignment_coverage(
+def plot_junctions_coverage(
     alignment_data: Dict[JunctionType, List[Tuple[int, int, str]]],
-    jct_lengths: Dict[JunctionType, int],
-    title: str,
-    output_path: Path | str ,
-    max_reads_per_plot: int = 200,
     alignment_data_anc: Dict[JunctionType, List[Tuple[int, int, str]]] | None = None,
     jc_calls: Dict[JunctionType, bool | None] | None = None,
     jc_calls_anc: Dict[JunctionType, bool | None] | None = None,
+    title: str | None = None,
+    output_path: Path | str = 'junctions_coverage.png',
+    max_reads_per_plot: int = 200,
 ) -> None:
-    """Plot read alignments as horizontal lines (coverage plot).
+    """Plot junctions coverage by reads as horizontal lines (coverage plot).
     
     Args:
         alignment_data: Dict mapping JunctionType to list of (start, end, read_type) tuples for isolate
@@ -306,7 +305,7 @@ if __name__ == '__main__':
     alignment_data = {jt: [] for jt in JunctionType.sorted()}
     jct_lengths = {jt: 600 for jt in JunctionType.sorted()}
     
-    plot_alignment_coverage(
+    plot_junctions_coverage(
         alignment_data=alignment_data,
         jct_lengths=jct_lengths,
         title='Alignment Coverage Demo (No Reads)',

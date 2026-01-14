@@ -533,10 +533,6 @@ class SynJctsTnJc2(SingleLocusLinkedTnJc2):
         """Path to BAM for this candidate."""
         return self.analysis_dir_path(base_dir, is_ancestor=is_ancestor) / "sorted.bam"
 
-    def alignment_plot_path(self, base_dir: Path, *, is_ancestor: bool = False) -> Path:
-        """Path to alignment distribution plot PNG for this candidate."""
-        return self.analysis_dir_path(base_dir, is_ancestor=is_ancestor) / f"alignment_distribution.png"
-
 
 class AnalyzedTnJc2(SynJctsTnJc2):
     """Candidate with junction coverage analysis (Step 12 output).
