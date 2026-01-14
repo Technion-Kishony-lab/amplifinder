@@ -3,11 +3,15 @@ import pysam
 import numpy as np
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 
-from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
+from amplifinder.optional_deps import plt
+
+from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts, Genome
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.visualization.plot_alignments import plot_alignment_coverage
+from amplifinder.tools.breseq import load_breseq_coverage
+from amplifinder.visualization.plot_coverage import plot_amplicon_coverage
+from amplifinder.visualization.plot_alignments import plot_junctions_coverage
 
 
 def is_covered(cov: JunctionReadCounts, min_jct_cov: int, 
@@ -65,21 +69,36 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         self,
         synjct_tnjc2s: RecordTypedDf[SynJctsTnJc2],
         output_dir: Path,
+        genome: Genome,
+        iso_breseq_path: Path,
         anc_output_dir: Optional[Path] = None,
+        anc_breseq_path: Optional[Path] = None,
         iso_read_length: int = 150,
         anc_read_length: Optional[int] = None,
         min_overlap_len: int = 12,
         min_jct_cov: int = 10,
+        create_plots: bool = True,
         force: Optional[bool] = None,
     ):
         self.synjct_tnjc2s = synjct_tnjc2s
         self._iso_output_dir = Path(output_dir)
         self._anc_output_dir = Path(anc_output_dir) if anc_output_dir else None
+        self.genome = genome
+        self.iso_breseq_path = Path(iso_breseq_path)
+        self.anc_breseq_path = Path(anc_breseq_path) if anc_breseq_path else None
         self.iso_read_length = iso_read_length
         self.anc_read_length = anc_read_length if anc_read_length else iso_read_length
         self.min_overlap_len = min_overlap_len
         self.min_jct_cov = min_jct_cov
+        self.create_plots = create_plots
         self.has_ancestor = self._anc_output_dir is not None
+
+        # Validate matplotlib availability if plotting requested
+        if self.create_plots and plt is None:
+            raise ImportError(
+                "Plotting is enabled (create_plots=True) but matplotlib is not installed. "
+                "Install with: pip install matplotlib, or disable plotting with --no-create-plots"
+            )
 
         # Input files are the BAM files from alignment step
         input_files = []
@@ -123,12 +142,31 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             for jt in JunctionType.sorted()
         }
 
+    def _load_coverage_for_plotting(self) -> tuple[Optional[Dict[str, np.ndarray]], Optional[Dict[str, np.ndarray]]]:
+        """Load genome coverage data for plotting (if enabled).
+        
+        Returns:
+            Tuple of (iso_coverage, anc_coverage) dicts, or (None, None) if plotting disabled
+        """
+        iso_scafs_to_covs = load_breseq_coverage(self.iso_breseq_path)
+        anc_scafs_to_covs = None
+        if self.has_ancestor and self.anc_breseq_path:
+            anc_scafs_to_covs = load_breseq_coverage(self.anc_breseq_path)
+        
+        return iso_scafs_to_covs, anc_scafs_to_covs
+
+
     def _calculate_output(self) -> RecordTypedDf[AnalyzedTnJc2]:
         """Analyze alignments for each candidate.
         
         Returns:
             RecordTypedDf containing AnalyzedTnJc2 records with coverage data and calls
         """
+        # Load coverage data once for all candidates (if plotting enabled)
+        if self.create_plots:
+            iso_scafs_to_covs, anc_scafs_to_covs = self._load_coverage_for_plotting()
+            print(f'Creating coverage plots (n={len(self.synjct_tnjc2s)}) ', end='', flush=True)
+        
         analyzed_records = []
         for synjct_tnjc2 in self.synjct_tnjc2s:
             # Get isolate junction coverage (required)
@@ -143,12 +181,6 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 jc_cov_anc, alignment_data_anc, jct_lengths_anc = self._get_cov(synjct_tnjc2, self._anc_output_dir, self.anc_read_length, is_ancestor=True)
                 jc_calls_anc = self._calculate_jc_calls(jc_cov_anc, jct_lengths_anc, self.anc_read_length)
 
-            # Generate combined visualization (isolate above, ancestor below x-axis)
-            self._generate_alignment_plot(synjct_tnjc2, alignment_data, jct_lengths, 
-                                          alignment_data_anc=alignment_data_anc, 
-                                          jc_calls=jc_calls, jc_calls_anc=jc_calls_anc,
-                                          is_ancestor=False)
-
             analyzed_tnjc2 = AnalyzedTnJc2.from_other(
                 synjct_tnjc2,
                 jc_cov=jc_cov,
@@ -157,6 +189,26 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 jc_calls_anc=jc_calls_anc,
             )
             analyzed_records.append(analyzed_tnjc2)
+            
+            if self.create_plots:
+                plot_junctions_coverage(
+                    jct_lengths=jct_lengths,
+                    alignment_data=alignment_data, alignment_data_anc=alignment_data_anc,
+                    jc_cov=jc_cov, jc_cov_anc=jc_cov_anc,
+                    jc_calls=jc_calls, jc_calls_anc=jc_calls_anc,
+                    title=f'Jcts coverage - {synjct_tnjc2.analysis_dir_name(is_ancestor=False)}',
+                    output_path=synjct_tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png",
+                )
+                plot_amplicon_coverage(
+                    tnjc2=analyzed_tnjc2,
+                    iso_scafs_to_covs=iso_scafs_to_covs,
+                    anc_scafs_to_covs=anc_scafs_to_covs,
+                    output_path=analyzed_tnjc2.analysis_dir_path(self._iso_output_dir) / "amplicon_coverage.png",
+                )
+                print('.', end='', flush=True)
+        
+        if self.create_plots:
+            print('\n', flush=True)
 
         return RecordTypedDf.from_records(analyzed_records, AnalyzedTnJc2)
 
@@ -223,37 +275,3 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
         return counts, alignment_data, jct_lengths
 
-    def _generate_alignment_plot(
-        self,
-        synjct_tnjc2: SynJctsTnJc2,
-        alignment_data: dict[JunctionType, list[tuple[int, int, str]]],
-        jct_lengths: dict[JunctionType, int],
-        alignment_data_anc: dict[JunctionType, list[tuple[int, int, str]]] | None = None,
-        jc_calls: dict[JunctionType, Optional[bool]] | None = None,
-        jc_calls_anc: dict[JunctionType, Optional[bool]] | None = None,
-        is_ancestor: bool = False,
-    ) -> None:
-        """Generate PNG plot showing read alignment coverage for all junction types.
-        
-        Args:
-            synjct_tnjc2: Synthetic junction record
-            alignment_data: Dict mapping JunctionType to list of (start, end, read_type) tuples for isolate
-            jct_lengths: Dict mapping JunctionType to junction length
-            alignment_data_anc: Optional dict for ancestor reads (plotted below x-axis)
-            jc_calls: Dict mapping JunctionType to coverage call (True/False/None) for isolate
-            jc_calls_anc: Optional dict mapping JunctionType to coverage call for ancestor
-            is_ancestor: Whether processing ancestor (True) or isolate (False) data
-        """
-        title = f'Read Alignment Coverage - {synjct_tnjc2.analysis_dir_name(is_ancestor=is_ancestor)}'
-        base_dir = self._anc_output_dir if is_ancestor else self._iso_output_dir
-        output_path = synjct_tnjc2.alignment_plot_path(base_dir, is_ancestor=is_ancestor)
-        
-        plot_alignment_coverage(
-            alignment_data=alignment_data,
-            jct_lengths=jct_lengths,
-            title=title,
-            output_path=output_path,
-            alignment_data_anc=alignment_data_anc,
-            jc_calls=jc_calls,
-            jc_calls_anc=jc_calls_anc,
-        )
