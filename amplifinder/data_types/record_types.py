@@ -546,8 +546,8 @@ class AnalyzedTnJc2(SynJctsTnJc2):
         'jc_cov_vector', 'jc_cov_anc_vector'
     ]
     # Junction coverage: JunctionType -> JunctionReadCounts
-    jc_cov: Dict[JunctionType, JunctionReadCounts]
-    jc_cov_anc: Optional[Dict[JunctionType, JunctionReadCounts]] = None
+    jc_covs: Dict[JunctionType, JunctionReadCounts]
+    jc_covs_anc: Optional[Dict[JunctionType, JunctionReadCounts]] = None
 
     # For each junction type, whether it is covered (True), ambiguous (None), or not covered (False)
     jc_calls: Dict[JunctionType, Optional[bool]] = None
@@ -556,15 +556,15 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     @property
     def jc_cov_vector(self) -> List[tuple[int, int, int]]:
         """Junction coverage vector."""
-        return [(self.jc_cov[jt].left, self.jc_cov[jt].spanning, self.jc_cov[jt].right)
+        return [(self.jc_covs[jt].left, self.jc_covs[jt].spanning, self.jc_covs[jt].right)
                 for jt in JunctionType.sorted()]
 
     @property
     def jc_cov_anc_vector(self) -> Optional[List[tuple[int, int, int]]]:
         """Ancestor junction coverage vector."""
-        if self.jc_cov_anc is None:
+        if self.jc_covs_anc is None:
             return None
-        return [(self.jc_cov_anc[jt].left, self.jc_cov_anc[jt].spanning, self.jc_cov_anc[jt].right)
+        return [(self.jc_covs_anc[jt].left, self.jc_covs_anc[jt].spanning, self.jc_covs_anc[jt].right)
                 for jt in JunctionType.sorted()]
 
 
