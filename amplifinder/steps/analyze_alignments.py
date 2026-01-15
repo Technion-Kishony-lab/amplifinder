@@ -7,7 +7,7 @@ from typing import Optional, Dict
 
 from amplifinder.optional_deps import plt
 
-from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts, Genome
+from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts, Genome, Side
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.visualization.plot_coverage import plot_amplicon_coverage
@@ -252,6 +252,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         read_length_factor = 1 + read_length_tolerance
         min_alignment_length = avg_read_length / read_length_factor
         max_alignment_length = avg_read_length * read_length_factor
+        min_bp_in_frame = 10
 
         counts = {jt: JunctionReadCounts() for jt in JunctionType.sorted()}
         alignment_data = {jt: [] for jt in JunctionType.sorted()}
@@ -265,7 +266,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
             # Count read-alignments of each type at each junction
             for read in bam.fetch():
-                if read.is_unmapped:
+                if read.is_unmapped or read.is_secondary or read.is_supplementary:
                     continue
 
                 jct_name = read.reference_name
@@ -274,13 +275,52 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 if not (min_alignment_length <= alignment_length <= max_alignment_length):
                     continue
 
-                start, end = read.reference_start, read.reference_end
-                assert start <= end
+                # MATLAB RdFull: only CIGAR-only-M reads are counted
+                if not read.cigartuples or any(op != 0 for op, _ in read.cigartuples):
+                    continue
 
-                read_type = counts[jct_type].add_read(start, end, arm_len=jct_lengths[jct_type] // 2,
-                                                      min_overlap_len=self.min_overlap_len)
+                # Filter by alignment tags (skip low-quality alignments)
+                try:
+                    as_score = read.get_tag("AS")
+                except KeyError:
+                    as_score = None
+                try:
+                    nm_score = read.get_tag("NM")
+                except KeyError:
+                    try:
+                        nm_score = read.get_tag("nM")
+                    except KeyError:
+                        nm_score = None
+                if (nm_score is not None and nm_score > 3) or (as_score is not None and as_score < -25):
+                    continue
+
+                # Convert to 1-based coordinates to match MATLAB BioMap output
+                start_0 = read.reference_start
+                end_0 = read.reference_end
+                start_1 = start_0 + 1
+                end_1 = end_0
+                assert start_1 <= end_1
+
+                seq_len = jct_lengths[jct_type]
+                jct_point = seq_len / 2
+                okz_left = (start_1 + alignment_length > jct_point - avg_read_length + min_bp_in_frame) and \
+                           (end_1 < jct_point + self.min_overlap_len)
+                okz_right = (start_1 > jct_point - self.min_overlap_len) and \
+                            (start_1 < jct_point + avg_read_length - min_bp_in_frame)
+                okz_green = (start_1 < jct_point - self.min_overlap_len) and \
+                            (end_1 > jct_point + self.min_overlap_len)
+
+                if okz_green:
+                    read_type = Side.MIDDLE
+                elif okz_left:
+                    read_type = Side.LEFT
+                elif okz_right:
+                    read_type = Side.RIGHT
+                else:
+                    read_type = None
+                counts[jct_type].increment(read_type)
 
                 # Store alignment data (for plotting, etc)
-                alignment_data[jct_type].append((start, end, read_type))
+                alignment_data[jct_type].append((start_0, end_0, read_type))
 
         return counts, alignment_data, jct_lengths

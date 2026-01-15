@@ -17,9 +17,9 @@ class AlignReadsToJunctionsStep(Step):
         synjcs_tnjc2s: RecordTypedDf[SynJctsTnJc2],
         output_dir: Path,
         fastq_path: Path,
-        threads: int = 1,
+        threads: int = 4,
         score_min: Optional[str] = None,  # None = use default (G,0,-0.25 for local)
-        num_alignments: int = 100,  # TODO: should this be '1' ?
+        num_alignments: int = 100,  # match MATLAB -k 100
         force: Optional[bool] = None,
     ):
         self.synjcs_tnjc2s = synjcs_tnjc2s
