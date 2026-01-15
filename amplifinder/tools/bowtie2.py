@@ -43,8 +43,8 @@ def run_bowtie2_align(
     fastq_path: Path,
     output_sam: Path,
     score_min: Optional[str] = None,
-    num_alignments: int = 10,
-    threads: int = 1,
+    num_alignments: int = 100,
+    threads: int = 4,
     local: bool = True,
 ) -> None:
     """Align reads to index using bowtie2.
@@ -55,7 +55,7 @@ def run_bowtie2_align(
         output_sam: Path to output SAM file
         score_min: Minimum alignment score function. If None, uses:
                    - "G,0,-0.25" for local alignment (matches MATLAB)
-                   - "L,0,-0.6" for end-to-end alignment
+                   - "L,0,-0.25" for end-to-end alignment (matches MATLAB)
         num_alignments: Maximum alignments to report per read (-k)
         threads: Number of threads to use
         local: Use local alignment (default True for junction alignment)
@@ -85,9 +85,9 @@ def run_bowtie2_align(
     ensure_parent_dir(output_sam)
 
     # Set default score_min based on alignment mode
-    # MATLAB uses end-to-end with L,0,-0.6, local with G,0,-0.25
+    # MATLAB uses end-to-end with L,0,-0.25, local with G,0,-0.25
     if score_min is None:
-        score_min = "G,0,-0.25" if local else "L,0,-0.6"
+        score_min = "G,0,-0.25" if local else "L,0,-0.25"
 
     cmd = [
         bowtie2,
@@ -97,6 +97,7 @@ def run_bowtie2_align(
         "-k", str(num_alignments),
         "--score-min", score_min,
         "-p", str(threads),
+        "--reorder",
     ]
 
     # Add mismatch penalty to match MATLAB (--mp 5,5)
@@ -154,7 +155,7 @@ def align_reads_to_fasta(
     output_bam: Path,
     threads: int = 1,
     score_min: Optional[str] = None,
-    num_alignments: int = 10,
+    num_alignments: int = 100,
     local: bool = False,  # MATLAB uses --end-to-end by default
     keep_sam: bool = False,
 ) -> None:
