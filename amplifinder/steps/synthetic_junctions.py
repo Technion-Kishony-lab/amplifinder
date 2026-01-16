@@ -32,6 +32,11 @@ from amplifinder.utils.fasta import write_fasta
 
 
 class RudimentaryJunctionValues(NamedTuple):
+    """
+    Primitive parameters for creating synthetic junctions.
+    Encodes the minimal parameter set for creating synthetic junctions.
+    Guarentees a 1-to-1 mapping between the fasta file name and the junction sequences.
+    """
     amp_left_pos: int
     amp_right_pos: int
     amp_scaf: str
