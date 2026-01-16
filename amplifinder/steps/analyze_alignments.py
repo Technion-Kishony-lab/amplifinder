@@ -225,6 +225,9 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         avg_read_length: int,
         is_ancestor: bool,
         read_length_tolerance: float = 0.1,
+        max_dist_from_junction: int = 10,
+        max_nm_score: int = 3,
+        min_as_score: int = -25
     ) -> tuple[
         dict[JunctionType, JunctionReadCounts],
         dict[JunctionType, list[tuple[int, int, str]]],
@@ -238,6 +241,9 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             avg_read_length: Read length for filtering
             is_ancestor: Whether processing ancestor (True) or isolate (False) data
             read_length_tolerance: Tolerance for read length filtering (default 0.1 = 10%)
+            max_dist_from_junction: Maximum distance from junction for read classification
+            max_nm_score: Maximum NM score threshold (default 3)
+            min_as_score: Minimum AS score threshold (default -25)
 
         Returns:
             tuple of:
@@ -252,17 +258,15 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         read_length_factor = 1 + read_length_tolerance
         min_alignment_length = avg_read_length / read_length_factor
         max_alignment_length = avg_read_length * read_length_factor
-        min_bp_in_frame = 10
 
-        counts = {jt: JunctionReadCounts() for jt in JunctionType.sorted()}
-        alignment_data = {jt: [] for jt in JunctionType.sorted()}
-        jct_lengths = {}
+        counts = {jt: JunctionReadCounts() for jt in JunctionType}
+        alignment_data = {jt: [] for jt in JunctionType}
 
         with pysam.AlignmentFile(str(bam_path), "rb") as bam:
 
             # Store lengths by JunctionType
-            jct_lengths_raw = dict(zip(bam.references, bam.lengths))
-            jct_lengths = {JunctionType[jct_name]: length for jct_name, length in jct_lengths_raw.items()}
+            jct_names_to_lengths = dict(zip(bam.references, bam.lengths))
+            jct_types_to_lengths = {JunctionType[jct_name]: length for jct_name, length in jct_names_to_lengths.items()}
 
             # Count read-alignments of each type at each junction
             for read in bam.fetch():
@@ -291,36 +295,23 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                         nm_score = read.get_tag("nM")
                     except KeyError:
                         nm_score = None
-                if (nm_score is not None and nm_score > 3) or (as_score is not None and as_score < -25):
+                if (nm_score is not None and nm_score > max_nm_score) or (as_score is not None and as_score < min_as_score):
                     continue
 
                 # Convert to 1-based coordinates to match MATLAB BioMap output
-                start_0 = read.reference_start
-                end_0 = read.reference_end
-                start_1 = start_0 + 1
-                end_1 = end_0
-                assert start_1 <= end_1
+                start = read.reference_start
+                end = read.reference_end
+                assert start <= end
+                start, end = start + 1, end  # 0-based end-exclusive coordinates
 
-                seq_len = jct_lengths[jct_type]
-                jct_point = seq_len / 2
-                okz_left = (start_1 + alignment_length > jct_point - avg_read_length + min_bp_in_frame) and \
-                           (end_1 < jct_point + self.min_overlap_len)
-                okz_right = (start_1 > jct_point - self.min_overlap_len) and \
-                            (start_1 < jct_point + avg_read_length - min_bp_in_frame)
-                okz_green = (start_1 < jct_point - self.min_overlap_len) and \
-                            (end_1 > jct_point + self.min_overlap_len)
+                arm_len = jct_types_to_lengths[jct_type] // 2
 
-                if okz_green:
-                    read_type = Side.MIDDLE
-                elif okz_left:
-                    read_type = Side.LEFT
-                elif okz_right:
-                    read_type = Side.RIGHT
-                else:
-                    read_type = None
-                counts[jct_type].increment(read_type)
+                read_type = counts[jct_type].add_read(start, end, arm_len,
+                                                      min_overlap_len=self.min_overlap_len,
+                                                      max_dist_from_junction=max_dist_from_junction)
 
                 # Store alignment data (for plotting, etc)
-                alignment_data[jct_type].append((start_0, end_0, read_type))
+                if read_type is not None:
+                    alignment_data[jct_type].append((start, end, read_type))
 
-        return counts, alignment_data, jct_lengths
+        return counts, alignment_data, jct_types_to_lengths
