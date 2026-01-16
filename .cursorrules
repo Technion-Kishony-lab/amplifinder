@@ -8,3 +8,8 @@
 # Code style
 - Short answers with code, no verbose explanations
 
+# Conda activation
+- No base conda on PATH; use env binaries directly.
+- Preferred: export PATH="/zdata/user-data/rkishony/.conda/envs/amplifinder/bin:$PATH" then run tools.
+- Or call full interpreter: /zdata/user-data/rkishony/.conda/envs/amplifinder/bin/python
+

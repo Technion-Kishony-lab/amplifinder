@@ -4,7 +4,9 @@ import pytest
 from unittest.mock import patch
 
 from amplifinder.steps import BreseqStep
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.data_types import RecordTypedDf
+from amplifinder.utils.file_utils import ensure_dir
+
 from tests.conftest import FIXTURES_DIR
 
 
@@ -17,7 +19,7 @@ def breseq_step(tmp_path, tiny_ref_fasta):
     output = ensure_dir(tmp_path / "breseq_out")
 
     return BreseqStep(
-        output_path=output,
+        breseq_path=output,
         fastq_path=fastq,
         ref_file=tiny_ref_fasta,
         docker=False,
@@ -29,8 +31,8 @@ def test_breseq_step_calls_run_breseq(breseq_step):
     """Should call run_breseq with correct params."""
     def mock_run_fn(*args, **kwargs):
         # Create output file when "running"
-        ensure_dir(breseq_step.output_path / "output")
-        (breseq_step.output_path / "output" / "output.gd").touch()
+        ensure_dir(breseq_step.breseq_path / "output")
+        (breseq_step.breseq_path / "output" / "output.gd").touch()
 
     with patch("amplifinder.steps.run_breseq.run_breseq", side_effect=mock_run_fn) as mock_run:
         breseq_step.run()
@@ -38,7 +40,7 @@ def test_breseq_step_calls_run_breseq(breseq_step):
         mock_run.assert_called_once_with(
             ref_paths=[breseq_step.ref_file],
             fastq_path=breseq_step.fastq_path,
-            output_path=breseq_step.output_path,
+            output_path=breseq_step.breseq_path,
             docker=False,
             threads=1,
         )
@@ -46,24 +48,26 @@ def test_breseq_step_calls_run_breseq(breseq_step):
 
 def test_breseq_step_skips_if_output_exists(breseq_step):
     """Should skip if output.gd already exists."""
-    ensure_dir(breseq_step.output_path / "output")
-    (breseq_step.output_path / "output" / "output.gd").touch()
+    ensure_dir(breseq_step.breseq_path / "output")
+    (breseq_step.breseq_path / "output" / "output.gd").touch()
 
     breseq_step.run()
-    assert breseq_step.run_count == 0  # skipped
+    assert breseq_step._artifacts_generated is False  # skipped (artifacts cached)
 
 
 def test_breseq_step_read_outputs():
     """Should parse breseq output correctly when output exists."""
     # When output exists, fastq_path and ref_file are optional
     step = BreseqStep(
-        output_path=FIXTURES_DIR / "breseq",
+        breseq_path=FIXTURES_DIR / "breseq",
     )
 
-    result = step.load_outputs()
+    # run() returns the parsed output (uses existing artifacts)
+    result = step.run()
 
-    assert isinstance(result, dict)
-    assert "JC" in result
+    assert isinstance(result, RecordTypedDf)
+    assert len(result.df) > 0
+    assert all(col in result.df.columns for col in ["num", "scaf1", "pos1", "scaf2", "pos2"])
 
 
 def test_breseq_step_requires_inputs_when_no_output(tmp_path):
@@ -71,7 +75,7 @@ def test_breseq_step_requires_inputs_when_no_output(tmp_path):
     output = ensure_dir(tmp_path / "breseq_out")
 
     with pytest.raises(ValueError, match="fastq_path and ref_file are required"):
-        BreseqStep(output_path=output)
+        BreseqStep(breseq_path=output)
 
 
 # =============================================================================

@@ -1,53 +1,29 @@
 """Tests for AlignReadsToJunctionsStep."""
 
-import pytest
-from pathlib import Path
 from amplifinder.steps import AlignReadsToJunctionsStep
-from amplifinder.data_types import RecordTypedDf, FilteredTnJc2, RawEvent, Orientation
-from amplifinder.utils.tools import ensure_parent_dir
+from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2
+from amplifinder.utils.file_utils import ensure_parent_dir
 
 
-@pytest.fixture
-def sample_candidate(tmp_path):
-    """Create a sample FilteredTnJc2."""
-    return FilteredTnJc2(
-        jc_num_L=1, jc_num_R=2,
-        scaf_chr="tiny",
-        pos_chr_L=200, pos_chr_R=300,
-        pos_tn_L=10, pos_tn_R=20,
-        dir_chr_L=Orientation.FORWARD, dir_chr_R=Orientation.REVERSE,
-        dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
-        tn_ids=[1], tn_orientations=[Orientation.FORWARD],
-        span_origin=False,
-        amplicon_length=100, complementary_length=900,
-        ref_name="tiny", iso_name="sample1",
-        amplicon_coverage=2.0, genome_coverage=1.0,
-        copy_number=2.0, amplicon_coverage_mode=2.0,
-        raw_event=RawEvent.FLANKED,
-        shared_tn_ids=[1], chosen_tn_id=1,
-        analysis_dir="jc_200_300_001_L150",
-    )
-
-
-def test_step_initialization(sample_candidate, tmp_path):
+def test_step_initialization(filtered_tnjc2_record, tmp_path):
     """Should initialize step correctly."""
-    filtered_tnjc2s = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
-    
+    filtered_tnjc2s = RecordTypedDf.from_records([filtered_tnjc2_record], SynJctsTnJc2)
+
     # Create dummy FASTQ file
     fastq_file = tmp_path / "test.fastq"
     fastq_file.write_text("@read1\nACGT\n+\nIIII\n")
-    
+
     # Create dummy junctions.fasta
-    junctions_file = tmp_path / sample_candidate.analysis_dir / "junctions.fasta"
+    junctions_file = tmp_path / "junctions" / filtered_tnjc2_record.analysis_dir / "junctions.fasta"
     ensure_parent_dir(junctions_file)
     junctions_file.write_text(">1\nACGTACGT\n")
-    
+
     step = AlignReadsToJunctionsStep(
-        filtered_tnjc2s=filtered_tnjc2s,
+        synjcs_tnjc2s=filtered_tnjc2s,
         output_dir=tmp_path,
-        iso_fastq_path=fastq_file,
+        fastq_path=fastq_file,
     )
-    
-    assert step.filtered_tnjc2s == filtered_tnjc2s
-    assert step.iso_fastq_path == fastq_file
-    assert step.anc_fastq_path is None
+
+    assert step.synjcs_tnjc2s == filtered_tnjc2s
+    assert step.fastq_path == fastq_file
+    assert step.is_ancestor is False

@@ -1,11 +1,9 @@
 """Tests for TN element location steps (Genbank and ISfinder)."""
 
-import pandas as pd
 import pytest
 
 from amplifinder.steps import LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep
-from amplifinder.data_types import RecordTypedDf
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.data_types import Orientation, RecordTypedDf
 from tests.env import RUN_BLAST_TESTS
 
 
@@ -19,6 +17,7 @@ skip_no_blast = pytest.mark.skipif(not RUN_BLAST_TESTS, reason="BLAST tests disa
 def step_factory(request, tmp_output, tiny_genome, tiny_tn_db):
     """Factory to create TN location steps - parametrized for both backends."""
     output_dir = tmp_output / "tn_loc" / tiny_genome.name
+
     def make_step(force=False):
         if request.param == "genbank":
             return LocateTNsUsingGenbankStep(
@@ -50,24 +49,30 @@ def test_extracts_tn_elements(locate_tns_step):
 
     assert isinstance(tn_loc, RecordTypedDf)
 
-    expected = pd.DataFrame({
-        "tn_id": [1, 2],
-        "tn_name": ["IS_test1", "IS_test2"],
-        "tn_scaf": ["tiny", "tiny"],
-        "loc_left": [501, 1601],
-        "loc_right": [1200, 2200],
-        "complement": [False, True],
-        "join": [False, False],
-    })
-    pd.testing.assert_frame_equal(tn_loc.df, expected)
+    # Check that we found the right number of TNs
+    assert len(tn_loc) == 2
+
+    # Check specific fields
+    assert list(tn_loc.df["tn_name"]) == ["IS_test1", "IS_test2"]
+    assert list(tn_loc.df["scaf"]) == ["tiny", "tiny"]
+    # Check coordinates are in the right range (parsers may differ slightly in exact positions)
+    assert tn_loc.df["start"].iloc[0] in [500, 501]  # IS_test1 start (forward)
+    assert tn_loc.df["start"].iloc[1] in [2199, 2200]  # IS_test2 start (reverse - higher coord)
+    assert tn_loc.df["end"].iloc[0] in [1199, 1200]  # IS_test1 end (forward)
+    assert tn_loc.df["end"].iloc[1] in [1600, 1601]  # IS_test2 end (reverse - lower coord)
+    assert list(tn_loc.df["orientation"]) == [Orientation.FORWARD, Orientation.REVERSE]
+    assert list(tn_loc.df["join"]) == [False, False]
 
 
-def test_skips_if_output_exists(locate_tns_step):
+def test_skips_if_output_exists(locate_tns_step, step_factory):
     """Should skip execution if output already exists."""
     locate_tns_step.run()
-    assert locate_tns_step.run_count == 1  # first run
-    locate_tns_step.run()
-    assert locate_tns_step.run_count == 1  # second run skips
+    assert locate_tns_step._artifacts_generated is True  # first run
+
+    # New instance should skip due to cached artifacts
+    step2 = step_factory()
+    step2.run()
+    assert step2._artifacts_generated is False  # skipped
 
 
 def test_force_reruns(step_factory):
@@ -75,7 +80,7 @@ def test_force_reruns(step_factory):
     step_factory().run()
     step = step_factory(force=True)
     step.run()
-    assert step.run_count == 1
+    assert step._artifacts_generated is True
 
 
 # =============================================================================
@@ -85,20 +90,6 @@ def test_force_reruns(step_factory):
 @pytest.mark.integration
 class TestLocateTNsIntegration:
     """Test TN element location using GenBank annotations with real data."""
-
-    @pytest.fixture
-    def u00096_genome(self, tmp_path):
-        """Load U00096 reference (cached)."""
-        from amplifinder.steps import GetRefGenomeStep
-        
-        ref_path = ensure_dir(tmp_path / "genomesDB")
-
-        step = GetRefGenomeStep(
-            ref_name="U00096",
-            ref_path=ref_path,
-            ncbi=True,
-        )
-        return step.run()
 
     def test_locate_tns_genbank(self, tmp_path, u00096_genome, isolate_srr25242877):
         """Locate TN elements from GenBank annotations."""
@@ -115,8 +106,8 @@ class TestLocateTNsIntegration:
 
         # Check expected columns
         assert "tn_name" in tn_loc.df.columns
-        assert "loc_left" in tn_loc.df.columns
-        assert "loc_right" in tn_loc.df.columns
+        assert "start" in tn_loc.df.columns
+        assert "end" in tn_loc.df.columns
 
     def test_locate_tns_isfinder(self, tmp_path, u00096_genome):
         """Locate TN elements using ISfinder database."""

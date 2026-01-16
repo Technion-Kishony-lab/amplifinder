@@ -1,7 +1,6 @@
 """Tests for InitializingStep."""
 
 import pytest
-from pathlib import Path
 from amplifinder.steps import InitializingStep
 from amplifinder.config import Config
 
@@ -19,12 +18,16 @@ def sample_config(tmp_path):
 
 
 @pytest.fixture
-def init_step(sample_config):
-    return InitializingStep(config=sample_config)
+def init_step_factory(sample_config):
+    """Factory to create InitializingStep instances with the same config."""
+    def make():
+        return InitializingStep(config=sample_config)
+    return make
 
 
-def test_creates_directories(init_step, tmp_path):
+def test_creates_directories(init_step_factory, tmp_path):
     """Should create output directories with ref_name/anc_name/iso_name structure."""
+    init_step = init_step_factory()
     iso_run_dir, anc_run_dir = init_step.run()
 
     assert (tmp_path / "output").exists()
@@ -34,11 +37,12 @@ def test_creates_directories(init_step, tmp_path):
     assert iso_run_dir == tmp_path / "output" / "U00096" / "ancestor1" / "sample1"
 
 
-def test_creates_config_file(init_step, tmp_path):
+def test_creates_config_file(init_step_factory, tmp_path):
     """Should create run_config.yaml file."""
+    init_step = init_step_factory()
     result = init_step.run()
     iso_run_dir, anc_run_dir = result
-    
+
     config_path = iso_run_dir / "run_config.yaml"
     assert config_path.exists()
 
@@ -59,12 +63,16 @@ def test_self_ancestor(tmp_path):
     assert iso_run_dir == tmp_path / "output" / "U00096" / "sample1" / "sample1"
 
 
-def test_skips_if_exists(init_step):
+def test_skips_if_exists(init_step_factory):
     """Should skip if output already exists."""
-    init_step.run()
-    assert init_step.run_count == 1
-    init_step.run()
-    assert init_step.run_count == 1  # didn't run again
+    step1 = init_step_factory()
+    step1.run()
+    assert step1._artifacts_generated is True
+
+    # New instance should skip due to cached artifacts
+    step2 = init_step_factory()
+    step2.run()
+    assert step2._artifacts_generated is False
 
 
 def test_force_reruns(tmp_path):
@@ -81,4 +89,4 @@ def test_force_reruns(tmp_path):
 
     step_force = InitializingStep(config=config, force=True)
     step_force.run()
-    assert step_force.run_count == 1
+    assert step_force._artifacts_generated is True

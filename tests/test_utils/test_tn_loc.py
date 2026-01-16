@@ -2,23 +2,25 @@
 
 import pandas as pd
 
-from amplifinder.utils.tn_loc import compare_tn_locations
-from amplifinder.data_types import RecordTypedDf, RefTnLoc
+from amplifinder.steps.locate_tns import compare_tn_locations
+from amplifinder.data_types import Orientation, RecordTypedDf, RefTn
 
 
-def make_tn_loc(records: list[dict]) -> RecordTypedDf[RefTnLoc]:
+def make_tn_loc(records: list[dict]) -> RecordTypedDf[RefTn]:
     """Helper to create TN location RecordDF."""
     if not records:
-        return RecordTypedDf.empty(RefTnLoc)
+        return RecordTypedDf.empty(RefTn)
     return RecordTypedDf(pd.DataFrame({
         "tn_id": [r.get("tn_id", i + 1) for i, r in enumerate(records)],
         "tn_name": [r["tn_name"] for r in records],
-        "tn_scaf": [r.get("tn_scaf", "chr1") for r in records],
-        "loc_left": [r["loc_left"] for r in records],
-        "loc_right": [r["loc_right"] for r in records],
-        "complement": [r.get("complement", False) for r in records],
+        "scaf": [r.get("scaf", "chr1") for r in records],
+        "is_circular": [r.get("is_circular", False) for r in records],
+        "length": [r.get("length", 10000) for r in records],
+        "start": [r["loc_left"] for r in records],
+        "end": [r["loc_right"] for r in records],
+        "orientation": [Orientation.REVERSE if r.get("complement", False) else Orientation.FORWARD for r in records],
         "join": [r.get("join", False) for r in records],
-    }), RefTnLoc)
+    }), RefTn)
 
 
 def get_single_record(caplog):
@@ -125,8 +127,8 @@ class TestCompareTnLocations:
 
     def test_different_scaffolds_no_match(self, caplog):
         """TNs on different scaffolds don't match."""
-        tn1 = make_tn_loc([{"tn_name": "IS1", "tn_scaf": "chr1", "loc_left": 100, "loc_right": 500}])
-        tn2 = make_tn_loc([{"tn_name": "IS1", "tn_scaf": "chr2", "loc_left": 100, "loc_right": 500}])
+        tn1 = make_tn_loc([{"tn_name": "IS1", "scaf": "chr1", "loc_left": 100, "loc_right": 500}])
+        tn2 = make_tn_loc([{"tn_name": "IS1", "scaf": "chr2", "loc_left": 100, "loc_right": 500}])
         compare_tn_locations(tn1, tn2, name1="A", name2="B")
         assert len(caplog.records) == 2
         assert "A TN 'IS1'" in caplog.records[0].message and "not found in B" in caplog.records[0].message

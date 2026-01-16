@@ -2,22 +2,18 @@
 
 import os
 import random
-import shutil
-from pathlib import Path
-
+import pandas as pd
 import pytest
+
 from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio.SeqFeature import SeqFeature, FeatureLocation
 
-from amplifinder.config import get_iso_run_dir
-from amplifinder.utils.tools import ensure_dir
+from pathlib import Path
 
-# =============================================================================
-# Assertion helpers
-# =============================================================================
-
+from amplifinder.data_types import RefTn, RecordTypedDf
+from amplifinder.utils.file_utils import ensure_dir
 
 # =============================================================================
 # Test configuration
@@ -31,6 +27,9 @@ TEST_DATA_ROOT = Path(
 )
 MATLAB_OUTPUT = TEST_DATA_ROOT / "AmpliFinderWorkspace" / "output"
 
+# Output cleanup mode: "clear", "keep", or "keep_junctions"
+OUTPUT_CLEANUP_MODE = "keep_junctions"
+
 # External data paths (from isolates.xlsx)
 FASTQ_PATH = Path(
     "/zdata/user-data/idan/small_projects/breseq_to_amplification_from_dropbox/morbidostat_sra"
@@ -43,6 +42,29 @@ BRESEQ_PATH = Path(
 # =============================================================================
 # Real-data integration fixtures (used across test suites)
 # =============================================================================
+
+# Persistent cache directory for test genomes (survives across test runs)
+TEST_GENOMES_CACHE = Path(__file__).parent / "test_outputs" / "integration" / "genomesDB"
+
+
+@pytest.fixture(scope="session")
+def u00096_genome():
+    """Load U00096 reference genome (session-scoped, cached across all tests).
+
+    Downloads from NCBI only if not already cached. All integration tests
+    share the same genome instance.
+    """
+    from amplifinder.steps import GetRefGenomeStep
+
+    ref_path = ensure_dir(TEST_GENOMES_CACHE)
+
+    step = GetRefGenomeStep(
+        ref_name="U00096",
+        ref_path=ref_path,
+        ncbi=True,
+    )
+    return step.run()
+
 
 @pytest.fixture
 def isolate_srr25242877():
@@ -68,19 +90,46 @@ def isolate_srr25242906():
     }
 
 
+def _clear_except(directory: Path, exclude: list[str]):
+    """Recursively delete all files/dirs except 'junctions' folders."""
+    for item in directory.iterdir():
+        if item.name in exclude:
+            continue  # skip items in exclude
+        if item.is_dir():
+            _clear_except(item, exclude)
+            # remove dir if empty after cleanup
+            if not any(item.iterdir()):
+                item.rmdir()
+        else:
+            item.unlink()
+
+
 @pytest.fixture
 def cleared_output_dir():
-    """Clear entire output directory before test run.
-    
-    Returns the cleared output_dir Path.
+    """Clear output directory based on OUTPUT_CLEANUP_MODE.
+
+    Modes:
+        - "clear": Remove entire output directory
+        - "keep": Keep all existing outputs
+        - "keep_junctions": Clear all except junctions folder
+
+    Returns the output_dir Path.
     """
-    default_base = TEST_DATA_ROOT.parent
-    base = Path(os.environ.get("AMPLIFINDER_OUTPUT_ROOT", default_base))
-    test_output_root = base / "python_outputs"
-    output_dir = test_output_root / "output"
-    
-    ensure_dir(output_dir, cleanup=True)
-    
+    base = Path(__file__).parent / "test_outputs" / "integration"
+    output_dir = base / "output"
+
+    if OUTPUT_CLEANUP_MODE == "clear":
+        ensure_dir(output_dir, cleanup=True)
+    elif OUTPUT_CLEANUP_MODE == "keep":
+        ensure_dir(output_dir, cleanup=False)
+    elif OUTPUT_CLEANUP_MODE == "keep_junctions":
+        if output_dir.exists():
+            _clear_except(output_dir, exclude=['junctions'])
+        else:
+            ensure_dir(output_dir)
+    else:
+        raise ValueError(f"Invalid OUTPUT_CLEANUP_MODE: {OUTPUT_CLEANUP_MODE}")
+
     return output_dir
 
 
@@ -148,7 +197,7 @@ def write_genbank(path: Path, name: str, seq: Seq, tn_locations: dict) -> None:
         description="Synthetic reference with TN elements for testing",
         annotations={
             "molecule_type": "DNA",
-            "topology": "linear",
+            "topology": "circular",
             "data_file_division": "SYN",
         },
     )
@@ -247,13 +296,144 @@ def tiny_genome(tiny_ref_gbk, tiny_ref_fasta):
 
 
 @pytest.fixture
-def locate_tns_step(tmp_output, tiny_genome):
-    """Create TN location step (genbank-based)."""
+def locate_tns_step_factory(tmp_output, tiny_genome):
+    """Factory for TN location steps (genbank-based)."""
     from amplifinder.steps import LocateTNsUsingGenbankStep
-    return LocateTNsUsingGenbankStep(
-        genome=tiny_genome,
-        output_dir=tmp_output / "tn_loc" / tiny_genome.name,
+
+    def make():
+        return LocateTNsUsingGenbankStep(
+            genome=tiny_genome,
+            output_dir=tmp_output / "tn_loc" / tiny_genome.name,
+        )
+
+    return make
+
+
+@pytest.fixture
+def locate_tns_step(locate_tns_step_factory):
+    """Single TN location step instance (kept for compatibility)."""
+    return locate_tns_step_factory()
+
+
+# =============================================================================
+# Shared record fixtures
+# =============================================================================
+
+@pytest.fixture
+def raw_tnjc2_record(tiny_genome):
+    """Base RawTnJc2 for step fixtures."""
+    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, Terminal
+
+    tn_jc_S = TnJunction(
+        num=1,
+        scaf1="tiny",
+        pos1=10,
+        dir1=Orientation.FORWARD,
+        scaf2="tiny",
+        pos2=200,
+        dir2=Orientation.FORWARD,
+        flanking1=50,
+        flanking2=50,
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.START, offset=0)],
+        swapped=False,
     )
+    tn_jc_E = TnJunction(
+        num=2,
+        scaf1="tiny",
+        pos1=20,
+        dir1=Orientation.REVERSE,
+        scaf2="tiny",
+        pos2=300,
+        dir2=Orientation.REVERSE,
+        flanking1=50,
+        flanking2=50,
+        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.END, offset=0)],
+        swapped=False,
+    )
+    scaffold = tiny_genome.get_scaffold("tiny")
+    return RawTnJc2(
+        tnjc_left=tn_jc_S,
+        tnjc_right=tn_jc_E,
+        scaffold=scaffold,
+    )
+
+
+@pytest.fixture
+def covered_tnjc2_record(raw_tnjc2_record):
+    """RawTnJc2 with coverage fields."""
+    from amplifinder.data_types import CoveredTnJc2
+
+    return CoveredTnJc2.from_other(
+        raw_tnjc2_record,
+        iso_scaf_avg=1.0,
+        iso_amplicon_avg=2.0,
+    )
+
+
+@pytest.fixture
+def classified_tnjc2_record(covered_tnjc2_record):
+    """CoveredTnJc2 with structural classification."""
+    from amplifinder.data_types import SingleLocusLinkedTnJc2, BaseRawEvent
+
+    return SingleLocusLinkedTnJc2.from_other(
+        covered_tnjc2_record,
+        base_raw_event=BaseRawEvent.LOCUS_JOINING,
+        single_locus_tnjc2_left_matchings=[],
+        single_locus_tnjc2_right_matchings=[],
+    )
+
+
+@pytest.fixture
+def filtered_tnjc2_record(classified_tnjc2_record):
+    """SynJctsTnJc2 with analysis directory."""
+    from amplifinder.data_types import SynJctsTnJc2
+
+    return SynJctsTnJc2.from_other(
+        classified_tnjc2_record,
+        analysis_dir="jc_200_300_001_L150",
+    )
+
+
+@pytest.fixture
+def analyzed_tnjc2_record(filtered_tnjc2_record):
+    """AnalyzedTnJc2 with junction coverage."""
+    from amplifinder.data_types import AnalyzedTnJc2, JunctionType, JunctionReadCounts
+
+    # Create jc_cov dict with all junction types having zero counts
+    jc_cov = {jt: JunctionReadCounts() for jt in JunctionType}
+
+    return AnalyzedTnJc2.from_other(
+        filtered_tnjc2_record,
+        jc_cov=jc_cov,
+        jc_cov_anc=None,
+    )
+
+
+@pytest.fixture
+def ref_tn_record():
+    """RefTn base record."""
+    from amplifinder.data_types import Orientation, RefTn
+
+    return RefTn(
+        tn_id=1,
+        tn_name="IS1",
+        scaf="tiny",
+        is_circular=False,
+        length=1000,
+        start=200,
+        end=300,
+        orientation=Orientation.FORWARD,
+        join=False,
+    )
+
+
+@pytest.fixture
+def ref_tns_indexed(ref_tn_record):
+    """RefTn RecordTypedDf with tn_id as index (for O(1) lookup in synthetic junctions)."""
+
+    ref_tn_df = pd.DataFrame([ref_tn_record.model_dump()])
+    ref_tn_df = ref_tn_df.set_index('tn_id', drop=False)  # Keep tn_id column
+    return RecordTypedDf(ref_tn_df, RefTn)
 
 
 def pytest_configure(config):

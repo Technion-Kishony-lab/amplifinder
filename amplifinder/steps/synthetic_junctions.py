@@ -1,233 +1,229 @@
-"""Step 10: Create synthetic junction sequences for alignment."""
+"""
+Create synthetic junction sequences for alignment.
+
+Amplicon structure:
+
+~~~~~~~~~>>>======>>>======>>>~~~~~~~~~
+
+legend:
+~~~    chromosome
+>>>    IS
+====== cassette (amplicon)
+(1) ~~-==  left reference (chromosome-cassette)
+(2) ~~->>  left IS transposition (chromosome-IS)
+(3) ==->>  left of mid IS (cassette-IS)
+(4) ==-==  lost IS (cassette-cassette, no IS)
+(5) >>-==  right of mid IS (IS-cassette)
+(6) >>-~~  right IS transposition (IS-chromosome)
+(7) ==-~~  right reference (cassette-chromosome)
+"""
 
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, NamedTuple
 
 from amplifinder.data_types import (
-    RecordTypedDf, FilteredTnJc2, Genome, JunctionType, RefTnLoc,
+    BaseRawEvent, RecordTypedDf, SingleLocusLinkedTnJc2, SynJctsTnJc2, Genome,
+    JunctionType, RefTn, Junction, Terminal, JcArm, Orientation
 )
-from amplifinder.steps.base import Step
-from amplifinder.utils.fasta import reverse_complement
-from amplifinder.utils.tools import ensure_parent_dir
+
+from amplifinder.steps.base import RecordTypedDfStep
+from amplifinder.utils.file_utils import ensure_dir, remove_file_or_dir
+from amplifinder.utils.fasta import write_fasta
 
 
-def create_synthetic_junctions(
-    candidate: FilteredTnJc2,
-    chr_seq: str,
-    tn_loc: RefTnLoc,
-    tn_seq: str,
-    read_length: int,
-) -> dict[JunctionType, str]:
-    """Create 7 synthetic junction sequences for a candidate amplicon.
-    
-    Junction types (amplicon: ~~~>>>======>>>======>>>~~~):
-    1. ~~==  left reference (chromosome-cassette)
-    2. ~~>>  left IS transposition (chromosome-IS)
-    3. ==>>  left of mid IS (cassette-IS)
-    4. ====  lost IS (cassette-cassette, no IS)
-    5. >>==  right of mid IS (IS-cassette)
-    6. >>~~  right IS transposition (IS-chromosome)
-    7. ==~~  right reference (cassette-chromosome)
-    
-    Args:
-        candidate: CandidateTnJc2 record
-        chr_seq: Chromosome sequence
-        tn_loc: TN location record for the chosen TN
-        tn_seq: TN element sequence
-        read_length: Read length for junction width
-    
-    Returns:
-        Dict mapping JunctionType to sequence string
-    """
-    WID = read_length * 2  # junction width
-    
-    # Positions (0-based for Python)
-    pos_L = candidate.pos_chr_L - 1  # left junction position
-    pos_R = candidate.pos_chr_R - 1  # right junction position
-    
-    # Handle origin spanning
-    if candidate.span_origin:
-        pos_L, pos_R = pos_R, pos_L
-    
-    # Outside positions (flanking the amplicon)
-    pos_out_L = pos_L - 1
-    pos_out_R = pos_R + 1
-    
-    # TN boundaries
-    tn_left = tn_loc.loc_left - 1  # 0-based
-    tn_right = tn_loc.loc_right  # exclusive end
-    tn_length = tn_right - tn_left
-    
-    # TN orientation (from chosen TN)
-    # Get orientation from candidate's tn_orientations list
-    # MATLAB: IS_orientation = isjc2.chosen_IS{1}.orientation
-    # Orientation computed in create_tnjc2: side_i * dir2(i), accounting for span_origin
-    tn_orientation = 1  # default to forward
-    if candidate.chosen_tn_id is not None:
-        try:
-            idx = candidate.tn_ids.index(candidate.chosen_tn_id)
-            tn_orientation = candidate.tn_orientations[idx].value
-        except (ValueError, IndexError):
-            # Fallback if chosen_tn_id not found in tn_ids
-            pass
-    
-    junctions = {}
-    
-    # Helper to get sequence with bounds checking
-    def get_seq(seq: str, start: int, end: int, circular: bool = False) -> str:
-        seq_len = len(seq)
-        if circular and (start < 0 or end > seq_len):
-            # Handle circular genome
-            result = []
-            for i in range(start, end):
-                result.append(seq[i % seq_len])
-            return ''.join(result)
+class RudimentaryJunctionValues(NamedTuple):
+    amp_left_pos: int
+    amp_right_pos: int
+    amp_scaf: str
+    tn_start_pos: int
+    tn_end_pos: int
+    tn_scaf: str
+    tn_side_left_amp_side: Terminal
+    flank: int
+    # Optional: chr positions in case of flanked TNJC2. Otherwise, we use the mirror of the amplicon arms
+    chr_left_pos: Optional[int] = None
+    chr_right_pos: Optional[int] = None
+
+    def create_syn_junctions(self) -> dict[JunctionType, Junction]:
+        """Create 7 synthetic junctions from primitive coordinates and strands."""
+        # Amplicon inward arms (left/right)
+        amp_left_arm = JcArm(scaf=self.amp_scaf, start=self.amp_left_pos, dir=Orientation.FORWARD, flank=self.flank)
+        amp_right_arm = JcArm(scaf=self.amp_scaf, start=self.amp_right_pos, dir=Orientation.REVERSE, flank=self.flank)
+
+        # Chromosome outward arms; mirror of amplicon if not flanked by ancestral TN
+        if self.chr_left_pos is None:
+            chr_left_arm = amp_left_arm.mirror()
         else:
-            start = max(0, start)
-            end = min(seq_len, end)
-            return seq[start:end]
-    
-    # (1) Left reference: ~~==
-    seq1 = get_seq(chr_seq, pos_out_L - WID + 1, pos_out_L + 1, circular=True)
-    seq2 = get_seq(chr_seq, pos_L, pos_L + WID, circular=True)
-    junctions[JunctionType.LEFT_REF] = seq1 + seq2
-    
-    # (2) Left IS transposition: ~~>>
-    seq1 = get_seq(chr_seq, pos_out_L - WID + 1, pos_out_L + 1, circular=True)
-    if tn_orientation == 1:
-        seq2 = get_seq(tn_seq, tn_left, tn_left + WID)
-    else:
-        seq2 = reverse_complement(get_seq(tn_seq, tn_right - WID, tn_right))
-    junctions[JunctionType.LEFT_IS_TRANS] = seq1 + seq2
-    
-    # (3) Left of mid IS: ==>>
-    seq1 = get_seq(chr_seq, pos_R - WID + 1, pos_R + 1, circular=True)
-    if tn_orientation == 1:
-        seq2 = get_seq(tn_seq, tn_left, tn_left + WID)
-    else:
-        seq2 = reverse_complement(get_seq(tn_seq, tn_right - WID, tn_right))
-    junctions[JunctionType.LEFT_MID_IS] = seq1 + seq2
-    
-    # (4) Lost IS: ====
-    seq1 = get_seq(chr_seq, pos_R - WID + 1, pos_R + 1, circular=True)
-    seq2 = get_seq(chr_seq, pos_L, pos_L + WID, circular=True)
-    junctions[JunctionType.LOST_IS] = seq1 + seq2
-    
-    # (5) Right of mid IS: >>==
-    if tn_orientation == 1:
-        seq1 = get_seq(tn_seq, tn_right - WID, tn_right)
-    else:
-        seq1 = reverse_complement(get_seq(tn_seq, tn_left, tn_left + WID))
-    seq2 = get_seq(chr_seq, pos_L, pos_L + WID, circular=True)
-    junctions[JunctionType.RIGHT_MID_IS] = seq1 + seq2
-    
-    # (6) Right IS transposition: >>~~
-    if tn_orientation == 1:
-        seq1 = get_seq(tn_seq, tn_right - WID, tn_right)
-    else:
-        seq1 = reverse_complement(get_seq(tn_seq, tn_left, tn_left + WID))
-    seq2 = get_seq(chr_seq, pos_out_R, pos_out_R + WID, circular=True)
-    junctions[JunctionType.RIGHT_IS_TRANS] = seq1 + seq2
-    
-    # (7) Right reference: ==~~
-    seq1 = get_seq(chr_seq, pos_R - WID + 1, pos_R + 1, circular=True)
-    seq2 = get_seq(chr_seq, pos_out_R, pos_out_R + WID, circular=True)
-    junctions[JunctionType.RIGHT_REF] = seq1 + seq2
-    
-    return junctions
+            chr_left_arm = JcArm(scaf=self.amp_scaf, start=self.chr_left_pos, dir=Orientation.REVERSE, flank=self.flank)
+
+        if self.chr_right_pos is None:
+            chr_right_arm = amp_right_arm.mirror()
+        else:
+            chr_right_arm = JcArm(
+                scaf=self.amp_scaf, start=self.chr_right_pos, dir=Orientation.FORWARD, flank=self.flank
+            )
+
+        # TN inward arms
+        tn_orientation = Orientation.FORWARD if self.tn_start_pos < self.tn_end_pos else Orientation.REVERSE
+        tn_start_arm = JcArm(scaf=self.tn_scaf, start=self.tn_start_pos, dir=tn_orientation, flank=self.flank)
+        tn_end_arm = JcArm(scaf=self.tn_scaf, start=self.tn_end_pos, dir=tn_orientation.opposite(), flank=self.flank)
+
+        if self.tn_side_left_amp_side == Terminal.START:
+            tn_left_arm, tn_right_arm = tn_end_arm, tn_start_arm
+        else:
+            tn_left_arm, tn_right_arm = tn_start_arm, tn_end_arm
+
+        return _build_7_junctions_from_6_arms(
+            chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
+
+    def get_name(self) -> str:
+        side_str = "S" if self.tn_side_left_amp_side == Terminal.START else "E"
+        chr_left_pos_str = f"chrL={self.chr_left_pos}_" if self.chr_left_pos is not None else ""
+        chr_right_pos_str = f"chrR={self.chr_right_pos}_" if self.chr_right_pos is not None else ""
+        return (f"jc_{self.amp_scaf}_{self.amp_left_pos}-{self.amp_right_pos}_"
+                f"{self.tn_scaf}_{self.tn_start_pos}-{self.tn_end_pos}_"
+                f"{chr_left_pos_str}{chr_right_pos_str}"
+                f"{side_str}_{self.flank}bp")
 
 
-def write_junctions_fasta(
-    junctions: dict[JunctionType, str],
-    output_path: Path,
-) -> None:
-    """Write junction sequences to FASTA file.
-    
-    Args:
-        junctions: Dict mapping JunctionType to sequence
-        output_path: Output FASTA file path
+def _build_7_junctions_from_6_arms(
+    chr_left: JcArm, chr_right: JcArm,
+    amp_left: JcArm, amp_right: JcArm,
+    tn_left: JcArm, tn_right: JcArm,
+) -> dict[JunctionType, Junction]:
+    """Create Junction objects for each junction type."""
+    return {
+        JunctionType.CHR_TO_AMP_LEFT: Junction.from_jc_arms(chr_left, amp_left),
+        JunctionType.CHR_TO_TN_LEFT: Junction.from_jc_arms(chr_left, tn_left),
+        JunctionType.AMP_RIGHT_TO_TN_LEFT: Junction.from_jc_arms(amp_right, tn_left),
+        JunctionType.AMP_RIGHT_TO_AMP_LEFT: Junction.from_jc_arms(amp_right, amp_left),
+        JunctionType.TN_RIGHT_TO_AMP_LEFT: Junction.from_jc_arms(tn_right, amp_left),
+        JunctionType.TN_RIGHT_TO_CHR: Junction.from_jc_arms(tn_right, chr_right),
+        JunctionType.AMP_RIGHT_TO_CHR: Junction.from_jc_arms(amp_right, chr_right),
+    }
+
+
+def create_synthetic_junctions_and_name(
+    tnjc2: SingleLocusLinkedTnJc2, jc_width: int, ref_tns: RecordTypedDf[RefTn]
+) -> tuple[dict[JunctionType, Junction], str]:
+
+    # Get TN sides that S and E junctions connect to (with offsets)
+    tn_side_left_amp, tn_side_right_amp = tnjc2.get_sides_of_chosen_tn()
+
+    # Get the chosen RefTn from chosen_tn_id (O(1) lookup using indexed ref_tns)
+    chosen_tn_id = tnjc2.chosen_tn_id
+    ref_tn = ref_tns[chosen_tn_id]
+    assert ref_tn.tn_id == chosen_tn_id
+
+    # Get inward arms for Amplicon
+    amp_left_arm, amp_right_arm = tnjc2.get_inward_arms(flank=jc_width)
+
+    # Get chromosome arms (outward amplicon arms)
+    chr_left_arm, chr_right_arm = tnjc2.get_outward_arms(flank=jc_width)
+
+    # Handle tnjc2 flanked by ancestral TN
+    paired_left = tnjc2.single_locus_tnjc2_matching_left
+    is_left_ref_tn = paired_left is not None and paired_left.base_raw_event == BaseRawEvent.REFERENCE
+    if is_left_ref_tn:
+        chr_left_arm = paired_left.get_outward_arms(flank=jc_width)[0]
+
+    paired_right = tnjc2.single_locus_tnjc2_matching_right
+    is_right_ref_tn = paired_right is not None and paired_right.base_raw_event == BaseRawEvent.REFERENCE
+    if is_right_ref_tn:
+        chr_right_arm = paired_right.get_outward_arms(flank=jc_width)[1]
+
+    # Get inward arms for RefTn with offset adjustments via ref_tn_side
+    # The right-side of the TN is one that connects to the left-side of the amplicon
+    tn_right_arm = ref_tn.get_inward_arm_by_ref_tn_side(tn_side_left_amp, jc_width)
+    tn_left_arm = ref_tn.get_inward_arm_by_ref_tn_side(tn_side_right_amp, jc_width)
+
+    # Create Junction objects for each junction type
+    direct_jc = _build_7_junctions_from_6_arms(
+        chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
+
+    # Create rudimentary junction values for naming
+    tn_side_left_amp_side = tn_side_left_amp.side
+    rudimentary = RudimentaryJunctionValues(
+        amp_left_pos=amp_left_arm.start, amp_right_pos=amp_right_arm.start, amp_scaf=amp_left_arm.scaf,
+        tn_start_pos=tn_left_arm.start if tn_side_left_amp_side == Terminal.END else tn_right_arm.start,
+        tn_end_pos=tn_right_arm.start if tn_side_left_amp_side == Terminal.END else tn_left_arm.start,
+        tn_scaf=tn_left_arm.scaf,
+        tn_side_left_amp_side=tn_side_left_amp_side,
+        chr_left_pos=chr_left_arm.start if is_left_ref_tn else None,
+        chr_right_pos=chr_right_arm.start if is_right_ref_tn else None,
+        flank=jc_width,
+    )
+
+    assert direct_jc == rudimentary.create_syn_junctions()
+
+    return direct_jc, rudimentary.get_name()
+
+
+class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
     """
-    ensure_parent_dir(output_path)
-    
-    with open(output_path, 'w') as f:
-        for jtype, seq in sorted(junctions.items(), key=lambda x: x[0].value):
-            f.write(f">{jtype.value}\n{seq}\n")
-
-
-class CreateSyntheticJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
-    """Create synthetic junction FASTA files for each candidate.
-    
     Creates 7 junction sequences per candidate for read alignment analysis.
     """
+    dir_field: str = 'analysis_dir'
+    is_ancestor: bool = False
 
     def __init__(
         self,
-        filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
+        filtered_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
         genome: Genome,
-        tn_locs: RecordTypedDf[RefTnLoc],
+        ref_tns: RecordTypedDf[RefTn],
         output_dir: Path,
-        read_length: int = 150,
+        junction_length: int = 150,
         force: Optional[bool] = None,
     ):
-        self.filtered_tnjc2s = filtered_tnjc2s
         self.genome = genome
-        self.tn_locs = tn_locs
-        self.output_dir = Path(output_dir)
-        self.read_length = read_length
-        
-        # Output files are per-candidate analysis directories
-        self.analysis_dirs = [
-            output_dir / filtered_tnjc2.analysis_dir
-            for filtered_tnjc2 in filtered_tnjc2s
-        ]
-        
+        self.ref_tns = ref_tns
+        self.junction_length = junction_length
+        self._tnjc2s_and_junctions: list[tuple[SynJctsTnJc2, dict[JunctionType, Junction]]] = []
+        for tnjc2 in filtered_tnjc2s:
+            junctions, analysis_dir_name = create_synthetic_junctions_and_name(
+                tnjc2=tnjc2, jc_width=self.junction_length * 2, ref_tns=self.ref_tns
+            )
+            tnjc2 = SynJctsTnJc2.from_other(tnjc2, **{self.dir_field: analysis_dir_name})
+            self._tnjc2s_and_junctions.append((tnjc2, junctions))
+
+        artifact_files = [
+            tnjc2.fasta_path(output_dir, is_ancestor=self.is_ancestor)
+            for tnjc2, _ in self._tnjc2s_and_junctions]
         super().__init__(
             input_files=[genome.fasta_path],
-            output_files=[d / "junctions.fasta" for d in self.analysis_dirs],
+            artifact_files=artifact_files,
+            output_dir=output_dir,
             force=force,
         )
 
-    def _calculate_output(self) -> RecordTypedDf[FilteredTnJc2]:
-        """Create synthetic junctions for each candidate."""
-        # Load chromosome sequence
-        chr_seq = self.genome.sequence
-        
-        # Build TN lookup
-        tn_lookup = {tn.tn_id: tn for tn in self.tn_locs}
-        
-        for filtered_tnjc2 in self.filtered_tnjc2s:
-            analysis_dir = self.output_dir / filtered_tnjc2.analysis_dir
-            
-            # Get chosen TN
-            chosen_tn_id = filtered_tnjc2.chosen_tn_id
-            if chosen_tn_id is None or chosen_tn_id not in tn_lookup:
-                # Skip candidates without valid chosen TN
+    def _generate_artifacts(self) -> None:
+        """Create junction FASTA files for each candidate."""
+        for tnjc2, junctions in self._tnjc2s_and_junctions:
+            fasta_path = tnjc2.fasta_path(self.output_dir, is_ancestor=self.is_ancestor)
+            if self.force:
+                remove_file_or_dir(fasta_path)
+            if fasta_path.exists():
                 continue
-            
-            tn_loc = tn_lookup[chosen_tn_id]
-            
-            # Get TN sequence (simplified - assumes same scaffold)
-            tn_seq = chr_seq[tn_loc.loc_left - 1:tn_loc.loc_right]
-            
-            # Create junctions
-            junctions = create_synthetic_junctions(
-                candidate=filtered_tnjc2,
-                chr_seq=chr_seq,
-                tn_loc=tn_loc,
-                tn_seq=tn_seq,
-                read_length=self.read_length,
-            )
-            
-            # Write FASTA
-            write_junctions_fasta(junctions, analysis_dir / "junctions.fasta")
-        
-        return self.filtered_tnjc2s
 
-    def _save_output(self, output: RecordTypedDf[FilteredTnJc2]) -> None:
-        """Output already saved in _calculate_output."""
-        pass
+            ensure_dir(fasta_path.parent)
+            sequences = {
+                jtype.name: self.genome.get_junction_sequence_arm1_to_arm2(jc)
+                for jtype, jc in junctions.items()
+            }
+            write_fasta(sequences, fasta_path, sort_keys=True)
 
-    def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
-        """Return candidates (junction files are side effects)."""
-        return self.filtered_tnjc2s
+    def _calculate_output(self) -> RecordTypedDf[SynJctsTnJc2]:
+        """Return records with analysis dirs (artifacts are FASTA files)."""
+        tnjc2s = [tnjc2 for tnjc2, _ in self._tnjc2s_and_junctions]
+        return RecordTypedDf.from_records(tnjc2s, SynJctsTnJc2)
 
+    def _artifact_labels(self) -> list[str]:
+        """Summarize outputs as count."""
+        n = len(self._tnjc2s_and_junctions)
+        return [f"{n} fasta files of synthetic junctions"]
+
+
+class AncCreateSyntheticJunctionsStep(CreateSyntheticJunctionsStep):
+    """Creates synthetic junctions for ancestor with its own junction length."""
+    dir_field: str = 'analysis_dir_anc'
+    is_ancestor: bool = True

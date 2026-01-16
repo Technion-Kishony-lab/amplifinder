@@ -1,50 +1,34 @@
 """Tests for AnalyzeTnJc2AlignmentsStep."""
 
-import pytest
-from pathlib import Path
 from amplifinder.steps import AnalyzeTnJc2AlignmentsStep
-from amplifinder.data_types import RecordTypedDf, FilteredTnJc2, RawEvent, Orientation
-from amplifinder.utils.tools import ensure_parent_dir
+from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2
+from amplifinder.utils.file_utils import ensure_parent_dir
 
 
-@pytest.fixture
-def sample_candidate(tmp_path):
-    """Create a sample FilteredTnJc2."""
-    return FilteredTnJc2(
-        jc_num_L=1, jc_num_R=2,
-        scaf_chr="tiny",
-        pos_chr_L=200, pos_chr_R=300,
-        pos_tn_L=10, pos_tn_R=20,
-        dir_chr_L=Orientation.FORWARD, dir_chr_R=Orientation.REVERSE,
-        dir_tn_L=Orientation.FORWARD, dir_tn_R=Orientation.REVERSE,
-        tn_ids=[1], tn_orientations=[Orientation.FORWARD],
-        span_origin=False,
-        amplicon_length=100, complementary_length=900,
-        ref_name="tiny", iso_name="sample1",
-        amplicon_coverage=2.0, genome_coverage=1.0,
-        copy_number=2.0, amplicon_coverage_mode=2.0,
-        raw_event=RawEvent.FLANKED,
-        shared_tn_ids=[1], chosen_tn_id=1,
-        analysis_dir="jc_200_300_001_L150",
-    )
-
-
-def test_step_initialization(sample_candidate, tmp_path):
+def test_step_initialization(filtered_tnjc2_record, tiny_genome, tmp_path):
     """Should initialize step correctly."""
-    filtered_tnjc2s = RecordTypedDf.from_records([sample_candidate], FilteredTnJc2)
-    
+    filtered_tnjc2s = RecordTypedDf.from_records([filtered_tnjc2_record], SynJctsTnJc2)
+
     # Create dummy BAM file (empty, just for initialization test)
-    bam_file = tmp_path / sample_candidate.analysis_dir / "iso.sorted.bam"
+    bam_file = tmp_path / "junctions" / filtered_tnjc2_record.analysis_dir / "sorted.bam"
     ensure_parent_dir(bam_file)
     bam_file.write_text("dummy")
-    
+
+    # Create dummy breseq path
+    iso_breseq_path = tmp_path / "breseq"
+    iso_breseq_path.mkdir(exist_ok=True)
+
     step = AnalyzeTnJc2AlignmentsStep(
-        filtered_tnjc2s=filtered_tnjc2s,
+        synjct_tnjc2s=filtered_tnjc2s,
         output_dir=tmp_path,
-        read_length=150,
-        has_ancestor=False,
+        genome=tiny_genome,
+        iso_breseq_path=iso_breseq_path,
+        iso_read_length=150,
+        anc_output_dir=None,
+        anc_breseq_path=None,
+        create_plots=False,
     )
-    
-    assert step.filtered_tnjc2s == filtered_tnjc2s
-    assert step.read_length == 150
+
+    assert step.synjct_tnjc2s == filtered_tnjc2s
+    assert step.iso_read_length == 150
     assert step.has_ancestor is False

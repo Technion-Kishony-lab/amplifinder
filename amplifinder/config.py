@@ -1,12 +1,14 @@
 """Configuration management for AmpliFinder."""
 
 from dataclasses import dataclass, field
+from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Tuple
+from typing import Any, Optional, Tuple, ClassVar
 import json
 import yaml
 
-from amplifinder.utils.tools import ensure_dir
+from amplifinder.data_types import AverageMethod
+from amplifinder.utils.file_utils import ensure_dir
 
 
 # Default configuration values (from config.txt)
@@ -20,40 +22,43 @@ DEFAULT_CONFIG = {
     # IS/TN detection parameters
     "max_dist_to_IS": 10,
     "trim_jc_flanking": 5,
-    "length_seq_into_is": 200,
+    "reference_IS_in_span": None,
     "reference_IS_out_span": 100,
     "isfinder_evalue": 1e-4,
     "isfinder_critical_coverage": 0.9,
 
-    # breseq parameters
-    "breseq_threads": 4,
+    # Alignment threads (breseq, bowtie2)
+    "threads": 4,
 
     # Junction filtering
-    "min_jct_cov": 5,
     "min_amplicon_length": 30,
     "max_amplicon_length": 1_000_000,
     "filter_amplicon_length": 100,
 
     # Coverage parameters
-    "ncp_limit1": -1,
-    "ncp_limit2": 3,
+    "ncp_min": 0.1,
+    "ncp_max": 1000.0,
     "ncp_n": 150,
+    "average_method": "median",  # 'median', 'mode', or 'mean' (converted to AverageMethod enum)
 
     # Copy number thresholds
     "copy_number_threshold": 1.5,
     "del_copy_number_threshold": 0.3,
 
     # Alignment parameters
-    "req_overlap": 12,
+    "min_overlap_len": 12,
+    "min_jct_cov": 5,
     "score_min": (0, -0.1),
     "mismatch_penalty": (5, 5),
 
     # File size thresholds
+    # TODO: These are not used yet
     "breseq_output_size_threshold": 10_000,
     "max_fastq_size": 500_000_000,
     "min_num_bases": 80_000_000,
 
     # Filtering options
+    # TODO: These are not used yet
     "shortest_amplicon": 1,
     "true_transposition_length": 0,
     "remove_jc_breseq_reject": False,
@@ -61,12 +66,17 @@ DEFAULT_CONFIG = {
 
     # Logging
     "log_path": "amplifinder.log",
+
+    # Plotting
+    "create_plots": True,
 }
 
 
 @dataclass
 class Config:
     """AmpliFinder configuration."""
+
+    RUN_CONFIG_FILENAME: ClassVar[str] = "run_config.yaml"
 
     # Required paths
     iso_path: Path
@@ -100,40 +110,43 @@ class Config:
     # IS/TN detection parameters
     max_dist_to_IS: int = 10
     trim_jc_flanking: int = 5
-    length_seq_into_is: int = 200
+    reference_IS_in_span: Optional[int] = None  # None = use the entire IS element
     reference_IS_out_span: int = 100
     isfinder_evalue: float = 1e-4
     isfinder_critical_coverage: float = 0.9
 
-    # breseq parameters
-    breseq_threads: int = 4
+    # Alignment threads (breseq, bowtie2)
+    threads: int = 4
 
     # Junction filtering
-    min_jct_cov: int = 5
     min_amplicon_length: int = 30
     max_amplicon_length: int = 1_000_000
     filter_amplicon_length: int = 100
 
     # Coverage parameters
-    ncp_limit1: int = -1
-    ncp_limit2: int = 3
+    ncp_min: float = 0.1
+    ncp_max: float = 1000.0
     ncp_n: int = 150
+    average_method: AverageMethod = AverageMethod.MEDIAN
 
     # Copy number thresholds
     copy_number_threshold: float = 1.5
     del_copy_number_threshold: float = 0.3
 
     # Alignment parameters
-    req_overlap: int = 12
+    min_overlap_len: int = 12
+    min_jct_cov: int = 5
     score_min: Tuple[float, float] = (0, -0.1)
     mismatch_penalty: Tuple[int, int] = (5, 5)
 
     # File size thresholds
+    # TODO: These are not used yet
     breseq_output_size_threshold: int = 10_000
     max_fastq_size: int = 500_000_000
     min_num_bases: int = 80_000_000
 
     # Filtering options
+    # TODO: These are not used yet
     shortest_amplicon: int = 1
     true_transposition_length: int = 0
     remove_jc_breseq_reject: bool = False
@@ -142,30 +155,135 @@ class Config:
     # Logging
     log_path: str = "amplifinder.log"
 
+    # Plotting
+    create_plots: bool = True
+
     @property
     def has_ancestor(self) -> bool:
         """True if ancestor comparison should be performed."""
         return self.anc_path is not None
 
+    @property
+    def iso_run_dir(self) -> Path:
+        """Get the isolate run directory path.
+
+        Structure: {output_dir}/{ref_name}/{anc_name}/{iso_name}/
+        """
+        return self.output_dir / self.ref_name / self.anc_name / self.iso_name
+
+    @property
+    def anc_run_dir(self) -> Path:
+        """Get the ancestor run directory path.
+
+        Structure: {output_dir}/{ref_name}/{anc_name}/{anc_name}/
+        """
+        return self.output_dir / self.ref_name / self.anc_name / self.anc_name
+
+    def get_anc_breseq_path(self) -> Optional[Path]:
+        """Return ancestor breseq path (provided or default run dir).
+
+        Returns:
+            Path to ancestor breseq directory, or None if no ancestor configured.
+        """
+        if not self.has_ancestor:
+            return None
+        return self.anc_breseq_path or (self.anc_run_dir / "breseq")
+
+    def get_iso_breseq_path(self) -> Path:
+        """Return isolate breseq path (provided or default run dir)."""
+        return self.iso_breseq_path or (self.iso_run_dir / "breseq")
+
+    def get_anc_name(self) -> Optional[str]:
+        """Return ancestor name, or None if no ancestor configured.
+
+        Note: anc_name property is set to iso_name when no ancestor (for folder structure),
+        but this method returns None for semantic correctness when passing to steps.
+
+        Returns:
+            Ancestor name, or None if no ancestor.
+        """
+        if not self.has_ancestor:
+            return None
+        return self.anc_name
+
+    def get_breseq_paths(self) -> tuple[Path, Optional[Path]]:
+        """Get isolate and ancestor breseq paths.
+        """
+        return self.get_iso_breseq_path(), self.get_anc_breseq_path()
+
+    def save(self, run_dir: Path) -> None:
+        """Save config to run_config.yaml in run directory."""
+        run_dir = ensure_dir(run_dir)
+        config_path = run_dir / self.RUN_CONFIG_FILENAME
+
+        # Convert Config to dict, handling Path objects and tuples
+        config_dict = {}
+        for key, value in self.__dict__.items():
+            if isinstance(value, Path):
+                config_dict[key] = str(value)
+            elif isinstance(value, tuple):
+                config_dict[key] = list(value)
+            elif isinstance(value, Enum):
+                config_dict[key] = value.value
+            elif value is not None:
+                config_dict[key] = value
+
+        with open(config_path, 'w') as f:
+            yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
+
+        from amplifinder.logger import info
+        info(f"Saved config to:\n{config_path}")
+
+    @classmethod
+    def load_from_run(cls, run_dir: Path) -> "Config":
+        """Load config from run_config.yaml in run directory.
+
+        Raises:
+            FileNotFoundError: If run_config.yaml doesn't exist
+        """
+        run_dir = Path(run_dir)
+        config_path = run_dir / cls.RUN_CONFIG_FILENAME
+
+        if not config_path.exists():
+            raise FileNotFoundError(f"Config file not found: {config_path}")
+
+        config_dict = load_config(config_path)
+
+        # Convert string paths back to Path objects
+        path_fields = ['iso_path', 'anc_path', 'output_dir', 'ref_path',
+                       'iso_breseq_path', 'anc_breseq_path', 'blastn_path',
+                       'samtools_path', 'isdb_path']
+        for path_field in path_fields:
+            if path_field in config_dict and config_dict[path_field] is not None:
+                config_dict[path_field] = Path(config_dict[path_field])
+
+        # Convert lists back to tuples for tuple fields
+        tuple_fields = ['score_min', 'mismatch_penalty']
+        for tuple_field in tuple_fields:
+            if tuple_field in config_dict and isinstance(config_dict[tuple_field], list):
+                config_dict[tuple_field] = tuple(config_dict[tuple_field])
+
+        return cls(**config_dict)
+
     def __post_init__(self):
         """Convert paths and set derived values."""
-        # Convert string paths to Path objects
-        self.iso_path = Path(self.iso_path)
-        self.output_dir = Path(self.output_dir)
-        self.ref_path = Path(self.ref_path)
+        # Convert string paths to absolute Path objects
+        self.iso_path = Path(self.iso_path).resolve()
+        self.output_dir = Path(self.output_dir).resolve()
+        self.ref_path = Path(self.ref_path).resolve()
 
         if self.anc_path is not None:
-            self.anc_path = Path(self.anc_path)
+            self.anc_path = Path(self.anc_path).resolve()
         if self.iso_breseq_path is not None:
-            self.iso_breseq_path = Path(self.iso_breseq_path)
+            self.iso_breseq_path = Path(self.iso_breseq_path).resolve()
         if self.anc_breseq_path is not None:
-            self.anc_breseq_path = Path(self.anc_breseq_path)
+            self.anc_breseq_path = Path(self.anc_breseq_path).resolve()
         if self.blastn_path is not None:
-            self.blastn_path = Path(self.blastn_path)
+            self.blastn_path = Path(self.blastn_path).resolve()
         if self.samtools_path is not None:
-            self.samtools_path = Path(self.samtools_path)
+            self.samtools_path = Path(self.samtools_path).resolve()
         if self.isdb_path is not None:
-            self.isdb_path = Path(self.isdb_path)
+            self.isdb_path = Path(self.isdb_path).resolve()
 
         # Derive names from paths if not provided
         if self.iso_name is None:
@@ -191,11 +309,21 @@ class Config:
             )
 
         # Validate: genomesDB is reserved for NCBI references
-        if str(self.ref_path) == "genomesDB" and not self.ncbi:
+        if self.ref_path.name == "genomesDB" and not self.ncbi:
             raise ValueError(
                 "genomesDB directory is reserved for NCBI references. "
                 "Choose a different --ref-path for local genomes."
             )
+
+        # Validate: average_method (convert string to enum if needed)
+        if isinstance(self.average_method, str):
+            try:
+                self.average_method = AverageMethod(self.average_method)
+            except ValueError:
+                valid_options = ", ".join(f"'{m.value}'" for m in AverageMethod)
+                raise ValueError(
+                    f"average_method must be one of {valid_options}, got: {self.average_method}"
+                )
 
 
 def load_config(config_path: Path) -> dict[str, Any]:
@@ -255,96 +383,3 @@ def merge_config(
             merged[key] = value
 
     return merged
-
-
-def get_iso_run_dir(config: Config) -> Path:
-    """Get the isolate run directory path for a config.
-    
-    Structure: {output_dir}/{ref_name}/{anc_name}/{iso_name}/
-    
-    Args:
-        config: Config object
-    
-    Returns:
-        Path to isolate run directory
-    """
-    return config.output_dir / config.ref_name / config.anc_name / config.iso_name
-
-
-def get_anc_run_dir(config: Config) -> Path:
-    """Get the ancestor run directory path for a config.
-    
-    Structure: {output_dir}/{ref_name}/{anc_name}/{anc_name}/
-    
-    Args:
-        config: Config object (isolate config)
-    
-    Returns:
-        Path to ancestor run directory
-    """
-    return config.output_dir / config.ref_name / config.anc_name / config.anc_name
-
-
-def save_config(config: Config, run_dir: Path) -> None:
-    """Save config to run_config.yaml in run directory.
-    
-    Args:
-        config: Config object to save
-        run_dir: Run directory path
-    """
-    run_dir = ensure_dir(run_dir)
-    
-    config_path = run_dir / "run_config.yaml"
-    
-    # Convert Config to dict, handling Path objects and tuples
-    config_dict = {}
-    for key, value in config.__dict__.items():
-        if isinstance(value, Path):
-            config_dict[key] = str(value)
-        elif isinstance(value, tuple):
-            config_dict[key] = list(value)  # Convert tuple to list for YAML
-        elif value is not None:
-            config_dict[key] = value
-    
-    with open(config_path, 'w') as f:
-        yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
-    
-    from amplifinder.logger import info
-    info(f"Saved config to: {config_path}")
-
-
-def load_config_from_run(run_dir: Path) -> Config:
-    """Load config from run_config.yaml in run directory.
-    
-    Args:
-        run_dir: Run directory path
-    
-    Returns:
-        Config object
-    
-    Raises:
-        FileNotFoundError: If run_config.yaml doesn't exist
-    """
-    run_dir = Path(run_dir)
-    config_path = run_dir / "run_config.yaml"
-    
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
-    
-    config_dict = load_config(config_path)
-    
-    # Convert string paths back to Path objects
-    path_fields = ['iso_path', 'anc_path', 'output_dir', 'ref_path', 
-                   'iso_breseq_path', 'anc_breseq_path', 'blastn_path', 
-                   'samtools_path', 'isdb_path']
-    for field in path_fields:
-        if field in config_dict and config_dict[field] is not None:
-            config_dict[field] = Path(config_dict[field])
-    
-    # Convert lists back to tuples for tuple fields
-    tuple_fields = ['score_min', 'mismatch_penalty']
-    for field in tuple_fields:
-        if field in config_dict and isinstance(config_dict[field], list):
-            config_dict[field] = tuple(config_dict[field])
-    
-    return Config(**config_dict)
