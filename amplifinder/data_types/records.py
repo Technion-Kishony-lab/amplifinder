@@ -4,8 +4,8 @@ from __future__ import annotations
 import pandas as pd
 
 from pathlib import Path
-from pydantic import BaseModel, ConfigDict
-from typing import Any, ClassVar, Dict, NamedTuple, Tuple, Type, TypeVar, get_origin, get_args, Union
+from pydantic import BaseModel
+from typing import Any, ClassVar, Dict, List, NamedTuple, Optional, Tuple, Type, TypeVar, get_origin, get_args, Union
 
 T = TypeVar("T", bound="Record")
 
@@ -62,11 +62,6 @@ class Schema(NamedTuple):
         return tuple(col.name for col in self.columns if not col.optional)
 
     @property
-    def optional_columns(self) -> Tuple[str, ...]:
-        """Names of optional columns (optional=True)."""
-        return tuple(col.name for col in self.columns if col.optional)
-
-    @property
     def dtypes(self) -> Dict[str, Column]:
         """Dictionary of column names to Column objects."""
         return {col.name: col for col in self.columns}
@@ -110,29 +105,43 @@ class Record(BaseModel):
         #    Column('notes', Optional[str], True))
     """
 
-    model_config = ConfigDict(extra='allow')
+    NAME: ClassVar[str] = "records"  # Display name for logging
 
     # Class variable to track if extra fields allowed (for schema generation)
-    ALLOW_EXTRA: ClassVar[bool] = True
+    ALLOW_EXTRA: ClassVar[bool] = False
+
+    # CSV export control: None = export all fields, List[str] = export only specified fields/properties
+    CSV_EXPORT_FIELDS: ClassVar[Optional[List[str]]] = None
+
+    # CSV field formatting: Dict[field_name, format_spec] (e.g., {' copy_number': '.1f', 'score': '.3f'})
+    CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {}
 
     @classmethod
     def schema(cls) -> Schema:
-        """Extract schema (Column definitions) from this model."""
+        """Extract schema (Column definitions) for CSV read/write.
+
+        If CSV_EXPORT_FIELDS is set, schema includes only those fields/properties.
+        Otherwise includes all model fields.
+        """
+        # Determine which fields to include in schema
+        if hasattr(cls, 'CSV_EXPORT_FIELDS') and cls.CSV_EXPORT_FIELDS is not None:
+            field_names = cls.CSV_EXPORT_FIELDS
+        else:
+            field_names = list(cls.model_fields.keys())
+
         columns = []
+        for name in field_names:
+            if name in cls.model_fields:
+                # It's a field - get type from model_fields
+                field_info = cls.model_fields[name]
+                dtype = field_info.annotation
+                is_optional = (get_origin(dtype) is Union and type(None) in get_args(dtype))
+            else:
+                # It's a property - infer type from property return annotation
+                from amplifinder.data_types.type_inference import infer_property_type
+                dtype, is_optional = infer_property_type(cls, name)
 
-        for name, field_info in cls.model_fields.items():
-            dtype = field_info.annotation
-            # Check if type is Optional (Union with None)
-            is_optional = (
-                get_origin(dtype) is Union and
-                type(None) in get_args(dtype)
-            )
-
-            columns.append(Column(
-                name=name,
-                dtype=dtype,
-                optional=is_optional,
-            ))
+            columns.append(Column(name=name, dtype=dtype, optional=is_optional))
 
         return Schema(columns=tuple(columns), allow_extra=cls.ALLOW_EXTRA)
 
@@ -148,3 +157,17 @@ class Record(BaseModel):
     def extra(self) -> Dict[str, Any]:
         """Return extra fields not in schema."""
         return self.__pydantic_extra__ or {}
+
+    def __repr__(self) -> str:
+        """Custom repr that excludes sequence fields."""
+        fields = []
+        for field_name in self.__class__.model_fields.keys():
+            # Skip sequence fields
+            value = getattr(self, field_name, None)
+            if ('sequence' in field_name.lower() or 'seq' in field_name.lower()) and isinstance(value, str):
+                s = f"{field_name}='<{len(value)} chars>'"
+            else:
+                s = f"{field_name}={repr(value)}"
+            fields.append(s)
+
+        return f"{self.__class__.__name__}({', '.join(fields)})"

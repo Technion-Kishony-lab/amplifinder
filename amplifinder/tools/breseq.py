@@ -12,7 +12,8 @@ import pandas as pd
 from amplifinder.logger import info, warning
 from amplifinder.data_types.typed_df import Schema
 from amplifinder.data import load_all_field_defs
-from amplifinder.utils.tools import run_command, ensure_dir
+from amplifinder.utils.run_utils import run_command
+from amplifinder.utils.file_utils import ensure_dir
 
 if TYPE_CHECKING:
     from amplifinder.data_types.genome import Genome
@@ -235,7 +236,7 @@ def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
         name: [] for name in RECORD_TYPES.keys()
     }
 
-    info(f"Parsing breseq output: {output_gd}")
+    info(f"Parsing breseq output:\n{output_gd}")
 
     with open(output_gd) as f:
         for line in f:
@@ -254,11 +255,13 @@ def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
 
     # Convert to DataFrames
     results = {}
+    lengths = {}
     for name, recs in records.items():
         df = pd.DataFrame(recs) if recs else pd.DataFrame()
         results[name] = df
-        info(f"  {name}: {len(df)} records")
-
+        lengths[name] = len(df)
+    print("Found the following breseq records: ", end="")
+    print(", ".join(f"{name}: {lengths[name]}" for name in lengths.keys()))
     return results
 
 
@@ -315,23 +318,86 @@ def _convert_value(value: str, dtype: type, none_values: Tuple[str, ...] = ("NA"
     return int(float(value)) if dtype is int else dtype(value)
 
 
-def load_breseq_coverage(breseq_path: Path, ref_name: str) -> np.ndarray:
-    """Load coverage from breseq output.
-    
+def load_breseq_coverage(breseq_path: Path) -> Dict[str, np.ndarray]:
+    """Load coverage from breseq output for entire genome.
+
     Args:
         breseq_path: Path to breseq output directory
-        ref_name: Reference genome name (used in coverage file name)
-    
+
     Returns:
-        1D array of coverage values (top + bottom strand combined)
+        Dictionary mapping scaffold names to coverage arrays
     """
-    cov_file = Path(breseq_path) / "08_mutation_identification" / f"{ref_name}.coverage.tab"
-    
-    if not cov_file.exists():
-        raise FileNotFoundError(f"Coverage file not found: {cov_file}")
-    
-    df = pd.read_csv(cov_file, sep="\t", usecols=["unique_top_cov", "unique_bot_cov"])
-    return (df["unique_top_cov"] + df["unique_bot_cov"]).values
+    cov_dir = Path(breseq_path) / "08_mutation_identification"
+
+    if not cov_dir.exists():
+        raise FileNotFoundError(f"Coverage directory not found: {cov_dir}")
+
+    # Load all *.coverage.tab files
+    scafs_to_covs = {}
+    for cov_file in cov_dir.glob("*.coverage.tab"):
+        # Extract scaffold name from filename (stem is "scaffold.coverage", remove ".coverage")
+        scaffold_name = cov_file.stem.removesuffix(".coverage")
+        scafs_to_covs[scaffold_name] = _load_cov_file(cov_file)
+
+    if not scafs_to_covs:
+        raise FileNotFoundError(f"No coverage files found in {cov_dir}")
+
+    return scafs_to_covs
+
+
+def _load_cov_file(cov_file: Path) -> np.ndarray:
+    """Load coverage from a single .coverage.tab file."""
+    fast = _load_cov_pyarrow(cov_file)
+    if fast is not None:
+        return fast
+
+    warning(f"Falling back to pandas for coverage load: {cov_file}")
+    df = pd.read_csv(
+        cov_file,
+        sep="\t",
+        usecols=["unique_top_cov", "unique_bot_cov"],
+        dtype={"unique_top_cov": np.int32, "unique_bot_cov": np.int32},
+        engine="c",
+        memory_map=True,
+    )
+    return (df["unique_top_cov"] + df["unique_bot_cov"]).to_numpy()
+
+
+def _load_cov_pyarrow(cov_file: Path) -> Optional[np.ndarray]:
+    """Fast-path coverage load using pyarrow if available."""
+    try:
+        import pyarrow as pa  # type: ignore
+        import pyarrow.csv as pacsv  # type: ignore
+        import pyarrow.compute as pc  # type: ignore
+    except ImportError:
+        return None
+
+    cols = ["unique_top_cov", "unique_bot_cov"]
+    try:
+        table = pacsv.read_csv(
+            cov_file,
+            read_options=pacsv.ReadOptions(use_threads=True),
+            parse_options=pacsv.ParseOptions(delimiter="\t"),
+            convert_options=pacsv.ConvertOptions(
+                include_columns=cols,
+            ),
+        )
+    except pa.ArrowKeyError:
+        return None
+
+    for col in cols:
+        if col not in table.column_names:
+            return None
+        # Cast to int if needed (handles float columns)
+        if table[col].type != pa.int32():
+            table = table.set_column(
+                table.column_names.index(col),
+                col,
+                pc.cast(table[col], pa.int32())
+            )
+
+    summed = pc.add(table["unique_top_cov"], table["unique_bot_cov"])
+    return summed.to_numpy()
 
 
 def get_breseq_summary(breseq_path: Path) -> Dict[str, Any]:

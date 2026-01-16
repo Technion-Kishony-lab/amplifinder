@@ -30,7 +30,7 @@ xxx[]  array
    │           │          │ 2b. LocateTNsUsingISfinder │      │              │
    │           │          └─────────────┬──────────────┘      │              │
    │           │                        ▼                     │              │
-   │           │                     TnLoc[]                  │              │
+   │           │                     RefTn[]                  │              │
    │           │                        │                     │              │
    │           │                        ▼                     │              │
    │           │           ┌────────────────────────┐         │              │
@@ -38,48 +38,48 @@ xxx[]  array
    │           │           └────────────┬───────────┘         │              │
    │           │                        ▼                     │              │
    │           │             ┌── RefTnJunction[]              │              │
-   │           │             │          │                     │              │
-   │           ▼             │          ▼                     ▼              │
-   │     ┌───────────┐       │       ┌───────────────────────────┐           │
-   │────►│ 4. Breseq │       │       │ 3b. CreateRefTnEndSeqs    │           │
-   │     └─────┬─────┘       │       └──────────────┬────────────┘           │
-   │           ▼             │                      ▼                        │
-   │        breseq JC        │                  SeqRefTnSide[]               │
-   │      + coverage         ▼                      │                        │
-   │            └─────┬──────┘                      ▼                        │
-   │                  ▼            ┌───────────────────┐                     │
-   │               all Jc ────────►│  5. CreateTnJc    │                     │
+   │           │             │                                │              │
+   │           ▼             │                                │              │
+   │     ┌───────────┐       │                                │              │
+   │────►│ 4. Breseq │       │                                │              │
+   │     └─────┬─────┘       │                                │              │
+   │           ▼             │                                │              │
+   │        breseq JC        │                                │              │
+   │      + coverage         ▼                                │              │
+   │            └─────┬──────┘                                │              │
+   │                  ▼            ┌───────────────────┐      │              │
+   │               all Jc ────────►│  5. CreateTnJc    │◄─────┘              │
    │                               └─────────┬─────────┘                     │
    │                                         ▼                               │
    │                                    TnJunction[]                         │
    │                                         │                               │
    │                                         ▼                               │
-   │                               ┌───────────────────┐                     │
-   │                               │  6. CreateTnJc2   │                     │
-   │                               └─────────┬─────────┘                     │
+   │                            ┌─────────────────────────┐                  │
+   │                            │  6. PairTnJcToRawTnJc2  │                  │
+   │                            └────────────┬────────────┘                  │
    │                                         ▼                               │
-   │                                      TnJc2[]                            │
+   │                                     RawTnJc2[]                          │
    │                                         │                               │
    │                                         ▼                               │
-   │                           ┌─────────────────────────┐                   │
-   │                           │ 7. CalcAmpliconCoverage │◄ - - - - - - - - -┤
-   │                           └────────────┬────────────┘  anc              │ 
-   │                                        ▼               coverage         │
+   │                        ┌───────────────────────────────┐                │
+   │                        │ 7. CalcTnJc2AmpliconCoverage  │◄ - - - - - - - ┤
+   │                        └───────────────┬───────────────┘     anc        │ 
+   │                                        ▼                  coverage      │
    │                                   CoveredTnJc2[]                        │
    │                                        │                                │
    │                                        ▼                                │
-   │                             ┌─────────────────────┐                     │
-   │                             │ 8. ClassifyStructure│                     │
-   │                             └──────────┬──────────┘                     │
+   │                          ┌───────────────────────────┐                  │
+   │                          │ 8. ClassifyTnJc2Structure │                  │
+   │                          └─────────────┬─────────────┘                  │
    │                                        ▼                                │
-   │                                 ClassifiedTnJc2[] (`RawEvent`)          │
+   │                                 SingleLocusLinkedTnJc2[] (`RawEvent`)   │
    │                                        │                                │
    │                                        ▼                                │
-   │                             ┌─────────────────────┐                     │
-   │                             │ 9. FilterCandidates │                     │
-   │                             └──────────┬──────────┘                     │
+   │                          ┌───────────────────────────┐                  │
+   │                          │ 9. FilterTnJc2Candidates  │                  │
+   │                          └─────────────┬─────────────┘                  │
    │                                        ▼                                │
-   │                                    CandidateTnJc2[]                     │
+   │                                 SingleLocusLinkedTnJc2[]                │
    │                                        │                                │
    │                                        ▼                                │
    │                         ┌──────────────────────────────┐                │
@@ -98,19 +98,19 @@ xxx[]  array
                                          anc.bam(?)          
                                             │             
                                             ▼             
-                                ┌───────────────────────┐   
-                                │ 12. AnalyzeAlignments │
-                                └────────────┬──────────┘
+                             ┌─────────────────────────────┐   
+                             │ 12. AnalyzeTnJc2Alignments  │
+                             └───────────────┬─────────────┘
                                              ▼
-                                  AnalyzedCandidateTnJc2[] (left/right/spanning, `JunctionCoverage`)
-                                  c_cov, anc_jc_cov(?)
+                                  AnalyzedTnJc2[] (left/right/spanning, `JunctionCoverage`)
+                                  jc_cov, anc_jc_cov(?)
                                              │
                                              ▼
-                                ┌────────────────────────┐
-                                │ 13. ClassifyCandidates │
-                                └────────────┬───────────┘
+                             ┌──────────────────────────────┐
+                             │ 13. ClassifyTnJc2Candidates  │
+                             └───────────────┬──────────────┘
                                              ▼
-                                    AnalyzedCandidateTnJc2[] (RawEvent + EventModifiers)
+                                    AnalyzedTnJc2[] (RawEvent + EventModifiers)
                                              │
                                              ▼
                                    ┌───────────────────┐
@@ -143,7 +143,7 @@ xxx[]  array
 - `from_other()` to convert between record types (copy shared fields)
 - Extra fields support
 
-**`RecordTypedDF[T]`** (`data_types/typed_df.py`): Typed DataFrame wrapper:
+**`RecordTypedDf[T]`** (`data_types/typed_df.py`): Typed DataFrame wrapper:
 - Wraps pandas DataFrame with type information
 - `from_records()`, `from_csv()`, `to_csv()` methods
 - Type-safe access to records
@@ -152,23 +152,19 @@ xxx[]  array
 
 **TN Location Records:**
 ```python
-TnLoc(Record)
-├── ID: int
-├── TN_Name: str
-├── TN_scaf: str
-├── LocLeft: int
-├── LocRight: int
-├── Complement: bool
-└── Join: bool
+RefTn(Record)
+├── tn_id: int
+├── tn_name: str
+├── tn_scaf: str
+├── loc_left: int
+├── loc_right: int
+├── orientation: Orientation
+└── join: bool
 
 RefTnSide(Record)
 ├── tn_id: int
-├── side: Side
-└── distance: Optional[int]
-
-SeqRefTnSide(RefTnSide)
-├── seq_fwd: str
-└── seq_rc: str
+├── side: Terminal
+└── offset: Optional[int]
 
 BlastHit(Record)
 ├── query: str
@@ -195,29 +191,29 @@ Junction(Record)  # Base junction
 ├── scaf2: str
 ├── pos2: int
 ├── dir2: Orientation
-├── flanking_left: int
-└── flanking_right: int
+├── flanking1: int
+└── flanking2: int
 
 RefTnJunction(Junction)  # Reference TN junction
 └── ref_tn_side: RefTnSide
 
 TnJunction(Junction)  # Junction matched to TN element(s)
 ├── ref_tn_sides: List[RefTnSide]
-└── switched: bool
+└── swapped: bool
 ```
 
 **Amplicon Candidate Records (Pipeline Flow):**
 ```python
-TnJc2(Record)  # Base paired junction record
+RawTnJc2(Record)  # Base paired junction record
 ├── jc_num_L: int
 ├── jc_num_R: int
-├── scaf_chr: str
-├── pos_chr_L: int
-├── pos_chr_R: int
+├── scaf: str
+├── pos_scaf_L: int
+├── pos_scaf_R: int
 ├── pos_tn_L: int
 ├── pos_tn_R: int
-├── dir_chr_L: Orientation
-├── dir_chr_R: Orientation
+├── dir_scaf_L: Orientation
+├── dir_scaf_R: Orientation
 ├── dir_tn_L: Orientation
 ├── dir_tn_R: Orientation
 ├── tn_ids: List[int]
@@ -226,25 +222,24 @@ TnJc2(Record)  # Base paired junction record
 ├── amplicon_length: int
 └── complementary_length: int
 
-CoveredTnJc2(TnJc2)  # Step 7: Coverage added
-├── ref_name: str
-├── iso_name: str
-├── anc_name: Optional[str]
-├── amplicon_coverage: float
-├── genome_coverage: float
+CoveredTnJc2(RawTnJc2)  # Step 7: Coverage added
+├── iso_amplicon_coverage: Average
+├── iso_scaf_coverage: Average
+├── anc_amplicon_coverage: Optional[Average]
+├── anc_scaf_coverage: Optional[Average]
 ├── copy_number: float
-├── amplicon_coverage_mode: float
-└── copy_number_ratio: Optional[float]
+└── copy_number_vs_anc: Optional[float]
 
-ClassifiedTnJc2(CoveredTnJc2)  # Step 8: Structure classified
+SingleLocusLinkedTnJc2(CoveredTnJc2)  # Step 8: Structure classified
 ├── raw_event: RawEvent
 ├── shared_tn_ids: List[int]
 └── chosen_tn_id: Optional[int]
 
-CandidateTnJc2(ClassifiedTnJc2)  # Step 9: Filtered candidates
-└── analysis_dir: str
+SynJctsTnJc2(SingleLocusLinkedTnJc2)  # Step 10: Synthetic junctions with analysis dirs
+├── analysis_dir: str
+└── analysis_dir_anc: Optional[str]
 
-AnalyzedTnJc2(CandidateTnJc2)  # Step 12: Junction coverage analyzed
+AnalyzedTnJc2(SynJctsTnJc2)  # Step 12: Junction coverage analyzed
 ├── jc_cov_left: List[int]
 ├── jc_cov_right: List[int]
 ├── jc_cov_spanning: List[int]
@@ -260,7 +255,7 @@ AnalyzedTnJc2(CandidateTnJc2)  # Step 12: Junction coverage analyzed
 ### Helper Types
 
 ```python
-class Coverage(NamedTuple):
+class Average(NamedTuple):
     """Coverage statistics for a genomic region."""
     mean: float
     median: float
@@ -277,7 +272,7 @@ class JunctionCoverage(NamedTuple):
 ### Key Enums
 
 ```python
-class Side(int, Enum):
+class Terminal(int, Enum):
     """Side of a TN element (left or right)."""
     LEFT = -1
     RIGHT = 1
@@ -345,9 +340,9 @@ Naming convention:
     ├── genbank_tn_loc.csv        # TN parsed from GenBank annotations (always)
     ├── isfinder_blast.txt        # BLAST output (always)
     ├── isfinder_tn_loc.csv       # TN parsed from BLAST results (always)
-    ├── genbank_ref_tn_jc.csv     # reference TN junctions (selected source only)
+    ├── genbank_ref_tnjc.csv      # reference TN junctions (selected source only)
     ├── genbank_tn_end_seqs.csv   # TN boundary sequences (selected source only)
-    ├── isfinder_ref_tn_jc.csv    # reference TN junctions (selected source only)
+    ├── isfinder_ref_tnjc.csv     # reference TN junctions (selected source only)
     └── isfinder_tn_end_seqs.csv  # TN boundary sequences (selected source only)
 ```
 
@@ -366,33 +361,30 @@ Organized by: reference → ancestor → isolate
         │   │   └── output/output.gd    # ancestor breseq output (Step 7)
         │   └── jc_{start}_{end}_{tn_id}_L{read_len}/  # per-candidate (from isolate runs)
         │       ├── junctions.fasta     # copied from isolate run
-        │       └── iso.sorted.bam      # ancestor reads aligned to junctions
+        │       └── sorted.bam          # ancestor reads aligned to junctions
         │
         │ # Isolate runs (normalized coverage: iso/anc ratio)
         ├── {iso_name_1}/               # isolate 1 vs this ancestor
         │   ├── breseq/
-        │   ├── tn_jc.csv
-        │   ├── tn_jc2.csv
-        │   ├── tn_jc2_*.csv
+        │   ├── tnjc.csv
+        │   ├── tnjc2_*.csv
         │   ├── run_config.yaml
         │   ├── ISJC2.csv
         │   ├── candidate_amplifications.csv
         │   └── jc_{start}_{end}_{tn_id}_L{read_len}/  # per-candidate
         │       ├── junctions.fasta     # created from isolate candidates
-        │       ├── iso.sorted.bam      # isolate reads aligned to junctions
-        │       ├── anc.sorted.bam      # copied from {anc_name}/jc_.../iso.sorted.bam
+        │       ├── sorted.bam          # isolate reads aligned to junctions
         │       └── coverage_plot.png   # (if --save-plots)
         │
         └── {iso_name_2}/               # isolate 2 vs this ancestor
             └── jc_{start}_{end}_{tn_id}_L{read_len}/
                 ├── junctions.fasta     # created from isolate candidates
-                ├── iso.sorted.bam      # isolate reads aligned to junctions
-                └── anc.sorted.bam      # copied from {anc_name}/jc_.../iso.sorted.bam (shared)
+                └── sorted.bam          # isolate reads aligned to junctions
 ```
 
 **Per-candidate folder naming:** `jc_{start}_{end}_{tn_id}_L{read_len}`
 - `start`, `end`: amplicon coordinates (genomic positions)
-- `tn_id`: TN index from TnLoc table (e.g., 001, 002)
+- `tn_id`: TN index from RefTn table (e.g., 001, 002)
 - `read_len`: read length (affects junction flank size)
 
 **Junction and alignment workflow:**
@@ -401,11 +393,9 @@ Organized by: reference → ancestor → isolate
 2. Junction files are copied to ancestor folder (in `{anc_name}/jc_.../`):
    - `junctions.fasta` (copied from isolate, allows ancestor alignments to be shared)
 3. Ancestor reads are aligned in ancestor folder:
-   - `{anc_name}/jc_.../iso.sorted.bam` (ancestor reads aligned to junctions)
-4. Ancestor alignments are copied back to isolate folder:
-   - `{anc_name}/jc_.../iso.sorted.bam` → `{iso_name}/jc_.../anc.sorted.bam`
-5. Isolate reads are aligned in isolate folder:
-   - `{iso_name}/jc_.../iso.sorted.bam` (isolate reads aligned to junctions)
+   - `{anc_name}/jc_.../sorted.bam` (ancestor reads aligned to junctions)
+4. Isolate reads are aligned in isolate folder:
+   - `{iso_name}/jc_.../sorted.bam` (isolate reads aligned to junctions)
 
 **Key design:**
 - Junction files are created from isolate candidates (not from ancestor)
@@ -430,22 +420,21 @@ Organized by: reference → ancestor → isolate
 | 2 | `LocateTNsUsingGenbankStep` | Finds TN from GenBank annotations | `findISinRef.m` |
 | 2 | `LocateTNsUsingISfinderStep` | Finds TN via BLAST to ISfinder DB | `ISfinder.m` |
 | 3 | `CreateRefTnJcStep` | Creates junctions for ref TN | `create_JC_of_reference_IS.m` |
-| 3 | `CreateRefTnEndSeqsStep` | TN flanking sequences for matching | `create_IS_end_seqs.m` |
 | 4 | `BreseqStep` | Runs breseq on FASTQ + reference | `run_breseq.m` |
 | 5 | `CreateTnJcStep` | Matches breseq JC to TN elements | `assign_potential_ISs.m` |
-| 6 | `CreateTnJc2Step` | Pairs junctions into TnJc2 | `combine_ISJC_pairs.m`, `calculate_amplicon_length.m` |
-| 7 | `CalcAmpliconCoverageStep` | Calculates amplicon coverage | `calc_coverage_ISJC2.m` |
-| 8 | `ClassifyStructureStep` | Classifies junction pairs | `classify_ISJC2.m`, `directed_IS.m` |
-| 9 | `FilterCandidatesStep` | Filters by amplicon length | `curate_candidate_amplicons.m` |
+| 6 | `PairTnJcToRawTnJc2Step` | Pairs junctions into RawTnJc2 | `combine_ISJC_pairs.m`, `calculate_amplicon_length.m` |
+| 7 | `CalcTnJc2AmpliconCoverageStep` | Calculates amplicon coverage | `calc_coverage_ISJC2.m` |
+| 8 | `LinkTnJc2ToSingleLocusPairsStep` | Classifies junction pairs | `classify_ISJC2.m`, `directed_IS.m` |
+| 9 | `FilterTnJc2CandidatesStep` | Filters by amplicon length | `curate_candidate_amplicons.m` |
 | 10 | `CreateSyntheticJunctionsStep` | Creates synthetic junction FASTA | `junction2fasta.m` |
 | 11 | `AlignReadsToJunctionsStep` | Aligns reads to junctions | `bowtie2_alignment.m` |
-| 12 | `AnalyzeAlignmentsStep` | Parses BAM, counts reads | `bamAnalysis.m`, `count_reads.m` |
-| 13 | `ClassifyCandidatesStep` | Classifies based on read patterns | `classify_candidates.m` |
-| 14 | `ExportStep` | Exports to Excel | `export_ISJC2.m` |
+| 12 | `AnalyzeTnJc2AlignmentsStep` | Parses BAM, counts reads | `bamAnalysis.m`, `count_reads.m` |
+| 13 | `ClassifyTnJc2CandidatesStep` | Classifies based on read patterns | `classify_candidates.m` |
+| 14 | `ExportTnJc2Step` | Exports to Excel | `export_ISJC2.m` |
 
 ## Convergence Points (anc_path=None vs anc_path=set)
 
-**Step 7 (CalcAmpliconCoverage):**
+**Step 7 (CalcTnJc2AmpliconCoverage):**
 - `anc_path=None` → raw coverage only
 - `anc_path=set` → load anc coverage, compute amplicon_coverage ratio
 
@@ -453,11 +442,11 @@ Organized by: reference → ancestor → isolate
 - `anc_path=None` → create junctions, align isolate reads only
 - `anc_path=set` → create junctions (from isolate candidates), copy to ancestor folder, align ancestor reads in ancestor folder, copy ancestor alignments back to isolate folder
 
-**Step 12 (AnalyzeAlignments):**
+**Step 12 (AnalyzeTnJc2Alignments):**
 - `anc_path=None` → parse own BAM → `jc_cov_*` fields
 - `anc_path=set` → parse BOTH BAMs → `iso_jc_cov_*` + `anc_jc_cov_*` fields
 
-**Step 13 (ClassifyCandidates):**
+**Step 13 (ClassifyTnJc2Candidates):**
 - `anc_path=None` → limited classification
 - `anc_path=set` → full iso vs anc pattern comparison
 
@@ -490,8 +479,7 @@ The original MATLAB code has inconsistent column naming. **Best practice:**
 ### Reference and Ancestor Context
 
 Every output table should be self-documenting:
-- `ref_name: str` in `TnJc2` (base record) - all junctions are relative to a reference
-- `iso_name: str` in `TnJc2` - identifies which sample the junctions came from
+- Reference and isolate names are tracked at the pipeline level, not in RawTnJc2 records
 - `anc_name: Optional[str]` in `CoveredTnJc2` - present when ancestor comparison is performed
 
 ### `raw_event` vs `isolate_architecture`
@@ -529,7 +517,7 @@ Integration tests compare Python outputs against MATLAB reference outputs:
 import scipy.io as sio
 
 def test_tnjc2_matches_matlab(tmp_path):
-    """Compare CreateTnJc2Step output to MATLAB reference."""
+    """Compare PairTnJcToRawTnJc2Step output to MATLAB reference."""
     # Load MATLAB reference
     matlab_data = sio.loadmat("AmpliFinder_test/ISJC2.mat")
     
@@ -591,12 +579,11 @@ jc_name = f"jc_{start}_{end}_{tn_id:03d}_L{read_len}"
 # Ancestor run's candidate dir (stores ancestor alignments for sharing)
 anc_jc_dir = anc_run_dir / jc_name
 anc_jc_dir / "junctions.fasta"           # copied from isolate run
-anc_jc_dir / "iso.sorted.bam"            # ancestor reads aligned to junctions
+anc_jc_dir / "sorted.bam"                # ancestor reads aligned to junctions
 
 # Isolate run's candidate dir
 iso_jc_dir = iso_run_dir / jc_name
 iso_jc_dir / "junctions.fasta"           # created from isolate candidates
-iso_jc_dir / "anc.sorted.bam"            # copied from anc_jc_dir/iso.sorted.bam
-iso_jc_dir / "iso.sorted.bam"            # isolate reads aligned to junctions
+iso_jc_dir / "sorted.bam"                # isolate reads aligned to junctions
 iso_jc_dir / "coverage_plot.png"         # (if --save-plots)
 ```

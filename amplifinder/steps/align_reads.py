@@ -3,105 +3,78 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.data_types import RecordTypedDf, FilteredTnJc2
+from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2
 from amplifinder.steps.base import Step
 from amplifinder.tools.bowtie2 import align_reads_to_fasta
-from amplifinder.logger import info
 
 
-class AlignReadsToJunctionsStep(Step[RecordTypedDf[FilteredTnJc2]]):
-    """Align reads to synthetic junction sequences.
-    
-    Alignment depends on run type:
-    - anc_fastq_path=None: align isolate reads only → iso.sorted.bam
-    - anc_fastq_path=set: align both isolate and ancestor reads → iso.sorted.bam + anc.sorted.bam
-    """
+class AlignReadsToJunctionsStep(Step):
+    """Align reads to synthetic junction sequences."""
+    is_ancestor: bool = False
 
     def __init__(
         self,
-        filtered_tnjc2s: RecordTypedDf[FilteredTnJc2],
+        synjcs_tnjc2s: RecordTypedDf[SynJctsTnJc2],
         output_dir: Path,
-        iso_fastq_path: Path,
-        anc_fastq_path: Optional[Path] = None,
+        fastq_path: Path,
         threads: int = 1,
         score_min: Optional[str] = None,  # None = use default (G,0,-0.25 for local)
-        num_alignments: int = 10,
+        num_alignments: int = 100,  # TODO: should this be '1' ?
         force: Optional[bool] = None,
     ):
-        self.filtered_tnjc2s = filtered_tnjc2s
+        self.synjcs_tnjc2s = synjcs_tnjc2s
         self.output_dir = Path(output_dir)
-        self.iso_fastq_path = Path(iso_fastq_path)
-        self.anc_fastq_path = Path(anc_fastq_path) if anc_fastq_path else None
+        self.fastq_path = Path(fastq_path)
         self.threads = threads
         self.score_min = score_min
         self.num_alignments = num_alignments
-        
+
         # Build list of expected output BAM files
         output_files = []
-        for filtered_tnjc2 in filtered_tnjc2s:
-            analysis_dir = output_dir / filtered_tnjc2.analysis_dir
-            output_files.append(analysis_dir / "iso.sorted.bam")
-            if anc_fastq_path:
-                output_files.append(analysis_dir / "anc.sorted.bam")
-        
-        input_files = [iso_fastq_path]
-        if anc_fastq_path:
-            input_files.append(anc_fastq_path)
-        # Junction FASTA files are inputs
-        for filtered_tnjc2 in filtered_tnjc2s:
-            input_files.append(output_dir / filtered_tnjc2.analysis_dir / "junctions.fasta")
-        
+        input_files = [fastq_path]
+
+        for filtered_tnjc2 in synjcs_tnjc2s:
+            # Junction FASTA file is input
+            input_files.append(filtered_tnjc2.fasta_path(self.output_dir, is_ancestor=self.is_ancestor))
+            # BAM file is output
+            output_files.append(filtered_tnjc2.bam_path(self.output_dir, is_ancestor=self.is_ancestor))
+
         super().__init__(
             input_files=input_files,
-            output_files=output_files,
+            artifact_files=output_files,
             force=force,
         )
 
-    @property
-    def has_ancestor(self) -> bool:
-        """True if ancestor reads should be aligned."""
-        return self.anc_fastq_path is not None
+    def _artifact_labels(self) -> list[str]:
+        """Summarize outputs as count."""
+        n = len(self.synjcs_tnjc2s)
+        return [f"{n} BAM files of synthetic junctions"]
 
-    def _calculate_output(self) -> RecordTypedDf[FilteredTnJc2]:
-        """Align reads to synthetic junctions for each candidate."""
-        for filtered_tnjc2 in self.filtered_tnjc2s:
-            analysis_dir = self.output_dir / filtered_tnjc2.analysis_dir
-            junctions_fasta = analysis_dir / "junctions.fasta"
-            
-            if not junctions_fasta.exists():
-                info(f"Skipping {filtered_tnjc2.analysis_dir}: no junctions.fasta")
+    def _generate_artifacts(self) -> None:
+        """Align reads to synthetic junctions; skip BAMs that already exist."""
+        analysis_dir_names = [tnjc2.analysis_dir_name(is_ancestor=self.is_ancestor) for tnjc2 in self.synjcs_tnjc2s]
+        max_name_length = max(len(name) for name in analysis_dir_names)
+        for filtered_tnjc2 in self.synjcs_tnjc2s:
+            junctions_fasta = filtered_tnjc2.fasta_path(self.output_dir, is_ancestor=self.is_ancestor)
+            assert junctions_fasta.exists()
+
+            bam_path = filtered_tnjc2.bam_path(self.output_dir, is_ancestor=self.is_ancestor)
+            name = filtered_tnjc2.analysis_dir_name(is_ancestor=self.is_ancestor)
+            print(f"{name:<{max_name_length}}: ", end="", flush=True)
+            if bam_path.exists():
+                print("file exists, skipping")
                 continue
-            
-            # Align isolate reads
-            iso_bam = analysis_dir / "iso.sorted.bam"
             align_reads_to_fasta(
                 ref_fasta=junctions_fasta,
-                fastq_path=self.iso_fastq_path,
-                output_bam=iso_bam,
+                fastq_path=self.fastq_path,
+                output_bam=bam_path,
                 threads=self.threads,
                 score_min=self.score_min,
                 num_alignments=self.num_alignments,
             )
-            
-            # Align ancestor reads if provided
-            if self.has_ancestor:
-                anc_bam = analysis_dir / "anc.sorted.bam"
-                align_reads_to_fasta(
-                    ref_fasta=junctions_fasta,
-                    fastq_path=self.anc_fastq_path,
-                    output_bam=anc_bam,
-                    threads=self.threads,
-                    score_min=self.score_min,
-                    num_alignments=self.num_alignments,
-                )
-        
-        return self.filtered_tnjc2s
+            assert bam_path.exists()
 
-    def _save_output(self, output: RecordTypedDf[FilteredTnJc2]) -> None:
-        """BAM files already created in _calculate_output."""
-        pass
 
-    def load_outputs(self) -> RecordTypedDf[FilteredTnJc2]:
-        """Return candidates (BAM files are side effects)."""
-        return self.filtered_tnjc2s
-
+class AncAlignReadsToJunctionsStep(AlignReadsToJunctionsStep):
+    """Align ancestor reads to synthetic junctions."""
+    is_ancestor: bool = True

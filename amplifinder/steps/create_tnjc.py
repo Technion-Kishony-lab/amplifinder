@@ -1,14 +1,11 @@
 """Step: Match junctions to TN elements (TnJc)."""
 
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Union
 
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.utils.fasta import reverse_complement
-from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDf, Junction, SeqRefTnSide, RefTnSide, TnJunction, Orientation
+from amplifinder.data_types import RecordTypedDf, Junction, OffsetRefTnSide, TnJunction, RefTnJunction, BreseqJunction
 from amplifinder.data_types.genome import Genome
-from amplifinder.utils.tools import ensure_dir
 
 
 class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
@@ -23,8 +20,8 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
 
     def __init__(
         self,
-        jc_df: RecordTypedDf[Junction],
-        ref_tn_end_seqs: RecordTypedDf[SeqRefTnSide],
+        junctions: List[Union[BreseqJunction, RefTnJunction]],
+        ref_tnjcs: RecordTypedDf[RefTnJunction],
         genome: Genome,
         output_dir: Path,
         max_dist_to_tn: int,
@@ -34,20 +31,21 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         """Initialize step.
 
         Args:
-            jc_df: All junctions (breseq + reference TN junctions combined)
-            ref_tn_end_seqs: Precomputed TN end sequences (from CreateRefTnEndSeqsStep)
+            junctions: All junctions (breseq + reference TN junctions combined) as a list to preserve types
+            ref_tnjcs: Reference TN junctions (used to get sequences on-the-fly)
             genome: Reference genome (for junction sequence extraction)
             output_dir: Directory to write output
             max_dist_to_tn: Maximum distance from junction to TN boundary
             trim_jc_flanking: Trim junction edges to avoid misalignment
             force: Force re-run
         """
-        self.jc_df = jc_df
-        self.ref_tn_end_seqs = ref_tn_end_seqs
+        self.junctions = junctions
+        self.ref_tnjcs = ref_tnjcs
         self.genome = genome
         self.max_dist_to_tn = max_dist_to_tn
         self.trim_jc_flanking = trim_jc_flanking
-        
+        self._ref_tn_seqs: Optional[list[tuple[RefTnJunction, str, int]]] = None
+
         super().__init__(
             output_dir=output_dir,
             input_files=[p for p in [genome.genbank_path, genome.fasta_path] if p],
@@ -56,92 +54,71 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
 
     def _calculate_output(self) -> RecordTypedDf[TnJunction]:
         """Match junctions to TN elements."""
-        ensure_dir(self.output_dir)
 
-        self.ref_seqs = self.genome.sequences
-        tnjc_records = []
+        self._precompute_ref_tnjcs_sequences()
 
-        for jc in self.jc_df:
-            # Get junction flanking sequences
-            seq1 = self._get_junction_seq(jc, side=1)
-            seq2 = self._get_junction_seq(jc, side=2)
+        tnjcs = []
 
+        for jc in self.junctions:
             # Match against TN sequences
-            matches1 = self._find_tn_matches(seq1)
-            matches2 = self._find_tn_matches(seq2)
+            tn_sides_matching_arm1 = self._find_ref_tn_sides_matches(jc, arm=1)
+            tn_sides_matching_arm2 = self._find_ref_tn_sides_matches(jc, arm=2)
 
-            is_side1_tn = len(matches1) > 0
-            is_side2_tn = len(matches2) > 0
+            # If this is a reference TN junction, assert we get an offset==0 match on arm 1 (TN side)
+            if isinstance(jc, RefTnJunction):
+                ref_tn_side_matches = [
+                    m for m in tn_sides_matching_arm1
+                    if m.offset == 0 and m.is_same_side(jc.ref_tn_side)]
+                assert len(ref_tn_side_matches) == 1, \
+                    f"Reference TN junction {jc} should match itself with offset==0"
 
-            # Skip if neither side matches a TN
-            if not is_side1_tn and not is_side2_tn:
+            is_arm1_tn = len(tn_sides_matching_arm1) > 0
+            is_arm2_tn = len(tn_sides_matching_arm2) > 0
+
+            # Skip if neither arm matches a TN
+            if not is_arm1_tn and not is_arm2_tn:
                 continue
 
-            # Normalize: side 1 should be the TN side
-            switched = not is_side1_tn and is_side2_tn
-            if switched:
-                matches = matches2
-                jc = jc.switch_sides()
+            # Normalize: arm 1 should be the TN side
+            swapped = not is_arm1_tn and is_arm2_tn
+            if swapped:
+                matches = tn_sides_matching_arm2
+                jc = jc.swap_sides()
             else:
-                matches = matches1
+                matches = tn_sides_matching_arm1
 
-            tnjc_records.append(TnJunction.from_other(jc, ref_tn_sides=matches, switched=switched))
+            tnjcs.append(TnJunction.from_other(jc, ref_tn_sides=matches, swapped=swapped))
 
-        tnjcs = RecordTypedDf.from_records(tnjc_records, TnJunction)
-        tnjcs = tnjcs.pipe(lambda df: df.sort_values(["scaf2", "pos2"]))
+        tnjcs = RecordTypedDf.from_records(tnjcs, TnJunction)
+        # Sort but drop the old positional index so CSV won't write an Unnamed column
+        tnjcs = tnjcs.pipe(lambda df: df.sort_values(["scaf2", "pos2"]).reset_index(drop=True))
 
-        info(f"Found {len(tnjcs)} TN-associated junctions (TnJc)")
         return tnjcs
 
-    def _get_junction_seq(self, jc: Junction, side: int) -> str:
-        """Extract sequence at junction side."""
-        scaf = jc.scaf1 if side == 1 else jc.scaf2
-        pos = jc.pos1 if side == 1 else jc.pos2
-        direction = jc.dir1 if side == 1 else jc.dir2
-        flank_len = jc.flanking_left if side == 1 else jc.flanking_right
+    def _precompute_ref_tnjcs_sequences(self) -> None:
+        """Pre-compute sequences for all reference TN junctions (cache to avoid recomputing)."""
+        self._ref_tn_seqs = []
+        for ref_tnjc in self.ref_tnjcs:
+            seq_inward = self.genome.get_junction_sequence_arm2_to_arm1(ref_tnjc)
+            self._ref_tn_seqs.append((ref_tnjc, seq_inward))
 
-        if scaf not in self.ref_seqs:
-            return ""
+    def _get_junction_arm_seq(self, jc: Junction, arm: int) -> str:
+        """Extract sequence at junction arm."""
+        seq = self.genome.get_junction_arm_sequence(jc, arm)
+        if not self.trim_jc_flanking:
+            return seq
+        return seq[:-self.trim_jc_flanking]
 
-        ref_seq = self.ref_seqs[scaf]
-        pos = pos - 1  # 0-based
-        flank_len = flank_len - self.trim_jc_flanking - 1
+    def _find_ref_tn_sides_matches(self, jc: Junction, arm: int) -> List[OffsetRefTnSide]:
+        """Find TN elements matching a junction arm sequence."""
+        jc_arm_seq = self._get_junction_arm_seq(jc, arm)
+        ref_tn_sides_matches = []
 
-        if flank_len <= 0:
-            flank_len = 20
-
-        if direction == Orientation.FORWARD:
-            start = pos
-            end = min(len(ref_seq), pos + flank_len)
-            seq = ref_seq[start:end]
-        else:
-            start = max(0, pos - flank_len)
-            end = pos + 1
-            seq = ref_seq[start:end]
-            seq = reverse_complement(seq)
-
-        return seq
-
-    def _find_tn_matches(self, jc_seq: str) -> List[RefTnSide]:
-        """Find TN elements matching a junction sequence."""
-        if not jc_seq:
-            return []
-
-        matches = []
-        threshold = self.max_dist_to_tn * 2
-
-        for tn in self.ref_tn_end_seqs:
-            # Check forward
-            pos_fwd = tn.seq_fwd.find(jc_seq)
-            if pos_fwd >= 0 and pos_fwd < threshold:
-                dist = pos_fwd - self.max_dist_to_tn
-                matches.append(RefTnSide.from_other(tn, distance=dist))
-                continue
-
-            # Check reverse complement
-            pos_rc = tn.seq_rc.find(jc_seq)
-            if pos_rc >= 0 and pos_rc < threshold:
-                dist = pos_rc - self.max_dist_to_tn
-                matches.append(RefTnSide.from_other(tn, distance=dist))
-
-        return matches
+        # Use pre-computed ref-tn-side inward sequences (cached in _precompute_ref_tnjcs_sequences)
+        for ref_tnjc, seq_inward in self._ref_tn_seqs:
+            pos = seq_inward.find(jc_arm_seq)
+            if pos >= 0:
+                offset = pos - ref_tnjc.flanking2
+                if abs(offset) <= self.max_dist_to_tn:
+                    ref_tn_sides_matches.append(OffsetRefTnSide.from_other(ref_tnjc.ref_tn_side, offset=offset))
+        return ref_tn_sides_matches

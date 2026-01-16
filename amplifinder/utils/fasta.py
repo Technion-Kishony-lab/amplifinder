@@ -3,23 +3,16 @@
 import gzip
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Optional, Union
+from typing import Dict, List, Optional
 
+from Bio import SeqIO
 from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 
-from amplifinder.logger import info, warning
+from amplifinder.utils.file_utils import ensure_parent_dir
 
 
-def reverse_complement(seq: str) -> str:
-    """Return the reverse complement of a DNA sequence.
-    
-    Args:
-        seq: DNA sequence string
-    
-    Returns:
-        Reverse complement sequence
-    """
-    return str(Seq(seq).reverse_complement())
+READ_LENGTH_UNIFORMITY_TOLERANCE: float = 0.05
 
 
 def read_fasta_lengths(fasta_path: Path, max_num_reads: Optional[int] = None) -> Dict[str, int]:
@@ -33,23 +26,10 @@ def read_fasta_lengths(fasta_path: Path, max_num_reads: Optional[int] = None) ->
         Dict mapping sequence ID to length
     """
     lengths = {}
-    current_header = None
-    current_len = 0
-
-    with open(fasta_path) as f:
-        for line in f:
-            if line.startswith(">"):
-                if current_header:
-                    lengths[current_header] = current_len
-                    if max_num_reads and len(lengths) >= max_num_reads:
-                        return lengths
-                current_header = line[1:].strip().split()[0]
-                current_len = 0
-            else:
-                current_len += len(line.strip())
-        if current_header and (not max_num_reads or len(lengths) < max_num_reads):
-            lengths[current_header] = current_len
-
+    for record in SeqIO.parse(fasta_path, "fasta"):
+        lengths[record.id] = len(record.seq)
+        if max_num_reads and len(lengths) >= max_num_reads:
+            break
     return lengths
 
 
@@ -66,36 +46,41 @@ def read_fastq_lengths(fastq_path: Path, max_num_reads: Optional[int] = None) ->
     lengths = []
     opener = gzip.open if str(fastq_path).endswith('.gz') else open
     with opener(fastq_path, 'rt') as f:
-        for i, line in enumerate(f):
-            if i % 4 == 1:  # Sequence line
-                lengths.append(len(line.strip()))
-                if max_num_reads and len(lengths) >= max_num_reads:
-                    break
+        for record in SeqIO.parse(f, "fastq"):
+            lengths.append(len(record.seq))
+            if max_num_reads and len(lengths) >= max_num_reads:
+                break
     return lengths
 
 
 @dataclass
 class ReadLengthStats:
     """Read length statistics from FASTQ files."""
+    min_length: int
     max_length: int
     mean_length: float
-    is_uniform: bool  # All sampled reads within 5% of each other
-    num_bases: int
-    num_reads: int
+
+    @property
+    def is_uniform(self) -> bool:
+        """True if all sampled reads within 5% of each other."""
+        return self.min_length > 0 and (self.max_length / self.min_length) < (1 + READ_LENGTH_UNIFORMITY_TOLERANCE)
 
 
 def get_read_length_stats(
     fastq_dir: Path,
-    sample_size: int = 1000,
+    sample_per_file: int = 1000,
 ) -> ReadLengthStats:
     """Calculate read length statistics from FASTQ files in a directory.
 
+    Samples reads from all FASTQ files (e.g., paired-end R1/R2) to determine
+    read length. For paired-end, R1 and R2 typically have the same length.
+
     Args:
         fastq_dir: Directory containing FASTQ files
-        sample_size: Number of reads to sample per file for uniformity check
+        sample_per_file: Number of reads to sample per file
 
     Returns:
-        ReadLengthStats with max_length, mean_length, is_uniform, num_bases, num_reads
+        ReadLengthStats with min_length, max_length, mean_length
     """
     fastq_dir = Path(fastq_dir)
 
@@ -105,66 +90,36 @@ def get_read_length_stats(
         raise FileNotFoundError(f"No FASTQ files found in {fastq_dir}")
 
     all_lengths: List[int] = []
-    total_bases = 0
-    total_reads = 0
-
     for fq_file in fastq_files:
-        lengths = read_fastq_lengths(fq_file, max_num_reads=sample_size)
-        if lengths:
-            all_lengths.extend(lengths)
-            # Estimate total bases/reads from file
-            file_lengths = read_fastq_lengths(fq_file, max_num_reads=None)
-            total_reads += len(file_lengths)
-            total_bases += sum(file_lengths)
+        lengths = read_fastq_lengths(fq_file, max_num_reads=sample_per_file)
+        all_lengths.extend(lengths)
 
     if not all_lengths:
         raise ValueError(f"No reads found in FASTQ files in {fastq_dir}")
 
-    max_length = max(all_lengths)
-    mean_length = sum(all_lengths) / len(all_lengths)
-
-    # Check uniformity: all sampled reads within 5% of each other
-    min_len = min(all_lengths)
-    is_uniform = (max_length / min_len) < 1.05 if min_len > 0 else False
-
-    info(f"Read length stats: max={max_length}, mean={mean_length:.1f}, "
-         f"uniform={is_uniform}, reads={total_reads:,}, bases={total_bases:,}")
-
     return ReadLengthStats(
-        max_length=max_length,
-        mean_length=mean_length,
-        is_uniform=is_uniform,
-        num_bases=total_bases,
-        num_reads=total_reads,
+        min_length=min(all_lengths),
+        max_length=max(all_lengths),
+        mean_length=sum(all_lengths) / len(all_lengths),
     )
 
 
-def get_read_length(
-    fastq_dir: Optional[Path] = None,
-    provided_length: Optional[int] = None,
-    sample_size: int = 1000,
-) -> int:
-    """Get read length from provided value or calculate from FASTQ files.
+def write_fasta(
+    sequences: Dict[str, str],
+    output_path: Path,
+    sort_keys: bool = False,
+) -> None:
+    """Write sequences to FASTA file.
 
     Args:
-        fastq_dir: Directory containing FASTQ files (used if provided_length is None)
-        provided_length: Pre-specified read length (takes precedence)
-        sample_size: Number of reads to sample for calculation
-
-    Returns:
-        Read length (max length from FASTQ or provided value)
-
-    Raises:
-        ValueError: If neither fastq_dir nor provided_length is given
+        sequences: Dict mapping sequence ID to sequence string
+        output_path: Output FASTA file path
+        sort_keys: If True, sort sequences by ID before writing
     """
-    if provided_length is not None:
-        info(f"Using provided read length: {provided_length}")
-        return provided_length
+    ensure_parent_dir(output_path)
 
-    if fastq_dir is None:
-        raise ValueError("Either fastq_dir or provided_length must be specified")
-
-    stats = get_read_length_stats(fastq_dir, sample_size)
-    if not stats.is_uniform:
-        warning("Read length is not uniform - may affect junction coverage accuracy")
-    return stats.max_length
+    items = sequences.items()
+    if sort_keys:
+        items = sorted(items)
+    records = [SeqRecord(Seq(seq), id=seq_id, description="") for seq_id, seq in items]
+    SeqIO.write(records, output_path, "fasta")
