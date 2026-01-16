@@ -225,7 +225,9 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         avg_read_length: int,
         is_ancestor: bool,
         read_length_tolerance: float = 0.1,
-        max_dist_from_junction: int = 10
+        max_dist_from_junction: int = 10,
+        max_nm_score: int = 3,
+        min_as_score: int = -25
     ) -> tuple[
         dict[JunctionType, JunctionReadCounts],
         dict[JunctionType, list[tuple[int, int, str]]],
@@ -239,6 +241,9 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             avg_read_length: Read length for filtering
             is_ancestor: Whether processing ancestor (True) or isolate (False) data
             read_length_tolerance: Tolerance for read length filtering (default 0.1 = 10%)
+            max_dist_from_junction: Maximum distance from junction for read classification
+            max_nm_score: Maximum NM score threshold (default 3)
+            min_as_score: Minimum AS score threshold (default -25)
 
         Returns:
             tuple of:
@@ -290,7 +295,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                         nm_score = read.get_tag("nM")
                     except KeyError:
                         nm_score = None
-                if (nm_score is not None and nm_score > 3) or (as_score is not None and as_score < -25):
+                if (nm_score is not None and nm_score > max_nm_score) or (as_score is not None and as_score < min_as_score):
                     continue
 
                 # Convert to 1-based coordinates to match MATLAB BioMap output
