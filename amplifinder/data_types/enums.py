@@ -5,7 +5,7 @@ import operator
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import ClassVar, TypeAlias
+from typing import ClassVar, Optional, TypeAlias
 
 
 class ReversibleIntEnum(int, Enum):
@@ -193,24 +193,49 @@ class JunctionReadCounts:
         """Return total number of reads."""
         return sum(self.counts.values())
 
-    def increment(self, read_type: ReadType) -> None:
+    def increment(self, read_type: Optional[ReadType]) -> None:
         """Increment the count for the given read type."""
+        if read_type is None:
+            return
         self[read_type] += 1
 
-    def get_read_type(self, start: int, end: int, arm_len: int, min_overlap_len: int) -> ReadType:
+    def get_read_type(self, start: int, end: int, arm_len: int, min_overlap_len: int, max_dist_from_junction: int
+                     ) -> Optional[ReadType]:
         """Determine the read type based on the start and end positions."""
-        #                            n+1 n+1+M                  2n
-        #                             |    |                     |
-        # +---------------------+----++----+---------------------+
-        # |                     |    |
-        # 1                    n-M   n
+        # n = arm_len
+        # M = min_overlap_len
+        # L = avg_read_len
+        # F = min_bp_in_frame
 
-        if end <= arm_len:
+        # index right-arm:      <--neg-----0-----pos-->
+        #                                  |
+        #                                 n+1   n+1+M                    2n
+        #                                  |      |                       |
+        # +------------------------+------++------+-----------------------+
+        # |                        |      |
+        # 1                       n-M     n
+        #                                 |
+        # index left-arm:      <--pos-----0-----neg-->
+
+        idx_L_1 = arm_len - end
+        idx_L_2 = arm_len - start
+        assert idx_L_2 >= idx_L_1
+
+        idx_R_1 = start - (arm_len + 1)
+        idx_R_2 = end - (arm_len + 1)
+        assert idx_R_2 >= idx_R_1
+
+        if idx_L_1 > max_dist_from_junction:
+            return None  # read is too far from junction on left side
+        if idx_R_1 > max_dist_from_junction:
+            return None  # read is too far from junction on right side
+
+        if idx_L_1 >= 0:
             return ReadType.LEFT
-        elif start > arm_len:
+        elif idx_R_1 >= 0:
             return ReadType.RIGHT
-        is_start_left_of_margin = start <= arm_len - min_overlap_len + 1
-        is_end_right_of_margin = end >= arm_len + min_overlap_len
+        is_start_left_of_margin = idx_L_2 >= min_overlap_len - 1
+        is_end_right_of_margin = idx_R_2 >= min_overlap_len - 1
         if is_start_left_of_margin and is_end_right_of_margin:
             return ReadType.MIDDLE
         elif is_start_left_of_margin:
@@ -219,9 +244,9 @@ class JunctionReadCounts:
             return ReadType.RIGHT_MARGINAL
         assert False
 
-    def add_read(self, start: int, end: int, arm_len: int, min_overlap_len: int) -> ReadType:
+    def add_read(self, start: int, end: int, arm_len: int, min_overlap_len: int, max_dist_from_junction: int) -> ReadType:
         """Add a read to the junction read counts."""
-        read_type = self.get_read_type(start, end, arm_len, min_overlap_len)
+        read_type = self.get_read_type(start, end, arm_len, min_overlap_len, max_dist_from_junction)
         self.increment(read_type)
         return read_type
 
