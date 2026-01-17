@@ -97,7 +97,7 @@ def _down_sample_alignments(
     return downsampled, scales
 
 
-def _plot_alignments(ax, reads: List[Tuple[int, int, ReadType]], midpoint: int,
+def _plot_alignments(ax, reads: List[Tuple[int, int, ReadType]], arm_len: int,
                      y_sign: int = 1, alpha: float = 1.0, use_nan: bool = True) -> None:
     # Plot isolate reads
     # start, end are 0-based end-exclusive coordinates.
@@ -106,18 +106,18 @@ def _plot_alignments(ax, reads: List[Tuple[int, int, ReadType]], midpoint: int,
     # -4  -3  -2  -1   0   1   2   3   4  x-axis
     #    0   1   2   3   4   5   6   7    seq index
     #
-    # junction_length = 8, midpoint = 4
+    # junction_length = 8, arm_len = 4
     # read with start=3, end=7 will be plotted as (len = 4)
     #              |---|---|---|---|
     #             -1               3      x-axis
-    # x_start = start - midpoint = 3 - 4 = -1
-    # x_end = end - midpoint = 7 - 4 = 3
+    # x_start = start - arm_len = 3 - 4 = -1
+    # x_end = end - arm_len = 7 - 4 = 3
 
     segments_by_type = {read_type: {'x': [], 'y': []} for read_type in ReadType}
 
     for y_pos, (start, end, read_type) in enumerate(reads, start=1):
-        x_start = start - midpoint
-        x_end = end - midpoint
+        x_start = start - arm_len
+        x_end = end - arm_len
         segments_by_type[read_type]['x'].append([x_start, x_end])
         segments_by_type[read_type]['y'].append([y_sign * y_pos, y_sign * y_pos])
 

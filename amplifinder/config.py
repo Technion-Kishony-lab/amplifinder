@@ -1,17 +1,41 @@
 """Configuration management for AmpliFinder."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Tuple, ClassVar
+from typing import Any, Optional, Tuple, ClassVar, Union
 import json
 import yaml
+from pydantic import BaseModel
 
 from amplifinder.data_types import AverageMethod
 from amplifinder.utils.file_utils import ensure_dir
 
 
-# Default configuration values (from config.txt)
+class AlignmentAnalysisParams(BaseModel):
+    """Parameters for junction alignment analysis."""
+    min_overlap_len: int = 12
+    read_length_tolerance: float = 0.1
+    max_dist_from_junction: int = 10
+    max_nm_score: int = 3
+    min_as_score: int = -25
+
+    class Config:
+        frozen = True
+
+
+class BowtieParams(BaseModel):
+    """Parameters for bowtie2 alignment."""
+    score_min: Union[str, Tuple[float, float]] = (0, -0.1)
+    mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5)
+    local: bool = False
+    num_alignments: int = 100
+
+    class Config:
+        frozen = True
+
+
+# Default configuration values (from config.txt and added alignment params)
 DEFAULT_CONFIG = {
     # External tools
     "breseq_docker": True,
@@ -46,11 +70,7 @@ DEFAULT_CONFIG = {
     "del_copy_number_threshold": 0.3,
 
     # Alignment parameters
-    "min_overlap_len": 12,
     "min_jct_cov": 5,
-    "score_min": (0, -0.1),
-    "mismatch_penalty": (5, 5),
-
     # File size thresholds
     # TODO: These are not used yet
     "breseq_output_size_threshold": 10_000,
@@ -70,6 +90,22 @@ DEFAULT_CONFIG = {
     # Plotting
     "create_plots": True,
 }
+
+
+_ALIGN_ANALYSIS_KEYS = tuple(AlignmentAnalysisParams.__annotations__.keys())
+_BOWTIE_KEYS = tuple(BowtieParams.__annotations__.keys())
+
+
+def _normalize_alignment_params(cfg: dict[str, Any]) -> None:
+    """Move legacy scalar alignment params into param objects."""
+    def _collect(keys: tuple[str, ...]) -> dict[str, Any]:
+        return {k: cfg.pop(k) for k in keys if k in cfg}
+
+    aa_vals = _collect(_ALIGN_ANALYSIS_KEYS)
+    bt_vals = _collect(_BOWTIE_KEYS)
+
+    cfg["alignment_analysis_params"] = aa_vals or cfg.get("alignment_analysis_params") or {}
+    cfg["bowtie_params"] = bt_vals or cfg.get("bowtie_params") or {}
 
 
 @dataclass
@@ -134,10 +170,9 @@ class Config:
     del_copy_number_threshold: float = 0.3
 
     # Alignment parameters
-    min_overlap_len: int = 12
     min_jct_cov: int = 5
-    score_min: Tuple[float, float] = (0, -0.1)
-    mismatch_penalty: Tuple[int, int] = (5, 5)
+    alignment_analysis_params: Optional[AlignmentAnalysisParams] = None
+    bowtie_params: Optional[BowtieParams] = None
 
     # File size thresholds
     # TODO: These are not used yet
@@ -225,6 +260,10 @@ class Config:
                 config_dict[key] = list(value)
             elif isinstance(value, Enum):
                 config_dict[key] = value.value
+            elif isinstance(value, BaseModel):
+                # pydantic v1/v2 compatibility
+                dump_fn = getattr(value, "model_dump", None)
+                config_dict[key] = dump_fn() if dump_fn else value.dict()
             elif value is not None:
                 config_dict[key] = value
 
@@ -248,6 +287,7 @@ class Config:
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
         config_dict = load_config(config_path)
+        _normalize_alignment_params(config_dict)
 
         # Convert string paths back to Path objects
         path_fields = ['iso_path', 'anc_path', 'output_dir', 'ref_path',
@@ -295,11 +335,10 @@ class Config:
                 # No ancestor: isolate is its own "ancestor" for folder structure
                 self.anc_name = self.iso_name
 
-        # Convert tuples if passed as lists
-        if isinstance(self.score_min, list):
-            self.score_min = tuple(self.score_min)
-        if isinstance(self.mismatch_penalty, list):
-            self.mismatch_penalty = tuple(self.mismatch_penalty)
+        # Normalize params
+        validate = lambda cls, obj: cls.model_validate(obj or {}) if hasattr(cls, "model_validate") else cls.parse_obj(obj or {})
+        self.alignment_analysis_params = validate(AlignmentAnalysisParams, self.alignment_analysis_params)
+        self.bowtie_params = validate(BowtieParams, self.bowtie_params)
 
         # Validate: ISfinder required for non-NCBI genomes
         if not self.ncbi and not self.use_isfinder:
@@ -382,4 +421,5 @@ def merge_config(
         if value is not None:
             merged[key] = value
 
+    _normalize_alignment_params(merged)
     return merged

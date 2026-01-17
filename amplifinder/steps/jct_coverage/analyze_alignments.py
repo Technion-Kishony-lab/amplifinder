@@ -5,6 +5,7 @@ import numpy as np
 from pathlib import Path
 from typing import Optional, Dict
 
+from amplifinder.config import AlignmentAnalysisParams
 from amplifinder.optional_deps import plt
 
 from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts, Genome, Side
@@ -13,6 +14,30 @@ from amplifinder.steps.jct_coverage.read_type import get_jct_read_counts
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.visualization.plot_coverage import plot_amplicon_coverage
 from amplifinder.visualization.plot_alignments import plot_junctions_coverage
+
+
+def get_jct_read_counts_by_tnjc2(
+    synjct_tnjc2: SynJctsTnJc2,
+    base_dir: Path,
+    is_ancestor: bool,
+    avg_read_length: int,
+    jct_align_params: AlignmentAnalysisParams,
+) -> tuple[
+    dict[JunctionType, JunctionReadCounts],
+    dict[JunctionType, list[tuple[int, int, str]]],
+    dict[JunctionType, int]
+]:
+    """A wrapper around get_jct_read_counts to get the read counts based on a SynJctsTnJc2."""
+    bam_path = synjct_tnjc2.bam_path(base_dir, is_ancestor=is_ancestor)
+    return get_jct_read_counts(
+        bam_path,
+        avg_read_length,
+        jct_align_params.min_overlap_len,
+        alignment_length_tolerance=jct_align_params.read_length_tolerance,
+        max_dist_from_junction=jct_align_params.max_dist_from_junction,
+        max_nm_score=jct_align_params.max_nm_score,
+        min_as_score=jct_align_params.min_as_score,
+    )
 
 
 def is_covered(cov: JunctionReadCounts, min_jct_cov: int,
@@ -76,7 +101,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         anc_breseq_path: Optional[Path] = None,
         iso_read_length: int = 150,
         anc_read_length: Optional[int] = None,
-        min_overlap_len: int = 12,
+        jct_align_params: AlignmentAnalysisParams = None,
         min_jct_cov: int = 10,
         create_plots: bool = True,
         force: Optional[bool] = None,
@@ -89,7 +114,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         self.anc_breseq_path = Path(anc_breseq_path) if anc_breseq_path else None
         self.iso_read_length = iso_read_length
         self.anc_read_length = anc_read_length if anc_read_length else iso_read_length
-        self.min_overlap_len = min_overlap_len
+        self.jct_align_params = jct_align_params or AlignmentAnalysisParams()
         self.min_jct_cov = min_jct_cov
         self.create_plots = create_plots
         self.has_ancestor = self._anc_output_dir is not None
@@ -138,7 +163,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 min_jct_cov=self.min_jct_cov,
                 jc_len=jct_lengths[jt],
                 read_len=read_len,
-                min_overlap_len=self.min_overlap_len
+                min_overlap_len=self.jct_align_params.min_overlap_len
             )
             for jt in JunctionType.sorted()
         }
@@ -171,20 +196,28 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         analyzed_records = []
         for synjct_tnjc2 in self.synjct_tnjc2s:
             # Get isolate junction coverage (required)
-            jc_covs, alignment_data, jct_lengths = self._get_cov(
-                synjct_tnjc2, self._iso_output_dir, self.iso_read_length, is_ancestor=False
+            jc_covs, alignment_data, jc_lengths = get_jct_read_counts_by_tnjc2(
+                synjct_tnjc2=synjct_tnjc2,
+                base_dir=self._iso_output_dir,
+                is_ancestor=False,
+                avg_read_length=self.iso_read_length,
+                jct_align_params=self.jct_align_params,
             )
-            jc_calls = self._calculate_jc_calls(jc_covs, jct_lengths, self.iso_read_length)
+            jc_calls = self._calculate_jc_calls(jc_covs, jc_lengths, self.iso_read_length)
 
             # Get ancestor junction coverage if available (optional)
             jc_covs_anc = None
             alignment_data_anc = None
             jc_calls_anc = None
             if self.has_ancestor:
-                jc_covs_anc, alignment_data_anc, jct_lengths_anc = self._get_cov(
-                    synjct_tnjc2, self._anc_output_dir, self.anc_read_length, is_ancestor=True
+                jc_covs_anc, alignment_data_anc, jc_lengths_anc = get_jct_read_counts_by_tnjc2(
+                    synjct_tnjc2=synjct_tnjc2,
+                    base_dir=self._anc_output_dir,
+                    is_ancestor=True,
+                    avg_read_length=self.anc_read_length,
+                    jct_align_params=self.jct_align_params,
                 )
-                jc_calls_anc = self._calculate_jc_calls(jc_covs_anc, jct_lengths_anc, self.anc_read_length)
+                jc_calls_anc = self._calculate_jc_calls(jc_covs_anc, jc_lengths_anc, self.anc_read_length)
 
             analyzed_tnjc2 = AnalyzedTnJc2.from_other(
                 synjct_tnjc2,
@@ -197,13 +230,13 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
             if self.create_plots:
                 plot_junctions_coverage(
-                    jc_lengths=jct_lengths,
+                    jc_lengths=jc_lengths,
                     alignment_data=alignment_data, alignment_data_anc=alignment_data_anc,
                     jc_covs=jc_covs, jc_covs_anc=jc_covs_anc,
                     jc_calls=jc_calls, jc_calls_anc=jc_calls_anc,
                     title=f'Jcts coverage - {synjct_tnjc2.analysis_dir_name(is_ancestor=False)}',
                     output_path=synjct_tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png",
-                    min_overlap_len=self.min_overlap_len,
+                    min_overlap_len=self.jct_align_params.min_overlap_len,
                     read_len=self.iso_read_length,
                 )
                 plot_amplicon_coverage(
@@ -218,43 +251,3 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             print('\n', flush=True)
 
         return RecordTypedDf.from_records(analyzed_records, AnalyzedTnJc2)
-
-    def _get_cov(
-        self,
-        synjct_tnjc2: SynJctsTnJc2,
-        base_dir: Path,
-        avg_read_length: int,
-        is_ancestor: bool,
-        read_length_tolerance: float = 0.1,
-        max_dist_from_junction: int = 10,
-        max_nm_score: int = 3,
-        min_as_score: int = -25
-    ) -> tuple[
-        dict[JunctionType, JunctionReadCounts],
-        dict[JunctionType, list[tuple[int, int, str]]],
-        dict[JunctionType, int]
-    ]:
-        """Parse BAM and get coverage for all 7 junction types.
-
-        Args:
-            synjct_tnjc2: Synthetic junction record
-            base_dir: Base directory containing BAM file
-            avg_read_length: Read length for filtering
-            is_ancestor: Whether processing ancestor (True) or isolate (False) data
-            read_length_tolerance: Tolerance for read length filtering (default 0.1 = 10%)
-            max_dist_from_junction: Maximum distance from junction for read classification
-            max_nm_score: Maximum NM score threshold (default 3)
-            min_as_score: Minimum AS score threshold (default -25)
-
-        Returns:
-            tuple of:
-                - dict mapping JunctionType -> JunctionReadCounts
-                - dict mapping JunctionType -> list of (start, end, read_type) tuples
-                - dict mapping JunctionType -> junction length
-        """
-        bam_path = synjct_tnjc2.bam_path(base_dir, is_ancestor=is_ancestor)
-        return get_jct_read_counts(bam_path, avg_read_length, self.min_overlap_len, 
-                                   alignment_length_tolerance=read_length_tolerance,
-                                   max_dist_from_junction=max_dist_from_junction,
-                                   max_nm_score=max_nm_score,
-                                   min_as_score=min_as_score)
