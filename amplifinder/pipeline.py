@@ -306,6 +306,7 @@ class Pipeline:
             output_dir=iso_output,
             fastq_path=cfg.iso_path,
             threads=cfg.threads,
+            bowtie_params=cfg.bowtie_params,
         ).run()
 
         # Align ancestor reads in ancestor folder
@@ -315,6 +316,7 @@ class Pipeline:
                 output_dir=anc_output,
                 fastq_path=cfg.anc_path,
                 threads=cfg.threads,
+                bowtie_params=cfg.bowtie_params,
             ).run()
 
     def _analyze_alignments(
@@ -338,8 +340,8 @@ class Pipeline:
             anc_breseq_path=anc_breseq_path,
             iso_read_length=read_lengths.iso_read_length,
             anc_read_length=read_lengths.anc_read_length,
-            min_overlap_len=self.config.min_overlap_len,
-            min_jct_cov=self.config.min_jct_cov,
+            jct_align_params=cfg.alignment_analysis_params,
+            min_jct_cov=cfg.min_jct_cov,
             create_plots=cfg.create_plots,
         ).run()
 
