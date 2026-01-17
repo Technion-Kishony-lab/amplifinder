@@ -23,7 +23,7 @@ from amplifinder.steps import (
     FilterTnJc2CandidatesStep,
     CreateSyntheticJunctionsStep, AncCreateSyntheticJunctionsStep,
     AlignReadsToJunctionsStep, AncAlignReadsToJunctionsStep,
-    AnalyzeTnJc2AlignmentsStep,
+    AnalyzeTnJc2AlignmentsStep, AncAnalyzeTnJc2AlignmentsStep, PlotTnJc2CoverageStep,
     ClassifyTnJc2CandidatesStep,
     ExportTnJc2Step,
     ReadLenStep, ReadLengths,
@@ -74,6 +74,7 @@ class Pipeline:
         self._align_reads(synjct_tnjc2s, iso_output, anc_output)
         analyzed_tnjc2s = self._analyze_alignments(synjct_tnjc2s, genome, iso_output, anc_output, read_lengths)
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
+        self._plot_coverage(classified_tnjc2s, iso_output, anc_output, read_lengths)
         self._export(classified_tnjc2s, genome, iso_output)
 
         return classified_tnjc2s
@@ -329,21 +330,27 @@ class Pipeline:
     ) -> RecordTypedDf[AnalyzedTnJc2]:
         """Step 12: Analyze read alignments."""
         cfg = self.config
-        iso_breseq_path, anc_breseq_path = cfg.get_breseq_paths()
 
-        return AnalyzeTnJc2AlignmentsStep(
-            synjct_tnjc2s=synjct_tnjc2s,
+        # Analyze isolate alignments
+        analyzed_tnjc2s = AnalyzeTnJc2AlignmentsStep(
+            tnjc2s=synjct_tnjc2s,
             output_dir=iso_output,
-            genome=genome,
-            iso_breseq_path=iso_breseq_path,
-            anc_output_dir=anc_output,
-            anc_breseq_path=anc_breseq_path,
-            iso_read_length=read_lengths.iso_read_length,
-            anc_read_length=read_lengths.anc_read_length,
+            read_length=read_lengths.iso_read_length,
             jct_align_params=cfg.alignment_analysis_params,
             min_jct_cov=cfg.min_jct_cov,
-            create_plots=cfg.create_plots,
         ).run()
+
+        # Analyze ancestor alignments if present
+        if anc_output:
+            analyzed_tnjc2s = AncAnalyzeTnJc2AlignmentsStep(
+                tnjc2s=analyzed_tnjc2s,
+                output_dir=anc_output,
+                read_length=read_lengths.anc_read_length,
+                jct_align_params=cfg.alignment_analysis_params,
+                min_jct_cov=cfg.min_jct_cov,
+            ).run()
+
+        return analyzed_tnjc2s
 
     def _classify_candidates(
         self,
@@ -354,6 +361,29 @@ class Pipeline:
         return ClassifyTnJc2CandidatesStep(
             analyzed_tnjc2s=analyzed_tnjc2s,
             output_dir=iso_output,
+        ).run()
+
+    def _plot_coverage(
+        self,
+        classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
+        iso_output: Path,
+        anc_output: Optional[Path],
+        read_lengths: ReadLengths,
+    ) -> None:
+        """Plot junction/amplicon coverage (post-classification)."""
+        cfg = self.config
+        iso_breseq_path, anc_breseq_path = cfg.get_breseq_paths()
+
+        PlotTnJc2CoverageStep(
+            classified_tnjc2s=classified_tnjc2s,
+            output_dir=iso_output,
+            iso_breseq_path=iso_breseq_path,
+            anc_output_dir=anc_output,
+            anc_breseq_path=anc_breseq_path,
+            iso_read_length=read_lengths.iso_read_length,
+            anc_read_length=read_lengths.anc_read_length,
+            jct_align_params=cfg.alignment_analysis_params,
+            create_plots=cfg.create_plots,
         ).run()
 
     def _export(

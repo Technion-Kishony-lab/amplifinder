@@ -13,7 +13,8 @@ from amplifinder.steps.filter_candidates import FilterTnJc2CandidatesStep
 from amplifinder.steps.amplicon_coverage import CalcTnJc2AmpliconCoverageStep
 from amplifinder.steps.synthetic_junctions import CreateSyntheticJunctionsStep, AncCreateSyntheticJunctionsStep
 from amplifinder.steps.align_reads import AlignReadsToJunctionsStep, AncAlignReadsToJunctionsStep
-from amplifinder.steps.jct_coverage.analyze_alignments import AnalyzeTnJc2AlignmentsStep
+from amplifinder.steps.jct_coverage.analyze_alignments import AnalyzeTnJc2AlignmentsStep, AncAnalyzeTnJc2AlignmentsStep
+from amplifinder.steps.jct_coverage.plot_results import PlotTnJc2CoverageStep
 from amplifinder.steps.classify_candidates import ClassifyTnJc2CandidatesStep
 from amplifinder.steps.export import ExportTnJc2Step
 from amplifinder.steps.read_length import ReadLenStep, ReadLengths
@@ -39,6 +40,8 @@ __all__ = [
     "AlignReadsToJunctionsStep",
     "AncAlignReadsToJunctionsStep",
     "AnalyzeTnJc2AlignmentsStep",
+    "AncAnalyzeTnJc2AlignmentsStep",
+    "PlotTnJc2CoverageStep",
     "ClassifyTnJc2CandidatesStep",
     "ExportTnJc2Step",
     "ReadLenStep",

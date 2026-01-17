@@ -1,0 +1,123 @@
+"""Step: Plot junction and amplicon coverage after classification."""
+from pathlib import Path
+from typing import Optional
+
+from amplifinder.config import AlignmentAnalysisParams
+from amplifinder.optional_deps import plt
+from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2
+from amplifinder.steps.base import Step
+from amplifinder.steps.jct_coverage.analyze_alignments import get_jct_read_counts_by_tnjc2
+from amplifinder.tools.breseq import load_breseq_coverage
+from amplifinder.visualization.plot_alignments import plot_junctions_coverage
+from amplifinder.visualization.plot_coverage import plot_amplicon_coverage
+
+
+class PlotTnJc2CoverageStep(Step):
+    """Generate junction and amplicon coverage plots (post-classification)."""
+
+    def __init__(
+        self,
+        classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
+        output_dir: Path,
+        iso_breseq_path: Path,
+        anc_output_dir: Optional[Path] = None,
+        anc_breseq_path: Optional[Path] = None,
+        iso_read_length: int = 150,
+        anc_read_length: Optional[int] = None,
+        jct_align_params: AlignmentAnalysisParams = None,
+        create_plots: bool = True,
+        force: Optional[bool] = None,
+    ):
+        self.classified_tnjc2s = classified_tnjc2s
+        self._iso_output_dir = Path(output_dir)
+        self._anc_output_dir = Path(anc_output_dir) if anc_output_dir else None
+        self.iso_breseq_path = Path(iso_breseq_path)
+        self.anc_breseq_path = Path(anc_breseq_path) if anc_breseq_path else None
+        self.iso_read_length = iso_read_length
+        self.anc_read_length = anc_read_length if anc_read_length else iso_read_length
+        self.jct_align_params = jct_align_params or AlignmentAnalysisParams()
+        self.create_plots = create_plots
+        self.has_ancestor = self._anc_output_dir is not None
+
+        if self.create_plots and plt is None:
+            raise ImportError(
+                "Plotting is enabled (create_plots=True) but matplotlib is not installed. "
+                "Install with: pip install matplotlib, or disable plotting with --no-create-plots"
+            )
+
+        input_files = [tnjc2.bam_path(self._iso_output_dir, is_ancestor=False) for tnjc2 in classified_tnjc2s]
+        if self.has_ancestor:
+            input_files += [tnjc2.bam_path(self._anc_output_dir, is_ancestor=True) for tnjc2 in classified_tnjc2s]
+
+        # breseq coverage dirs
+        input_files.append(self.iso_breseq_path)
+        if self.has_ancestor and self.anc_breseq_path:
+            input_files.append(self.anc_breseq_path)
+
+        # artifact files (plots to generate)
+        artifact_files = []
+        for tnjc2 in classified_tnjc2s:
+            artifact_files.append(tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png")
+            artifact_files.append(tnjc2.analysis_dir_path(self._iso_output_dir) / "amplicon_coverage.png")
+
+        super().__init__(input_files=input_files, artifact_files=artifact_files, force=force)
+
+    def _load_coverage_for_plotting(self):
+        iso_scafs_to_covs = load_breseq_coverage(self.iso_breseq_path)
+        anc_scafs_to_covs = None
+        if self.has_ancestor and self.anc_breseq_path:
+            anc_scafs_to_covs = load_breseq_coverage(self.anc_breseq_path)
+        return iso_scafs_to_covs, anc_scafs_to_covs
+
+    def _generate_artifacts(self) -> None:
+        if not self.create_plots:
+            return
+
+        iso_scafs_to_covs, anc_scafs_to_covs = self._load_coverage_for_plotting()
+        print(f'Creating coverage plots (n={len(self.classified_tnjc2s)}) ', end='', flush=True)
+
+        for tnjc2 in self.classified_tnjc2s:
+            jc_covs, alignment_data, jc_lengths = get_jct_read_counts_by_tnjc2(
+                synjct_tnjc2=tnjc2,
+                base_dir=self._iso_output_dir,
+                is_ancestor=False,
+                avg_read_length=self.iso_read_length,
+                jct_align_params=self.jct_align_params,
+            )
+            jc_calls = tnjc2.jc_calls
+
+            jc_covs_anc = None
+            alignment_data_anc = None
+            jc_calls_anc = None
+            if self.has_ancestor:
+                jc_covs_anc, alignment_data_anc, _ = get_jct_read_counts_by_tnjc2(
+                    synjct_tnjc2=tnjc2,
+                    base_dir=self._anc_output_dir,
+                    is_ancestor=True,
+                    avg_read_length=self.anc_read_length,
+                    jct_align_params=self.jct_align_params,
+                )
+                jc_calls_anc = tnjc2.jc_calls_anc
+
+            plot_junctions_coverage(
+                jc_lengths=jc_lengths,
+                alignment_data=alignment_data,
+                alignment_data_anc=alignment_data_anc,
+                jc_covs=jc_covs,
+                jc_covs_anc=jc_covs_anc,
+                jc_calls=jc_calls,
+                jc_calls_anc=jc_calls_anc,
+                title=f'Jcts coverage - {tnjc2.analysis_dir_name(is_ancestor=False)}',
+                output_path=tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png",
+                min_overlap_len=self.jct_align_params.min_overlap_len,
+                read_len=self.iso_read_length,
+            )
+            plot_amplicon_coverage(
+                tnjc2=tnjc2,
+                iso_scafs_to_covs=iso_scafs_to_covs,
+                anc_scafs_to_covs=anc_scafs_to_covs,
+                output_path=tnjc2.analysis_dir_path(self._iso_output_dir) / "amplicon_coverage.png",
+            )
+            print('.', end='', flush=True)
+
+        print('\n', flush=True)
