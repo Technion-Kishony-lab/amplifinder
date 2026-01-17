@@ -3,10 +3,55 @@
 ## Overview
 This plan details a systematic comparison between MATLAB and Python pipeline outputs for junction alignment analysis, focusing on identifying differences in BAM file alignments and read-type classification (left/right/green) for the junction `chr_U00096_873161F_890745R_IS_41R`.
 
+**IMPORTANT: This plan must result in an executable test/script** that can be run to perform the complete comparison. The implementation should:
+1. Be a single executable Python script or test suite that can be run from the command line
+2. Include clear command-line usage instructions
+3. Generate all comparison outputs in a structured output directory
+4. Provide a summary report that clearly indicates where differences exist
+5. Include documentation on how to interpret all output files
+
+See sections **"How to Run the Comparison Test"** and **"How to Interpret Results"** below for detailed instructions.
+
 ## Target Junction
 - **Junction ID**: `chr_U00096_873161F_890745R_IS_41R`
 - **MATLAB BAM**: `/zdata/user-data/rkishony/AmpliFinder_test/AmpliFinderWorkspace/output/SRR25242877/chr_U00096_873161F_890745R_IS_41R/alignment/alignment.sorted.bam`
 - **Python BAM**: `/zdata/user-data/idan/small_projects/AmpliFinder/pyAmpliFinder/amplifinder/tests/test_outputs/integration/output/U00096/SRR25242906/SRR25242877/junctions/jc_U00096_873161-890745_U00096_3583428-3584195_S_302bp/sorted.bam`
+
+## Junction Sequence Mapping
+
+### FASTA File Locations
+- **MATLAB FASTA**: `/zdata/user-data/rkishony/AmpliFinder_test/AmpliFinderWorkspace/output/SRR25242877/chr_U00096_873161F_890745R_IS_41R/jc.fasta`
+- **Python FASTA**: `/zdata/user-data/idan/small_projects/AmpliFinder/pyAmpliFinder/amplifinder/tests/test_outputs/integration/output/U00096/SRR25242906/SRR25242877/junctions/jc_U00096_873161-890745_U00096_3583428-3584195_S_302bp/junctions.fasta`
+
+### Junction Type Mapping
+Both FASTA files contain 7 junction sequences (604 bp each). Base-by-base comparison confirms all sequences are **identical** between MATLAB and Python. The mapping is:
+
+| MATLAB Junction ID | Python Junction Name | Sequence Length | Status |
+|-------------------|----------------------|-----------------|--------|
+| `1` | `CHR_TO_AMP_LEFT` | 604 bp | ✓ Identical |
+| `2` | `CHR_TO_TN_LEFT` | 604 bp | ✓ Identical |
+| `3` | `AMP_RIGHT_TO_TN_LEFT` | 604 bp | ✓ Identical |
+| `4` | `AMP_RIGHT_TO_AMP_LEFT` | 604 bp | ✓ Identical |
+| `5` | `TN_RIGHT_TO_AMP_LEFT` | 604 bp | ✓ Identical |
+| `6` | `TN_RIGHT_TO_CHR` | 604 bp | ✓ Identical |
+| `7` | `AMP_RIGHT_TO_CHR` | 604 bp | ✓ Identical |
+
+**Mapping Dictionary** (for use in comparison scripts):
+```python
+MATLAB_TO_PYTHON_JUNCTION_MAP = {
+    '1': 'CHR_TO_AMP_LEFT',
+    '2': 'CHR_TO_TN_LEFT',
+    '3': 'AMP_RIGHT_TO_TN_LEFT',
+    '4': 'AMP_RIGHT_TO_AMP_LEFT',
+    '5': 'TN_RIGHT_TO_AMP_LEFT',
+    '6': 'TN_RIGHT_TO_CHR',
+    '7': 'AMP_RIGHT_TO_CHR'
+}
+
+PYTHON_TO_MATLAB_JUNCTION_MAP = {v: k for k, v in MATLAB_TO_PYTHON_JUNCTION_MAP.items()}
+```
+
+**Note**: When comparing alignments or classifications, use this mapping to match junction types between MATLAB (numeric IDs '1'-'7') and Python (descriptive names). The BAM files use these junction names as reference names (RNAME field).
 
 ---
 
@@ -482,8 +527,9 @@ This plan details a systematic comparison between MATLAB and Python pipeline out
 3. **For each alignment in Python BAM**:
    - Skip if `read.is_unmapped`, `read.is_secondary`, or `read.is_supplementary`
    - Get `read_id = read.query_name`
-   - Get `jct_name = read.reference_name`
-   - Get `jct_type = JunctionType[jct_name]` (convert to string '1'..'7' for comparison)
+   - Get `jct_name = read.reference_name` (Python junction name, e.g., 'CHR_TO_AMP_LEFT')
+   - Convert to MATLAB format: `jct_type = PYTHON_TO_MATLAB_JUNCTION_MAP.get(jct_name)` (string '1'..'7' for comparison)
+   - If mapping not found, skip or use Python name directly (should not happen if mapping is correct)
    - Get `jct_len = jct_lengths[jct_name]`
    
    - **Apply Python filters**:
@@ -656,18 +702,30 @@ This plan details a systematic comparison between MATLAB and Python pipeline out
 
 ### Script Structure
 
-**Suggested script organization**:
+**Recommended implementation**: A single executable script `compare_jc_alignment.py` that can be run from the command line, with modular functions organized as follows:
+
 ```
+compare_jc_alignment.py              # Main executable script (entry point)
+├── compare_bam_files()              # Part 1: BAM comparison
+├── compare_read_counts()             # Part 2: Read count comparison
+├── extract_matlab_data()            # Helper: Load MATLAB CSV files
+├── extract_python_data()            # Helper: Extract Python classifications
+├── parse_bam_file()                 # BAM parsing utility
+├── classify_read()                   # Classification logic (MATLAB and Python)
+└── generate_reports()               # Generate summary reports
+
+# Optional: If split into multiple files for maintainability:
 compare_jc_alignment/
-├── compare_bam_files.py          # Part 1: BAM comparison
-├── compare_read_counts.py          # Part 2: Read count comparison
-├── extract_matlab_data.py         # Helper: Extract MATLAB .mat to CSV
-├── extract_python_data.py         # Helper: Extract Python classifications
+├── compare_jc_alignment.py          # Main executable (entry point with CLI)
+├── bam_comparison.py                # Part 1: BAM comparison functions
+├── read_count_comparison.py         # Part 2: Read count comparison functions
 ├── utils/
-│   ├── bam_parser.py              # BAM parsing utilities
-│   ├── read_classifier.py         # Classification logic (MATLAB and Python)
-│   └── matlab_loader.py           # MATLAB .mat file loader
-└── outputs/
+│   ├── bam_parser.py                # BAM parsing utilities
+│   ├── read_classifier.py           # Classification logic (MATLAB and Python)
+│   └── matlab_loader.py             # MATLAB CSV file loader
+└── outputs/                         # Generated at runtime (not in repo)
+    ├── README.md                    # Auto-generated guide to outputs
+    ├── comparison_summary.txt       # Quick summary
     ├── bam_comparison/
     │   ├── matlab_alignment.sam
     │   ├── python_alignment.sam
@@ -679,6 +737,14 @@ compare_jc_alignment/
         ├── differentially_labelled_reads.csv
         └── per_junction_read_lists.csv
 ```
+
+**Key Requirements for the Executable Script:**
+1. **Command-line interface**: Use `argparse` or `click` for CLI
+2. **Error handling**: Clear error messages if input files are missing or invalid
+3. **Progress reporting**: Print progress for long-running operations
+4. **Output documentation**: Auto-generate `README.md` in output directory explaining all files
+5. **Exit codes**: Return appropriate exit codes (0 = success, 1 = errors found, 2 = script error)
+6. **Logging**: Optional verbose mode with detailed logging
 
 ### Key Parameters
 
@@ -702,20 +768,36 @@ compare_jc_alignment/
 
 ## Expected Outputs Summary
 
-### Part 1 Outputs:
-1. `matlab_alignment.sam` - SAM conversion of MATLAB BAM
-2. `python_alignment.sam` - SAM conversion of Python BAM
-3. `bam_comparison_differences.csv` - Detailed CSV of all differing alignments
-4. `green_mismatch_reads.fastq` - FASTQ of reads with different mappings
-5. `comparison_summary.txt` - Text summary of differences
+**Note**: See **"How to Interpret Results"** section below for detailed guidance on reading and understanding these outputs.
 
-### Part 2 Outputs:
-1. `read_count_comparison_summary.csv` - Side-by-side count comparison
-2. `differentially_labelled_reads.csv` - Reads with different classifications
-3. `per_junction_read_lists.csv` - Complete lists of reads per category per junction
-4. MATLAB data CSVs (if not already present):
-   - `bamreads__*.csv`
-   - `biomap__*.csv`
+### Part 1 Outputs (BAM Comparison):
+Located in `<output-dir>/bam_comparison/`:
+1. `matlab_alignment.sam` - SAM conversion of MATLAB BAM (for manual inspection)
+2. `python_alignment.sam` - SAM conversion of Python BAM (for manual inspection)
+3. `bam_comparison_differences.csv` - Detailed CSV of all differing alignments (see interpretation guide)
+4. `green_mismatch_reads.fastq` - FASTQ of reads with different mappings (for re-analysis)
+5. `comparison_summary.txt` - Text summary of differences (start here for quick overview)
+
+### Part 2 Outputs (Read Count Comparison):
+Located in `<output-dir>/read_count_comparison/`:
+1. `read_count_comparison_summary.csv` - Side-by-side count comparison per junction type (key file for differences)
+2. `differentially_labelled_reads.csv` - Detailed list of every read classified differently (for deep dive)
+3. `per_junction_read_lists.csv` - Complete lists of reads per category per junction (for verification)
+
+### Root Output Directory:
+- `README.md` - Auto-generated guide explaining all output files and how to interpret them
+- `comparison_summary.txt` - Overall summary combining Part 1 and Part 2 results
+
+### Input Files (not generated, must exist):
+- MATLAB data CSVs (exported from .mat files):
+  - `bamreads__nmbr_green_reads.csv`
+  - `bamreads__nmbr_left_reads.csv`
+  - `bamreads__nmbr_right_reads.csv`
+  - `biomap__RdStart.csv`
+  - `biomap__RdRef.csv`
+  - `biomap__RdLength.csv`
+  - `biomap__RdFlag.csv`
+  - `biomap__RdFull.csv`
 
 ---
 
@@ -768,12 +850,212 @@ compare_jc_alignment/
    - Check if both pipelines skip secondary/supplementary or count them
 
 5. **Junction Type Mapping**:
-   - Verify junction type names match between MATLAB and Python
-   - MATLAB uses '1'..'7' as strings, Python uses `JunctionType` enum
+   - **Mapping verified**: See "Junction Sequence Mapping" section above
+   - MATLAB uses '1'..'7' as strings, Python uses descriptive names (e.g., 'CHR_TO_AMP_LEFT')
+   - Use `MATLAB_TO_PYTHON_JUNCTION_MAP` and `PYTHON_TO_MATLAB_JUNCTION_MAP` dictionaries for conversion
+   - All 7 sequences are identical between MATLAB and Python (verified base-by-base)
 
 6. **Bowtie2 Parameters**:
    - Verify both pipelines use identical bowtie2 parameters
    - Check: `--local` vs `--end-to-end`, `-k`, `--score-min`, `--mp`, `--reorder`
+
+---
+
+## How to Run the Comparison Test
+
+### Prerequisites
+1. **Python environment**: Use the conda environment at `/zdata/user-data/rkishony/.conda/envs/amplifinder/bin/python`
+2. **Required Python packages**: `pysam`, `pandas`, `scipy`, `biopython`
+3. **Command-line tools**: `samtools` (must be in PATH)
+4. **Input files** (must exist):
+   - MATLAB BAM file (see "Target Junction" section)
+   - Python BAM file (see "Target Junction" section)
+   - MATLAB CSV files (exported from .mat files, see Part 2.1)
+   - MATLAB FASTA file (see "Junction Sequence Mapping" section)
+   - Python FASTA file (see "Junction Sequence Mapping" section)
+
+### Running the Test
+
+**Option 1: Single executable script**
+```bash
+# Activate conda environment or use full path
+export PATH="/zdata/user-data/rkishony/.conda/envs/amplifinder/bin:$PATH"
+
+# Run the comparison script
+python compare_jc_alignment.py \
+    --matlab-bam /path/to/matlab/alignment.sorted.bam \
+    --python-bam /path/to/python/sorted.bam \
+    --matlab-fasta /path/to/matlab/jc.fasta \
+    --python-fasta /path/to/python/junctions.fasta \
+    --matlab-data-dir /path/to/matlab/alignment/directory \
+    --output-dir ./comparison_outputs
+```
+
+**Option 2: Test suite (if implemented as pytest)**
+```bash
+export PATH="/zdata/user-data/rkishony/.conda/envs/amplifinder/bin:$PATH"
+pytest compare_jc_alignment_test.py -v
+```
+
+### Command-Line Arguments
+
+The executable script should accept the following arguments:
+
+- `--matlab-bam`: Path to MATLAB BAM file (required)
+- `--python-bam`: Path to Python BAM file (required)
+- `--matlab-fasta`: Path to MATLAB FASTA file (required)
+- `--python-fasta`: Path to Python FASTA file (required)
+- `--matlab-data-dir`: Directory containing MATLAB CSV files (required for Part 2)
+- `--output-dir`: Output directory for all comparison results (default: `./comparison_outputs`)
+- `--junction-length`: Junction sequence length (default: 604, can be auto-detected from FASTA)
+- `--read-length`: Average read length (default: 150)
+- `--min-overlap-len`: Minimum overlap length (default: 12)
+- `--verbose`: Enable verbose output
+- `--skip-bam-comparison`: Skip Part 1 (BAM comparison)
+- `--skip-read-counts`: Skip Part 2 (read count comparison)
+
+### Expected Runtime
+- Part 1 (BAM comparison): ~5-30 minutes depending on BAM file size
+- Part 2 (Read count comparison): ~10-60 minutes depending on number of reads
+- Total: ~15-90 minutes for complete comparison
+
+### Output Structure
+All outputs will be written to the specified `--output-dir`:
+```
+<output-dir>/
+├── README.md                          # Summary of outputs and how to interpret
+├── comparison_summary.txt             # Quick summary of differences
+├── bam_comparison/
+│   ├── matlab_alignment.sam
+│   ├── python_alignment.sam
+│   ├── bam_comparison_differences.csv
+│   ├── green_mismatch_reads.fastq
+│   └── comparison_summary.txt
+└── read_count_comparison/
+    ├── read_count_comparison_summary.csv
+    ├── differentially_labelled_reads.csv
+    └── per_junction_read_lists.csv
+```
+
+---
+
+## How to Interpret Results
+
+### Quick Start: Reading the Summary
+
+1. **Start with `comparison_summary.txt`** in the output directory:
+   - This file provides a high-level overview of differences
+   - Look for sections marked "DIFFERENCES FOUND" or "NO DIFFERENCES"
+   - Check the summary statistics at the top
+
+2. **Check `read_count_comparison_summary.csv`**:
+   - Open in Excel or any CSV viewer
+   - Look at the `*_diff` columns (green_diff, left_diff, right_diff)
+   - Non-zero values indicate differences in read counts
+   - Positive values mean Python has more reads, negative means MATLAB has more
+
+### Detailed Interpretation Guide
+
+#### Part 1: BAM Comparison Results
+
+**File: `bam_comparison/comparison_summary.txt`**
+- **Total reads**: Number of reads in each BAM file
+- **Matched alignments**: Reads with identical alignments in both pipelines
+- **Unmatched MATLAB**: Reads only in MATLAB BAM
+- **Unmatched Python**: Reads only in Python BAM
+- **Differing alignments**: Same read, different alignment properties
+
+**File: `bam_comparison/bam_comparison_differences.csv`**
+- **Columns to focus on**:
+  - `read_id`: Read identifier
+  - `source`: "matlab" or "python"
+  - `ref_name`: Junction type (use mapping table to compare)
+  - `pos`, `cigar`, `flag`: Alignment properties
+  - `AS`, `NM`: Alignment scores (key indicators of alignment quality)
+- **How to use**:
+  - Sort by `read_id` to see all alignments for a specific read
+  - Compare `AS` (alignment score) and `NM` (edit distance) between MATLAB and Python
+  - Check if same read aligns to different junction types
+
+**File: `bam_comparison/green_mismatch_reads.fastq`**
+- Contains read sequences for reads with different mappings
+- Use for manual inspection or re-alignment testing
+
+#### Part 2: Read Count Comparison Results
+
+**File: `read_count_comparison/read_count_comparison_summary.csv`**
+- **Key columns**:
+  - `junction_type`: Junction type (1-7 for MATLAB, see mapping table)
+  - `matlab_green`, `python_green`: Green/spanning read counts
+  - `green_diff`: Difference (Python - MATLAB)
+  - Similar columns for `left` and `right` reads
+- **Interpretation**:
+  - `green_diff = 0`: Perfect match for green reads
+  - `green_diff > 0`: Python classified more reads as green
+  - `green_diff < 0`: MATLAB classified more reads as green
+  - Same logic applies to `left_diff` and `right_diff`
+
+**File: `read_count_comparison/differentially_labelled_reads.csv`**
+- **Purpose**: Lists every read that was classified differently
+- **Key columns**:
+  - `read_id`: Read identifier
+  - `junction_type`: Junction type (MATLAB format: '1'-'7')
+  - `matlab_classification`: Classification from MATLAB (green/left/right/None)
+  - `python_classification`: Classification from Python
+  - `difference_reason`: Brief explanation (e.g., "MATLAB: green, Python: left")
+  - Alignment details from both pipelines (start, end, length, CIGAR, flags, tags)
+- **How to use**:
+  - Sort by `difference_reason` to group similar differences
+  - Compare alignment coordinates (`matlab_start` vs `python_start`, etc.)
+  - Check if alignment quality differs (`AS`, `NM` tags)
+  - Look for patterns (e.g., all differences in junction type 4)
+
+**File: `read_count_comparison/per_junction_read_lists.csv`**
+- **Purpose**: Complete list of all reads in each category per junction
+- **Use cases**:
+  - Verify specific reads are counted correctly
+  - Find reads that should be in one category but appear in another
+  - Cross-reference with BAM files for manual inspection
+
+### Common Scenarios and What They Mean
+
+1. **All differences are zero**:
+   - ✅ Perfect match! MATLAB and Python produce identical results.
+
+2. **Small differences (< 5 reads) in one junction type**:
+   - ⚠️ Minor discrepancy, likely due to edge cases or rounding
+   - Check `differentially_labelled_reads.csv` for those specific reads
+   - May be acceptable depending on use case
+
+3. **Large differences (> 10 reads) in multiple junction types**:
+   - ❌ Significant discrepancy requiring investigation
+   - Check if alignment parameters differ (bowtie2 settings)
+   - Verify classification logic matches exactly
+   - Look for systematic patterns in `differentially_labelled_reads.csv`
+
+4. **Many unmatched reads in BAM comparison**:
+   - ⚠️ Indicates different alignment results
+   - Check if bowtie2 parameters are identical
+   - Verify both BAM files are from the same input FASTQ
+
+5. **Reads classified differently but same alignment**:
+   - ⚠️ Indicates classification logic difference
+   - Compare classification parameters (min_overlap_len, read_length_tolerance)
+   - Check coordinate calculations (1-based vs 0-based)
+
+### Troubleshooting
+
+**If script fails:**
+1. Check that all input files exist and are readable
+2. Verify `samtools` is in PATH: `which samtools`
+3. Check Python environment: `python --version` (should be from conda env)
+4. Verify BAM files are valid: `samtools quickcheck <bam_file>`
+
+**If results seem incorrect:**
+1. Verify junction mapping is correct (see "Junction Sequence Mapping" section)
+2. Check that MATLAB CSV files are correctly exported (no missing data)
+3. Compare a few reads manually using `samtools view` on both BAM files
+4. Verify classification parameters match MATLAB defaults
 
 ---
 
@@ -784,3 +1066,36 @@ Once differences are identified:
 2. Determine which pipeline behavior is correct (if applicable)
 3. Propose fixes to align Python behavior with MATLAB (or vice versa)
 4. Re-run comparison after fixes to verify alignment
+
+---
+
+## Quick Reference
+
+### Running the Test
+```bash
+export PATH="/zdata/user-data/rkishony/.conda/envs/amplifinder/bin:$PATH"
+python compare_jc_alignment.py \
+    --matlab-bam <path> \
+    --python-bam <path> \
+    --matlab-fasta <path> \
+    --python-fasta <path> \
+    --matlab-data-dir <path> \
+    --output-dir ./comparison_outputs
+```
+
+### Key Output Files to Check
+1. **Start here**: `<output-dir>/comparison_summary.txt` - Overall summary
+2. **Count differences**: `<output-dir>/read_count_comparison/read_count_comparison_summary.csv` - Look at `*_diff` columns
+3. **Specific reads**: `<output-dir>/read_count_comparison/differentially_labelled_reads.csv` - Every read with different classification
+4. **Alignment differences**: `<output-dir>/bam_comparison/bam_comparison_differences.csv` - Reads with different alignments
+
+### Junction Type Mapping
+- MATLAB uses numeric IDs: '1', '2', '3', '4', '5', '6', '7'
+- Python uses descriptive names: 'CHR_TO_AMP_LEFT', 'CHR_TO_TN_LEFT', etc.
+- See "Junction Sequence Mapping" section for complete mapping table
+
+### Interpreting Differences
+- **All zeros in `*_diff` columns**: ✅ Perfect match
+- **Small differences (< 5)**: ⚠️ Minor discrepancy, check specific reads
+- **Large differences (> 10)**: ❌ Significant issue, investigate root cause
+- See "How to Interpret Results" section for detailed guidance

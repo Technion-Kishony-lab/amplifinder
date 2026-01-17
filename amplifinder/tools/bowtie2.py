@@ -119,6 +119,8 @@ def run_bowtie2_align(
 
     if local:
         cmd.append("--local")
+    else:
+        cmd.append("--end-to-end")  # Explicitly match MATLAB's --end-to-end flag
 
     run_command(cmd, check=True, capture_output=True, text=True)
 
