@@ -1,19 +1,14 @@
 """Step 12: Analyze read alignments to synthetic junctions."""
-import pysam
 import numpy as np
 
 from pathlib import Path
 from typing import Optional, Dict
 
 from amplifinder.config import AlignmentAnalysisParams
-from amplifinder.optional_deps import plt
 
-from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts, Genome, Side
+from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.steps.jct_coverage.read_type import get_jct_read_counts
-from amplifinder.tools.breseq import load_breseq_coverage
-from amplifinder.visualization.plot_coverage import plot_amplicon_coverage
-from amplifinder.visualization.plot_alignments import plot_junctions_coverage
 
 
 def get_jct_read_counts_by_tnjc2(
@@ -89,51 +84,31 @@ def is_covered(cov: JunctionReadCounts, min_jct_cov: int,
 
 
 class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
-    """Analyze read alignments to get junction coverage."""
+    """Analyze isolate read alignments to get junction coverage."""
+
+    IS_ANCESTOR = False
+    COV_FIELD = "jc_covs"
+    CALLS_FIELD = "jc_calls"
 
     def __init__(
         self,
-        synjct_tnjc2s: RecordTypedDf[SynJctsTnJc2],
+        tnjc2s: RecordTypedDf[SynJctsTnJc2],
         output_dir: Path,
-        genome: Genome,
-        iso_breseq_path: Path,
-        anc_output_dir: Optional[Path] = None,
-        anc_breseq_path: Optional[Path] = None,
-        iso_read_length: int = 150,
-        anc_read_length: Optional[int] = None,
+        read_length: int = 150,
         jct_align_params: AlignmentAnalysisParams = None,
         min_jct_cov: int = 10,
-        create_plots: bool = True,
         force: Optional[bool] = None,
     ):
-        self.synjct_tnjc2s = synjct_tnjc2s
-        self._iso_output_dir = Path(output_dir)
-        self._anc_output_dir = Path(anc_output_dir) if anc_output_dir else None
-        self.genome = genome
-        self.iso_breseq_path = Path(iso_breseq_path)
-        self.anc_breseq_path = Path(anc_breseq_path) if anc_breseq_path else None
-        self.iso_read_length = iso_read_length
-        self.anc_read_length = anc_read_length if anc_read_length else iso_read_length
+        self.tnjc2s = tnjc2s
+        self.read_length = read_length
         self.jct_align_params = jct_align_params or AlignmentAnalysisParams()
         self.min_jct_cov = min_jct_cov
-        self.create_plots = create_plots
-        self.has_ancestor = self._anc_output_dir is not None
+        self._output_dir = Path(output_dir)
 
-        # Validate matplotlib availability if plotting requested
-        if self.create_plots and plt is None:
-            raise ImportError(
-                "Plotting is enabled (create_plots=True) but matplotlib is not installed. "
-                "Install with: pip install matplotlib, or disable plotting with --no-create-plots"
-            )
+        # compatibility handle for tests/consumers
+        self.synjct_tnjc2s = tnjc2s
 
-        # Input files are the BAM files from alignment step
-        input_files = []
-        for synjct_tnjc2 in synjct_tnjc2s:
-            iso_bam = synjct_tnjc2.bam_path(self._iso_output_dir, is_ancestor=False)
-            input_files.append(iso_bam)
-            if self.has_ancestor:
-                anc_bam = synjct_tnjc2.bam_path(self._anc_output_dir, is_ancestor=True)
-                input_files.append(anc_bam)
+        input_files = [tnjc2.bam_path(self._output_dir, is_ancestor=self.IS_ANCESTOR) for tnjc2 in tnjc2s]
 
         super().__init__(
             output_dir=output_dir,
@@ -141,113 +116,39 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             force=force,
         )
 
-    def _calculate_jc_calls(
-        self,
-        jc_cov: dict[JunctionType, JunctionReadCounts],
-        jct_lengths: dict[JunctionType, int],
-        read_len: int,
-    ) -> dict[JunctionType, Optional[bool]]:
-        """Calculate junction coverage calls for all junction types.
-
-        Args:
-            jc_cov: Dict mapping JunctionType to JunctionReadCounts
-            jct_lengths: Dict mapping JunctionType to junction length
-            read_len: Read length
-
-        Returns:
-            Dict mapping JunctionType to coverage call (True/False/None)
-        """
-        return {
-            jt: is_covered(
-                jc_cov[jt],
-                min_jct_cov=self.min_jct_cov,
-                jc_len=jct_lengths[jt],
-                read_len=read_len,
-                min_overlap_len=self.jct_align_params.min_overlap_len
-            )
-            for jt in JunctionType.sorted()
-        }
-
-    def _load_coverage_for_plotting(self) -> tuple[Optional[Dict[str, np.ndarray]], Optional[Dict[str, np.ndarray]]]:
-        """Load genome coverage data for plotting (if enabled).
-
-        Returns:
-            Tuple of (iso_coverage, anc_coverage) dicts, or (None, None) if plotting disabled
-        """
-        iso_scafs_to_covs = load_breseq_coverage(self.iso_breseq_path)
-        anc_scafs_to_covs = None
-        if self.has_ancestor and self.anc_breseq_path:
-            anc_scafs_to_covs = load_breseq_coverage(self.anc_breseq_path)
-
-        return iso_scafs_to_covs, anc_scafs_to_covs
-
-
     def _calculate_output(self) -> RecordTypedDf[AnalyzedTnJc2]:
-        """Analyze alignments for each candidate.
-
-        Returns:
-            RecordTypedDf containing AnalyzedTnJc2 records with coverage data and calls
-        """
-        # Load coverage data once for all candidates (if plotting enabled)
-        if self.create_plots:
-            iso_scafs_to_covs, anc_scafs_to_covs = self._load_coverage_for_plotting()
-            print(f'Creating coverage plots (n={len(self.synjct_tnjc2s)}) ', end='', flush=True)
-
+        """Analyze alignments for each candidate."""
         analyzed_records = []
-        for synjct_tnjc2 in self.synjct_tnjc2s:
-            # Get isolate junction coverage (required)
-            jc_covs, alignment_data, jc_lengths = get_jct_read_counts_by_tnjc2(
-                synjct_tnjc2=synjct_tnjc2,
-                base_dir=self._iso_output_dir,
-                is_ancestor=False,
-                avg_read_length=self.iso_read_length,
+        for tnjc2 in self.tnjc2s:
+            jc_covs, _, jc_lengths = get_jct_read_counts_by_tnjc2(
+                synjct_tnjc2=tnjc2,
+                base_dir=self._output_dir,
+                is_ancestor=self.IS_ANCESTOR,
+                avg_read_length=self.read_length,
                 jct_align_params=self.jct_align_params,
             )
-            jc_calls = self._calculate_jc_calls(jc_covs, jc_lengths, self.iso_read_length)
-
-            # Get ancestor junction coverage if available (optional)
-            jc_covs_anc = None
-            alignment_data_anc = None
-            jc_calls_anc = None
-            if self.has_ancestor:
-                jc_covs_anc, alignment_data_anc, jc_lengths_anc = get_jct_read_counts_by_tnjc2(
-                    synjct_tnjc2=synjct_tnjc2,
-                    base_dir=self._anc_output_dir,
-                    is_ancestor=True,
-                    avg_read_length=self.anc_read_length,
-                    jct_align_params=self.jct_align_params,
+            jc_calls = {
+                jt: is_covered(
+                    jc_covs[jt],
+                    min_jct_cov=self.min_jct_cov,
+                    jc_len=jc_lengths[jt],
+                    read_len=self.read_length,
+                    min_overlap_len=self.jct_align_params.min_overlap_len
                 )
-                jc_calls_anc = self._calculate_jc_calls(jc_covs_anc, jc_lengths_anc, self.anc_read_length)
+                for jt in JunctionType.sorted()
+            }
 
-            analyzed_tnjc2 = AnalyzedTnJc2.from_other(
-                synjct_tnjc2,
-                jc_covs=jc_covs,
-                jc_covs_anc=jc_covs_anc,
-                jc_calls=jc_calls,
-                jc_calls_anc=jc_calls_anc,
-            )
-            analyzed_records.append(analyzed_tnjc2)
-
-            if self.create_plots:
-                plot_junctions_coverage(
-                    jc_lengths=jc_lengths,
-                    alignment_data=alignment_data, alignment_data_anc=alignment_data_anc,
-                    jc_covs=jc_covs, jc_covs_anc=jc_covs_anc,
-                    jc_calls=jc_calls, jc_calls_anc=jc_calls_anc,
-                    title=f'Jcts coverage - {synjct_tnjc2.analysis_dir_name(is_ancestor=False)}',
-                    output_path=synjct_tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png",
-                    min_overlap_len=self.jct_align_params.min_overlap_len,
-                    read_len=self.iso_read_length,
-                )
-                plot_amplicon_coverage(
-                    tnjc2=analyzed_tnjc2,
-                    iso_scafs_to_covs=iso_scafs_to_covs,
-                    anc_scafs_to_covs=anc_scafs_to_covs,
-                    output_path=analyzed_tnjc2.analysis_dir_path(self._iso_output_dir) / "amplicon_coverage.png",
-                )
-                print('.', end='', flush=True)
-
-        if self.create_plots:
-            print('\n', flush=True)
+            analyzed_records.append(AnalyzedTnJc2.from_other(
+                tnjc2,
+                **{self.COV_FIELD: jc_covs, self.CALLS_FIELD: jc_calls},
+            ))
 
         return RecordTypedDf.from_records(analyzed_records, AnalyzedTnJc2)
+
+
+class AncAnalyzeTnJc2AlignmentsStep(AnalyzeTnJc2AlignmentsStep):
+    """Analyze ancestor read alignments."""
+
+    IS_ANCESTOR = True
+    COV_FIELD = "jc_covs_anc"
+    CALLS_FIELD = "jc_calls_anc"

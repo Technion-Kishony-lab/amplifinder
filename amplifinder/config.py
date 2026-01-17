@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Optional, Tuple, ClassVar, Union
 import json
 import yaml
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from amplifinder.data_types import AverageMethod
 from amplifinder.utils.file_utils import ensure_dir
@@ -14,25 +14,23 @@ from amplifinder.utils.file_utils import ensure_dir
 
 class AlignmentAnalysisParams(BaseModel):
     """Parameters for junction alignment analysis."""
+    model_config = ConfigDict(frozen=True)
+    
     min_overlap_len: int = 12
     read_length_tolerance: float = 0.1
     max_dist_from_junction: int = 10
     max_nm_score: int = 3
     min_as_score: int = -25
 
-    class Config:
-        frozen = True
-
 
 class BowtieParams(BaseModel):
     """Parameters for bowtie2 alignment."""
+    model_config = ConfigDict(frozen=True)
+    
     score_min: Union[str, Tuple[float, float]] = (0, -0.1)
     mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5)
     local: bool = False
     num_alignments: int = 100
-
-    class Config:
-        frozen = True
 
 
 # Default configuration values (from config.txt and added alignment params)
@@ -251,21 +249,31 @@ class Config:
         run_dir = ensure_dir(run_dir)
         config_path = run_dir / self.RUN_CONFIG_FILENAME
 
+        def convert_value(val):
+            """Recursively convert values for YAML serialization."""
+            if isinstance(val, Path):
+                return str(val)
+            elif isinstance(val, Enum):
+                return val.value
+            elif isinstance(val, tuple):
+                return [convert_value(v) for v in val]
+            elif isinstance(val, dict):
+                return {k: convert_value(v) for k, v in val.items()}
+            elif isinstance(val, list):
+                return [convert_value(v) for v in val]
+            elif isinstance(val, BaseModel):
+                # pydantic v1/v2 compatibility
+                dump_fn = getattr(val, "model_dump", None)
+                dumped = dump_fn() if dump_fn else val.dict()
+                return convert_value(dumped)
+            else:
+                return val
+
         # Convert Config to dict, handling Path objects and tuples
         config_dict = {}
         for key, value in self.__dict__.items():
-            if isinstance(value, Path):
-                config_dict[key] = str(value)
-            elif isinstance(value, tuple):
-                config_dict[key] = list(value)
-            elif isinstance(value, Enum):
-                config_dict[key] = value.value
-            elif isinstance(value, BaseModel):
-                # pydantic v1/v2 compatibility
-                dump_fn = getattr(value, "model_dump", None)
-                config_dict[key] = dump_fn() if dump_fn else value.dict()
-            elif value is not None:
-                config_dict[key] = value
+            if value is not None:
+                config_dict[key] = convert_value(value)
 
         with open(config_path, 'w') as f:
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)

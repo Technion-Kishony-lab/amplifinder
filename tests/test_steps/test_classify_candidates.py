@@ -20,11 +20,9 @@ def test_step_initialization(sample_analyzed, tmp_path):
     step = ClassifyTnJc2CandidatesStep(
         analyzed_tnjc2s=analyzed_tnjc2s,
         output_dir=tmp_path,
-        has_ancestor=False,
     )
 
     assert step.analyzed_tnjc2s == analyzed_tnjc2s
-    assert step.has_ancestor is False
     from amplifinder.steps.io_naming import default_filename
     from amplifinder.data_types import ClassifiedTnJc2
 

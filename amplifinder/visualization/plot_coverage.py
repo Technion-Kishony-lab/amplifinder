@@ -62,7 +62,7 @@ def plot_amplicon_coverage(
     iso_plot_cov = iso_plot_cov / tnjc2.iso_scaf_avg
 
     anc_plot_cov = None
-    if anc_scafs_to_covs is not None:
+    if anc_scafs_to_covs is not None and tnjc2.anc_scaf_avg is not None:
         anc_scaf_cov = anc_scafs_to_covs[tnjc2.scaf]
         anc_plot_cov = scaf_obj.slice(plot_start, plot_end, seq=anc_scaf_cov)
         anc_plot_cov = anc_plot_cov / tnjc2.anc_scaf_avg
