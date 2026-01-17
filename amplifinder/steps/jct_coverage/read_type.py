@@ -3,7 +3,7 @@ import pysam
 
 from typing import Optional
 
-from amplifinder.data_types import JunctionReadCounts, JunctionType, SynJctsTnJc2
+from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import ReadType
 
 
@@ -60,7 +60,7 @@ def get_jct_read_counts(
             arm_len = jct_types_to_lengths[jct_type] // 2
 
             read_type = classify_read(read, arm_len, min_alignment_length, max_alignment_length,
-                                        max_nm_score, min_as_score, min_overlap_len, max_dist_from_junction)
+                                      max_nm_score, min_as_score, min_overlap_len, max_dist_from_junction)
 
             if read_type is not None:
                 counts[jct_type].increment(read_type)
@@ -96,7 +96,6 @@ def classify_read(read: pysam.AlignedSegment, arm_len: int, min_alignment_length
                          max_dist_from_junction=max_dist_from_junction)
 
 
-
 def passes_quality_filters(read: pysam.AlignedSegment, max_nm_score: int, min_as_score: int) -> bool:
     if read.is_unmapped or read.is_secondary or read.is_supplementary:
         return False
@@ -119,8 +118,8 @@ def passes_quality_filters(read: pysam.AlignedSegment, max_nm_score: int, min_as
     return True
 
 
-def get_read_type(start: int, end: int, arm_len: int, min_overlap_len: int, max_dist_from_junction: int
-                    ) -> Optional[ReadType]:
+def get_read_type(start: int, end: int, arm_len: int, min_overlap_len: int,
+                  max_dist_from_junction: int) -> Optional[ReadType]:
     """Determine the read type based on the start and end positions."""
     # n = arm_len
     # M = min_overlap_len
@@ -157,7 +156,7 @@ def get_read_type(start: int, end: int, arm_len: int, min_overlap_len: int, max_
     elif idx_R_1 >= 0:
         return ReadType.RIGHT
     is_start_left_of_margin = idx_L_2 >= min_overlap_len - 1
-    is_end_right_of_margin  = idx_R_2 >= min_overlap_len - 1
+    is_end_right_of_margin = idx_R_2 >= min_overlap_len - 1
     if is_start_left_of_margin and is_end_right_of_margin:
         return ReadType.MIDDLE
     elif is_start_left_of_margin:
@@ -185,8 +184,8 @@ def is_read_cigar_acceptable(read: pysam.AlignedSegment) -> bool:
     # MATLAB RdFull: only CIGAR-only-M reads are counted
     if any(op != 0 for op, _ in read.cigartuples):
         return False
-    
-    return True    
+
+    return True
 
 
 def get_expected_counts(arm_len: int, min_overlap_len: int, read_len: int) -> JunctionReadCounts:

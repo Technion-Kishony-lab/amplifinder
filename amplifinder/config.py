@@ -1,6 +1,6 @@
 """Configuration management for AmpliFinder."""
 
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional, Tuple, ClassVar, Union
@@ -15,7 +15,7 @@ from amplifinder.utils.file_utils import ensure_dir
 class AlignmentAnalysisParams(BaseModel):
     """Parameters for junction alignment analysis."""
     model_config = ConfigDict(frozen=True)
-    
+
     min_overlap_len: int = 12
     read_length_tolerance: float = 0.1
     max_dist_from_junction: int = 10
@@ -26,7 +26,7 @@ class AlignmentAnalysisParams(BaseModel):
 class BowtieParams(BaseModel):
     """Parameters for bowtie2 alignment."""
     model_config = ConfigDict(frozen=True)
-    
+
     score_min: Union[str, Tuple[float, float]] = (0, -0.1)
     mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5)
     local: bool = False
@@ -344,8 +344,11 @@ class Config:
                 self.anc_name = self.iso_name
 
         # Normalize params
-        validate = lambda cls, obj: cls.model_validate(obj or {}) if hasattr(cls, "model_validate") else cls.parse_obj(obj or {})
-        self.alignment_analysis_params = validate(AlignmentAnalysisParams, self.alignment_analysis_params)
+        def validate(cls, obj):
+            return (cls.model_validate(obj or {}) if hasattr(cls, "model_validate")
+                    else cls.parse_obj(obj or {}))
+        self.alignment_analysis_params = validate(
+            AlignmentAnalysisParams, self.alignment_analysis_params)
         self.bowtie_params = validate(BowtieParams, self.bowtie_params)
 
         # Validate: ISfinder required for non-NCBI genomes

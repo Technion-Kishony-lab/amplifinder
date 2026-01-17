@@ -2,7 +2,7 @@
 import numpy as np
 
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional
 
 from amplifinder.config import AlignmentAnalysisParams
 

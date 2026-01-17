@@ -87,13 +87,13 @@ class JunctionType(Enum):
     ====== cassette (amplicon)
 
     """
-    CHR_TO_AMP_LEFT       = (1, '~~-==', Element.CHR, Element.AMP, -1)
-    CHR_TO_TN_LEFT        = (2, '~~->>', Element.CHR, Element.TN , -2)
-    AMP_RIGHT_TO_TN_LEFT  = (3, '==->>', Element.AMP, Element.TN , +3)
-    AMP_RIGHT_TO_AMP_LEFT = (4, '==-==', Element.AMP, Element.AMP,  0)
-    TN_RIGHT_TO_AMP_LEFT  = (5, '>>-==', Element.TN,  Element.AMP, -3)
-    TN_RIGHT_TO_CHR       = (6, '>>-~~', Element.TN,  Element.CHR, +2)
-    AMP_RIGHT_TO_CHR      = (7, '==-~~', Element.AMP, Element.CHR, +1)
+    CHR_TO_AMP_LEFT       = (1, '~~-==', Element.CHR, Element.AMP, -1)  # noqa: E221, E203
+    CHR_TO_TN_LEFT        = (2, '~~->>', Element.CHR, Element.TN , -2)  # noqa: E221, E203
+    AMP_RIGHT_TO_TN_LEFT  = (3, '==->>', Element.AMP, Element.TN , +3)  # noqa: E221, E203
+    AMP_RIGHT_TO_AMP_LEFT = (4, '==-==', Element.AMP, Element.AMP,  0)  # noqa: E221, E203
+    TN_RIGHT_TO_AMP_LEFT  = (5, '>>-==', Element.TN,  Element.AMP, -3)  # noqa: E221, E203
+    TN_RIGHT_TO_CHR       = (6, '>>-~~', Element.TN,  Element.CHR, +2)  # noqa: E221, E203
+    AMP_RIGHT_TO_CHR      = (7, '==-~~', Element.AMP, Element.CHR, +1)  # noqa: E221, E203
 
     @classmethod
     def sorted(cls) -> list[JunctionType]:
