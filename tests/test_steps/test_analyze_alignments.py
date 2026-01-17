@@ -1,7 +1,7 @@
 """Tests for AnalyzeTnJc2AlignmentsStep."""
 
-from amplifinder.steps import AnalyzeTnJc2AlignmentsStep, AncAnalyzeTnJc2AlignmentsStep
-from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2
+from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2
+from amplifinder.steps import AnalyzeTnJc2AlignmentsStep
 from amplifinder.utils.file_utils import ensure_parent_dir
 
 
@@ -22,4 +22,3 @@ def test_step_initialization(filtered_tnjc2_record, tmp_path):
 
     assert step.synjct_tnjc2s == filtered_tnjc2s
     assert step.read_length == 150
-

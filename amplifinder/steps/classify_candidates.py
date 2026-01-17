@@ -80,9 +80,9 @@ def classify_architecture(jc_calls: Dict[JunctionType, Optional[bool]]) -> RawEv
     #
     # Junction patterns (1=covered, 0=not):
 
-    architecture_patterns: Dict[tuple[int, int, int, int, int, int, int], RawEvent] = {
-        #-- Junction Type --
-        #1  2  3  4  5  6  7   event
+    #    -- Junction Type --
+    #    1  2  3  4  5  6  7   event
+    patterns = {
         (0, 1, 1, 0, 1, 1, 0): RawEvent.FLANKED,
         (0, 1, 1, 0, 1, 0, 1): RawEvent.HEMI_FLANKED_LEFT,
         (1, 0, 1, 0, 1, 1, 0): RawEvent.HEMI_FLANKED_RIGHT,
@@ -97,7 +97,7 @@ def classify_architecture(jc_calls: Dict[JunctionType, Optional[bool]]) -> RawEv
 
     if None in pattern:
         return RawEvent.UNRESOLVED
-    return architecture_patterns.get(pattern, RawEvent.UNRESOLVED)
+    return patterns.get(pattern, RawEvent.UNRESOLVED)
 
 
 class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[ClassifiedTnJc2]):
