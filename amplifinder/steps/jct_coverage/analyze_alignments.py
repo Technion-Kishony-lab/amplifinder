@@ -9,6 +9,7 @@ from amplifinder.optional_deps import plt
 
 from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts, Genome, Side
 from amplifinder.steps.base import RecordTypedDfStep
+from amplifinder.steps.jct_coverage.read_type import get_jct_read_counts
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.visualization.plot_coverage import plot_amplicon_coverage
 from amplifinder.visualization.plot_alignments import plot_junctions_coverage
@@ -252,66 +253,8 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 - dict mapping JunctionType -> junction length
         """
         bam_path = synjct_tnjc2.bam_path(base_dir, is_ancestor=is_ancestor)
-        if not bam_path.exists():
-            raise FileNotFoundError(f"BAM file not found: {bam_path}")
-
-        read_length_factor = 1 + read_length_tolerance
-        min_alignment_length = avg_read_length / read_length_factor
-        max_alignment_length = avg_read_length * read_length_factor
-
-        counts = {jt: JunctionReadCounts() for jt in JunctionType}
-        alignment_data = {jt: [] for jt in JunctionType}
-
-        with pysam.AlignmentFile(str(bam_path), "rb") as bam:
-
-            # Store lengths by JunctionType
-            jct_names_to_lengths = dict(zip(bam.references, bam.lengths))
-            jct_types_to_lengths = {JunctionType[jct_name]: length for jct_name, length in jct_names_to_lengths.items()}
-
-            # Count read-alignments of each type at each junction
-            for read in bam.fetch():
-                if read.is_unmapped or read.is_secondary or read.is_supplementary:
-                    continue
-
-                jct_name = read.reference_name
-                jct_type = JunctionType[jct_name]
-                alignment_length = read.query_alignment_length
-                if not (min_alignment_length <= alignment_length <= max_alignment_length):
-                    continue
-
-                # MATLAB RdFull: only CIGAR-only-M reads are counted
-                if not read.cigartuples or any(op != 0 for op, _ in read.cigartuples):
-                    continue
-
-                # Filter by alignment tags (skip low-quality alignments)
-                try:
-                    as_score = read.get_tag("AS")
-                except KeyError:
-                    as_score = None
-                try:
-                    nm_score = read.get_tag("NM")
-                except KeyError:
-                    try:
-                        nm_score = read.get_tag("nM")
-                    except KeyError:
-                        nm_score = None
-                if (nm_score is not None and nm_score > max_nm_score) or (as_score is not None and as_score < min_as_score):
-                    continue
-
-                # Convert to 1-based coordinates to match MATLAB BioMap output
-                start = read.reference_start
-                end = read.reference_end
-                assert start <= end
-                start, end = start + 1, end  # 0-based end-exclusive coordinates
-
-                arm_len = jct_types_to_lengths[jct_type] // 2
-
-                read_type = counts[jct_type].add_read(start, end, arm_len,
-                                                      min_overlap_len=self.min_overlap_len,
-                                                      max_dist_from_junction=max_dist_from_junction)
-
-                # Store alignment data (for plotting, etc)
-                if read_type is not None:
-                    alignment_data[jct_type].append((start, end, read_type))
-
-        return counts, alignment_data, jct_types_to_lengths
+        return get_jct_read_counts(bam_path, avg_read_length, self.min_overlap_len, 
+                                   alignment_length_tolerance=read_length_tolerance,
+                                   max_dist_from_junction=max_dist_from_junction,
+                                   max_nm_score=max_nm_score,
+                                   min_as_score=min_as_score)

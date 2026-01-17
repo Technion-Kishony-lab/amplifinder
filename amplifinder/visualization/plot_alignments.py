@@ -10,6 +10,7 @@ from typing import Dict, List, Tuple
 
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import Element, ReadType, JcCall
+from amplifinder.steps.jct_coverage.read_type import get_expected_counts
 from amplifinder.visualization.genetic_elements import draw_genetic_element
 
 
@@ -78,7 +79,7 @@ def _down_sample_alignments(
     # Sort alignments by start position
     sorted_alignments = sorted(alignments, key=lambda x: x[0])
 
-    expected = JunctionReadCounts.expected_counts(arm_len, min_overlap_len, read_len)
+    expected = get_expected_counts(arm_len, min_overlap_len, read_len)
     max_reads = expected * max_reads_per_plot // expected.total
 
     scales = jc_cov // max_reads
