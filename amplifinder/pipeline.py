@@ -372,6 +372,8 @@ class Pipeline:
     ) -> None:
         """Plot junction/amplicon coverage (post-classification)."""
         cfg = self.config
+        if not cfg.create_plots:
+            return
         iso_breseq_path, anc_breseq_path = cfg.get_breseq_paths()
 
         PlotTnJc2CoverageStep(
@@ -383,7 +385,6 @@ class Pipeline:
             iso_read_length=read_lengths.iso_read_length,
             anc_read_length=read_lengths.anc_read_length,
             jct_align_params=cfg.alignment_analysis_params,
-            create_plots=cfg.create_plots,
         ).run()
 
     def _export(

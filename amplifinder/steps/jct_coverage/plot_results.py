@@ -25,7 +25,6 @@ class PlotTnJc2CoverageStep(Step):
         iso_read_length: int = 150,
         anc_read_length: Optional[int] = None,
         jct_align_params: AlignmentAnalysisParams = None,
-        create_plots: bool = True,
         force: Optional[bool] = None,
     ):
         self.classified_tnjc2s = classified_tnjc2s
@@ -36,25 +35,26 @@ class PlotTnJc2CoverageStep(Step):
         self.iso_read_length = iso_read_length
         self.anc_read_length = anc_read_length if anc_read_length else iso_read_length
         self.jct_align_params = jct_align_params or AlignmentAnalysisParams()
-        self.create_plots = create_plots
         self.has_ancestor = self._anc_output_dir is not None
 
-        if self.create_plots and plt is None:
+        if plt is None:
             raise ImportError(
                 "Plotting is enabled (create_plots=True) but matplotlib is not installed. "
                 "Install with: pip install matplotlib, or disable plotting with --no-create-plots"
             )
 
+        # input files include:
+        # 1. bam files
         input_files = [tnjc2.bam_path(self._iso_output_dir, is_ancestor=False) for tnjc2 in classified_tnjc2s]
         if self.has_ancestor:
             input_files += [tnjc2.bam_path(self._anc_output_dir, is_ancestor=True) for tnjc2 in classified_tnjc2s]
 
-        # breseq coverage dirs
+        # 2. breseq coverage dirs
         input_files.append(self.iso_breseq_path)
         if self.has_ancestor and self.anc_breseq_path:
             input_files.append(self.anc_breseq_path)
 
-        # artifact files (plots to generate)
+        # output artifact files (plots to generate)
         artifact_files = []
         for tnjc2 in classified_tnjc2s:
             artifact_files.append(tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png")
@@ -70,9 +70,6 @@ class PlotTnJc2CoverageStep(Step):
         return iso_scafs_to_covs, anc_scafs_to_covs
 
     def _generate_artifacts(self) -> None:
-        if not self.create_plots:
-            return
-
         iso_scafs_to_covs, anc_scafs_to_covs = self._load_coverage_for_plotting()
         print(f'Creating coverage plots (n={len(self.classified_tnjc2s)}) ', end='', flush=True)
 
@@ -84,6 +81,7 @@ class PlotTnJc2CoverageStep(Step):
                 avg_read_length=self.iso_read_length,
                 jct_align_params=self.jct_align_params,
             )
+            assert jc_covs == tnjc2.jc_covs
             jc_calls = tnjc2.jc_calls
 
             jc_covs_anc = None
@@ -97,6 +95,7 @@ class PlotTnJc2CoverageStep(Step):
                     avg_read_length=self.anc_read_length,
                     jct_align_params=self.jct_align_params,
                 )
+                assert jc_covs_anc == tnjc2.jc_covs_anc
                 jc_calls_anc = tnjc2.jc_calls_anc
 
             plot_junctions_coverage(
@@ -110,7 +109,9 @@ class PlotTnJc2CoverageStep(Step):
                 title=f'Jcts coverage - {tnjc2.analysis_dir_name(is_ancestor=False)}',
                 output_path=tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png",
                 min_overlap_len=self.jct_align_params.min_overlap_len,
-                read_len=self.iso_read_length,
+                max_dist_from_junction=self.jct_align_params.max_dist_from_junction,
+                iso_read_len=self.iso_read_length,
+                anc_read_len=self.anc_read_length,
             )
             plot_amplicon_coverage(
                 tnjc2=tnjc2,
@@ -121,3 +122,8 @@ class PlotTnJc2CoverageStep(Step):
             print('.', end='', flush=True)
 
         print('\n', flush=True)
+
+    def _artifact_labels(self) -> list[str]:
+        """Summarize outputs as count."""
+        n = len(self.classified_tnjc2s)
+        return [f"{n}x amplicon_coverage.png and jct_coverages.png"]
