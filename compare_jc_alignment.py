@@ -375,6 +375,32 @@ def convert_bam_to_sam(bam_path: Path, sam_path: Path, verbose: bool = True) -> 
     log(f"  Saved to {sam_path}", verbose)
 
 
+def split_unmapped_reads(
+    bam_path: Path,
+    mapped_bam_path: Path,
+    unmapped_bam_path: Path,
+    verbose: bool = True,
+) -> Tuple[int, int]:
+    """Split BAM into mapped and unmapped reads."""
+    log(f"Splitting unmapped reads in {bam_path.name}...", verbose)
+    mapped_count = 0
+    unmapped_count = 0
+    with pysam.AlignmentFile(str(bam_path), 'rb') as bam_in:
+        with pysam.AlignmentFile(str(mapped_bam_path), 'wb', header=bam_in.header) as bam_mapped:
+            with pysam.AlignmentFile(str(unmapped_bam_path), 'wb', header=bam_in.header) as bam_unmapped:
+                for read in bam_in:
+                    if read.is_unmapped:
+                        bam_unmapped.write(read)
+                        unmapped_count += 1
+                    else:
+                        bam_mapped.write(read)
+                        mapped_count += 1
+    log(f"  Mapped: {mapped_count}, Unmapped: {unmapped_count}", verbose)
+    log(f"  Mapped BAM: {mapped_bam_path}", verbose)
+    log(f"  Unmapped BAM: {unmapped_bam_path}", verbose)
+    return mapped_count, unmapped_count
+
+
 def write_fastq_from_records(records: List[Dict[str, Any]], fastq_path: Path, verbose: bool = True) -> int:
     """Write FASTQ from alignment records (uses first record per read_id)."""
     seen = set()
@@ -410,19 +436,28 @@ def compare_bam_files(
     bam_output_dir = output_dir / 'bam_comparison'
     ensure_dir(bam_output_dir)
     
+    # Split unmapped reads to separate files (compare only mapped)
+    matlab_mapped_bam = bam_output_dir / 'matlab_alignment.mapped.bam'
+    matlab_unmapped_bam = bam_output_dir / 'matlab_alignment.unmapped.bam'
+    python_mapped_bam = bam_output_dir / 'python_alignment.mapped.bam'
+    python_unmapped_bam = bam_output_dir / 'python_alignment.unmapped.bam'
+
+    split_unmapped_reads(matlab_bam, matlab_mapped_bam, matlab_unmapped_bam, verbose)
+    split_unmapped_reads(python_bam, python_mapped_bam, python_unmapped_bam, verbose)
+
     # Convert BAM to SAM
     matlab_sam = bam_output_dir / 'matlab_alignment.sam'
     python_sam = bam_output_dir / 'python_alignment.sam'
     
-    convert_bam_to_sam(matlab_bam, matlab_sam, verbose)
-    convert_bam_to_sam(python_bam, python_sam, verbose)
+    convert_bam_to_sam(matlab_mapped_bam, matlab_sam, verbose)
+    convert_bam_to_sam(python_mapped_bam, python_sam, verbose)
     
     # Parse BAM files and extract alignments
     log("Parsing MATLAB BAM file...", verbose)
     matlab_alignments = defaultdict(list)  # read_id -> list of alignments
     matlab_all_tags = set()
     
-    with pysam.AlignmentFile(str(matlab_bam), 'rb') as bam:
+    with pysam.AlignmentFile(str(matlab_mapped_bam), 'rb') as bam:
         for read in bam:
             read_id = read.query_name
             record = extract_alignment_record(read, 'matlab')
@@ -435,7 +470,7 @@ def compare_bam_files(
     python_alignments = defaultdict(list)
     python_all_tags = set()
     
-    with pysam.AlignmentFile(str(python_bam), 'rb') as bam:
+    with pysam.AlignmentFile(str(python_mapped_bam), 'rb') as bam:
         for read in bam:
             read_id = read.query_name
             record = extract_alignment_record(read, 'python')
@@ -574,7 +609,8 @@ def load_matlab_csv(matlab_data_dir: Path, filename: str) -> pd.Series:
     if not path.exists():
         raise FileNotFoundError(f"MATLAB CSV file not found: {path}")
     df = pd.read_csv(path, header=None)
-    return df.iloc[:, 0]  # Return first column as Series
+    values = df.values.flatten()
+    return pd.Series(values)
 
 
 def compare_read_counts(

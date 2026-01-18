@@ -72,6 +72,7 @@ class AlignReadsToJunctionsStep(Step):
                 mismatch_penalty=self.bowtie_params.mismatch_penalty,
                 num_alignments=self.bowtie_params.num_alignments,
                 local=self.bowtie_params.local,
+                min_qlen=self.bowtie_params.min_qlen,
             )
             assert bam_path.exists()
 

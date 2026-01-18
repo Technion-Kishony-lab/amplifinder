@@ -8,7 +8,8 @@ from amplifinder.config import AlignmentAnalysisParams, JcCallParams
 
 from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
 from amplifinder.steps.base import RecordTypedDfStep
-from amplifinder.steps.jct_coverage.read_type import get_jct_read_counts
+from amplifinder.steps.jct_coverage.read_type import get_jct_read_counts, get_jct_read_counts_with_reads
+from amplifinder.data_types.enums import ReadType
 
 
 def get_jct_read_counts_by_tnjc2(
@@ -33,6 +34,32 @@ def get_jct_read_counts_by_tnjc2(
         max_nm_score=jct_align_params.max_nm_score,
         min_as_score=jct_align_params.min_as_score,
     )
+
+
+def _write_fastq(path: Path, reads: list[tuple[str, str, str]]) -> int:
+    count = 0
+    with path.open("w") as handle:
+        for idx, (read_id, seq, qual) in enumerate(reads, start=1):
+            if not seq:
+                continue
+            qual_str = qual if qual else "I" * len(seq)
+            handle.write(f"@{read_id}/{idx}\n{seq}\n+\n{qual_str}\n")
+            count += 1
+    return count
+
+
+def write_junction_read_fastqs(output_dir: Path, reads_by_jct: dict) -> None:
+    """Write FASTQ files by junction (1-7) and label (left/right/green)."""
+    output_dir = Path(output_dir)
+    for jct_type, read_map in reads_by_jct.items():
+        jct_num = jct_type.num
+        left_reads = read_map.get(ReadType.LEFT, []) + read_map.get(ReadType.LEFT_MARGINAL, [])
+        right_reads = read_map.get(ReadType.RIGHT, []) + read_map.get(ReadType.RIGHT_MARGINAL, [])
+        green_reads = read_map.get(ReadType.MIDDLE, [])
+
+        _write_fastq(output_dir / f"reads_jct_{jct_num}_left.fastq", left_reads)
+        _write_fastq(output_dir / f"reads_jct_{jct_num}_right.fastq", right_reads)
+        _write_fastq(output_dir / f"reads_jct_{jct_num}_green.fastq", green_reads)
 
 
 def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
@@ -120,12 +147,18 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         """Analyze alignments for each candidate."""
         analyzed_records = []
         for tnjc2 in self.tnjc2s:
-            jc_covs, _, jc_lengths = get_jct_read_counts_by_tnjc2(
-                synjct_tnjc2=tnjc2,
-                base_dir=self._output_dir,
-                is_ancestor=self.IS_ANCESTOR,
+            jc_covs, _, jc_lengths, reads_by_jct = get_jct_read_counts_with_reads(
+                bam_path=tnjc2.bam_path(self._output_dir, is_ancestor=self.IS_ANCESTOR),
                 avg_read_length=self.read_length,
-                jct_align_params=self.jct_align_params,
+                min_overlap_len=self.jct_align_params.min_overlap_len,
+                alignment_length_tolerance=self.jct_align_params.read_length_tolerance,
+                max_dist_from_junction=self.jct_align_params.max_dist_from_junction,
+                max_nm_score=self.jct_align_params.max_nm_score,
+                min_as_score=self.jct_align_params.min_as_score,
+            )
+            write_junction_read_fastqs(
+                output_dir=tnjc2.bam_path(self._output_dir, is_ancestor=self.IS_ANCESTOR).parent,
+                reads_by_jct=reads_by_jct,
             )
             jc_calls = {
                 jt: is_covered(
