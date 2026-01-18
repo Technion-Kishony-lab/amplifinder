@@ -65,7 +65,9 @@ def add_pie_chart(ax, jc_cov: JunctionReadCounts, position: str = 'top'):
 
 def _down_sample_alignments(
     alignments: List[Tuple[int, int, ReadType]], jc_cov: JunctionReadCounts,
-    max_reads_per_plot: int, arm_len: int, min_overlap_len: int, read_len: int
+    max_reads_per_plot: int, arm_len: int, min_overlap_len: int, 
+    max_dist_from_junction: int,
+    read_len: int
 ) -> tuple[List[Tuple[int, int, ReadType]], JunctionReadCounts]:
     """Downsample alignments to a maximum number of reads per plot.
 
@@ -79,7 +81,7 @@ def _down_sample_alignments(
     # Sort alignments by start position
     sorted_alignments = sorted(alignments, key=lambda x: x[0])
 
-    expected = get_expected_counts(arm_len, min_overlap_len, read_len)
+    expected = get_expected_counts(arm_len, min_overlap_len, max_dist_from_junction, read_len)
     max_reads = expected * max_reads_per_plot // expected.total
 
     scales = jc_cov // max_reads
@@ -185,7 +187,9 @@ def plot_junctions_coverage(
     output_path: Path | str = 'junctions_coverage.png',
     max_reads_per_plot: int = 200,
     min_overlap_len: int = 10,
-    read_len: int = 150,
+    max_dist_from_junction: int = 10,
+    iso_read_len: int = 150,
+    anc_read_len: int = 150,
 ) -> None:
     """Plot junctions coverage by reads as horizontal lines (coverage plot).
 
@@ -240,7 +244,7 @@ def plot_junctions_coverage(
         alignments = alignment_data[jt]
         jc_cov = jc_covs[jt]
         downsampled, scales_iso = _down_sample_alignments(
-            alignments, jc_cov, max_reads_per_plot, arm_len, min_overlap_len, read_len
+            alignments, jc_cov, max_reads_per_plot, arm_len, min_overlap_len, max_dist_from_junction, iso_read_len
         )
         _plot_alignments(ax, downsampled, arm_len, y_sign=1)
 
@@ -249,7 +253,7 @@ def plot_junctions_coverage(
             alignments_anc = alignment_data_anc[jt]
             jc_cov_anc = jc_covs_anc[jt]
             downsampled_anc, scales_anc = _down_sample_alignments(
-                alignments_anc, jc_cov_anc, max_reads_per_plot, arm_len, min_overlap_len, read_len
+                alignments_anc, jc_cov_anc, max_reads_per_plot, arm_len, min_overlap_len, max_dist_from_junction, anc_read_len
             )
             _plot_alignments(ax, downsampled_anc, arm_len, y_sign=-1, alpha=0.7)
 
@@ -281,7 +285,9 @@ def plot_junctions_coverage(
         left_elem_type, right_elem_type = jt.elements
 
         # Set up genetic element axes
-        ax_gene.set_xlim(-arm_len, arm_len)
+        max_read_len = max(iso_read_len, anc_read_len)
+        x_lim = max_read_len + max_dist_from_junction
+        ax_gene.set_xlim(-x_lim, x_lim)
         ax_gene.set_ylim(0, 1)
         ax_gene.set_aspect('auto')
 

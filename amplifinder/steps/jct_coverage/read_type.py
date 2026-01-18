@@ -188,8 +188,9 @@ def is_read_cigar_acceptable(read: pysam.AlignedSegment) -> bool:
     return True
 
 
-def get_expected_counts(arm_len: int, min_overlap_len: int, read_len: int) -> JunctionReadCounts:
+def get_expected_counts(arm_len: int, min_overlap_len: int, max_dist_from_junction, read_len: int) -> JunctionReadCounts:
     """Return the expected counts assuming uniform distribution of reads across the junction."""
+    arm_len = read_len + max_dist_from_junction
     return JunctionReadCounts(
         left=arm_len - read_len + 1,
         left_marginal=min_overlap_len,
