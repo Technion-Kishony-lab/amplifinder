@@ -72,7 +72,7 @@ class Pipeline:
         synjct_tnjc2s = self._create_synthetic_junctions(
             filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
         self._align_reads(synjct_tnjc2s, iso_output, anc_output)
-        analyzed_tnjc2s = self._analyze_alignments(synjct_tnjc2s, genome, iso_output, anc_output, read_lengths)
+        analyzed_tnjc2s = self._analyze_alignments(synjct_tnjc2s, iso_output, anc_output, read_lengths)
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
         self._plot_coverage(classified_tnjc2s, iso_output, anc_output, read_lengths)
         self._export(classified_tnjc2s, genome, iso_output)
@@ -323,7 +323,6 @@ class Pipeline:
     def _analyze_alignments(
         self,
         synjct_tnjc2s: RecordTypedDf[SynJctsTnJc2],
-        genome: Genome,
         iso_output: Path,
         anc_output: Optional[Path],
         read_lengths: ReadLengths,

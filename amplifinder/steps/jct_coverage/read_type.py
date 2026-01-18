@@ -49,7 +49,7 @@ def get_jct_read_counts(
     counts = {jt: JunctionReadCounts() for jt in JunctionType}
     alignment_data = {jt: [] for jt in JunctionType}
 
-    jcs_to_readtypes_to_reads = {
+    jcs_to_readtypes_to_hits = {
         jt: {rt: [] for rt in ReadType}
         for jt in JunctionType
     }
@@ -61,25 +61,25 @@ def get_jct_read_counts(
         jct_types_to_lengths = {JunctionType[jct_name]: length for jct_name, length in jct_names_to_lengths.items()}
 
         # Count read-alignments of each type at each junction
-        for read in bam.fetch():
-            jct_name = read.reference_name
+        for hit in bam.fetch():
+            jct_name = hit.reference_name
             jct_type = JunctionType[jct_name]
             arm_len = jct_types_to_lengths[jct_type] // 2
 
-            read_type = classify_read(read, arm_len, min_alignment_length, max_alignment_length,
+            read_type = classify_read(hit, arm_len, min_alignment_length, max_alignment_length,
                                       max_nm_score, min_as_score, min_overlap_len, max_dist_from_junction)
 
             if read_type is None:
                 continue
 
             counts[jct_type].increment(read_type)
-            alignment_data[jct_type].append((read.reference_start, read.reference_end, read_type))
+            alignment_data[jct_type].append((hit.reference_start, hit.reference_end, read_type))
 
-            read_id = read.query_name
-            seq = read.query_sequence or ""
-            jcs_to_readtypes_to_reads[jct_type][read_type].append((read_id, seq))
+            read_id = hit.query_name
+            seq = hit.query_sequence or ""
+            jcs_to_readtypes_to_hits[jct_type][read_type].append((read_id, seq))
 
-    return counts, alignment_data, jct_types_to_lengths, jcs_to_readtypes_to_reads
+    return counts, alignment_data, jct_types_to_lengths, jcs_to_readtypes_to_hits
 
 
 def classify_read(read: pysam.AlignedSegment, arm_len: int, min_alignment_length: int,
