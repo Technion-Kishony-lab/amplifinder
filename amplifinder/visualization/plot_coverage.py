@@ -103,7 +103,8 @@ def plot_amplicon_coverage(
     # Bottom subplot: Plot ratio iso_cov / anc_cov
     if anc_plot_cov is not None:
         ax2.axhline(1.0, color='black', linestyle='--', linewidth=0.5)
-        ratio = iso_plot_cov / anc_plot_cov
+        with np.errstate(divide='ignore', invalid='ignore'):
+            ratio = iso_plot_cov / anc_plot_cov
         ax2.plot(positions, ratio, 'g-', linewidth=1, label='Isolate/Ancestor', alpha=0.7)
         ax2.hlines(
             tnjc2.scaf_norm_copy_number_ratio, left_pos, right_pos, colors='green', linestyles='--',
