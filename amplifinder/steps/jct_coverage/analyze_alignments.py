@@ -4,7 +4,7 @@ import numpy as np
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.config import AlignmentAnalysisParams
+from amplifinder.config import AlignmentAnalysisParams, JcCallParams
 
 from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
 from amplifinder.steps.base import RecordTypedDfStep
@@ -35,17 +35,16 @@ def get_jct_read_counts_by_tnjc2(
     )
 
 
-def is_covered(cov: JunctionReadCounts, min_jct_cov: int,
-               jc_len: int, read_len: int, min_overlap_len: int, num_std: int = 3) -> Optional[bool]:
+def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
+               jc_len: int, read_len: int, min_overlap_len: int) -> Optional[bool]:
     """Determine if junction is covered based on spanning read statistics.
 
     Args:
         cov: Junction read counts (left, right, spanning)
-        min_jct_cov: Minimum expected spanning reads threshold
+        jc_call_params: Junction calling parameters (min_jc_cov, num_std)
         jc_len: Junction length
         read_len: Read length
         min_overlap_len: Minimum overlap length for spanning reads
-        num_std: Number of standard deviations for coverage threshold (default 3)
 
     Returns:
         True if junction is covered, False if not covered, None if ambiguous
@@ -73,8 +72,8 @@ def is_covered(cov: JunctionReadCounts, min_jct_cov: int,
 
     total_err = np.sqrt(err_expected_num_spanning**2 + err_num_spanning_reads**2)
 
-    is_above_minimal_expected = num_spanning_reads >= expected_num_spanning - num_std * total_err
-    is_below_min_jct_cov = num_spanning_reads <= min_jct_cov
+    is_above_minimal_expected = num_spanning_reads >= expected_num_spanning - jc_call_params.num_std * total_err
+    is_below_min_jct_cov = num_spanning_reads <= jc_call_params.min_jc_cov
 
     if is_above_minimal_expected and not is_below_min_jct_cov:
         return True
@@ -96,13 +95,13 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         output_dir: Path,
         read_length: int = 150,
         jct_align_params: AlignmentAnalysisParams = None,
-        min_jct_cov: int = 10,
+        jc_call_params: JcCallParams = None,
         force: Optional[bool] = None,
     ):
         self.tnjc2s = tnjc2s
         self.read_length = read_length
         self.jct_align_params = jct_align_params or AlignmentAnalysisParams()
-        self.min_jct_cov = min_jct_cov
+        self.jc_call_params = jc_call_params or JcCallParams()
         self._output_dir = Path(output_dir)
 
         # compatibility handle for tests/consumers
@@ -130,7 +129,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             jc_calls = {
                 jt: is_covered(
                     jc_covs[jt],
-                    min_jct_cov=self.min_jct_cov,
+                    jc_call_params=self.jc_call_params,
                     jc_len=jc_lengths[jt],
                     read_len=self.read_length,
                     min_overlap_len=self.jct_align_params.min_overlap_len

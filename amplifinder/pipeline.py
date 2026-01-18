@@ -337,7 +337,7 @@ class Pipeline:
             output_dir=iso_output,
             read_length=read_lengths.iso_read_length,
             jct_align_params=cfg.alignment_analysis_params,
-            min_jct_cov=cfg.min_jct_cov,
+            jc_call_params=cfg.jc_call_params,
         ).run()
 
         # Analyze ancestor alignments if present
@@ -347,7 +347,7 @@ class Pipeline:
                 output_dir=anc_output,
                 read_length=read_lengths.anc_read_length,
                 jct_align_params=cfg.alignment_analysis_params,
-                min_jct_cov=cfg.min_jct_cov,
+                jc_call_params=cfg.jc_call_params,
             ).run()
 
         return analyzed_tnjc2s
