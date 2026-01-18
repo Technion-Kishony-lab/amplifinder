@@ -74,6 +74,14 @@ class PlotTnJc2CoverageStep(Step):
         print(f'Creating coverage plots (n={len(self.classified_tnjc2s)}) ', end='', flush=True)
 
         for tnjc2 in self.classified_tnjc2s:
+            jct_cov_path = tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png"
+            amp_cov_path = tnjc2.analysis_dir_path(self._iso_output_dir) / "amplicon_coverage.png"
+            
+            # Skip if both plots already exist
+            if jct_cov_path.exists() and amp_cov_path.exists():
+                print('-', end='', flush=True)
+                continue
+            
             jc_covs, alignment_data, jc_lengths = get_jct_read_counts_by_tnjc2(
                 synjct_tnjc2=tnjc2,
                 base_dir=self._iso_output_dir,
@@ -98,27 +106,31 @@ class PlotTnJc2CoverageStep(Step):
                 assert jc_covs_anc == tnjc2.jc_covs_anc
                 jc_calls_anc = tnjc2.jc_calls_anc
 
-            plot_junctions_coverage(
-                jc_lengths=jc_lengths,
-                alignment_data=alignment_data,
-                alignment_data_anc=alignment_data_anc,
-                jc_covs=jc_covs,
-                jc_covs_anc=jc_covs_anc,
-                jc_calls=jc_calls,
-                jc_calls_anc=jc_calls_anc,
-                title=f'Jcts coverage - {tnjc2.analysis_dir_name(is_ancestor=False)}',
-                output_path=tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png",
-                min_overlap_len=self.jct_align_params.min_overlap_len,
-                max_dist_from_junction=self.jct_align_params.max_dist_from_junction,
-                iso_read_len=self.iso_read_length,
-                anc_read_len=self.anc_read_length,
-            )
-            plot_amplicon_coverage(
-                tnjc2=tnjc2,
-                iso_scafs_to_covs=iso_scafs_to_covs,
-                anc_scafs_to_covs=anc_scafs_to_covs,
-                output_path=tnjc2.analysis_dir_path(self._iso_output_dir) / "amplicon_coverage.png",
-            )
+            if not jct_cov_path.exists():
+                plot_junctions_coverage(
+                    jc_lengths=jc_lengths,
+                    alignment_data=alignment_data,
+                    alignment_data_anc=alignment_data_anc,
+                    jc_covs=jc_covs,
+                    jc_covs_anc=jc_covs_anc,
+                    jc_calls=jc_calls,
+                    jc_calls_anc=jc_calls_anc,
+                    title=f'Jcts coverage - {tnjc2.analysis_dir_name(is_ancestor=False)}',
+                    output_path=jct_cov_path,
+                    min_overlap_len=self.jct_align_params.min_overlap_len,
+                    max_dist_from_junction=self.jct_align_params.max_dist_from_junction,
+                    iso_read_len=self.iso_read_length,
+                    anc_read_len=self.anc_read_length,
+                )
+            
+            if not amp_cov_path.exists():
+                plot_amplicon_coverage(
+                    tnjc2=tnjc2,
+                    iso_scafs_to_covs=iso_scafs_to_covs,
+                    anc_scafs_to_covs=anc_scafs_to_covs,
+                    output_path=amp_cov_path,
+                )
+            
             print('.', end='', flush=True)
 
         print('\n', flush=True)
