@@ -303,21 +303,28 @@ def extract_alignment_record(read: pysam.AlignedSegment, source: str) -> Dict[st
     """Extract all alignment fields and tags from a read."""
     # Get all tags first
     all_tags = extract_all_tags(read)
-    
+
+    ref_name = read.reference_name if read.reference_name else '*'
+    pos_1 = read.reference_start + 1 if read.reference_start is not None and read.reference_start >= 0 else 0
+    rnext = read.next_reference_name if read.next_reference_name else '*'
+    pnext = read.next_reference_start + 1 if read.next_reference_start is not None else 0
+    seq = read.query_sequence if read.query_sequence else ''
+    qual = ''.join(chr(q + 33) for q in read.query_qualities) if read.query_qualities else ''
+
     # Standard SAM fields
     record = {
         'read_id': read.query_name,
         'source': source,
         'flag': read.flag,
-        'ref_name': read.reference_name,
-        'pos': read.reference_start + 1,  # 1-based
+        'ref_name': ref_name,
+        'pos': pos_1,  # 1-based
         'mapq': read.mapping_quality,
         'cigar': read.cigarstring,
-        'rnext': read.next_reference_name if read.next_reference_name else '*',
-        'pnext': read.next_reference_start + 1 if read.next_reference_start is not None else 0,
+        'rnext': rnext,
+        'pnext': pnext,
         'tlen': read.template_length,
-        'sequence': read.query_sequence if read.query_sequence else '',
-        'quality': ''.join(chr(q + 33) for q in read.query_qualities) if read.query_qualities else '',
+        'sequence': seq,
+        'quality': qual,
     }
     
     # Flag-derived boolean fields
@@ -368,6 +375,29 @@ def convert_bam_to_sam(bam_path: Path, sam_path: Path, verbose: bool = True) -> 
     log(f"  Saved to {sam_path}", verbose)
 
 
+def write_fastq_from_records(records: List[Dict[str, Any]], fastq_path: Path, verbose: bool = True) -> int:
+    """Write FASTQ from alignment records (uses first record per read_id)."""
+    seen = set()
+    written = 0
+    with open(fastq_path, 'w') as f:
+        for record in records:
+            read_id = record.get('read_id')
+            if not read_id or read_id in seen:
+                continue
+            seq = record.get('sequence') or ''
+            if not seq:
+                continue
+            qual = record.get('quality') or ''
+            if not qual:
+                qual = 'I' * len(seq)
+            f.write(f"@{read_id}\n{seq}\n+\n{qual}\n")
+            seen.add(read_id)
+            written += 1
+    if verbose:
+        log(f"  Wrote {written} reads to {fastq_path}", verbose)
+    return written
+
+
 def compare_bam_files(
     matlab_bam: Path,
     python_bam: Path,
@@ -394,8 +424,6 @@ def compare_bam_files(
     
     with pysam.AlignmentFile(str(matlab_bam), 'rb') as bam:
         for read in bam:
-            if read.is_unmapped:
-                continue
             read_id = read.query_name
             record = extract_alignment_record(read, 'matlab')
             matlab_alignments[read_id].append(record)
@@ -409,8 +437,6 @@ def compare_bam_files(
     
     with pysam.AlignmentFile(str(python_bam), 'rb') as bam:
         for read in bam:
-            if read.is_unmapped:
-                continue
             read_id = read.query_name
             record = extract_alignment_record(read, 'python')
             python_alignments[read_id].append(record)
@@ -488,7 +514,7 @@ def compare_bam_files(
         # Build column list
         base_columns = [
             'read_id', 'source', 'flag', 'ref_name', 'pos', 'mapq', 'cigar',
-            'rnext', 'pnext', 'tlen',
+            'rnext', 'pnext', 'tlen', 'sequence', 'quality',
             'is_paired', 'is_proper_pair', 'is_unmapped', 'mate_unmapped',
             'is_reverse', 'mate_reverse', 'is_read1', 'is_read2',
             'is_secondary', 'is_qcfail', 'is_duplicate', 'is_supplementary',
@@ -506,8 +532,13 @@ def compare_bam_files(
         df = pd.DataFrame(all_differences)
         # Sort by read_id, then source, then ref_name, then pos
         df = df.sort_values(['read_id', 'source', 'ref_name', 'pos'])
-        df.to_csv(bam_output_dir / 'bam_comparison_differences.csv', index=False)
-        log(f"  Saved to {bam_output_dir / 'bam_comparison_differences.csv'}", verbose)
+        diff_csv_path = bam_output_dir / 'bam_comparison_differences.csv'
+        df.to_csv(diff_csv_path, index=False)
+        log(f"  Saved to {diff_csv_path}", verbose)
+
+        # Write FASTQ for differing reads
+        fastq_path = bam_output_dir / 'green_mismatch_reads.fastq'
+        write_fastq_from_records(all_differences, fastq_path, verbose)
     
     # Write summary
     summary_path = bam_output_dir / 'comparison_summary.txt'
@@ -587,8 +618,6 @@ def compare_read_counts(
     
     with pysam.AlignmentFile(str(matlab_bam), 'rb') as bam:
         for idx, read in enumerate(bam):
-            if read.is_unmapped:
-                continue
             read_id = read.query_name
             matlab_index_to_readid[idx] = read_id
             matlab_alignments_by_index[idx] = {
@@ -599,6 +628,18 @@ def compare_read_counts(
                 'cigar': read.cigarstring,
                 'flag': read.flag,
                 'mapq': read.mapping_quality,
+                'is_paired': read.is_paired,
+                'is_proper_pair': read.is_proper_pair,
+                'is_unmapped': read.is_unmapped,
+                'mate_unmapped': read.mate_is_unmapped,
+                'is_reverse': read.is_reverse,
+                'mate_reverse': read.mate_is_reverse,
+                'is_read1': read.is_read1,
+                'is_read2': read.is_read2,
+                'is_secondary': read.is_secondary,
+                'is_qcfail': read.is_qcfail,
+                'is_duplicate': read.is_duplicate,
+                'is_supplementary': read.is_supplementary,
                 'tags': extract_all_tags(read),
             }
     
@@ -632,7 +673,8 @@ def compare_read_counts(
         
         read_id = matlab_index_to_readid[i]
         key = (read_id, jct_type)
-        matlab_classifications[key] = classification
+        matlab_classifications.setdefault(key, []).append(classification)
+        matlab_details = matlab_alignments_by_index.get(i, {})
         matlab_classification_details[key] = {
             'classification': classification,
             'start': start_1,
@@ -640,6 +682,21 @@ def compare_read_counts(
             'length': alignment_length,
             'flag': int(RdFlag.iloc[i]),
             'matlab_index': i,
+            'cigar': matlab_details.get('cigar'),
+            'mapq': matlab_details.get('mapq'),
+            'is_paired': matlab_details.get('is_paired'),
+            'is_proper_pair': matlab_details.get('is_proper_pair'),
+            'is_unmapped': matlab_details.get('is_unmapped'),
+            'mate_unmapped': matlab_details.get('mate_unmapped'),
+            'is_reverse': matlab_details.get('is_reverse'),
+            'mate_reverse': matlab_details.get('mate_reverse'),
+            'is_read1': matlab_details.get('is_read1'),
+            'is_read2': matlab_details.get('is_read2'),
+            'is_secondary': matlab_details.get('is_secondary'),
+            'is_qcfail': matlab_details.get('is_qcfail'),
+            'is_duplicate': matlab_details.get('is_duplicate'),
+            'is_supplementary': matlab_details.get('is_supplementary'),
+            'tags': matlab_details.get('tags', {}),
         }
     
     log(f"  Classified {len(matlab_classifications)} MATLAB read-junction pairs", verbose)
@@ -672,7 +729,7 @@ def compare_read_counts(
             )
             
             key = (read_id, jct_type)
-            python_classifications[key] = classification
+            python_classifications.setdefault(key, []).append(classification)
             
             start_1 = read.reference_start + 1
             end_1 = read.reference_end
@@ -685,6 +742,18 @@ def compare_read_counts(
                 'cigar': read.cigarstring,
                 'flag': read.flag,
                 'mapq': read.mapping_quality,
+                'is_paired': read.is_paired,
+                'is_proper_pair': read.is_proper_pair,
+                'is_unmapped': read.is_unmapped,
+                'mate_unmapped': read.mate_is_unmapped,
+                'is_reverse': read.is_reverse,
+                'mate_reverse': read.mate_is_reverse,
+                'is_read1': read.is_read1,
+                'is_read2': read.is_read2,
+                'is_secondary': read.is_secondary,
+                'is_qcfail': read.is_qcfail,
+                'is_duplicate': read.is_duplicate,
+                'is_supplementary': read.is_supplementary,
                 'tags': extract_all_tags(read),
             }
     
@@ -701,9 +770,12 @@ def compare_read_counts(
         matlab_right = int(nmbr_right.iloc[int(jct_type) - 1]) if int(jct_type) <= len(nmbr_right) else 0
         
         # Python counts (count from classifications)
-        python_green = sum(1 for (rid, jt), cls in python_classifications.items() if jt == jct_type and cls == 'green')
-        python_left = sum(1 for (rid, jt), cls in python_classifications.items() if jt == jct_type and cls == 'left')
-        python_right = sum(1 for (rid, jt), cls in python_classifications.items() if jt == jct_type and cls == 'right')
+        python_green = sum(1 for (rid, jt), cls_list in python_classifications.items()
+                           if jt == jct_type for cls in cls_list if cls == 'green')
+        python_left = sum(1 for (rid, jt), cls_list in python_classifications.items()
+                          if jt == jct_type for cls in cls_list if cls == 'left')
+        python_right = sum(1 for (rid, jt), cls_list in python_classifications.items()
+                           if jt == jct_type for cls in cls_list if cls == 'right')
         
         summary_data.append({
             'junction_type': jct_type,
@@ -727,12 +799,22 @@ def compare_read_counts(
     common_keys = set(matlab_classifications.keys()) & set(python_classifications.keys())
     matlab_only = set(matlab_classifications.keys()) - set(python_classifications.keys())
     python_only = set(python_classifications.keys()) - set(matlab_classifications.keys())
+
+    matlab_all_tags = set()
+    python_all_tags = set()
+    for details in matlab_classification_details.values():
+        matlab_all_tags.update((details.get('tags') or {}).keys())
+    for details in python_classification_details.values():
+        python_all_tags.update((details.get('tags') or {}).keys())
+    all_tags = sorted(matlab_all_tags | python_all_tags)
     
     diff_reads = []
     
     for key in sorted(common_keys):
-        matlab_cls = matlab_classifications[key]
-        python_cls = python_classifications[key]
+        matlab_cls_list = matlab_classifications[key]
+        python_cls_list = python_classifications[key]
+        matlab_cls = matlab_cls_list[0] if matlab_cls_list else None
+        python_cls = python_cls_list[0] if python_cls_list else None
         if matlab_cls != python_cls:
             read_id, jct_type = key
             matlab_details = matlab_classification_details.get(key, {})
@@ -754,6 +836,20 @@ def compare_read_counts(
                 'matlab_end': matlab_details.get('end', 'N/A'),
                 'matlab_length': matlab_details.get('length', 'N/A'),
                 'matlab_flag': matlab_details.get('flag', 'N/A'),
+                'matlab_cigar': matlab_details.get('cigar', 'N/A'),
+                'matlab_mapq': matlab_details.get('mapq', 'N/A'),
+                'matlab_is_paired': matlab_details.get('is_paired', 'N/A'),
+                'matlab_is_proper_pair': matlab_details.get('is_proper_pair', 'N/A'),
+                'matlab_is_unmapped': matlab_details.get('is_unmapped', 'N/A'),
+                'matlab_mate_unmapped': matlab_details.get('mate_unmapped', 'N/A'),
+                'matlab_is_reverse': matlab_details.get('is_reverse', 'N/A'),
+                'matlab_mate_reverse': matlab_details.get('mate_reverse', 'N/A'),
+                'matlab_is_read1': matlab_details.get('is_read1', 'N/A'),
+                'matlab_is_read2': matlab_details.get('is_read2', 'N/A'),
+                'matlab_is_secondary': matlab_details.get('is_secondary', 'N/A'),
+                'matlab_is_qcfail': matlab_details.get('is_qcfail', 'N/A'),
+                'matlab_is_duplicate': matlab_details.get('is_duplicate', 'N/A'),
+                'matlab_is_supplementary': matlab_details.get('is_supplementary', 'N/A'),
             })
             
             # Add Python details
@@ -764,7 +860,23 @@ def compare_read_counts(
                 'python_cigar': python_details.get('cigar', 'N/A'),
                 'python_flag': python_details.get('flag', 'N/A'),
                 'python_mapq': python_details.get('mapq', 'N/A'),
+                'python_is_paired': python_details.get('is_paired', 'N/A'),
+                'python_is_proper_pair': python_details.get('is_proper_pair', 'N/A'),
+                'python_is_unmapped': python_details.get('is_unmapped', 'N/A'),
+                'python_mate_unmapped': python_details.get('mate_unmapped', 'N/A'),
+                'python_is_reverse': python_details.get('is_reverse', 'N/A'),
+                'python_mate_reverse': python_details.get('mate_reverse', 'N/A'),
+                'python_is_read1': python_details.get('is_read1', 'N/A'),
+                'python_is_read2': python_details.get('is_read2', 'N/A'),
+                'python_is_secondary': python_details.get('is_secondary', 'N/A'),
+                'python_is_qcfail': python_details.get('is_qcfail', 'N/A'),
+                'python_is_duplicate': python_details.get('is_duplicate', 'N/A'),
+                'python_is_supplementary': python_details.get('is_supplementary', 'N/A'),
             })
+
+            for tag in all_tags:
+                row[f'matlab_tag_{tag}'] = (matlab_details.get('tags') or {}).get(tag, 'N/A')
+                row[f'python_tag_{tag}'] = (python_details.get('tags') or {}).get(tag, 'N/A')
             
             diff_reads.append(row)
     
@@ -775,7 +887,7 @@ def compare_read_counts(
         row = {
             'read_id': read_id,
             'junction_type': jct_type,
-            'matlab_classification': matlab_classifications[key] if matlab_classifications[key] else 'N/A',
+            'matlab_classification': matlab_classifications[key][0] if matlab_classifications[key] else 'N/A',
             'python_classification': 'N/A',
             'difference_reason': 'Only in MATLAB',
         }
@@ -784,8 +896,29 @@ def compare_read_counts(
             'matlab_end': matlab_details.get('end', 'N/A'),
             'matlab_length': matlab_details.get('length', 'N/A'),
             'matlab_flag': matlab_details.get('flag', 'N/A'),
+            'matlab_cigar': matlab_details.get('cigar', 'N/A'),
+            'matlab_mapq': matlab_details.get('mapq', 'N/A'),
+            'matlab_is_paired': matlab_details.get('is_paired', 'N/A'),
+            'matlab_is_proper_pair': matlab_details.get('is_proper_pair', 'N/A'),
+            'matlab_is_unmapped': matlab_details.get('is_unmapped', 'N/A'),
+            'matlab_mate_unmapped': matlab_details.get('mate_unmapped', 'N/A'),
+            'matlab_is_reverse': matlab_details.get('is_reverse', 'N/A'),
+            'matlab_mate_reverse': matlab_details.get('mate_reverse', 'N/A'),
+            'matlab_is_read1': matlab_details.get('is_read1', 'N/A'),
+            'matlab_is_read2': matlab_details.get('is_read2', 'N/A'),
+            'matlab_is_secondary': matlab_details.get('is_secondary', 'N/A'),
+            'matlab_is_qcfail': matlab_details.get('is_qcfail', 'N/A'),
+            'matlab_is_duplicate': matlab_details.get('is_duplicate', 'N/A'),
+            'matlab_is_supplementary': matlab_details.get('is_supplementary', 'N/A'),
         })
-        row.update({f'python_{k}': 'N/A' for k in ['start', 'end', 'length', 'cigar', 'flag', 'mapq']})
+        row.update({f'python_{k}': 'N/A' for k in ['start', 'end', 'length', 'cigar', 'flag', 'mapq',
+                                                   'is_paired', 'is_proper_pair', 'is_unmapped',
+                                                   'mate_unmapped', 'is_reverse', 'mate_reverse',
+                                                   'is_read1', 'is_read2', 'is_secondary',
+                                                   'is_qcfail', 'is_duplicate', 'is_supplementary']})
+        for tag in all_tags:
+            row[f'matlab_tag_{tag}'] = (matlab_details.get('tags') or {}).get(tag, 'N/A')
+            row[f'python_tag_{tag}'] = 'N/A'
         diff_reads.append(row)
     
     for key in sorted(python_only):
@@ -795,10 +928,14 @@ def compare_read_counts(
             'read_id': read_id,
             'junction_type': jct_type,
             'matlab_classification': 'N/A',
-            'python_classification': python_classifications[key] if python_classifications[key] else 'N/A',
+            'python_classification': python_classifications[key][0] if python_classifications[key] else 'N/A',
             'difference_reason': 'Only in Python',
         }
-        row.update({f'matlab_{k}': 'N/A' for k in ['start', 'end', 'length', 'flag']})
+        row.update({f'matlab_{k}': 'N/A' for k in ['start', 'end', 'length', 'flag', 'cigar', 'mapq',
+                                                   'is_paired', 'is_proper_pair', 'is_unmapped',
+                                                   'mate_unmapped', 'is_reverse', 'mate_reverse',
+                                                   'is_read1', 'is_read2', 'is_secondary',
+                                                   'is_qcfail', 'is_duplicate', 'is_supplementary']})
         row.update({
             'python_start': python_details.get('start', 'N/A'),
             'python_end': python_details.get('end', 'N/A'),
@@ -806,7 +943,22 @@ def compare_read_counts(
             'python_cigar': python_details.get('cigar', 'N/A'),
             'python_flag': python_details.get('flag', 'N/A'),
             'python_mapq': python_details.get('mapq', 'N/A'),
+            'python_is_paired': python_details.get('is_paired', 'N/A'),
+            'python_is_proper_pair': python_details.get('is_proper_pair', 'N/A'),
+            'python_is_unmapped': python_details.get('is_unmapped', 'N/A'),
+            'python_mate_unmapped': python_details.get('mate_unmapped', 'N/A'),
+            'python_is_reverse': python_details.get('is_reverse', 'N/A'),
+            'python_mate_reverse': python_details.get('mate_reverse', 'N/A'),
+            'python_is_read1': python_details.get('is_read1', 'N/A'),
+            'python_is_read2': python_details.get('is_read2', 'N/A'),
+            'python_is_secondary': python_details.get('is_secondary', 'N/A'),
+            'python_is_qcfail': python_details.get('is_qcfail', 'N/A'),
+            'python_is_duplicate': python_details.get('is_duplicate', 'N/A'),
+            'python_is_supplementary': python_details.get('is_supplementary', 'N/A'),
         })
+        for tag in all_tags:
+            row[f'matlab_tag_{tag}'] = 'N/A'
+            row[f'python_tag_{tag}'] = (python_details.get('tags') or {}).get(tag, 'N/A')
         diff_reads.append(row)
     
     if diff_reads:
@@ -816,6 +968,43 @@ def compare_read_counts(
         log(f"  Saved {len(diff_reads)} differentially labelled reads to {count_output_dir / 'differentially_labelled_reads.csv'}", verbose)
     else:
         log("  No differentially labelled reads found!", verbose)
+
+    # Per-junction read lists
+    per_junction_rows = []
+    for (read_id, jct_type), cls_list in matlab_classifications.items():
+        details = matlab_classification_details.get((read_id, jct_type), {})
+        for cls in cls_list:
+            per_junction_rows.append({
+                'junction_type': jct_type,
+                'source': 'matlab',
+                'read_id': read_id,
+                'classification': cls if cls else 'N/A',
+                'start': details.get('start', 'N/A'),
+                'end': details.get('end', 'N/A'),
+                'length': details.get('length', 'N/A'),
+                'cigar': details.get('cigar', 'N/A'),
+                'flag': details.get('flag', 'N/A'),
+            })
+    for (read_id, jct_type), cls_list in python_classifications.items():
+        details = python_classification_details.get((read_id, jct_type), {})
+        for cls in cls_list:
+            per_junction_rows.append({
+                'junction_type': jct_type,
+                'source': 'python',
+                'read_id': read_id,
+                'classification': cls if cls else 'N/A',
+                'start': details.get('start', 'N/A'),
+                'end': details.get('end', 'N/A'),
+                'length': details.get('length', 'N/A'),
+                'cigar': details.get('cigar', 'N/A'),
+                'flag': details.get('flag', 'N/A'),
+            })
+    if per_junction_rows:
+        df_per_junction = pd.DataFrame(per_junction_rows)
+        df_per_junction = df_per_junction.sort_values(['junction_type', 'source', 'read_id'])
+        per_junction_path = count_output_dir / 'per_junction_read_lists.csv'
+        df_per_junction.to_csv(per_junction_path, index=False)
+        log(f"  Saved per-junction read lists to {per_junction_path}", verbose)
     
     return {
         'total_differences': len(diff_reads),
