@@ -41,7 +41,7 @@ def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
 
     Args:
         cov: Junction read counts (left, right, spanning)
-        jc_call_params: Junction calling parameters (min_jc_cov, num_std)
+        jc_call_params: Junction calling parameters. See JcCallParams for details.
         jc_len: Junction length
         read_len: Read length
         min_overlap_len: Minimum overlap length for spanning reads
@@ -72,12 +72,13 @@ def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
 
     total_err = np.sqrt(err_expected_num_spanning**2 + err_num_spanning_reads**2)
 
-    is_above_minimal_expected = num_spanning_reads >= expected_num_spanning - jc_call_params.num_std * total_err
-    is_below_min_jct_cov = num_spanning_reads <= jc_call_params.min_jc_cov
+    is_above_minimal_expected = num_spanning_reads >= expected_num_spanning - jc_call_params.pos_threshold_in_num_std_below_expected * total_err
+    is_close_to_zero = num_spanning_reads <= jc_call_params.neg_threshold_abs \
+        or num_spanning_reads <= expected_num_spanning * jc_call_params.neg_threshold_rel
 
-    if is_above_minimal_expected and not is_below_min_jct_cov:
+    if is_above_minimal_expected and not is_close_to_zero:
         return True
-    if not is_above_minimal_expected and is_below_min_jct_cov:
+    if not is_above_minimal_expected and is_close_to_zero:
         return False
     return None  # ambiguous
 
