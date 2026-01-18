@@ -130,6 +130,7 @@ def sam_to_sorted_bam(
     bam_path: Path,
     samtools_path: Optional[Path] = None,
     threads: int = 1,
+    min_qlen: Optional[int] = None,
 ) -> None:
     """Convert SAM to sorted BAM and index.
 
@@ -148,15 +149,35 @@ def sam_to_sorted_bam(
     if not sam_path.exists():
         raise FileNotFoundError(f"SAM file not found: {sam_path}")
 
-    # Convert and sort
-    cmd_sort = [
-        samtools, "sort",
-        "-@", str(threads),
-        "-o", str(bam_path),
-        str(sam_path),
-    ]
-
-    run_command(cmd_sort, check=True, capture_output=True, text=True)
+    # Convert and sort (optionally filter by min_qlen)
+    if min_qlen is not None:
+        temp_bam = bam_path.with_suffix(".filtered.bam")
+        cmd_view = [
+            samtools, "view",
+            "-bS",
+            "--min-qlen", str(min_qlen),
+            "-@", str(threads),
+            "-o", str(temp_bam),
+            str(sam_path),
+        ]
+        run_command(cmd_view, check=True, capture_output=True, text=True)
+        cmd_sort = [
+            samtools, "sort",
+            "-@", str(threads),
+            "-o", str(bam_path),
+            str(temp_bam),
+        ]
+        run_command(cmd_sort, check=True, capture_output=True, text=True)
+        if temp_bam.exists():
+            temp_bam.unlink()
+    else:
+        cmd_sort = [
+            samtools, "sort",
+            "-@", str(threads),
+            "-o", str(bam_path),
+            str(sam_path),
+        ]
+        run_command(cmd_sort, check=True, capture_output=True, text=True)
 
     # Index
     cmd_index = [samtools, "index", str(bam_path)]
@@ -173,6 +194,7 @@ def align_reads_to_fasta(
     mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5),
     num_alignments: int = 100,
     local: bool = False,  # Default: end-to-end (matches MATLAB)
+    min_qlen: Optional[int] = None,
     keep_sam: bool = False,
 ) -> None:
     """Full alignment pipeline: build index, align, convert to sorted BAM.
@@ -212,7 +234,7 @@ def align_reads_to_fasta(
 
     # Convert to sorted BAM
     with print_timer("BAM... ", end_msg="", seperate_prints=True):
-        sam_to_sorted_bam(sam_path, output_bam, threads=threads)
+        sam_to_sorted_bam(sam_path, output_bam, threads=threads, min_qlen=min_qlen)
     print()  # Newline after final step
 
     # Cleanup
