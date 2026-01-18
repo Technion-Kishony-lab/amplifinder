@@ -11,4 +11,3 @@ breseq_docker: true
 
 # ISfinder database (null = use bundled)
 isdb_path: null
-

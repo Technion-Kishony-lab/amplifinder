@@ -7,12 +7,6 @@ from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import ReadType
 
 
-def _qual_to_str(qual: Optional[list[int]]) -> str:
-    if not qual:
-        return ""
-    return "".join(chr(q + 33) for q in qual)
-
-
 def get_jct_read_counts(
     bam_path: Path,
     avg_read_length: int,
@@ -24,7 +18,8 @@ def get_jct_read_counts(
 ) -> tuple[
     dict[JunctionType, JunctionReadCounts],
     dict[JunctionType, list[tuple[int, int, str]]],
-    dict[JunctionType, int]
+    dict[JunctionType, int],
+    dict[JunctionType, dict[ReadType, list[tuple[str, str]]]]
 ]:
     """Parse BAM and get coverage for all 7 junction types.
 
@@ -42,6 +37,7 @@ def get_jct_read_counts(
             - dict mapping JunctionType -> JunctionReadCounts
             - dict mapping JunctionType -> list of (start, end, read_type) tuples
             - dict mapping JunctionType -> junction length
+            - dict mapping JunctionType -> dict[ReadType -> list of (read_id, seq) tuples]
     """
     if not bam_path.exists():
         raise FileNotFoundError(f"BAM file not found: {bam_path}")
@@ -52,6 +48,11 @@ def get_jct_read_counts(
 
     counts = {jt: JunctionReadCounts() for jt in JunctionType}
     alignment_data = {jt: [] for jt in JunctionType}
+
+    jcs_to_readtypes_to_reads = {
+        jt: {rt: [] for rt in ReadType}
+        for jt in JunctionType
+    }
 
     with pysam.AlignmentFile(str(bam_path), "rb") as bam:
 
@@ -68,62 +69,6 @@ def get_jct_read_counts(
             read_type = classify_read(read, arm_len, min_alignment_length, max_alignment_length,
                                       max_nm_score, min_as_score, min_overlap_len, max_dist_from_junction)
 
-            if read_type is not None:
-                counts[jct_type].increment(read_type)
-                alignment_data[jct_type].append((read.reference_start, read.reference_end, read_type))
-
-    return counts, alignment_data, jct_types_to_lengths
-
-
-def get_jct_read_counts_with_reads(
-    bam_path: Path,
-    avg_read_length: int,
-    min_overlap_len: int,
-    alignment_length_tolerance: float = 0.1,
-    max_dist_from_junction: int = 10,
-    max_nm_score: int = 3,
-    min_as_score: int = -25
-) -> tuple[
-    dict[JunctionType, JunctionReadCounts],
-    dict[JunctionType, list[tuple[int, int, str]]],
-    dict[JunctionType, int],
-    dict[JunctionType, dict[ReadType, list[tuple[str, str, str]]]]
-]:
-    """Parse BAM and get coverage plus per-junction reads for FASTQ export."""
-    if not bam_path.exists():
-        raise FileNotFoundError(f"BAM file not found: {bam_path}")
-
-    read_length_factor = 1 + alignment_length_tolerance
-    min_alignment_length = avg_read_length / read_length_factor
-    max_alignment_length = avg_read_length * read_length_factor
-
-    counts = {jt: JunctionReadCounts() for jt in JunctionType}
-    alignment_data = {jt: [] for jt in JunctionType}
-    reads_by_jct = {
-        jt: {
-            ReadType.LEFT: [],
-            ReadType.LEFT_MARGINAL: [],
-            ReadType.MIDDLE: [],
-            ReadType.RIGHT_MARGINAL: [],
-            ReadType.RIGHT: [],
-        }
-        for jt in JunctionType
-    }
-
-    with pysam.AlignmentFile(str(bam_path), "rb") as bam:
-        jct_names_to_lengths = dict(zip(bam.references, bam.lengths))
-        jct_types_to_lengths = {JunctionType[jct_name]: length for jct_name, length in jct_names_to_lengths.items()}
-
-        for read in bam.fetch():
-            jct_name = read.reference_name
-            jct_type = JunctionType[jct_name]
-            arm_len = jct_types_to_lengths[jct_type] // 2
-
-            read_type = classify_read(
-                read, arm_len, min_alignment_length, max_alignment_length,
-                max_nm_score, min_as_score, min_overlap_len, max_dist_from_junction
-            )
-
             if read_type is None:
                 continue
 
@@ -132,10 +77,9 @@ def get_jct_read_counts_with_reads(
 
             read_id = read.query_name
             seq = read.query_sequence or ""
-            qual = _qual_to_str(read.query_qualities)
-            reads_by_jct[jct_type][read_type].append((read_id, seq, qual))
+            jcs_to_readtypes_to_reads[jct_type][read_type].append((read_id, seq))
 
-    return counts, alignment_data, jct_types_to_lengths, reads_by_jct
+    return counts, alignment_data, jct_types_to_lengths, jcs_to_readtypes_to_reads
 
 
 def classify_read(read: pysam.AlignedSegment, arm_len: int, min_alignment_length: int,
