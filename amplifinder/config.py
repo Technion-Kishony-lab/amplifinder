@@ -12,9 +12,13 @@ from amplifinder.data_types import AverageMethod
 from amplifinder.utils.file_utils import ensure_dir
 
 
-class AlignmentAnalysisParams(BaseModel):
-    """Parameters for junction alignment analysis."""
+class FrozenParams(BaseModel):
+    """Base class for frozen parameter models."""
     model_config = ConfigDict(frozen=True)
+
+
+class AlignmentAnalysisParams(FrozenParams):
+    """Parameters for junction alignment analysis."""
 
     min_overlap_len: int = 12
     read_length_tolerance: float = 0.1
@@ -23,14 +27,20 @@ class AlignmentAnalysisParams(BaseModel):
     min_as_score: int = -25
 
 
-class BowtieParams(BaseModel):
+class BowtieParams(FrozenParams):
     """Parameters for bowtie2 alignment."""
-    model_config = ConfigDict(frozen=True)
 
     score_min: Union[str, Tuple[float, float]] = (0, -0.1)
     mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5)
     local: bool = False
     num_alignments: int = 100
+
+
+class JcCallParams(FrozenParams):
+    """Parameters for junction coverage calling (exists, not exists, ambiguous)."""
+
+    min_jc_cov: int = 5
+    num_std: int = 3
 
 
 # Default configuration values (from config.txt and added alignment params)
@@ -67,8 +77,6 @@ DEFAULT_CONFIG = {
     "copy_number_threshold": 1.5,
     "del_copy_number_threshold": 0.3,
 
-    # Alignment parameters
-    "min_jct_cov": 5,
     # File size thresholds
     # TODO: These are not used yet
     "breseq_output_size_threshold": 10_000,
@@ -90,20 +98,20 @@ DEFAULT_CONFIG = {
 }
 
 
-_ALIGN_ANALYSIS_KEYS = tuple(AlignmentAnalysisParams.__annotations__.keys())
-_BOWTIE_KEYS = tuple(BowtieParams.__annotations__.keys())
-
-
 def _normalize_alignment_params(cfg: dict[str, Any]) -> None:
     """Move legacy scalar alignment params into param objects."""
     def _collect(keys: tuple[str, ...]) -> dict[str, Any]:
         return {k: cfg.pop(k) for k in keys if k in cfg}
 
-    aa_vals = _collect(_ALIGN_ANALYSIS_KEYS)
-    bt_vals = _collect(_BOWTIE_KEYS)
-
-    cfg["alignment_analysis_params"] = aa_vals or cfg.get("alignment_analysis_params") or {}
-    cfg["bowtie_params"] = bt_vals or cfg.get("bowtie_params") or {}
+    param_specs = [
+        (AlignmentAnalysisParams, "alignment_analysis_params"),
+        (BowtieParams, "bowtie_params"),
+        (JcCallParams, "jc_call_params"),
+    ]
+    for param_class, param_name in param_specs:
+        keys = tuple(param_class.__annotations__.keys())
+        vals = _collect(keys)
+        cfg[param_name] = vals or cfg.get(param_name) or {}
 
 
 @dataclass
@@ -168,9 +176,9 @@ class Config:
     del_copy_number_threshold: float = 0.3
 
     # Alignment parameters
-    min_jct_cov: int = 5
     alignment_analysis_params: Optional[AlignmentAnalysisParams] = None
     bowtie_params: Optional[BowtieParams] = None
+    jc_call_params: Optional[JcCallParams] = None
 
     # File size thresholds
     # TODO: These are not used yet
@@ -350,6 +358,7 @@ class Config:
         self.alignment_analysis_params = validate(
             AlignmentAnalysisParams, self.alignment_analysis_params)
         self.bowtie_params = validate(BowtieParams, self.bowtie_params)
+        self.jc_call_params = validate(JcCallParams, self.jc_call_params)
 
         # Validate: ISfinder required for non-NCBI genomes
         if not self.ncbi and not self.use_isfinder:
