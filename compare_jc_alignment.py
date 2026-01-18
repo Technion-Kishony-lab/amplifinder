@@ -450,8 +450,12 @@ def compare_bam_files(
         
         for m_read in matlab_reads:
             for p_read in python_reads:
-                # Match based on ref_name, position (within 1 bp), and CIGAR
-                if (m_read['ref_name'] == p_read['ref_name'] and
+                # Convert MATLAB ref_name (numeric) to Python ref_name (descriptive) for comparison
+                matlab_ref_mapped = MATLAB_TO_PYTHON_JUNCTION_MAP.get(m_read['ref_name'], m_read['ref_name'])
+                python_ref = p_read['ref_name']
+                
+                # Match based on ref_name (after mapping), position (within 1 bp), and CIGAR
+                if (matlab_ref_mapped == python_ref and
                     abs(m_read['pos'] - p_read['pos']) <= 1 and
                     m_read['cigar'] == p_read['cigar'] and
                     m_read['flag'] == p_read['flag']):
