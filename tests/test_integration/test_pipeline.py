@@ -44,6 +44,37 @@ def _select_target_candidate(syn_tnjc2s):
     pytest.fail(f"No matching candidate found for positions {TARGET_LEFT}-{TARGET_RIGHT}")
 
 
+def _compare_bams_one_to_one(bam1: Path, bam2: Path) -> None:
+    """Compare two BAMs record-by-record with normalized ref names."""
+    def extract_reads(bam: Path, normalize: bool = False):
+        with pysam.AlignmentFile(bam, "rb") as f:
+            return [
+                (
+                    r.query_name,
+                    r.flag,
+                    JUNCTION_ID_MAP[r.reference_name] if normalize else r.reference_name,
+                    r.reference_start,
+                    r.cigarstring,
+                    r.query_sequence,
+                )
+                for r in f.fetch(until_eof=True)
+            ]
+
+    reads1 = extract_reads(bam1, normalize=True)
+    reads2 = extract_reads(bam2, normalize=False)
+
+    if len(reads1) != len(reads2):
+        pytest.fail(f"BAM length mismatch: {len(reads1)} vs {len(reads2)}")
+
+    mismatches = [(i, a, b) for i, (a, b) in enumerate(zip(reads1, reads2), start=1) if a != b]
+    if mismatches:
+        msg_lines = []
+        for idx, a, b in mismatches[:10]:
+            msg_lines.append(f"{idx}: {a} != {b}")
+        extra = f" (showing first 10 of {len(mismatches)})" if len(mismatches) > 10 else ""
+        pytest.fail("BAM mismatches" + extra + ":\n" + "\n".join(msg_lines))
+
+
 class TestPipeline(Pipeline):
     """Pipeline subclass for testing with step-by-step MATLAB comparisons."""
     __test__ = False  # avoid pytest collection warning for helper class
@@ -160,6 +191,36 @@ class TestPipeline(Pipeline):
     def _calc_amplicon_coverage(self, tnjc2, genome, iso_output):
         result = super()._calc_amplicon_coverage(tnjc2, genome, iso_output)
         return result
+
+    def _align_reads(
+        self,
+        syn_tnjc2s,
+        iso_output,
+        anc_output,
+    ):
+        # Identify target candidate and force re-alignment by removing existing BAM
+        matching_candidate = _select_target_candidate(syn_tnjc2s)
+        python_bam = matching_candidate.bam_path(iso_output, is_ancestor=False)
+
+        # Remove existing BAM files (to force re-alignment)
+        remove_file_or_dir(python_bam)
+        remove_file_or_dir(python_bam.with_suffix(".bai"))
+        remove_file_or_dir(python_bam.with_suffix(".linearindex"))
+
+        # Run parent method and capture bowtie command
+        super()._align_reads(syn_tnjc2s, iso_output, anc_output)
+        
+        # Compare BAM files with MATLAB for each candidate
+        matlab_candidate_dir = self.matlab_output_dir / MATLAB_CANDIDATE_DIRNAME
+        matlab_alignment_dir = matlab_candidate_dir / "alignment"
+        matlab_bam = matlab_alignment_dir / "alignment.sorted.bam"
+
+        python_bam = matching_candidate.bam_path(iso_output, is_ancestor=False)
+
+        # Compare BAMs record-by-record
+        _compare_bams_one_to_one(matlab_bam, python_bam)
+
+        print_color("✓ All alignments perfectly match MATLAB")
 
     def _export(self, analyzed, genome, iso_output):
         super()._export(analyzed, genome, iso_output)
