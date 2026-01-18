@@ -46,4 +46,7 @@ __all__ = [
     # Timing utilities
     "start_timer",
     "end_timer",
+
+    # Flag utilities
+    "MutableFlag",
 ]
