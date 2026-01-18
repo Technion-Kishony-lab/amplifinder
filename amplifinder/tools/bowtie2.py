@@ -150,6 +150,7 @@ def sam_to_sorted_bam(
         raise FileNotFoundError(f"SAM file not found: {sam_path}")
 
     # Convert and sort (optionally filter by min_qlen)
+    input_for_sort = sam_path
     if min_qlen is not None:
         temp_bam = bam_path.with_suffix(".filtered.bam")
         cmd_view = [
@@ -161,23 +162,18 @@ def sam_to_sorted_bam(
             str(sam_path),
         ]
         run_command(cmd_view, check=True, capture_output=True, text=True)
-        cmd_sort = [
-            samtools, "sort",
-            "-@", str(threads),
-            "-o", str(bam_path),
-            str(temp_bam),
-        ]
-        run_command(cmd_sort, check=True, capture_output=True, text=True)
-        if temp_bam.exists():
-            temp_bam.unlink()
-    else:
-        cmd_sort = [
-            samtools, "sort",
-            "-@", str(threads),
-            "-o", str(bam_path),
-            str(sam_path),
-        ]
-        run_command(cmd_sort, check=True, capture_output=True, text=True)
+        input_for_sort = temp_bam
+    
+    cmd_sort = [
+        samtools, "sort",
+        "-@", str(threads),
+        "-o", str(bam_path),
+        str(input_for_sort),
+    ]
+    run_command(cmd_sort, check=True, capture_output=True, text=True)
+    
+    if min_qlen is not None and temp_bam.exists():
+        temp_bam.unlink()
 
     # Index
     cmd_index = [samtools, "index", str(bam_path)]

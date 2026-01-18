@@ -105,21 +105,16 @@ def get_read_length_stats(
 
 
 def write_fasta(
-    sequences: Dict[str, str],
+    sequences: List[tuple[str, str]],
     output_path: Path,
-    sort_keys: bool = False,
 ) -> None:
     """Write sequences to FASTA file.
 
     Args:
-        sequences: Dict mapping sequence ID to sequence string
+        sequences: List of (seq_id, sequence) tuples
         output_path: Output FASTA file path
         sort_keys: If True, sort sequences by ID before writing
     """
     ensure_parent_dir(output_path)
-
-    items = sequences.items()
-    if sort_keys:
-        items = sorted(items)
-    records = [SeqRecord(Seq(seq), id=seq_id, description="") for seq_id, seq in items]
+    records = [SeqRecord(Seq(seq), id=seq_id, description="") for seq_id, seq in sequences]
     SeqIO.write(records, output_path, "fasta")

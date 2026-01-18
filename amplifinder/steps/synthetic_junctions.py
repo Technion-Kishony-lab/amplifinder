@@ -211,11 +211,11 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
                 continue
 
             ensure_dir(fasta_path.parent)
-            sequences = {
-                jtype.name: self.genome.get_junction_sequence_arm1_to_arm2(jc)
+            sequences = [
+                (jtype.name, self.genome.get_junction_sequence_arm1_to_arm2(jc))
                 for jtype, jc in junctions.items()
-            }
-            write_fasta(sequences, fasta_path, sort_keys=True)
+            ]
+            write_fasta(sequences, fasta_path)
 
     def _calculate_output(self) -> RecordTypedDf[SynJctsTnJc2]:
         """Return records with analysis dirs (artifacts are FASTA files)."""
