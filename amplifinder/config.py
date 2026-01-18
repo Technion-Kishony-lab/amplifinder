@@ -34,7 +34,7 @@ class BowtieParams(FrozenParams):
     mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5)
     local: bool = False
     num_alignments: int = 100
-    min_qlen: Optional[int] = None
+    min_qlen: Optional[int] = 136
 
 
 class JcCallParams(FrozenParams):
