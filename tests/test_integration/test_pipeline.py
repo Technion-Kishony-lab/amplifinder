@@ -3,21 +3,45 @@
 import pandas as pd
 import numpy as np
 import pytest
+import pysam
 
+from contextlib import contextmanager
+from pathlib import Path
+from Bio import SeqIO
+
+from amplifinder.utils.file_utils import remove_file_or_dir
+from amplifinder.data_types.enums import JunctionType
 from amplifinder.steps.base import Step
 from amplifinder.config import Config
 from amplifinder.pipeline import Pipeline
+
 from tests.test_integration.matlab_compare import (
     convert_python_records_to_standard,
     convert_matlab_to_standard,
     compare_amplifications,
     load_matlab_isjc2
 )
+from tests.test_integration.test_utils import print_color, force_step
 
 pytestmark = pytest.mark.integration
 
 # Global flag: if True, skip tests when MATLAB files are missing; if False, fail
 REQUIRE_MATLAB_FILES = True
+
+TARGET_LEFT = 873161
+TARGET_RIGHT = 890745
+MATLAB_CANDIDATE_DIRNAME = "chr_U00096_873161F_890745R_IS_41R"
+
+# Mapping from junction numeric IDs to names
+JUNCTION_ID_MAP = {str(j.num): j.name for j in JunctionType}
+
+
+def _select_target_candidate(syn_tnjc2s):
+    """Pick the 873161-890745 candidate; fallback to first if not found."""
+    for c in syn_tnjc2s.to_records():
+        if c.left == TARGET_LEFT and c.right == TARGET_RIGHT:
+            return c
+    pytest.fail(f"No matching candidate found for positions {TARGET_LEFT}-{TARGET_RIGHT}")
 
 
 class TestPipeline(Pipeline):
@@ -45,23 +69,48 @@ class TestPipeline(Pipeline):
         return None
 
     def _locate_tns_in_reference(self, genome):
-        """Step 2: Locate TN elements - compare with MATLAB."""
         result = super()._locate_tns_in_reference(genome)
         self.ref_tns = result  # Store for IS name mapping
         return result
 
+    def _create_synthetic_junctions(self, filtered_tnjc2s, genome, ref_tns,
+                                    iso_output, anc_output, read_lengths):
+        with force_step():
+            syn_tnjc2s = super()._create_synthetic_junctions(
+                filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths,
+            )
+
+        matlab_fasta = self.matlab_output_dir / MATLAB_CANDIDATE_DIRNAME / "jc.fasta"
+        if not matlab_fasta.exists():
+            if REQUIRE_MATLAB_FILES:
+                pytest.fail(f"MATLAB jc.fasta not found: {matlab_fasta}")
+            return syn_tnjc2s
+
+        target = _select_target_candidate(syn_tnjc2s)
+        python_fasta = target.fasta_path(iso_output, is_ancestor=False)
+
+        matlab_seqs = {JUNCTION_ID_MAP[rec.id]: str(rec.seq) for rec in SeqIO.parse(matlab_fasta, "fasta")}
+        python_seqs = {rec.id: str(rec.seq) for rec in SeqIO.parse(python_fasta, "fasta")}
+
+        diffs = [k for k in matlab_seqs if python_seqs[k] != matlab_seqs[k]]
+        if diffs:
+            pytest.fail(f"Junction FASTA mismatch for: {', '.join(diffs)}")
+        
+        if list(matlab_seqs.keys()) != list(python_seqs.keys()):
+            pytest.fail(f"Junction FASTA key-order mismatch: {list(matlab_seqs.keys())} != {list(python_seqs.keys())}")
+
+        print_color("✓ Junction FASTA perfectly matches MATLAB")
+        return syn_tnjc2s
+
     def _create_ref_tn_junctions(self, tn_loc, genome, iso_output):
-        """Step 3: Create reference TN junctions - compare with MATLAB."""
         result = super()._create_ref_tn_junctions(tn_loc, genome, iso_output)
         return result
 
     def _run_breseq(self, genome):
-        """Step 4: Parse breseq - compare with MATLAB."""
         result = super()._run_breseq(genome)
         return result
 
     def _create_tnjcs(self, breseq_jc, ref_tnjc, genome, iso_output):
-        """Step 5: Match junctions to TN elements."""
         result = super()._create_tnjcs(breseq_jc, ref_tnjc, genome, iso_output)
 
         # Ensure single-locus TNJCs cover all MATLAB ISJC2 sides
@@ -87,13 +136,12 @@ class TestPipeline(Pipeline):
         return result
 
     def _create_tnjc2s(self, tnjc, genome, iso_output):
-        """Step 6: Combine junction pairs - compare RawTnJc2 with MATLAB ISJC2."""
         result = super()._create_tnjc2s(tnjc, genome, iso_output)
 
         # Compare RawTnJc2 with MATLAB ISJC2.xlsx (positions, length, IS elements)
         matlab_df = self._load_matlab_isjc2()
         if matlab_df is not None:
-            print("\nStep 6: Comparing RawTnJc2 with MATLAB ISJC2")
+            print_color("\nStep 6: Comparing RawTnJc2 with MATLAB ISJC2")
 
             # Convert both to standard format
             records = result.to_records()
@@ -102,20 +150,18 @@ class TestPipeline(Pipeline):
             matlab_std = convert_matlab_to_standard(matlab_df)
 
             compare_amplifications(python_std, matlab_std)
-            print("Step 6: ✓ Comparison complete")
+            print_color("✓ Comparison complete")
         else:
             assert not REQUIRE_MATLAB_FILES, "MATLAB file missing but REQUIRE_MATLAB_FILES=True"
-            print(f"Step 6: Python={len(result)} candidates (MATLAB file not found)")
+            print_color(f"Python={len(result)} candidates (MATLAB file not found)")
 
         return result
 
     def _calc_amplicon_coverage(self, tnjc2, genome, iso_output):
-        """Step 7: Calculate amplicon coverage."""
         result = super()._calc_amplicon_coverage(tnjc2, genome, iso_output)
         return result
 
     def _export(self, analyzed, genome, iso_output):
-        """Step 14: Export results - compare final export tables with MATLAB."""
         super()._export(analyzed, genome, iso_output)
 
         # Note: Final comparison done in test methods
@@ -188,8 +234,8 @@ class TestPipelineStepByStep:
         candidate_file = run_dir / "candidate_amplifications.csv"
         assert candidate_file.exists(), f"candidate_amplifications.csv not found in {run_dir}"
 
-        print("\n=== Final ISJC2 Comparison ===")
-        print("✓ Comparison done in _create_tnjc2 step")
+        print_color("\n=== Final ISJC2 Comparison ===")
+        print_color("✓ Comparison done in _create_tnjc2 step")
 
     def test_pipeline_with_ancestor(
             self,
@@ -209,15 +255,15 @@ class TestPipelineStepByStep:
         # Setup pipeline
         run_dir = self._setup_pipeline(config, return_run_dir=True)
 
-        print("\n=== Testing Isolate Pipeline (with ancestor) ===")
+        print_color("\n=== Testing Isolate Pipeline (with ancestor) ===")
         pipeline = TestPipeline(config, matlab_output_dir)
         result = pipeline.run()  # Will run ancestor automatically if needed
 
-        print(f"\nFinal result: {len(result)} candidates")
+        print_color(f"\nFinal result: {len(result)} candidates")
 
         # Verify output file exists
         python_isjc2_file = run_dir / "tnjc2_exported.csv"
         assert python_isjc2_file.exists(), f"tnjc2_exported.csv not found in {run_dir}"
 
-        print("\n=== Final Comparison ===")
-        print("✓ Comparison done in _create_tnjc2 step")
+        print_color("\n=== Final Comparison ===")
+        print_color("✓ Comparison done in _create_tnjc2 step")
