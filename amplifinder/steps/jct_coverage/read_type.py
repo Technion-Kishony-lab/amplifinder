@@ -37,7 +37,7 @@ def get_jct_read_counts(
             - dict mapping JunctionType -> JunctionReadCounts
             - dict mapping JunctionType -> list of (start, end, read_type) tuples
             - dict mapping JunctionType -> junction length
-            - dict mapping JunctionType -> dict[ReadType -> list of (read_id, seq) tuples]
+            - dict mapping JunctionType -> dict[ReadType -> list of (read_id, seq, bam_index) tuples]
     """
     if not bam_path.exists():
         raise FileNotFoundError(f"BAM file not found: {bam_path}")
@@ -61,7 +61,8 @@ def get_jct_read_counts(
         jct_types_to_lengths = {JunctionType[jct_name]: length for jct_name, length in jct_names_to_lengths.items()}
 
         # Count read-alignments of each type at each junction
-        for hit in bam.fetch():
+        # Track 1-based BAM index to match MATLAB format
+        for bam_index, hit in enumerate(bam.fetch(), start=1):
             jct_name = hit.reference_name
             jct_type = JunctionType[jct_name]
             arm_len = jct_types_to_lengths[jct_type] // 2
@@ -77,7 +78,7 @@ def get_jct_read_counts(
 
             read_id = hit.query_name
             seq = hit.query_sequence or ""
-            jcs_to_readtypes_to_hits[jct_type][read_type].append((read_id, seq))
+            jcs_to_readtypes_to_hits[jct_type][read_type].append((read_id, seq, bam_index))
 
     return counts, alignment_data, jct_types_to_lengths, jcs_to_readtypes_to_hits
 

@@ -37,15 +37,15 @@ def get_jct_read_counts_by_tnjc2(
     )
 
 
-def _write_fasta_with_index(reads: list[tuple[str, str]], output_path: Path) -> None:
-    """Add unique index suffix to read IDs and write to FASTA."""
-    indexed = [(f"{rid}/{i}", seq) for i, (rid, seq) in enumerate(reads, 1)]
+def _write_fasta_with_index(reads: list[tuple[str, str, int]], output_path: Path) -> None:
+    """Add BAM index suffix to read IDs and write to FASTA (matches MATLAB format)."""
+    indexed = [(f"{rid}/{bam_index}", seq) for rid, seq, bam_index in reads]
     write_fasta(indexed, output_path)
 
 
 def write_junction_read_fastas(
         output_dir: Path, 
-        jcs_to_readtypes_to_reads: dict[JunctionType, dict[ReadType, list[tuple[str, str]]]]
+        jcs_to_readtypes_to_reads: dict[JunctionType, dict[ReadType, list[tuple[str, str, int]]]]
         ) -> None:
     """Write FASTQ files by junction (1-7) and label (left/right/green)."""
 
