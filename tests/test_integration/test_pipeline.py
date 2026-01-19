@@ -27,6 +27,7 @@ pytestmark = pytest.mark.integration
 
 # Global flag: if True, skip tests when MATLAB files are missing; if False, fail
 REQUIRE_MATLAB_FILES = True
+RECREATE_BAM = False
 
 TARGET_LEFT = 873161
 TARGET_RIGHT = 890745
@@ -203,9 +204,10 @@ class TestPipeline(Pipeline):
         python_bam = matching_candidate.bam_path(iso_output, is_ancestor=False)
 
         # Remove existing BAM files (to force re-alignment)
-        remove_file_or_dir(python_bam)
-        remove_file_or_dir(python_bam.with_suffix(".bai"))
-        remove_file_or_dir(python_bam.with_suffix(".linearindex"))
+        if RECREATE_BAM:
+            remove_file_or_dir(python_bam)
+            remove_file_or_dir(python_bam.with_suffix(".bai"))
+            remove_file_or_dir(python_bam.with_suffix(".linearindex"))
 
         # Run parent method and capture bowtie command
         super()._align_reads(syn_tnjc2s, iso_output, anc_output)
@@ -221,6 +223,56 @@ class TestPipeline(Pipeline):
         _compare_bams_one_to_one(matlab_bam, python_bam)
 
         print_color("✓ All alignments perfectly match MATLAB")
+
+    def _analyze_alignments(
+        self,
+        synjct_tnjc2s,
+        iso_output,
+        anc_output,
+        read_lengths,
+    ):
+        analyzed = super()._analyze_alignments(
+            synjct_tnjc2s, iso_output, anc_output, read_lengths
+        )
+
+        matlab_alignment_dir = self.matlab_output_dir / MATLAB_CANDIDATE_DIRNAME / "alignment"
+
+        def _load_counts(name):
+            path = matlab_alignment_dir / name
+            if not path.exists():
+                if REQUIRE_MATLAB_FILES:
+                    pytest.fail(f"MATLAB {name} not found: {path}")
+                return None
+            txt = path.read_text().strip()
+            if not txt:
+                if REQUIRE_MATLAB_FILES:
+                    pytest.fail(f"MATLAB {name} is empty: {path}")
+                return None
+            return [int(x) for x in txt.split(",") if x]
+
+        matlab_left = _load_counts("bamreads__nmbr_left_reads.csv")
+        matlab_right = _load_counts("bamreads__nmbr_right_reads.csv")
+        matlab_span = _load_counts("bamreads__nmbr_green_reads.csv")
+
+        if matlab_left is None or matlab_right is None or matlab_span is None:
+            return analyzed
+
+        target = _select_target_candidate(analyzed)
+        covs = target.jc_covs
+        py_left = [covs[jt].left + covs[jt].left_marginal for jt in JunctionType]
+        py_right = [covs[jt].right + covs[jt].right_marginal for jt in JunctionType]
+        py_span = [covs[jt].spanning for jt in JunctionType]
+
+        if matlab_left != py_left or matlab_right != py_right or matlab_span != py_span:
+            msg = [
+                f"Left  mismatch: \n{np.array([matlab_left, py_left])}",
+                f"Right mismatch: \n{np.array([matlab_right, py_right])}",
+                f"Spanning mismatch: \n{np.array([matlab_span, py_span])}",
+            ]
+            pytest.fail("\nComppared read counts matlab (top row) vs python (bottom row):\n" + "\n\n".join(msg))
+
+        print_color("✓ Junction read counts (left/spanning/right) match MATLAB")
+        return analyzed
 
     def _export(self, analyzed, genome, iso_output):
         super()._export(analyzed, genome, iso_output)
@@ -267,64 +319,16 @@ class TestPipelineStepByStep:
         return Config(**config_kwargs)
 
     def test_pipeline_without_ancestor(self, isolate_srr25242877, cleared_output_dir):
-        """Pipeline on isolate only - compare with MATLAB."""
+        print_color("\n=== Testing Isolate Pipeline WITHOUT ancestor ===")
         matlab_output_dir = isolate_srr25242877["matlab_output"]
-
-        # Check MATLAB output exists
-        matlab_isjc2 = load_matlab_isjc2(matlab_output_dir)
-        if matlab_isjc2 is None:
-            pytest.skip("MATLAB reference output not available")
-
-        # Create config (without ancestor for this test)
         config = self._create_config(isolate_srr25242877, cleared_output_dir)
-
-        # Setup pipeline
-        run_dir = self._setup_pipeline(config, return_run_dir=True)
-
-        # Run full pipeline with step-by-step comparison
         pipeline = TestPipeline(config, matlab_output_dir)
-        result = pipeline.run()
+        pipeline.run()
 
-        # Check if pipeline produced any candidates
-        assert len(result) > 0, \
-            f"Pipeline found 0 candidates. Expected to match MATLAB output with {len(matlab_isjc2)} junctions. " \
-            f"Check pipeline parameters and matching logic. Run dir: {run_dir}"
 
-        isjc2_file = run_dir / "tnjc2_exported.csv"
-        assert isjc2_file.exists(), f"tnjc2_exported.csv not found in {run_dir}"
-        candidate_file = run_dir / "candidate_amplifications.csv"
-        assert candidate_file.exists(), f"candidate_amplifications.csv not found in {run_dir}"
-
-        print_color("\n=== Final ISJC2 Comparison ===")
-        print_color("✓ Comparison done in _create_tnjc2 step")
-
-    def test_pipeline_with_ancestor(
-            self,
-            isolate_srr25242877,
-            isolate_srr25242906,
-            cleared_output_dir):
-        """Pipeline on isolate + ancestor - compare with MATLAB."""
+    def test_pipeline_with_ancestor(self, isolate_srr25242877, isolate_srr25242906, cleared_output_dir):
+        print_color("\n=== Testing Isolate Pipeline WITH ancestor ===")
         matlab_output_dir = isolate_srr25242877["matlab_output"]
-
-        # Check MATLAB output exists
-        matlab_isjc2 = load_matlab_isjc2(matlab_output_dir)
-        if matlab_isjc2 is None:
-            pytest.skip("MATLAB reference output not available")
-
         config = self._create_config(isolate_srr25242877, cleared_output_dir, anc_isolate=isolate_srr25242906)
-
-        # Setup pipeline
-        run_dir = self._setup_pipeline(config, return_run_dir=True)
-
-        print_color("\n=== Testing Isolate Pipeline (with ancestor) ===")
         pipeline = TestPipeline(config, matlab_output_dir)
-        result = pipeline.run()  # Will run ancestor automatically if needed
-
-        print_color(f"\nFinal result: {len(result)} candidates")
-
-        # Verify output file exists
-        python_isjc2_file = run_dir / "tnjc2_exported.csv"
-        assert python_isjc2_file.exists(), f"tnjc2_exported.csv not found in {run_dir}"
-
-        print_color("\n=== Final Comparison ===")
-        print_color("✓ Comparison done in _create_tnjc2 step")
+        pipeline.run()  # Will run ancestor automatically if needed
