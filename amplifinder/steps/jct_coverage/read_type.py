@@ -13,8 +13,8 @@ def get_jct_read_counts(
     min_overlap_len: int,
     alignment_length_tolerance: float = 0.1,
     max_dist_from_junction: int = 10,
-    max_nm_score: int = 3,
-    min_as_score: int = -25
+    max_nm_score: Optional[int] = None,  # 3,
+    min_as_score: Optional[int] = None,  # -25
 ) -> tuple[
     dict[JunctionType, JunctionReadCounts],
     dict[JunctionType, list[tuple[int, int, str]]],
@@ -124,9 +124,9 @@ def passes_quality_filters(read: pysam.AlignedSegment, max_nm_score: int, min_as
         except KeyError:
             nm_score = None
 
-    if nm_score is not None and nm_score > max_nm_score:
+    if max_nm_score is not None and nm_score > max_nm_score:
         return False
-    if as_score is not None and as_score < min_as_score:
+    if min_as_score is not None and as_score < min_as_score:
         return False
     return True
 
