@@ -22,9 +22,9 @@ class AlignmentAnalysisParams(FrozenParams):
 
     min_overlap_len: int = 12
     read_length_tolerance: float = 0.1
-    max_dist_from_junction: int = 10
-    max_nm_score: int = 3
-    min_as_score: int = -25
+    max_dist_from_junction: int = 341
+    max_nm_score: Optional[int] = None  # 3,
+    min_as_score: Optional[int] = None  # -25
 
 
 class BowtieParams(FrozenParams):
