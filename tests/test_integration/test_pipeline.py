@@ -22,6 +22,11 @@ from tests.test_integration.matlab_compare import (
     load_matlab_isjc2
 )
 from tests.test_integration.test_utils import print_color, force_step
+from tests.test_integration.jc_cover_compare import (
+    load_matlab_read_buckets,
+    load_python_read_buckets,
+    create_jct_comparison_table,
+)
 
 pytestmark = pytest.mark.integration
 
@@ -231,9 +236,12 @@ class TestPipeline(Pipeline):
         anc_output,
         read_lengths,
     ):
-        analyzed = super()._analyze_alignments(
-            synjct_tnjc2s, iso_output, anc_output, read_lengths
-        )
+        # Enable DEBUG to ensure Python FASTA files are written for comparison
+        from amplifinder.env import DEBUG
+        with DEBUG.temp_set(True):
+            analyzed = super()._analyze_alignments(
+                synjct_tnjc2s, iso_output, anc_output, read_lengths
+            )
 
         matlab_alignment_dir = self.matlab_output_dir / MATLAB_CANDIDATE_DIRNAME / "alignment"
 
@@ -263,13 +271,52 @@ class TestPipeline(Pipeline):
         py_right = [covs[jt].right + covs[jt].right_marginal for jt in JunctionType]
         py_span = [covs[jt].spanning for jt in JunctionType]
 
+        # Always generate read-by-read comparison tables
+        python_bam = target.bam_path(iso_output, is_ancestor=False)
+        python_alignment_dir = python_bam.parent
+        matlab_buckets = load_matlab_read_buckets(matlab_alignment_dir)
+        python_buckets = load_python_read_buckets(python_alignment_dir)
+        
+        output_dir = python_alignment_dir
+        
+        # Create comparison table for each junction
+        for jt in JunctionType.sorted():
+            jct_num = jt.num
+            
+            df, confusion_matrix = create_jct_comparison_table(
+                python_bam=python_bam,
+                matlab_buckets=matlab_buckets,
+                python_buckets=python_buckets,
+                jct_num=jct_num,
+            )
+            
+            csv_path = output_dir / f"jct_{jct_num}_read_comparison.csv"
+            df.to_csv(csv_path, index=False)
+            
+            # check if conf mat has any non-diagonal elements
+            if np.any(confusion_matrix.values != np.diag(confusion_matrix.values)):
+                print_color(f"✗ Not all classifications match")
+            else:
+                print_color(f"✓ All classifications match perfectly")
+            # Print confusion matrix
+            print_color(f"\nConfusion matrix for jct_{jct_num}:")
+            print(confusion_matrix.to_string())
+            print()
+
+            if len(df):
+                print_color(f"Comparison table: {csv_path}")
+                print_color(f"\nFirst 10 mismatches for jct_{jct_num}:")
+                print(df.head(10).to_string(index=False))
+                print()
+            
+
         if matlab_left != py_left or matlab_right != py_right or matlab_span != py_span:
             msg = [
                 f"Left  mismatch: \n{np.array([matlab_left, py_left])}",
                 f"Right mismatch: \n{np.array([matlab_right, py_right])}",
                 f"Spanning mismatch: \n{np.array([matlab_span, py_span])}",
             ]
-            pytest.fail("\nComppared read counts matlab (top row) vs python (bottom row):\n" + "\n\n".join(msg))
+            pytest.fail("\nCompared read counts matlab (top row) vs python (bottom row):\n" + "\n\n".join(msg))
 
         print_color("✓ Junction read counts (left/spanning/right) match MATLAB")
         return analyzed
