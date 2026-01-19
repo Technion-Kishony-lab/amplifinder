@@ -20,7 +20,7 @@ class FrozenParams(BaseModel):
 class AlignmentAnalysisParams(FrozenParams):
     """Parameters for junction alignment analysis."""
 
-    min_overlap_len: int = 12
+    min_overlap_len: int = 13
     read_length_tolerance: float = 0.1
     max_dist_from_junction: int = 341
     max_nm_score: Optional[int] = None  # 3,
