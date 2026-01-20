@@ -399,13 +399,16 @@ def analyzed_tnjc2_record(filtered_tnjc2_record):
     """AnalyzedTnJc2 with junction coverage."""
     from amplifinder.data_types import AnalyzedTnJc2, JunctionType, JunctionReadCounts
 
-    # Create jc_cov dict with all junction types having zero counts
-    jc_cov = {jt: JunctionReadCounts() for jt in JunctionType}
+    # Create jc_covs dict with all junction types having zero counts
+    jc_covs = {jt: JunctionReadCounts() for jt in JunctionType}
 
     return AnalyzedTnJc2.from_other(
         filtered_tnjc2_record,
-        jc_cov=jc_cov,
-        jc_cov_anc=None,
+        analysis_dir_anc="jc_200_300_001_L150_anc",
+        jc_covs=jc_covs,
+        jc_covs_anc=None,
+        jc_calls=None,
+        jc_calls_anc=None,
     )
 
 

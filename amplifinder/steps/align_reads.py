@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2
+from amplifinder.config import BowtieParams
 from amplifinder.steps.base import Step
 from amplifinder.tools.bowtie2 import align_reads_to_fasta
 
@@ -17,17 +18,15 @@ class AlignReadsToJunctionsStep(Step):
         synjcs_tnjc2s: RecordTypedDf[SynJctsTnJc2],
         output_dir: Path,
         fastq_path: Path,
-        threads: int = 1,
-        score_min: Optional[str] = None,  # None = use default (G,0,-0.25 for local)
-        num_alignments: int = 100,  # TODO: should this be '1' ?
+        threads: int = 4,
+        bowtie_params: BowtieParams = None,
         force: Optional[bool] = None,
     ):
         self.synjcs_tnjc2s = synjcs_tnjc2s
         self.output_dir = Path(output_dir)
         self.fastq_path = Path(fastq_path)
         self.threads = threads
-        self.score_min = score_min
-        self.num_alignments = num_alignments
+        self.bowtie_params = bowtie_params or BowtieParams()
 
         # Build list of expected output BAM files
         output_files = []
@@ -69,8 +68,11 @@ class AlignReadsToJunctionsStep(Step):
                 fastq_path=self.fastq_path,
                 output_bam=bam_path,
                 threads=self.threads,
-                score_min=self.score_min,
-                num_alignments=self.num_alignments,
+                score_min=self.bowtie_params.score_min,
+                mismatch_penalty=self.bowtie_params.mismatch_penalty,
+                num_alignments=self.bowtie_params.num_alignments,
+                local=self.bowtie_params.local,
+                min_qlen=self.bowtie_params.min_qlen,
             )
             assert bam_path.exists()
 

@@ -3,15 +3,52 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Tuple, ClassVar
+from typing import Any, Optional, Tuple, ClassVar, Union
 import json
 import yaml
+from pydantic import BaseModel, ConfigDict
 
 from amplifinder.data_types import AverageMethod
 from amplifinder.utils.file_utils import ensure_dir
 
 
-# Default configuration values (from config.txt)
+class FrozenParams(BaseModel):
+    """Base class for frozen parameter models."""
+    model_config = ConfigDict(frozen=True)
+
+
+class AlignmentAnalysisParams(FrozenParams):
+    """Parameters for junction alignment analysis."""
+
+    min_overlap_len: int = 13
+    read_length_tolerance: float = 0.1
+    max_dist_from_junction: int = 341
+    max_nm_score: Optional[int] = None  # 3,
+    min_as_score: Optional[int] = None  # -25
+
+
+class BowtieParams(FrozenParams):
+    """Parameters for bowtie2 alignment."""
+
+    score_min: Union[str, Tuple[float, float]] = (0, -0.2)
+    mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5)
+    local: bool = False
+    num_alignments: int = 100
+    min_qlen: Optional[int] = 136
+
+
+class JcCallParams(FrozenParams):
+    """Parameters for junction coverage calling (exists, not exists, ambiguous)."""
+
+    # for a jct to be negative, the number of spanning reads should be less than:
+    neg_threshold_abs: int = 5  # absolute number of spanning reads, or
+    neg_threshold_rel: float = 0.01  # fraction of the expected number of spanning reads
+
+    # for a jct to be positive, the number of spanning reads should be greater than the expected number minus x standard deviations
+    pos_threshold_in_num_std_below_expected: int = 3
+
+
+# Default configuration values (from config.txt and added alignment params)
 DEFAULT_CONFIG = {
     # External tools
     "breseq_docker": True,
@@ -45,12 +82,6 @@ DEFAULT_CONFIG = {
     "copy_number_threshold": 1.5,
     "del_copy_number_threshold": 0.3,
 
-    # Alignment parameters
-    "min_overlap_len": 12,
-    "min_jct_cov": 5,
-    "score_min": (0, -0.1),
-    "mismatch_penalty": (5, 5),
-
     # File size thresholds
     # TODO: These are not used yet
     "breseq_output_size_threshold": 10_000,
@@ -70,6 +101,22 @@ DEFAULT_CONFIG = {
     # Plotting
     "create_plots": True,
 }
+
+
+def _normalize_alignment_params(cfg: dict[str, Any]) -> None:
+    """Move legacy scalar alignment params into param objects."""
+    def _collect(keys: tuple[str, ...]) -> dict[str, Any]:
+        return {k: cfg.pop(k) for k in keys if k in cfg}
+
+    param_specs = [
+        (AlignmentAnalysisParams, "alignment_analysis_params"),
+        (BowtieParams, "bowtie_params"),
+        (JcCallParams, "jc_call_params"),
+    ]
+    for param_class, param_name in param_specs:
+        keys = tuple(param_class.__annotations__.keys())
+        vals = _collect(keys)
+        cfg[param_name] = vals or cfg.get(param_name) or {}
 
 
 @dataclass
@@ -134,10 +181,9 @@ class Config:
     del_copy_number_threshold: float = 0.3
 
     # Alignment parameters
-    min_overlap_len: int = 12
-    min_jct_cov: int = 5
-    score_min: Tuple[float, float] = (0, -0.1)
-    mismatch_penalty: Tuple[int, int] = (5, 5)
+    alignment_analysis_params: Optional[AlignmentAnalysisParams] = None
+    bowtie_params: Optional[BowtieParams] = None
+    jc_call_params: Optional[JcCallParams] = None
 
     # File size thresholds
     # TODO: These are not used yet
@@ -216,17 +262,31 @@ class Config:
         run_dir = ensure_dir(run_dir)
         config_path = run_dir / self.RUN_CONFIG_FILENAME
 
+        def convert_value(val):
+            """Recursively convert values for YAML serialization."""
+            if isinstance(val, Path):
+                return str(val)
+            elif isinstance(val, Enum):
+                return val.value
+            elif isinstance(val, tuple):
+                return [convert_value(v) for v in val]
+            elif isinstance(val, dict):
+                return {k: convert_value(v) for k, v in val.items()}
+            elif isinstance(val, list):
+                return [convert_value(v) for v in val]
+            elif isinstance(val, BaseModel):
+                # pydantic v1/v2 compatibility
+                dump_fn = getattr(val, "model_dump", None)
+                dumped = dump_fn() if dump_fn else val.dict()
+                return convert_value(dumped)
+            else:
+                return val
+
         # Convert Config to dict, handling Path objects and tuples
         config_dict = {}
         for key, value in self.__dict__.items():
-            if isinstance(value, Path):
-                config_dict[key] = str(value)
-            elif isinstance(value, tuple):
-                config_dict[key] = list(value)
-            elif isinstance(value, Enum):
-                config_dict[key] = value.value
-            elif value is not None:
-                config_dict[key] = value
+            if value is not None:
+                config_dict[key] = convert_value(value)
 
         with open(config_path, 'w') as f:
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
@@ -248,6 +308,7 @@ class Config:
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
         config_dict = load_config(config_path)
+        _normalize_alignment_params(config_dict)
 
         # Convert string paths back to Path objects
         path_fields = ['iso_path', 'anc_path', 'output_dir', 'ref_path',
@@ -295,11 +356,14 @@ class Config:
                 # No ancestor: isolate is its own "ancestor" for folder structure
                 self.anc_name = self.iso_name
 
-        # Convert tuples if passed as lists
-        if isinstance(self.score_min, list):
-            self.score_min = tuple(self.score_min)
-        if isinstance(self.mismatch_penalty, list):
-            self.mismatch_penalty = tuple(self.mismatch_penalty)
+        # Normalize params
+        def validate(cls, obj):
+            return (cls.model_validate(obj or {}) if hasattr(cls, "model_validate")
+                    else cls.parse_obj(obj or {}))
+        self.alignment_analysis_params = validate(
+            AlignmentAnalysisParams, self.alignment_analysis_params)
+        self.bowtie_params = validate(BowtieParams, self.bowtie_params)
+        self.jc_call_params = validate(JcCallParams, self.jc_call_params)
 
         # Validate: ISfinder required for non-NCBI genomes
         if not self.ncbi and not self.use_isfinder:
@@ -382,4 +446,5 @@ def merge_config(
         if value is not None:
             merged[key] = value
 
+    _normalize_alignment_params(merged)
     return merged

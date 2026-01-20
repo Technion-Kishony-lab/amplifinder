@@ -32,6 +32,11 @@ from amplifinder.utils.fasta import write_fasta
 
 
 class RudimentaryJunctionValues(NamedTuple):
+    """
+    Primitive parameters for creating synthetic junctions.
+    Encodes the minimal parameter set for creating synthetic junctions.
+    Guarentees a 1-to-1 mapping between the fasta file name and the junction sequences.
+    """
     amp_left_pos: int
     amp_right_pos: int
     amp_scaf: str
@@ -206,11 +211,11 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
                 continue
 
             ensure_dir(fasta_path.parent)
-            sequences = {
-                jtype.name: self.genome.get_junction_sequence_arm1_to_arm2(jc)
+            sequences = [
+                (jtype.name, self.genome.get_junction_sequence_arm1_to_arm2(jc))
                 for jtype, jc in junctions.items()
-            }
-            write_fasta(sequences, fasta_path, sort_keys=True)
+            ]
+            write_fasta(sequences, fasta_path)
 
     def _calculate_output(self) -> RecordTypedDf[SynJctsTnJc2]:
         """Return records with analysis dirs (artifacts are FASTA files)."""
