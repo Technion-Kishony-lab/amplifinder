@@ -61,7 +61,7 @@ def _classify_read(
     jct_len: int,
     avg_read_length: int,
     min_overlap_len: int,
-    read_length_tolerance: float = 0.1,
+    alignment_length_tolerance: float = 0.1,
     min_bp_in_frame: int = 10,
 ) -> Optional[Side]:
     """MATLAB-equivalent read classification (left/right/green/undetermined)."""

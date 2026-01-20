@@ -17,14 +17,19 @@ class FrozenParams(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class AlignmentAnalysisParams(FrozenParams):
+class AlignmentFilterParams(FrozenParams):
+    """Parameters for read filtering."""
+
+    max_nm_score: Optional[int] = None  # 3,
+    min_as_score: Optional[int] = None  # -25
+    length_tolerance: float = 0.1
+
+
+class AlignmentClassifyParams(FrozenParams):
     """Parameters for junction alignment analysis."""
 
     min_overlap_len: int = 13
-    read_length_tolerance: float = 0.1
     max_dist_from_junction: int = 341
-    max_nm_score: Optional[int] = None  # 3,
-    min_as_score: Optional[int] = None  # -25
 
 
 class BowtieParams(FrozenParams):
@@ -109,7 +114,8 @@ def _normalize_alignment_params(cfg: dict[str, Any]) -> None:
         return {k: cfg.pop(k) for k in keys if k in cfg}
 
     param_specs = [
-        (AlignmentAnalysisParams, "alignment_analysis_params"),
+        (AlignmentFilterParams, "alignment_filter_params"),
+        (AlignmentClassifyParams, "alignment_analysis_params"),
         (BowtieParams, "bowtie_params"),
         (JcCallParams, "jc_call_params"),
     ]
@@ -181,7 +187,8 @@ class Config:
     del_copy_number_threshold: float = 0.3
 
     # Alignment parameters
-    alignment_analysis_params: Optional[AlignmentAnalysisParams] = None
+    alignment_filter_params: Optional[AlignmentFilterParams] = None
+    alignment_analysis_params: Optional[AlignmentClassifyParams] = None
     bowtie_params: Optional[BowtieParams] = None
     jc_call_params: Optional[JcCallParams] = None
 
@@ -360,8 +367,8 @@ class Config:
         def validate(cls, obj):
             return (cls.model_validate(obj or {}) if hasattr(cls, "model_validate")
                     else cls.parse_obj(obj or {}))
-        self.alignment_analysis_params = validate(
-            AlignmentAnalysisParams, self.alignment_analysis_params)
+        self.alignment_filter_params = validate(AlignmentFilterParams, self.alignment_filter_params)
+        self.alignment_analysis_params = validate(AlignmentClassifyParams, self.alignment_analysis_params)
         self.bowtie_params = validate(BowtieParams, self.bowtie_params)
         self.jc_call_params = validate(JcCallParams, self.jc_call_params)
 

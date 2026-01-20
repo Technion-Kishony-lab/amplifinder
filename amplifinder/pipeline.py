@@ -335,7 +335,8 @@ class Pipeline:
             tnjc2s=synjct_tnjc2s,
             output_dir=iso_output,
             read_length=read_lengths.iso_read_length,
-            jct_align_params=cfg.alignment_analysis_params,
+            alignment_classify_params=cfg.alignment_analysis_params,
+            alignment_filter_params=cfg.alignment_filter_params,
             jc_call_params=cfg.jc_call_params,
         ).run()
 
@@ -345,7 +346,8 @@ class Pipeline:
                 tnjc2s=analyzed_tnjc2s,
                 output_dir=anc_output,
                 read_length=read_lengths.anc_read_length,
-                jct_align_params=cfg.alignment_analysis_params,
+                alignment_classify_params=cfg.alignment_analysis_params,
+                alignment_filter_params=cfg.alignment_filter_params,
                 jc_call_params=cfg.jc_call_params,
             ).run()
 
@@ -383,7 +385,8 @@ class Pipeline:
             anc_breseq_path=anc_breseq_path,
             iso_read_length=read_lengths.iso_read_length,
             anc_read_length=read_lengths.anc_read_length,
-            jct_align_params=cfg.alignment_analysis_params,
+            alignment_classify_params=cfg.alignment_analysis_params,
+            alignment_filter_params=cfg.alignment_filter_params,
         ).run()
 
     def _export(
