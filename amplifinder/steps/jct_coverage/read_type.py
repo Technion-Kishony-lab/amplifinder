@@ -3,6 +3,7 @@ from typing import Optional
 
 import pysam
 
+from amplifinder.config import AlignmentFilterParams, AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import ReadType
 
@@ -10,11 +11,8 @@ from amplifinder.data_types.enums import ReadType
 def get_jct_read_counts(
     bam_path: Path,
     avg_read_length: int,
-    min_overlap_len: int,
-    alignment_length_tolerance: float = 0.1,
-    max_dist_from_junction: int = 10,
-    max_nm_score: Optional[int] = None,  # 3,
-    min_as_score: Optional[int] = None,  # -25
+    alignment_classify_params: AlignmentClassifyParams,
+    alignment_filter_params: AlignmentFilterParams,
 ) -> tuple[
     dict[JunctionType, JunctionReadCounts],
     dict[JunctionType, list[tuple[int, int, str]]],
@@ -26,11 +24,8 @@ def get_jct_read_counts(
     Args:
         bam_path: Path to BAM file
         avg_read_length: Read length for filtering
-        min_overlap_len: Minimum overlap length required
-        alignment_length_tolerance: Tolerance for read length filtering (default 0.1 = 10%)
-        max_dist_from_junction: Maximum distance from junction for read classification
-        max_nm_score: Maximum NM score threshold (default 3)
-        min_as_score: Minimum AS score threshold (default -25)
+        align_params: Alignment analysis parameters
+        alignment_filter_params: Read filtering parameters
 
     Returns:
         tuple of:
@@ -41,10 +36,6 @@ def get_jct_read_counts(
     """
     if not bam_path.exists():
         raise FileNotFoundError(f"BAM file not found: {bam_path}")
-
-    read_length_factor = 1 + alignment_length_tolerance
-    min_alignment_length = avg_read_length / read_length_factor
-    max_alignment_length = avg_read_length * read_length_factor
 
     counts = {jt: JunctionReadCounts() for jt in JunctionType}
     alignment_data = {jt: [] for jt in JunctionType}
@@ -67,8 +58,10 @@ def get_jct_read_counts(
             jct_type = JunctionType[jct_name]
             arm_len = jct_types_to_lengths[jct_type] // 2
 
-            read_type = classify_read(hit, arm_len, min_alignment_length, max_alignment_length,
-                                      max_nm_score, min_as_score, min_overlap_len, max_dist_from_junction)
+            read_type = analyze_hit(
+                hit, arm_len, avg_read_length,
+                alignment_filter_params, alignment_classify_params
+            )
 
             if read_type is None:
                 continue
@@ -83,57 +76,57 @@ def get_jct_read_counts(
     return counts, alignment_data, jct_types_to_lengths, jcs_to_readtypes_to_hits
 
 
-def classify_read(read: pysam.AlignedSegment, arm_len: int, min_alignment_length: int,
-                  max_alignment_length: int, max_nm_score: int, min_as_score: int,
-                  min_overlap_len: int, max_dist_from_junction: int) -> Optional[ReadType]:
+def analyze_hit(
+    hit: pysam.AlignedSegment,
+    arm_len: int,
+    avg_read_length: int,
+    alignment_filter_params: AlignmentFilterParams,
+    alignment_classify_params: AlignmentClassifyParams,
+) -> Optional[ReadType]:
 
     # Filter by quality
-    if not passes_quality_filters(read, max_nm_score, min_as_score):
-        return None
-
-    # Filter by alignment length
-    alignment_length = read.query_alignment_length
-    if not (min_alignment_length <= alignment_length <= max_alignment_length):
+    if not passes_alignment_filters(hit, alignment_filter_params, avg_read_length):
         return None
 
     # Filter by CIGAR string
-    if not is_read_cigar_acceptable(read):
+    if not is_hit_cigar_acceptable(hit):
         return None
 
     # Get read type
-    start = read.reference_start
-    end = read.reference_end
+    start = hit.reference_start
+    end = hit.reference_end
     start, end = start + 1, end  # convert to 1-based coordinates, end-inclusive
 
-    return get_read_type(start, end, arm_len,
-                         min_overlap_len=min_overlap_len,
-                         max_dist_from_junction=max_dist_from_junction)
+    return get_hit_type(start, end, arm_len, alignment_classify_params)
 
 
-def passes_quality_filters(read: pysam.AlignedSegment, max_nm_score: int, min_as_score: int) -> bool:
-    if read.is_unmapped or read.is_secondary or read.is_supplementary:
-        return False
-    try:
-        as_score = read.get_tag("AS")
-    except KeyError:
-        as_score = None
-    try:
-        nm_score = read.get_tag("NM")
-    except KeyError:
-        try:
-            nm_score = read.get_tag("nM")
-        except KeyError:
-            nm_score = None
+def passes_alignment_filters(hit: pysam.AlignedSegment, alignment_filter_params: AlignmentFilterParams, avg_read_length: int) -> bool:
 
-    if max_nm_score is not None and nm_score > max_nm_score:
+    # Filter by alignment length
+    read_length_factor = 1 + alignment_filter_params.length_tolerance
+    min_alignment_length = avg_read_length / read_length_factor
+    max_alignment_length = avg_read_length * read_length_factor
+
+    if not (min_alignment_length <= hit.query_alignment_length <= max_alignment_length):
         return False
-    if min_as_score is not None and as_score < min_as_score:
+
+    # Filter by alignment flags
+    if hit.is_unmapped or hit.is_secondary or hit.is_supplementary:
         return False
+
+    # Filter by alignment tags
+    nm_score = hit.get_tag("NM")
+    if alignment_filter_params.max_nm_score is not None and nm_score > alignment_filter_params.max_nm_score:
+        return False
+
+    as_score = hit.get_tag("AS")
+    if alignment_filter_params.min_as_score is not None and as_score < alignment_filter_params.min_as_score:
+        return False
+
     return True
 
 
-def get_read_type(start: int, end: int, arm_len: int, min_overlap_len: int,
-                  max_dist_from_junction: int) -> Optional[ReadType]:
+def get_hit_type(start: int, end: int, arm_len: int, alignment_classify_params: AlignmentClassifyParams) -> Optional[ReadType]:
     """Determine the read type based on the start and end positions."""
     # n = arm_len
     # M = min_overlap_len
@@ -159,9 +152,9 @@ def get_read_type(start: int, end: int, arm_len: int, min_overlap_len: int,
     assert idx_R_2 >= idx_R_1
 
     # remove reads that are too far from junction
-    if idx_L_1 > max_dist_from_junction:
+    if idx_L_1 > alignment_classify_params.max_dist_from_junction:
         return None
-    if idx_R_1 > max_dist_from_junction:
+    if idx_R_1 > alignment_classify_params.max_dist_from_junction:
         return None
 
     # classify reads
@@ -169,8 +162,8 @@ def get_read_type(start: int, end: int, arm_len: int, min_overlap_len: int,
         return ReadType.LEFT
     elif idx_R_1 >= 0:
         return ReadType.RIGHT
-    is_start_left_of_margin = idx_L_2 >= min_overlap_len - 1
-    is_end_right_of_margin = idx_R_2 >= min_overlap_len - 1
+    is_start_left_of_margin = idx_L_2 >= alignment_classify_params.min_overlap_len - 1
+    is_end_right_of_margin = idx_R_2 >= alignment_classify_params.min_overlap_len - 1
     if is_start_left_of_margin and is_end_right_of_margin:
         return ReadType.MIDDLE
     elif is_start_left_of_margin:
@@ -180,7 +173,7 @@ def get_read_type(start: int, end: int, arm_len: int, min_overlap_len: int,
     assert False
 
 
-def is_read_cigar_acceptable(read: pysam.AlignedSegment) -> bool:
+def is_hit_cigar_acceptable(hit: pysam.AlignedSegment) -> bool:
     # CIGAR operation codes:
     # 0=M (match/mismatch)
     # 1=I (insertion)
@@ -192,23 +185,23 @@ def is_read_cigar_acceptable(read: pysam.AlignedSegment) -> bool:
     # 7= (sequence match)
     # 8=X (sequence mismatch)
 
-    if not read.cigartuples:
+    if not hit.cigartuples:
         return False
 
     # MATLAB RdFull: only CIGAR-only-M reads are counted
-    if any(op != 0 for op, _ in read.cigartuples):
+    if any(op != 0 for op, _ in hit.cigartuples):
         return False
 
     return True
 
 
-def get_expected_counts(arm_len: int, min_overlap_len: int, max_dist_from_junction, read_len: int) -> JunctionReadCounts:
+def get_expected_counts(avg_read_len: int, arm_len: int, alignment_classify_params: AlignmentClassifyParams) -> JunctionReadCounts:
     """Return the expected counts assuming uniform distribution of reads across the junction."""
-    arm_len = read_len + max_dist_from_junction
+    arm_len = avg_read_len + alignment_classify_params.max_dist_from_junction
     return JunctionReadCounts(
-        left=arm_len - read_len + 1,
-        left_marginal=min_overlap_len,
-        spanning=read_len - 2 * min_overlap_len - 1,
-        right_marginal=min_overlap_len,
-        right=arm_len - read_len + 1
+        left=arm_len - avg_read_len + 1,
+        left_marginal=alignment_classify_params.min_overlap_len,
+        spanning=avg_read_len - 2 * alignment_classify_params.min_overlap_len - 1,
+        right_marginal=alignment_classify_params.min_overlap_len,
+        right=arm_len - avg_read_len + 1
     )

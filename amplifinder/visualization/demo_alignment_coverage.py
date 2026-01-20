@@ -1,7 +1,9 @@
 """Demo script for alignment coverage plotting with dummy data."""
 import random
 
+from amplifinder.config import AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
+from amplifinder.steps.jct_coverage.read_type import get_hit_type
 from amplifinder.utils.timing import timer
 from amplifinder.visualization.plot_alignments import plot_junctions_coverage
 
@@ -12,6 +14,7 @@ def main():
     jct_lengths = {jt: 600 for jt in JunctionType}
     read_len = 100
     min_overlap_len = 12
+    align_params = AlignmentClassifyParams(min_overlap_len=min_overlap_len)
 
     # Generate dummy reads for each junction type
     alignment_data = {}
@@ -35,15 +38,19 @@ def main():
         for _ in range(255):
             start = random.randint(0, length - read_len)
             end = min(start + read_len + random.randint(-10, 10), length)
-            read_type = jc_cov_iso.add_read(start, end, arm_len, min_overlap_len)
-            reads_iso.append((start, end, read_type))
+            read_type = get_hit_type(start + 1, end, arm_len, align_params)
+            if read_type is not None:
+                jc_cov_iso.increment(read_type)
+                reads_iso.append((start, end, read_type))
 
         # Ancestor: 130 reads
         for _ in range(130):
             start = random.randint(0, length - read_len)
             end = min(start + read_len + random.randint(-10, 10), length)
-            read_type = jc_cov_anc.add_read(start, end, arm_len, min_overlap_len)
-            reads_anc.append((start, end, read_type))
+            read_type = get_hit_type(start + 1, end, arm_len, align_params)
+            if read_type is not None:
+                jc_cov_anc.increment(read_type)
+                reads_anc.append((start, end, read_type))
 
         alignment_data[jt] = reads_iso
         jc_covs[jt] = jc_cov_iso
@@ -64,8 +71,9 @@ def main():
             jc_calls_anc=jc_calls_anc,
             title='Alignment Coverage Demo (Dummy Reads)',
             output_path='demo_alignment_coverage.png',
-            min_overlap_len=min_overlap_len,
-            read_len=read_len,
+            alignment_classify_params=AlignmentClassifyParams(min_overlap_len=min_overlap_len),
+            iso_read_len=read_len,
+            anc_read_len=read_len,
         )
 
 

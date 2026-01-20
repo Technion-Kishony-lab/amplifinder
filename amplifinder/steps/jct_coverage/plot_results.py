@@ -2,7 +2,7 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.config import AlignmentAnalysisParams
+from amplifinder.config import AlignmentClassifyParams, AlignmentFilterParams
 from amplifinder.optional_deps import plt
 from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2
 from amplifinder.steps.base import Step
@@ -24,7 +24,8 @@ class PlotTnJc2CoverageStep(Step):
         anc_breseq_path: Optional[Path] = None,
         iso_read_length: int = 150,
         anc_read_length: Optional[int] = None,
-        jct_align_params: AlignmentAnalysisParams = None,
+        alignment_classify_params: AlignmentClassifyParams = None,
+        alignment_filter_params: AlignmentFilterParams = None,
         force: Optional[bool] = None,
     ):
         self.classified_tnjc2s = classified_tnjc2s
@@ -34,7 +35,8 @@ class PlotTnJc2CoverageStep(Step):
         self.anc_breseq_path = Path(anc_breseq_path) if anc_breseq_path else None
         self.iso_read_length = iso_read_length
         self.anc_read_length = anc_read_length if anc_read_length else iso_read_length
-        self.jct_align_params = jct_align_params or AlignmentAnalysisParams()
+        self.alignment_classify_params = alignment_classify_params or AlignmentClassifyParams()
+        self.alignment_filter_params = alignment_filter_params or AlignmentFilterParams()
         self.has_ancestor = self._anc_output_dir is not None
 
         if plt is None:
@@ -87,7 +89,8 @@ class PlotTnJc2CoverageStep(Step):
                 base_dir=self._iso_output_dir,
                 is_ancestor=False,
                 avg_read_length=self.iso_read_length,
-                jct_align_params=self.jct_align_params,
+                alignment_classify_params=self.alignment_classify_params,
+                alignment_filter_params=self.alignment_filter_params,
             )
             assert jc_covs == tnjc2.jc_covs
             jc_calls = tnjc2.jc_calls
@@ -101,7 +104,8 @@ class PlotTnJc2CoverageStep(Step):
                     base_dir=self._anc_output_dir,
                     is_ancestor=True,
                     avg_read_length=self.anc_read_length,
-                    jct_align_params=self.jct_align_params,
+                    alignment_classify_params=self.alignment_classify_params,
+                    alignment_filter_params=self.alignment_filter_params,
                 )
                 assert jc_covs_anc == tnjc2.jc_covs_anc
                 jc_calls_anc = tnjc2.jc_calls_anc
@@ -117,8 +121,7 @@ class PlotTnJc2CoverageStep(Step):
                     jc_calls_anc=jc_calls_anc,
                     title=f'Jcts coverage - {tnjc2.analysis_dir_name(is_ancestor=False)}',
                     output_path=jct_cov_path,
-                    min_overlap_len=self.jct_align_params.min_overlap_len,
-                    max_dist_from_junction=self.jct_align_params.max_dist_from_junction,
+                    alignment_classify_params=self.alignment_classify_params,
                     iso_read_len=self.iso_read_length,
                     anc_read_len=self.anc_read_length,
                 )

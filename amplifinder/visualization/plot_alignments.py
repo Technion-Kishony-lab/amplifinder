@@ -8,6 +8,7 @@ from matplotlib.lines import Line2D
 from pathlib import Path
 from typing import Dict, List, Tuple
 
+from amplifinder.config import AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import Element, ReadType, JcCall
 from amplifinder.steps.jct_coverage.read_type import get_expected_counts
@@ -65,14 +66,18 @@ def add_pie_chart(ax, jc_cov: JunctionReadCounts, position: str = 'top'):
 
 def _down_sample_alignments(
     alignments: List[Tuple[int, int, ReadType]], jc_cov: JunctionReadCounts,
-    max_reads_per_plot: int, arm_len: int, min_overlap_len: int, 
-    max_dist_from_junction: int,
-    read_len: int
+    max_reads_per_plot: int, expected_counts: JunctionReadCounts
 ) -> tuple[List[Tuple[int, int, ReadType]], JunctionReadCounts]:
     """Downsample alignments to a maximum number of reads per plot.
 
     Left and right alignments are scaled independently to max_reads_per_plot.
     Spanning and marginal alignments are scaled by the minimum of left/right scaling factors.
+
+    Args:
+        alignments: List of (start, end, ReadType) tuples
+        jc_cov: JunctionReadCounts with actual counts
+        max_reads_per_plot: Maximum reads to show per plot
+        expected_counts: Expected counts for calculating scaling factors
 
     Returns:
         Tuple of (downsampled_alignments, scales)
@@ -81,8 +86,7 @@ def _down_sample_alignments(
     # Sort alignments by start position
     sorted_alignments = sorted(alignments, key=lambda x: x[0])
 
-    expected = get_expected_counts(arm_len, min_overlap_len, max_dist_from_junction, read_len)
-    max_reads = expected * max_reads_per_plot // expected.total
+    max_reads = expected_counts * max_reads_per_plot // expected_counts.total
 
     scales = jc_cov // max_reads
 
@@ -186,8 +190,7 @@ def plot_junctions_coverage(
     title: str | None = None,
     output_path: Path | str = 'junctions_coverage.png',
     max_reads_per_plot: int = 200,
-    min_overlap_len: int = 10,
-    max_dist_from_junction: int = 10,
+    alignment_classify_params: AlignmentClassifyParams | None = None,
     iso_read_len: int = 150,
     anc_read_len: int = 150,
 ) -> None:
@@ -209,6 +212,8 @@ def plot_junctions_coverage(
             raise ValueError("Cannot plot with junction calls for isolate and no ancestor calls")
 
     h_pixels = 18
+
+    alignment_classify_params = alignment_classify_params or AlignmentClassifyParams()
 
     # Create figure with 7 subplots (each with genetic element axes above)
     fig = plt.figure(figsize=(15, 11))
@@ -243,8 +248,9 @@ def plot_junctions_coverage(
         # Downsample and plot isolate
         alignments = alignment_data[jt]
         jc_cov = jc_covs[jt]
+        expected_iso = get_expected_counts(iso_read_len, arm_len, alignment_classify_params)
         downsampled, scales_iso = _down_sample_alignments(
-            alignments, jc_cov, max_reads_per_plot, arm_len, min_overlap_len, max_dist_from_junction, iso_read_len
+            alignments, jc_cov, max_reads_per_plot, expected_iso
         )
         _plot_alignments(ax, downsampled, arm_len, y_sign=1)
 
@@ -252,8 +258,9 @@ def plot_junctions_coverage(
         if alignment_data_anc:
             alignments_anc = alignment_data_anc[jt]
             jc_cov_anc = jc_covs_anc[jt]
+            expected_anc = get_expected_counts(anc_read_len, arm_len, alignment_classify_params)
             downsampled_anc, scales_anc = _down_sample_alignments(
-                alignments_anc, jc_cov_anc, max_reads_per_plot, arm_len, min_overlap_len, max_dist_from_junction, anc_read_len
+                alignments_anc, jc_cov_anc, max_reads_per_plot, expected_anc
             )
             _plot_alignments(ax, downsampled_anc, arm_len, y_sign=-1, alpha=0.7)
 
@@ -286,7 +293,7 @@ def plot_junctions_coverage(
 
         # Set up genetic element axes
         max_read_len = max(iso_read_len, anc_read_len)
-        x_lim = max_read_len + max_dist_from_junction
+        x_lim = max_read_len + alignment_classify_params.max_dist_from_junction
         ax_gene.set_xlim(-x_lim, x_lim)
         ax_gene.set_ylim(0, 1)
         ax_gene.set_aspect('auto')

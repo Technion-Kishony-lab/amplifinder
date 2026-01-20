@@ -4,7 +4,7 @@ import numpy as np
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.config import AlignmentAnalysisParams, JcCallParams
+from amplifinder.config import AlignmentClassifyParams, JcCallParams, AlignmentFilterParams
 from amplifinder.env import DEBUG
 from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
 from amplifinder.steps.base import RecordTypedDfStep
@@ -18,7 +18,8 @@ def get_jct_read_counts_by_tnjc2(
     base_dir: Path,
     is_ancestor: bool,
     avg_read_length: int,
-    jct_align_params: AlignmentAnalysisParams,
+    alignment_classify_params: AlignmentClassifyParams,
+    alignment_filter_params: AlignmentFilterParams,
 ) -> tuple[
     dict[JunctionType, JunctionReadCounts],
     dict[JunctionType, list[tuple[int, int, str]]],
@@ -26,15 +27,7 @@ def get_jct_read_counts_by_tnjc2(
 ]:
     """A wrapper around get_jct_read_counts to get the read counts based on a SynJctsTnJc2."""
     bam_path = synjct_tnjc2.bam_path(base_dir, is_ancestor=is_ancestor)
-    return get_jct_read_counts(
-        bam_path,
-        avg_read_length,
-        jct_align_params.min_overlap_len,
-        alignment_length_tolerance=jct_align_params.read_length_tolerance,
-        max_dist_from_junction=jct_align_params.max_dist_from_junction,
-        max_nm_score=jct_align_params.max_nm_score,
-        min_as_score=jct_align_params.min_as_score,
-    )
+    return get_jct_read_counts(bam_path, avg_read_length, alignment_classify_params, alignment_filter_params)
 
 
 def _write_fasta_with_index(reads: list[tuple[str, str, int]], output_path: Path) -> None:
@@ -121,13 +114,15 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         tnjc2s: RecordTypedDf[SynJctsTnJc2],
         output_dir: Path,
         read_length: int = 150,
-        jct_align_params: AlignmentAnalysisParams = None,
+        alignment_classify_params: AlignmentClassifyParams = None,
+        alignment_filter_params: AlignmentFilterParams = None,
         jc_call_params: JcCallParams = None,
         force: Optional[bool] = None,
     ):
         self.tnjc2s = tnjc2s
         self.read_length = read_length
-        self.jct_align_params = jct_align_params or AlignmentAnalysisParams()
+        self.alignment_classify_params = alignment_classify_params or AlignmentClassifyParams()
+        self.alignment_filter_params = alignment_filter_params or AlignmentFilterParams()
         self.jc_call_params = jc_call_params or JcCallParams()
         self._output_dir = Path(output_dir)
 
@@ -151,7 +146,8 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 base_dir=self._output_dir,
                 is_ancestor=self.IS_ANCESTOR,
                 avg_read_length=self.read_length,
-                jct_align_params=self.jct_align_params,
+                alignment_classify_params=self.alignment_classify_params,
+                alignment_filter_params=self.alignment_filter_params,
             )
             
             if DEBUG:
@@ -166,7 +162,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                     jc_call_params=self.jc_call_params,
                     jc_len=jc_lengths[jt],
                     read_len=self.read_length,
-                    min_overlap_len=self.jct_align_params.min_overlap_len
+                    min_overlap_len=self.alignment_classify_params.min_overlap_len
                 )
                 for jt in JunctionType.sorted()
             }
