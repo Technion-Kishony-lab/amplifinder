@@ -29,7 +29,7 @@ class AlignmentClassifyParams(FrozenParams):
     """Parameters for junction alignment analysis."""
 
     min_overlap_len: int = 13
-    max_dist_from_junction: int = 341
+    max_dist_from_junction: Optional[int] = 30  # None to allow any distance within the synthetic junction
 
 
 class BowtieParams(FrozenParams):

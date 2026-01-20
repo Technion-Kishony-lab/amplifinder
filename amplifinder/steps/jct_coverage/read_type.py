@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Optional
 
+from pandas.core.base import np
 import pysam
 
 from amplifinder.config import AlignmentFilterParams, AlignmentClassifyParams
@@ -152,9 +153,9 @@ def get_hit_type(start: int, end: int, arm_len: int, alignment_classify_params: 
     assert idx_R_2 >= idx_R_1
 
     # remove reads that are too far from junction
-    if idx_L_1 > alignment_classify_params.max_dist_from_junction:
+    if idx_L_1 >= alignment_classify_params.max_dist_from_junction:
         return None
-    if idx_R_1 > alignment_classify_params.max_dist_from_junction:
+    if idx_R_1 >= alignment_classify_params.max_dist_from_junction:
         return None
 
     # classify reads
@@ -197,11 +198,15 @@ def is_hit_cigar_acceptable(hit: pysam.AlignedSegment) -> bool:
 
 def get_expected_counts(avg_read_len: int, arm_len: int, alignment_classify_params: AlignmentClassifyParams) -> JunctionReadCounts:
     """Return the expected counts assuming uniform distribution of reads across the junction."""
-    arm_len = avg_read_len + alignment_classify_params.max_dist_from_junction
+    min_overlap_len = alignment_classify_params.min_overlap_len
+    max_dist = alignment_classify_params.max_dist_from_junction
+    if max_dist is None:
+        max_dist = np.inf
+    max_dist = min(max_dist, arm_len - avg_read_len)
     return JunctionReadCounts(
-        left=arm_len - avg_read_len + 1,
-        left_marginal=alignment_classify_params.min_overlap_len,
-        spanning=avg_read_len - 2 * alignment_classify_params.min_overlap_len - 1,
-        right_marginal=alignment_classify_params.min_overlap_len,
-        right=arm_len - avg_read_len + 1
+        left=max_dist + 1,
+        left_marginal=min_overlap_len,
+        spanning=avg_read_len - 2 * min_overlap_len - 1,
+        right_marginal=min_overlap_len,
+        right=max_dist + 1
     )
