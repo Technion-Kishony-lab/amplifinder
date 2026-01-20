@@ -550,7 +550,7 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     jc_covs_anc: Optional[Dict[JunctionType, JunctionReadCounts]] = None
 
     # For each junction type, whether it is covered (True), ambiguous (None), or not covered (False)
-    jc_calls: Dict[JunctionType, Optional[bool]] = None
+    jc_calls: Optional[Dict[JunctionType, Optional[bool]]] = None
     jc_calls_anc: Optional[Dict[JunctionType, Optional[bool]]] = None
 
     @property

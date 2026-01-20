@@ -5,7 +5,7 @@ import operator
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import ClassVar, TypeAlias
+from typing import ClassVar, Optional, TypeAlias
 
 
 class ReversibleIntEnum(int, Enum):
@@ -87,13 +87,13 @@ class JunctionType(Enum):
     ====== cassette (amplicon)
 
     """
-    CHR_TO_AMP_LEFT       = (1, '~~-==', Element.CHR, Element.AMP, -1)
-    CHR_TO_TN_LEFT        = (2, '~~->>', Element.CHR, Element.TN , -2)
-    AMP_RIGHT_TO_TN_LEFT  = (3, '==->>', Element.AMP, Element.TN , +3)
-    AMP_RIGHT_TO_AMP_LEFT = (4, '==-==', Element.AMP, Element.AMP,  0)
-    TN_RIGHT_TO_AMP_LEFT  = (5, '>>-==', Element.TN,  Element.AMP, -3)
-    TN_RIGHT_TO_CHR       = (6, '>>-~~', Element.TN,  Element.CHR, +2)
-    AMP_RIGHT_TO_CHR      = (7, '==-~~', Element.AMP, Element.CHR, +1)
+    CHR_TO_AMP_LEFT       = (1, '~~-==', Element.CHR, Element.AMP, -1)  # noqa: E221, E203
+    CHR_TO_TN_LEFT        = (2, '~~->>', Element.CHR, Element.TN , -2)  # noqa: E221, E203
+    AMP_RIGHT_TO_TN_LEFT  = (3, '==->>', Element.AMP, Element.TN , +3)  # noqa: E221, E203
+    AMP_RIGHT_TO_AMP_LEFT = (4, '==-==', Element.AMP, Element.AMP,  0)  # noqa: E221, E203
+    TN_RIGHT_TO_AMP_LEFT  = (5, '>>-==', Element.TN,  Element.AMP, -3)  # noqa: E221, E203
+    TN_RIGHT_TO_CHR       = (6, '>>-~~', Element.TN,  Element.CHR, +2)  # noqa: E221, E203
+    AMP_RIGHT_TO_CHR      = (7, '==-~~', Element.AMP, Element.CHR, +1)  # noqa: E221, E203
 
     @classmethod
     def sorted(cls) -> list[JunctionType]:
@@ -193,50 +193,11 @@ class JunctionReadCounts:
         """Return total number of reads."""
         return sum(self.counts.values())
 
-    def increment(self, read_type: ReadType) -> None:
+    def increment(self, read_type: Optional[ReadType]) -> None:
         """Increment the count for the given read type."""
+        if read_type is None:
+            return
         self[read_type] += 1
-
-    def get_read_type(self, start: int, end: int, arm_len: int, min_overlap_len: int) -> ReadType:
-        """Determine the read type based on the start and end positions."""
-        #                            n+1 n+1+M                  2n
-        #                             |    |                     |
-        # +---------------------+----++----+---------------------+
-        # |                     |    |
-        # 1                    n-M   n
-
-        if end <= arm_len:
-            return ReadType.LEFT
-        elif start > arm_len:
-            return ReadType.RIGHT
-        is_start_left_of_margin = start <= arm_len - min_overlap_len + 1
-        is_end_right_of_margin = end >= arm_len + min_overlap_len
-        if is_start_left_of_margin and is_end_right_of_margin:
-            return ReadType.MIDDLE
-        elif is_start_left_of_margin:
-            return ReadType.LEFT_MARGINAL
-        elif is_end_right_of_margin:
-            return ReadType.RIGHT_MARGINAL
-        assert False
-
-    def add_read(self, start: int, end: int, arm_len: int, min_overlap_len: int) -> ReadType:
-        """Add a read to the junction read counts."""
-        read_type = self.get_read_type(start, end, arm_len, min_overlap_len)
-        self.increment(read_type)
-        return read_type
-
-    @classmethod
-    def expected_counts(cls, arm_len: int, min_overlap_len: int, read_len: int) -> JunctionReadCounts:
-        """Return the expected counts assuming uniform distribution of reads across the junction."""
-        self = JunctionReadCounts(
-            left=arm_len - read_len + 1,
-            left_marginal=min_overlap_len,
-            spanning=read_len - 2 * min_overlap_len - 1,
-            right_marginal=min_overlap_len,
-            right=arm_len - read_len + 1
-        )
-        assert self.total == 2 * arm_len - read_len + 1
-        return self
 
     @classmethod
     def from_scalar(cls, scalar: int | float) -> JunctionReadCounts:

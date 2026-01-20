@@ -1,7 +1,7 @@
 """Bowtie2 wrapper for read alignment."""
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union, Tuple
 
 from amplifinder.env import SAMTOOLS_PATH, BOWTIE2_PATH
 from amplifinder.utils.run_utils import get_tool_path, run_command
@@ -38,14 +38,32 @@ def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
     run_command(cmd, check=True, capture_output=True, text=True)
 
 
+def _format_score_min(score_min: Union[str, Tuple[float, float]], local: bool) -> str:
+    """Format score_min for bowtie2."""
+    if isinstance(score_min, str):
+        return score_min
+    mode = "G" if local else "L"
+    return f"{mode},{score_min[0]},{score_min[1]}"
+
+
+def _format_mismatch_penalty(mismatch_penalty: Union[str, Tuple[int, int]]) -> str:
+    """Format mismatch penalty tuple or string as a single bowtie2 argument."""
+    if isinstance(mismatch_penalty, str):
+        return mismatch_penalty
+    return f"{mismatch_penalty[0]},{mismatch_penalty[1]}"
+
+
 def run_bowtie2_align(
     index_prefix: Path,
     fastq_path: Path,
     output_sam: Path,
-    score_min: Optional[str] = None,
-    num_alignments: int = 10,
-    threads: int = 1,
+    # bowtie scoring/behavior
+    score_min: Tuple[float, float] = (0, -0.25),
+    mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5),
     local: bool = True,
+    num_alignments: int = 100,
+    # resources
+    threads: int = 4,
 ) -> None:
     """Align reads to index using bowtie2.
 
@@ -55,7 +73,7 @@ def run_bowtie2_align(
         output_sam: Path to output SAM file
         score_min: Minimum alignment score function. If None, uses:
                    - "G,0,-0.25" for local alignment (matches MATLAB)
-                   - "L,0,-0.6" for end-to-end alignment
+                   - "L,0,-0.25" for end-to-end alignment (matches MATLAB)
         num_alignments: Maximum alignments to report per read (-k)
         threads: Number of threads to use
         local: Use local alignment (default True for junction alignment)
@@ -84,27 +102,25 @@ def run_bowtie2_align(
     # Create output directory if needed
     ensure_parent_dir(output_sam)
 
-    # Set default score_min based on alignment mode
-    # MATLAB uses end-to-end with L,0,-0.6, local with G,0,-0.25
-    if score_min is None:
-        score_min = "G,0,-0.25" if local else "L,0,-0.6"
-
+    # Set score_min based on alignment mode (or override)
+    score_min_str = _format_score_min(score_min, local)
+    mp = _format_mismatch_penalty(mismatch_penalty)
     cmd = [
         bowtie2,
         "-x", str(index_prefix),
         "-U", reads_arg,
         "-S", str(output_sam),
         "-k", str(num_alignments),
-        "--score-min", score_min,
+        "--score-min", score_min_str,
+        "--mp", mp,
         "-p", str(threads),
+        "--reorder",
     ]
-
-    # Add mismatch penalty to match MATLAB (--mp 5,5)
-    # MATLAB uses this for both end-to-end and local modes
-    cmd.extend(["--mp", "5,5"])
 
     if local:
         cmd.append("--local")
+    else:
+        cmd.append("--end-to-end")  # Explicitly match MATLAB's --end-to-end flag
 
     run_command(cmd, check=True, capture_output=True, text=True)
 
@@ -114,6 +130,7 @@ def sam_to_sorted_bam(
     bam_path: Path,
     samtools_path: Optional[Path] = None,
     threads: int = 1,
+    min_qlen: Optional[int] = None,
 ) -> None:
     """Convert SAM to sorted BAM and index.
 
@@ -132,15 +149,31 @@ def sam_to_sorted_bam(
     if not sam_path.exists():
         raise FileNotFoundError(f"SAM file not found: {sam_path}")
 
-    # Convert and sort
+    # Convert and sort (optionally filter by min_qlen)
+    input_for_sort = sam_path
+    if min_qlen is not None:
+        temp_bam = bam_path.with_suffix(".filtered.bam")
+        cmd_view = [
+            samtools, "view",
+            "-bS",
+            "--min-qlen", str(min_qlen),
+            "-@", str(threads),
+            "-o", str(temp_bam),
+            str(sam_path),
+        ]
+        run_command(cmd_view, check=True, capture_output=True, text=True)
+        input_for_sort = temp_bam
+    
     cmd_sort = [
         samtools, "sort",
         "-@", str(threads),
         "-o", str(bam_path),
-        str(sam_path),
+        str(input_for_sort),
     ]
-
     run_command(cmd_sort, check=True, capture_output=True, text=True)
+    
+    if min_qlen is not None and temp_bam.exists():
+        temp_bam.unlink()
 
     # Index
     cmd_index = [samtools, "index", str(bam_path)]
@@ -153,9 +186,11 @@ def align_reads_to_fasta(
     fastq_path: Path,
     output_bam: Path,
     threads: int = 1,
-    score_min: Optional[str] = None,
-    num_alignments: int = 10,
-    local: bool = False,  # MATLAB uses --end-to-end by default
+    score_min: Union[str, Tuple[float, float]] = (0, -0.25),
+    mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5),
+    num_alignments: int = 100,
+    local: bool = False,  # Default: end-to-end (matches MATLAB)
+    min_qlen: Optional[int] = None,
     keep_sam: bool = False,
 ) -> None:
     """Full alignment pipeline: build index, align, convert to sorted BAM.
@@ -165,10 +200,11 @@ def align_reads_to_fasta(
         fastq_path: FASTQ file or directory
         output_bam: Output sorted BAM file
         threads: Number of threads
-        score_min: Minimum alignment score function. If None, uses appropriate default.
-        num_alignments: Max alignments per read
-        local: Use local alignment (default True for junction alignment)
-        keep_sam: Keep intermediate SAM file (default False)
+        score_min: Alignment score function (tuple uses mode G/L based on local).
+        mismatch_penalty: Bowtie2 --mp value (tuple or string).
+        num_alignments: Max alignments per read (-k).
+        local: Use local alignment (default False = end-to-end).
+        keep_sam: Keep intermediate SAM file (default False).
     """
     # Paths
     work_dir = output_bam.parent
@@ -186,14 +222,15 @@ def align_reads_to_fasta(
             fastq_path=fastq_path,
             output_sam=sam_path,
             score_min=score_min,
+            mismatch_penalty=mismatch_penalty,
+            local=local,
             num_alignments=num_alignments,
             threads=threads,
-            local=local,
         )
 
     # Convert to sorted BAM
     with print_timer("BAM... ", end_msg="", seperate_prints=True):
-        sam_to_sorted_bam(sam_path, output_bam, threads=threads)
+        sam_to_sorted_bam(sam_path, output_bam, threads=threads, min_qlen=min_qlen)
     print()  # Newline after final step
 
     # Cleanup

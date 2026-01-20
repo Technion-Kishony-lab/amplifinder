@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Optional
 import yaml
 
+from amplifinder.utils.flag_utils import MutableFlag
+
 
 # Search paths for config.yaml
 CONFIG_SEARCH_PATHS = [
@@ -48,3 +50,5 @@ BLAST_PATH: Optional[Path] = _get_path("blast_path")
 SAMTOOLS_PATH: Optional[Path] = _get_path("samtools_path")
 BOWTIE2_PATH: Optional[Path] = _get_path("bowtie2_path")
 BRESEQ_DOCKER: bool = _CONFIG.get("breseq_docker", False)  # TODO: This is not used yet
+
+DEBUG = MutableFlag(False)

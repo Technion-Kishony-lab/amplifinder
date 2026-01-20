@@ -51,5 +51,4 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
         return RecordTypedDf.from_records(filtered_tnjc2s, SingleLocusLinkedTnJc2)
 
     def report_output_message(self, output: RecordTypedDf[SingleLocusLinkedTnJc2]) -> Optional[str]:
-        return (f"Filtered to {len(output)} candidates "
-                f"(from {len(self.linked_tnjc2s)} classified)")
+        return f"Filtered to {len(output)} candidates (from {len(self.linked_tnjc2s)} classified)"
