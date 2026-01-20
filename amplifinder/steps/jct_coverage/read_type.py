@@ -46,6 +46,12 @@ def get_jct_read_counts(
         for jt in JunctionType
     }
 
+    # Track read_ids per read_type per junction for deduplication
+    read_ids_by_type = {
+        jt: {rt: set() for rt in ReadType}
+        for jt in JunctionType
+    }
+
     with pysam.AlignmentFile(str(bam_path), "rb") as bam:
 
         # Store lengths by JunctionType
@@ -67,10 +73,18 @@ def get_jct_read_counts(
             if read_type is None:
                 continue
 
+            read_id = hit.query_name
+
+            # Deduplicate: skip if this read_id already seen for this read_type at this junction
+            if read_id in read_ids_by_type[jct_type][read_type]:
+                continue
+
+            # Add this read_id to the set of seen read_ids for this read_type at this junction
+            read_ids_by_type[jct_type][read_type].add(read_id)
+
             counts[jct_type].increment(read_type)
             alignment_data[jct_type].append((hit.reference_start, hit.reference_end, read_type))
 
-            read_id = hit.query_name
             seq = hit.query_sequence or ""
             jcs_to_readtypes_to_hits[jct_type][read_type].append((read_id, seq, bam_index))
 
