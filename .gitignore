@@ -15,3 +15,5 @@ __pycache__/
 tests/test_outputs/
 # Lock files
 *.lock
+# IDE files
+.idea/
