@@ -141,9 +141,10 @@ class EventModifier(str, Enum):
 class ReadType(str, Enum):
     """Type of a read at a junction."""
     LEFT = "left"
-    LEFT_MARGINAL = "left marginal"
+    LEFT_MARGINAL = "left-marginal"
     MIDDLE = "spanning"
-    RIGHT_MARGINAL = "right marginal"
+    PAIRED = "paired"
+    RIGHT_MARGINAL = "right-marginal"
     RIGHT = "right"
 
     def is_marginal(self) -> bool:
@@ -159,6 +160,7 @@ class JunctionReadCounts:
     left: int = 0            # reads on left side of junction
     left_marginal: int = 0   # reads partially overlapping from left
     spanning: int = 0        # reads spanning the junction (MIDDLE)
+    paired: int = 0          # paired-end reads supporting the left and right sides
     right_marginal: int = 0  # reads partially overlapping from right
     right: int = 0           # reads on right side of junction
 
@@ -166,6 +168,7 @@ class JunctionReadCounts:
         ReadType.LEFT: "left",
         ReadType.LEFT_MARGINAL: "left_marginal",
         ReadType.MIDDLE: "spanning",
+        ReadType.PAIRED: "paired",
         ReadType.RIGHT_MARGINAL: "right_marginal",
         ReadType.RIGHT: "right"
     }
