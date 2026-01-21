@@ -7,6 +7,7 @@ import pysam
 from amplifinder.config import AlignmentFilterParams, AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import ReadType
+from amplifinder.steps.jct_coverage.alignment_data import AlignmentData, SingleAlignment, PairedAlignment
 
 
 def get_jct_read_counts(
@@ -16,9 +17,8 @@ def get_jct_read_counts(
     alignment_filter_params: AlignmentFilterParams,
 ) -> tuple[
     dict[JunctionType, JunctionReadCounts],
-    dict[JunctionType, list[tuple[int, int, str]]],
-    dict[JunctionType, int],
-    dict[JunctionType, dict[ReadType, list[tuple[str, str]]]]
+    dict[JunctionType, list[AlignmentData]],
+    dict[JunctionType, int]
 ]:
     """Parse BAM and get coverage for all 7 junction types.
 
@@ -31,64 +31,90 @@ def get_jct_read_counts(
     Returns:
         tuple of:
             - dict mapping JunctionType -> JunctionReadCounts
-            - dict mapping JunctionType -> list of (start, end, read_type) tuples
+            - dict mapping JunctionType -> list of SingleAlignment or PairedAlignment tuples
             - dict mapping JunctionType -> junction length
-            - dict mapping JunctionType -> dict[ReadType -> list of (read_id, seq, bam_index) tuples]
     """
     if not bam_path.exists():
         raise FileNotFoundError(f"BAM file not found: {bam_path}")
 
+    jctypes_to_readtypes_to_readids_to_hits, jct_types_to_lengths = _classify_bam_hits_by_jc_types_and_read_types(
+        bam_path, avg_read_length, alignment_classify_params, alignment_filter_params
+    )
+    
+    _merge_hits_of_paired_end_reads(jctypes_to_readtypes_to_readids_to_hits)
+    
+    # Count and collect hits by junction type and read type
     counts = {jt: JunctionReadCounts() for jt in JunctionType}
     alignment_data = {jt: [] for jt in JunctionType}
+    
+    for jct_type in JunctionType:
+        readtypes_to_readids_to_hits = jctypes_to_readtypes_to_readids_to_hits[jct_type]
+        for read_type in ReadType:
+            readids_to_hits = readtypes_to_readids_to_hits[read_type]
+            counts[jct_type][read_type] = len(readids_to_hits)
+            alignment_data[jct_type].extend(readids_to_hits.values())
+    
+    return counts, alignment_data, jct_types_to_lengths
 
-    jcs_to_readtypes_to_hits = {
-        jt: {rt: [] for rt in ReadType}
-        for jt in JunctionType
+
+def _classify_bam_hits_by_jc_types_and_read_types(
+    bam_path: Path,
+    avg_read_length: int,
+    alignment_classify_params: AlignmentClassifyParams,
+    alignment_filter_params: AlignmentFilterParams,
+) -> tuple[dict[JunctionType, dict[ReadType, dict[str, AlignmentData]]], dict[JunctionType, int]]:
+    """Parse BAM file and classify hits by junction and read type."""
+    jctypes_to_readtypes_to_readids_to_hits: dict[JunctionType, dict[ReadType, dict[str, AlignmentData]]] = {
+        jt: {rt: {} for rt in ReadType} for jt in JunctionType
     }
-
-    # Track read_ids per read_type per junction for deduplication
-    read_ids_by_type = {
-        jt: {rt: set() for rt in ReadType}
-        for jt in JunctionType
-    }
-
+    
     with pysam.AlignmentFile(str(bam_path), "rb") as bam:
-
-        # Store lengths by JunctionType
         jct_names_to_lengths = dict(zip(bam.references, bam.lengths))
         jct_types_to_lengths = {JunctionType[jct_name]: length for jct_name, length in jct_names_to_lengths.items()}
 
-        # Count read-alignments of each type at each junction
-        # Track 1-based BAM index to match MATLAB format
         for bam_index, hit in enumerate(bam.fetch(), start=1):
-            jct_name = hit.reference_name
-            jct_type = JunctionType[jct_name]
+            jct_type = JunctionType[hit.reference_name]
             arm_len = jct_types_to_lengths[jct_type] // 2
 
-            read_type = analyze_hit(
-                hit, arm_len, avg_read_length,
-                alignment_filter_params, alignment_classify_params
-            )
-
+            read_type = analyze_hit(hit, arm_len, avg_read_length, alignment_filter_params, alignment_classify_params)
             if read_type is None:
                 continue
 
             read_id = hit.query_name
-
-            # Deduplicate: skip if this read_id already seen for this read_type at this junction
-            if read_id in read_ids_by_type[jct_type][read_type]:
+            readids_to_hits = jctypes_to_readtypes_to_readids_to_hits[jct_type][read_type]
+            
+            if read_id in readids_to_hits:  # Deduplicate
                 continue
 
-            # Add this read_id to the set of seen read_ids for this read_type at this junction
-            read_ids_by_type[jct_type][read_type].add(read_id)
+            readids_to_hits[read_id] = SingleAlignment(read_type, hit.reference_start, hit.reference_end, bam_index)
 
-            counts[jct_type].increment(read_type)
-            alignment_data[jct_type].append((hit.reference_start, hit.reference_end, read_type))
+    return jctypes_to_readtypes_to_readids_to_hits, jct_types_to_lengths
 
-            seq = hit.query_sequence or ""
-            jcs_to_readtypes_to_hits[jct_type][read_type].append((read_id, seq, bam_index))
 
-    return counts, alignment_data, jct_types_to_lengths, jcs_to_readtypes_to_hits
+def _merge_hits_of_paired_end_reads(
+    jctypes_to_readtypes_to_readids_to_hits: dict[JunctionType, dict[ReadType, dict[str, AlignmentData]]]
+) -> None:
+    """
+    Detect paired-end reads (ids appearing in both LEFT and RIGHT) 
+    and merge them into PAIRED category.
+    """
+    for jct_type in JunctionType:
+        readtypes_to_readids_to_hits = jctypes_to_readtypes_to_readids_to_hits[jct_type]
+        
+        readids_to_hits_L = readtypes_to_readids_to_hits[ReadType.LEFT]
+        readids_to_hits_R = readtypes_to_readids_to_hits[ReadType.RIGHT]
+        paired_read_ids = set(readids_to_hits_L.keys()) & set(readids_to_hits_R.keys())
+
+        paired_readids_to_hits = readtypes_to_readids_to_hits[ReadType.PAIRED]
+        assert len(paired_readids_to_hits) == 0
+        
+        for read_id in paired_read_ids:
+            hit_L = readids_to_hits_L.pop(read_id)
+            hit_R = readids_to_hits_R.pop(read_id)
+            paired_readids_to_hits[read_id] = PairedAlignment(ReadType.PAIRED,
+                hit_L.start, hit_L.end, hit_L.bam_index,
+                hit_R.start, hit_R.end, hit_R.bam_index,
+            )
 
 
 def analyze_hit(
