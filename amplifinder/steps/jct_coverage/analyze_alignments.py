@@ -8,9 +8,10 @@ from amplifinder.config import AlignmentClassifyParams, JcCallParams, AlignmentF
 from amplifinder.env import DEBUG
 from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
 from amplifinder.steps.base import RecordTypedDfStep
+from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
 from amplifinder.steps.jct_coverage.read_type import get_jct_read_counts
+from amplifinder.steps.jct_coverage.export_bam_indices import write_junction_read_bam_indices
 from amplifinder.data_types.enums import ReadType
-from amplifinder.utils.fasta import write_fasta
 
 
 def get_jct_read_counts_by_tnjc2(
@@ -22,36 +23,12 @@ def get_jct_read_counts_by_tnjc2(
     alignment_filter_params: AlignmentFilterParams,
 ) -> tuple[
     dict[JunctionType, JunctionReadCounts],
-    dict[JunctionType, list[tuple[int, int, str]]],
+    dict[JunctionType, list[AlignmentData]],
     dict[JunctionType, int]
 ]:
     """A wrapper around get_jct_read_counts to get the read counts based on a SynJctsTnJc2."""
     bam_path = synjct_tnjc2.bam_path(base_dir, is_ancestor=is_ancestor)
     return get_jct_read_counts(bam_path, avg_read_length, alignment_classify_params, alignment_filter_params)
-
-
-def _write_fasta_with_index(reads: list[tuple[str, str, int]], output_path: Path) -> None:
-    """Add BAM index suffix to read IDs and write to FASTA (matches MATLAB format)."""
-    indexed = [(f"{rid}/{bam_index}", seq) for rid, seq, bam_index in reads]
-    write_fasta(indexed, output_path)
-
-
-def write_junction_read_fastas(
-        output_dir: Path, 
-        jcs_to_readtypes_to_reads: dict[JunctionType, dict[ReadType, list[tuple[str, str, int]]]]
-        ) -> None:
-    """Write FASTQ files by junction (1-7) and label (left/right/green)."""
-
-    output_dir = Path(output_dir)
-    for jc_type, readtypes_to_reads in jcs_to_readtypes_to_reads.items():
-        jc_num = jc_type.num
-        left_reads = readtypes_to_reads[ReadType.LEFT] + readtypes_to_reads[ReadType.LEFT_MARGINAL]
-        right_reads = readtypes_to_reads[ReadType.RIGHT] + readtypes_to_reads[ReadType.RIGHT_MARGINAL]
-        green_reads = readtypes_to_reads[ReadType.MIDDLE]
-
-        _write_fasta_with_index(left_reads, output_dir / f"reads_jct_{jc_num}_left.fasta")
-        _write_fasta_with_index(right_reads, output_dir / f"reads_jct_{jc_num}_right.fasta")
-        _write_fasta_with_index(green_reads, output_dir / f"reads_jct_{jc_num}_green.fasta")
 
 
 def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
@@ -141,7 +118,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         """Analyze alignments for each candidate."""
         analyzed_records = []
         for tnjc2 in self.tnjc2s:
-            jc_covs, _, jc_lengths, jcs_to_readtypes_to_reads = get_jct_read_counts_by_tnjc2(
+            jc_covs, alignment_data, jc_lengths = get_jct_read_counts_by_tnjc2(
                 synjct_tnjc2=tnjc2,
                 base_dir=self._output_dir,
                 is_ancestor=self.IS_ANCESTOR,
@@ -151,9 +128,9 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             )
             
             if DEBUG:
-                write_junction_read_fastas(
-                    output_dir=tnjc2.bam_path(self._output_dir, is_ancestor=self.IS_ANCESTOR).parent,
-                    jcs_to_readtypes_to_reads=jcs_to_readtypes_to_reads,
+                write_junction_read_bam_indices(
+                    alignment_data=alignment_data,
+                    output_dir=tnjc2.analysis_dir_path(self._output_dir, is_ancestor=self.IS_ANCESTOR),
                 )
 
             jc_calls = {
