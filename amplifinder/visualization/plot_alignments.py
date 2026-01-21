@@ -6,11 +6,12 @@ import matplotlib.gridspec as gridspec
 from matplotlib.lines import Line2D
 
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from amplifinder.config import AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import Element, ReadType, JcCall
+from amplifinder.steps.jct_coverage.alignment_data import AlignmentData, SingleAlignment, PairedAlignment
 from amplifinder.steps.jct_coverage.read_type import get_expected_counts
 from amplifinder.visualization.genetic_elements import draw_genetic_element
 
@@ -19,12 +20,13 @@ READ_TYPES_TO_COLORS = {
     ReadType.LEFT: '#d00000',  # vibrant red
     ReadType.LEFT_MARGINAL: '#b06060',  # soft coral
     ReadType.MIDDLE: '#606060',  # teal green
+    ReadType.PAIRED: '#606060',  # green for paired-end reads
     ReadType.RIGHT_MARGINAL: '#6060b0',  # warm amber
     ReadType.RIGHT: '#0000d0'  # bright orange
 }
 
 
-JC_CALLS_TO_COLORS = {
+JC_CALLS_TO_COLORS: dict[Optional[bool], str] = {
     True: 'green',
     False: 'red',
     None: 'grey'
@@ -52,29 +54,30 @@ def add_pie_chart(ax, jc_cov: JunctionReadCounts, position: str = 'top'):
     if jc_cov.total == 0:
         return
 
-    sizes = list(jc_cov.counts.values())
-    colors = list(READ_TYPES_TO_COLORS.values())
+    sizes_to_colors = {jc_cov.counts[rt]: READ_TYPES_TO_COLORS[rt] for
+                       rt in ReadType}
 
     # Create inset axes for pie chart (bounds in axes coordinates: [left, bottom, width, height])
     y_offset = 0.32 if position == 'top' else 0.5
     inset_ax = ax.inset_axes([0.72, y_offset, 0.28, 0.18])
 
-    inset_ax.pie(sizes, colors=colors, startangle=90, counterclock=False,
+    inset_ax.pie(list(sizes_to_colors), colors=list(sizes_to_colors.values()), startangle=90, counterclock=False,
                  wedgeprops=dict(edgecolor='white', linewidth=0.5))
     inset_ax.set_aspect('equal')
 
 
 def _down_sample_alignments(
-    alignments: List[Tuple[int, int, ReadType]], jc_cov: JunctionReadCounts,
+    alignments: List[AlignmentData], 
+    jc_cov: JunctionReadCounts,
     max_reads_per_plot: int, expected_counts: JunctionReadCounts
-) -> tuple[List[Tuple[int, int, ReadType]], JunctionReadCounts]:
+) -> tuple[List[AlignmentData], JunctionReadCounts]:
     """Downsample alignments to a maximum number of reads per plot.
 
     Left and right alignments are scaled independently to max_reads_per_plot.
     Spanning and marginal alignments are scaled by the minimum of left/right scaling factors.
 
     Args:
-        alignments: List of (start, end, ReadType) tuples
+        alignments: List of SingleAlignment or PairedAlignment tuples
         jc_cov: JunctionReadCounts with actual counts
         max_reads_per_plot: Maximum reads to show per plot
         expected_counts: Expected counts for calculating scaling factors
@@ -83,8 +86,7 @@ def _down_sample_alignments(
         Tuple of (downsampled_alignments, scales)
         where scales is a JunctionReadCounts with scaling factors for each read type
     """
-    # Sort alignments by start position
-    sorted_alignments = sorted(alignments, key=lambda x: x[0])
+    sorted_alignments = sorted(alignments, key=lambda a: a.left)
 
     max_reads = expected_counts * max_reads_per_plot // expected_counts.total
 
@@ -93,18 +95,19 @@ def _down_sample_alignments(
     counters = JunctionReadCounts()
 
     downsampled = []
-    for start, end, read_type in sorted_alignments:
+    for alignment in sorted_alignments:
+        read_type = alignment.read_type
         count = counters[read_type]
         scale = scales[read_type]
         if scale == 0 or count % scale == 0:
-            downsampled.append((start, end, read_type))
+            downsampled.append(alignment)
         counters.increment(read_type)
 
     return downsampled, scales
 
 
-def _plot_alignments(ax, reads: List[Tuple[int, int, ReadType]], arm_len: int,
-                     y_sign: int = 1, alpha: float = 1.0, use_nan: bool = True) -> None:
+def _plot_alignments(ax, reads: List[AlignmentData], 
+                     arm_len: int, y_sign: int = 1, alpha: float = 1.0, use_nan: bool = True) -> None:
     # Plot isolate reads
     # start, end are 0-based end-exclusive coordinates.
     #
@@ -121,11 +124,13 @@ def _plot_alignments(ax, reads: List[Tuple[int, int, ReadType]], arm_len: int,
 
     segments_by_type = {read_type: {'x': [], 'y': []} for read_type in ReadType}
 
-    for y_pos, (start, end, read_type) in enumerate(reads, start=1):
-        x_start = start - arm_len
-        x_end = end - arm_len
-        segments_by_type[read_type]['x'].append([x_start, x_end])
-        segments_by_type[read_type]['y'].append([y_sign * y_pos, y_sign * y_pos])
+    for y_pos, alignment in enumerate(reads, start=1):
+        read_type = alignment.read_type
+        for start, end in alignment.get_plotting_segments():
+            x_start = start - arm_len
+            x_end = end - arm_len
+            segments_by_type[read_type]['x'].append([x_start, x_end])
+            segments_by_type[read_type]['y'].append([y_sign * y_pos, y_sign * y_pos])
 
     for read_type, segments in segments_by_type.items():
         x_arr = np.array(segments['x'])
@@ -181,8 +186,8 @@ def _draw_genetic_element_legend(ax_legend, h_pixels: int = 18) -> None:
 
 def plot_junctions_coverage(
     jc_lengths: Dict[JunctionType, int],
-    alignment_data: Dict[JunctionType, List[Tuple[int, int, ReadType]]],
-    alignment_data_anc: Dict[JunctionType, List[Tuple[int, int, ReadType]]] | None = None,
+    alignment_data: Dict[JunctionType, List[AlignmentData]],
+    alignment_data_anc: Dict[JunctionType, List[AlignmentData]] | None = None,
     jc_covs: Dict[JunctionType, JunctionReadCounts] | None = None,
     jc_covs_anc: Dict[JunctionType, JunctionReadCounts] | None = None,
     jc_calls: Dict[JunctionType, JcCall] | None = None,
@@ -197,7 +202,7 @@ def plot_junctions_coverage(
     """Plot junctions coverage by reads as horizontal lines (coverage plot).
 
     Args:
-        alignment_data: Dict mapping JunctionType to list of (start, end, ReadType) tuples for isolate
+        alignment_data: Dict mapping JunctionType to list of SingleAlignment or PairedAlignment tuples
         jc_lengths: Dict mapping JunctionType to junction length
         title: Plot title
         output_path: Path to save the PNG file
