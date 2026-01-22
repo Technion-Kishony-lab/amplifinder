@@ -9,7 +9,9 @@ from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import ReadType
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData, SingleAlignment, PairedAlignment
 from amplifinder.steps.jct_coverage.hits_container import HitsContainer
-from amplifinder.env import IGNORE_DUPLICATES, LINK_PAIRED_END, ALLOW_INDELS_AT_JUNCTION_DISTANCE
+from amplifinder.steps.jct_coverage.cigar import resolve_cigar_m_operations
+from amplifinder.env import IGNORE_DUPLICATES, LINK_PAIRED_END, \
+    ALLOW_INDELS_AT_JUNCTION_DISTANCE, RESOLVE_CIGAR_MATCHES_VS_MISMATCHES
 
 
 if LINK_PAIRED_END:
@@ -230,18 +232,25 @@ def is_hit_cigar_acceptable(hit: pysam.AlignedSegment, arm_len: int) -> bool:
     # 7= (sequence match)
     # 8=X (sequence mismatch)
 
-    if not hit.cigartuples:
+    cigar = hit.cigartuples
+    if not cigar:
         return False
 
     # Check for operations other than M (0), indels (1, 2), and match/mismatch (7, 8)
-    if any(op not in (0, 1, 2, 7, 8) for op, _ in hit.cigartuples):
+    if any(op not in (0, 1, 2, 7, 8) for op, _ in cigar):
         return False
     
+    # Convert M operations to =/X by comparing to reference
+    if RESOLVE_CIGAR_MATCHES_VS_MISMATCHES:
+        query_seq = hit.query_alignment_sequence
+        ref_seq = hit.get_reference_sequence()
+        cigar = resolve_cigar_m_operations(cigar, query_seq, ref_seq)
+
     # Check for indels (insertions=1 or deletions=2)
-    has_indels = any(op in (1, 2) for op, _ in hit.cigartuples)
+    has_indels = any(op in (1, 2) for op, _ in cigar)
     
     if not has_indels:
-        # Only M operations - acceptable
+        # Only M/=/X operations - acceptable
         return True
     
     # Has indels - check if they're close enough to junction
@@ -257,7 +266,7 @@ def is_hit_cigar_acceptable(hit: pysam.AlignedSegment, arm_len: int) -> bool:
     junction_pos = arm_len  # 0-based junction position
     ref_pos = hit.reference_start  # Current position on reference (0-based)
     
-    for op, length in hit.cigartuples:
+    for op, length in cigar:
         if op == 1:  # Insertion - occurs at a single reference position
             dist_to_junction = abs(ref_pos - junction_pos)  # 0 when precisely at junction
             if dist_to_junction > ALLOW_INDELS_AT_JUNCTION_DISTANCE:

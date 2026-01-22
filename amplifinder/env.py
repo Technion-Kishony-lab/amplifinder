@@ -59,4 +59,8 @@ LINK_PAIRED_END: bool = True  # If False, don't merge LEFT and RIGHT reads into 
 # (None = no limit, -1 = no indels, 0 = only indels precisely at junction, >0 = maximum distance)
 ALLOW_INDELS_AT_JUNCTION_DISTANCE: Optional[int] = 4
 
+
+# Resolve CIGAR 'M' operations to '=' (match) and 'X' (mismatch) by comparing to reference
+RESOLVE_CIGAR_MATCHES_VS_MISMATCHES: bool = True
+
 DEBUG = MutableFlag(False)
