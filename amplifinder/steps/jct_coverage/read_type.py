@@ -1,7 +1,8 @@
+import numpy as np
+
 from pathlib import Path
 from typing import NamedTuple, Optional
 
-from pandas.core.base import np
 import pysam
 
 from amplifinder.config import AlignmentFilterParams, AlignmentClassifyParams
@@ -247,11 +248,11 @@ def resolve_cigar(hit: pysam.AlignedSegment) -> Optional[Cigar]:
     # 7= (sequence match)
     # 8=X (sequence mismatch)
 
-    cigar = list(hit.cigartuples or [])
+    cigar = Cigar(hit.cigartuples or [])
     if not cigar:
         return None
 
-    if any(op not in (0, 1, 2, 7, 8) for op, _ in cigar):
+    if not cigar.has_only_operations({0, 1, 2, 7, 8}):
         return None
 
     if RESOLVE_CIGAR_MATCHES_VS_MISMATCHES and any(op == 0 for op, _ in cigar):
@@ -281,9 +282,8 @@ def _indels_within_limit(cigar: Cigar, reference_start: int, arm_len: int) -> bo
     
     # Check distance of each indel from junction
     junction_pos = arm_len  # 0-based junction position
-    ref_pos = reference_start  # Current position on reference (0-based)
     
-    for op, length in cigar:
+    for op, length, ref_pos in cigar.iter_with_ref_pos(reference_start):
         if op == 1:  # Insertion - occurs at a single reference position
             dist_to_junction = abs(ref_pos - junction_pos)  # 0 when precisely at junction
             if dist_to_junction > ALLOW_INDELS_AT_JUNCTION_DISTANCE:
@@ -293,10 +293,6 @@ def _indels_within_limit(cigar: Cigar, reference_start: int, arm_len: int) -> bo
             dist_end = abs(ref_pos + length - junction_pos)
             if dist_start > ALLOW_INDELS_AT_JUNCTION_DISTANCE or dist_end > ALLOW_INDELS_AT_JUNCTION_DISTANCE:
                 return False
-        
-        # Update reference position (insertions don't consume reference)
-        if op in (0, 2, 7, 8):  # M, D, =, X consume reference
-            ref_pos += length
     
     return True
 

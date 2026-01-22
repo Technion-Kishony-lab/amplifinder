@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from amplifinder.data_types.enums import ReadType
+from amplifinder.steps.jct_coverage.cigar import Cigar
 
 
 @dataclass(frozen=True)
@@ -34,7 +35,7 @@ class SingleAlignment(AlignmentData):
     start: int
     end: int
     bam_index: int
-    cigar: list[tuple[int, int]]
+    cigar: Cigar
     
     def get_bam_indices(self) -> tuple[int]:
         return (self.bam_index,)
@@ -56,11 +57,11 @@ class PairedAlignment(AlignmentData):
     start1: int
     end1: int
     bam_index1: int
-    cigar1: list[tuple[int, int]]
+    cigar1: Cigar
     start2: int
     end2: int
     bam_index2: int
-    cigar2: list[tuple[int, int]]
+    cigar2: Cigar
     
     def get_bam_indices(self) -> tuple[int, int]:
         return (self.bam_index1, self.bam_index2)
