@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 from pandas.core.base import np
 import pysam
@@ -8,6 +8,12 @@ from amplifinder.config import AlignmentFilterParams, AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import ReadType
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData, SingleAlignment, PairedAlignment
+from amplifinder.steps.jct_coverage.hits_container import HitsContainer
+from amplifinder.env import IGNORE_DUPLICATES, LINK_PAIRED_END
+
+
+if LINK_PAIRED_END:
+    assert IGNORE_DUPLICATES, "LINK_PAIRED_END requires IGNORE_DUPLICATES"
 
 
 def get_jct_read_counts(
@@ -41,7 +47,8 @@ def get_jct_read_counts(
         bam_path, avg_read_length, alignment_classify_params, alignment_filter_params
     )
     
-    _merge_hits_of_paired_end_reads(jctypes_to_readtypes_to_readids_to_hits)
+    if LINK_PAIRED_END:
+        _merge_hits_of_paired_end_reads(jctypes_to_readtypes_to_readids_to_hits)
     
     # Count and collect hits by junction type and read type
     counts = {jt: JunctionReadCounts() for jt in JunctionType}
@@ -50,9 +57,9 @@ def get_jct_read_counts(
     for jct_type in JunctionType:
         readtypes_to_readids_to_hits = jctypes_to_readtypes_to_readids_to_hits[jct_type]
         for read_type in ReadType:
-            readids_to_hits = readtypes_to_readids_to_hits[read_type]
-            counts[jct_type][read_type] = len(readids_to_hits)
-            alignment_data[jct_type].extend(readids_to_hits.values())
+            hits_container = readtypes_to_readids_to_hits[read_type]
+            counts[jct_type][read_type] = len(hits_container)
+            alignment_data[jct_type].extend(hits_container)
     
     return counts, alignment_data, jct_types_to_lengths
 
@@ -62,10 +69,10 @@ def _classify_bam_hits_by_jc_types_and_read_types(
     avg_read_length: int,
     alignment_classify_params: AlignmentClassifyParams,
     alignment_filter_params: AlignmentFilterParams,
-) -> tuple[dict[JunctionType, dict[ReadType, dict[str, AlignmentData]]], dict[JunctionType, int]]:
+) -> tuple[dict[JunctionType, dict[ReadType, HitsContainer]], dict[JunctionType, int]]:
     """Parse BAM file and classify hits by junction and read type."""
-    jctypes_to_readtypes_to_readids_to_hits: dict[JunctionType, dict[ReadType, dict[str, AlignmentData]]] = {
-        jt: {rt: {} for rt in ReadType} for jt in JunctionType
+    jctypes_to_readtypes_to_hits_container: dict[JunctionType, dict[ReadType, HitsContainer]] = {
+        jt: {rt: HitsContainer(IGNORE_DUPLICATES) for rt in ReadType} for jt in JunctionType
     }
     
     with pysam.AlignmentFile(str(bam_path), "rb") as bam:
@@ -81,18 +88,15 @@ def _classify_bam_hits_by_jc_types_and_read_types(
                 continue
 
             read_id = hit.query_name
-            readids_to_hits = jctypes_to_readtypes_to_readids_to_hits[jct_type][read_type]
-            
-            if read_id in readids_to_hits:  # Deduplicate
-                continue
+            hits_container = jctypes_to_readtypes_to_hits_container[jct_type][read_type]
+            alignment = SingleAlignment(read_type, hit.reference_start, hit.reference_end, bam_index)
+            hits_container.add_hit(alignment, read_id)
 
-            readids_to_hits[read_id] = SingleAlignment(read_type, hit.reference_start, hit.reference_end, bam_index)
-
-    return jctypes_to_readtypes_to_readids_to_hits, jct_types_to_lengths
+    return jctypes_to_readtypes_to_hits_container, jct_types_to_lengths
 
 
 def _merge_hits_of_paired_end_reads(
-    jctypes_to_readtypes_to_readids_to_hits: dict[JunctionType, dict[ReadType, dict[str, AlignmentData]]]
+    jctypes_to_readtypes_to_readids_to_hits: dict[JunctionType, dict[ReadType, HitsContainer]]
 ) -> None:
     """
     Detect paired-end reads (ids appearing in both LEFT and RIGHT) 
