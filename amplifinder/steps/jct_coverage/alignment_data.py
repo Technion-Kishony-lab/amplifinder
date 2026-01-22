@@ -76,3 +76,9 @@ class PairedAlignment(AlignmentData):
 
     def get_plotting_segments(self) -> list[tuple[int, int]]:
         return [(self.start1, self.end1), (self.start2, self.end2)]
+
+    def to_two_single_alignments(self) -> tuple[SingleAlignment, SingleAlignment]:
+        return (
+            SingleAlignment(self.start1, self.end1, self.bam_index1, self.cigar1),
+            SingleAlignment(self.start2, self.end2, self.bam_index2, self.cigar2),
+        )

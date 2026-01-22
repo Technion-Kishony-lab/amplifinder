@@ -1,18 +1,27 @@
-"""Plotting utilities for read alignment visualization."""
-import numpy as np
+"""Plot junction coverage figures combining genetic elements and alignments."""
 
 from amplifinder.optional_deps import plt
-import matplotlib.gridspec as gridspec
-from matplotlib.lines import Line2D
+if plt is not None:
+    from matplotlib import gridspec
+    from matplotlib.lines import Line2D
+    from matplotlib.axes import Axes
 
+
+from collections import defaultdict
+from typing import Dict, List, Optional
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+
+from amplifinder.env import PLOT_ALIGNMENT_SNP_INDELS
 
 from amplifinder.config import AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import Element, ReadType, JcCall
-from amplifinder.steps.jct_coverage.alignment_data import AlignmentData, SingleAlignment, PairedAlignment
+
+from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
 from amplifinder.steps.jct_coverage.read_type import get_expected_counts
+from amplifinder.steps.jct_coverage.alignment_segments import AlignmentElements, CoordsAlignmentElements, \
+    convert_coords_to_nan_separated_arrays, get_alignment_segments
+
 from amplifinder.visualization.genetic_elements import draw_genetic_element
 
 
@@ -33,13 +42,77 @@ JC_CALLS_TO_COLORS: dict[Optional[bool], str] = {
 }
 
 
-def format_read_info(jc_cov: JunctionReadCounts, scales: JunctionReadCounts) -> list[Line2D]:
-    """Create legend elements with colored markers for read counts."""
-    return [
+ALIGNMENT_ELEMENTS_PLOT_KWARGS = AlignmentElements(
+    match={"color": "#1f77b4", "linewidth": 1},
+    mismatch={"color": "#1f77b4", "linewidth": 1},
+    deletion={"color": "#d62728", "linewidth": 3},
+    insertion={"color": "#2ca02c", "marker": "v", "markersize": 4},
+    snp={"color": "#1f77b4", "linewidth": 0.25},
+)
+
+
+COMMON_PLOT_KWARGS = {
+    "solid_capstyle": "butt",
+    "marker": "None",
+    "color": "#1f77b4",
+    "linewidth": 1,
+}
+
+
+def plot_alignments(ax: Axes, alignments: list[AlignmentData], arm_len: int,
+                    show_events: bool = False,
+                    y_step: float = 1.0,
+                    read_type_to_color: dict = None,
+                    alignment_elements_plot_kwargs: AlignmentElements = None,
+                    common_plot_kwargs: dict = None) -> None:
+    """Plot multiple alignments stacked vertically, colored by read_type."""
+    
+    read_type_to_color = read_type_to_color or {}
+    alignment_elements_plot_kwargs = alignment_elements_plot_kwargs or ALIGNMENT_ELEMENTS_PLOT_KWARGS
+    common_plot_kwargs = common_plot_kwargs or {}
+    
+    # Group alignments by read_type, keeping original index for y-position
+    alignments_by_type = defaultdict(list)
+    for i, alignment in enumerate(alignments):
+        alignments_by_type[alignment.read_type].append((i, alignment))
+    
+    # Plot each read_type group
+    for read_type, indexed_alignments in alignments_by_type.items():
+        all_segments = CoordsAlignmentElements.create()
+        
+        # Collect segments from all alignments of this type
+        for i, alignment in indexed_alignments:
+            y = i * y_step
+            segments = get_alignment_segments(alignment, show_events, -arm_len, y)
+            all_segments.extend(segments)
+        
+        # Determine 'match' color for this read_type
+        match_color = read_type_to_color.get(read_type)
+        
+        # Plot all segments for this read_type
+        for key, segment in all_segments.items():
+            x, y = convert_coords_to_nan_separated_arrays(segment)
+            
+            plot_kwargs_combined = {
+                **COMMON_PLOT_KWARGS,
+                **common_plot_kwargs,
+                **ALIGNMENT_ELEMENTS_PLOT_KWARGS[key],
+                **alignment_elements_plot_kwargs[key],
+            }
+            if match_color and key == 'match':
+                plot_kwargs_combined['color'] = match_color
+            ax.plot(x, y, **plot_kwargs_combined)
+
+
+def add_hit_legend_with_info(ax: Axes, jc_cov: JunctionReadCounts, scales: JunctionReadCounts, 
+                             loc: str = 'upper left', title: str = None, fontsize: int = 7):
+    legend_elements = [
         Line2D([0], [0], marker='o', color='w', markerfacecolor=READ_TYPES_TO_COLORS[rt],
                markersize=6, label=f"{jc_cov[rt]} :{scales[rt]}")
         for rt in ReadType
     ]
+    return ax.legend(handles=legend_elements, loc=loc, fontsize=fontsize,
+                     framealpha=0.8, title=title, title_fontsize=fontsize)
 
 
 def add_pie_chart(ax, jc_cov: JunctionReadCounts, position: str = 'top'):
@@ -106,45 +179,6 @@ def _down_sample_alignments(
     return downsampled, scales
 
 
-def _plot_alignments(ax, reads: List[AlignmentData], 
-                     arm_len: int, y_sign: int = 1, alpha: float = 1.0, use_nan: bool = True) -> None:
-    # Plot isolate reads
-    # start, end are 0-based end-exclusive coordinates.
-    #
-    #  |---|---|---|---|---|---|---|---|
-    # -4  -3  -2  -1   0   1   2   3   4  x-axis
-    #    0   1   2   3   4   5   6   7    seq index
-    #
-    # junction_length = 8, arm_len = 4
-    # read with start=3, end=7 will be plotted as (len = 4)
-    #              |---|---|---|---|
-    #             -1               3      x-axis
-    # x_start = start - arm_len = 3 - 4 = -1
-    # x_end = end - arm_len = 7 - 4 = 3
-
-    segments_by_type = {read_type: {'x': [], 'y': []} for read_type in ReadType}
-
-    for y_pos, alignment in enumerate(reads, start=1):
-        read_type = alignment.read_type
-        for start, end in alignment.get_plotting_segments():
-            x_start = start - arm_len
-            x_end = end - arm_len
-            segments_by_type[read_type]['x'].append([x_start, x_end])
-            segments_by_type[read_type]['y'].append([y_sign * y_pos, y_sign * y_pos])
-
-    for read_type, segments in segments_by_type.items():
-        x_arr = np.array(segments['x'])
-        y_arr = np.array(segments['y'])
-        if use_nan:  # Seems a bit faster to plot with nan separators
-            x_arr = np.column_stack([x_arr, np.full(len(x_arr), np.nan)]).ravel()
-            y_arr = np.column_stack([y_arr, np.full(len(y_arr), np.nan)]).ravel()
-        else:
-            x_arr = x_arr.T
-            y_arr = y_arr.T
-        ax.plot(x_arr, y_arr, color=READ_TYPES_TO_COLORS[read_type],
-                linewidth=1, solid_capstyle='butt', alpha=alpha)
-
-
 def _draw_genetic_element_legend(ax_legend, h_pixels: int = 18) -> None:
     """Draw genetic element legend showing chromosome, amplicon, and IS elements."""
     ax_legend.axis('off')
@@ -199,18 +233,7 @@ def plot_junctions_coverage(
     iso_read_len: int = 150,
     anc_read_len: int = 150,
 ) -> None:
-    """Plot junctions coverage by reads as horizontal lines (coverage plot).
-
-    Args:
-        alignment_data: Dict mapping JunctionType to list of SingleAlignment or PairedAlignment tuples
-        jc_lengths: Dict mapping JunctionType to junction length
-        title: Plot title
-        output_path: Path to save the PNG file
-        max_reads_per_plot: Maximum reads to show per plot (downsampling)
-        alignment_data_anc: Optional dict for ancestor reads (plotted below x-axis with negative y)
-        jc_calls: Optional dict mapping JunctionType to coverage call (True/False/None) for isolate
-        jc_calls_anc: Optional dict mapping JunctionType to coverage call for ancestor
-    """
+    """Plot junctions coverage by reads as horizontal lines (coverage plot)."""
     with_calls = jc_calls is not None
     if with_calls:
         if alignment_data_anc and not jc_calls_anc:
@@ -257,7 +280,12 @@ def plot_junctions_coverage(
         downsampled, scales_iso = _down_sample_alignments(
             alignments, jc_cov, max_reads_per_plot, expected_iso
         )
-        _plot_alignments(ax, downsampled, arm_len, y_sign=1)
+        plot_alignments(
+            ax, downsampled, arm_len,
+            show_events=PLOT_ALIGNMENT_SNP_INDELS,
+            y_step=1.0,
+            read_type_to_color=READ_TYPES_TO_COLORS,
+        )
 
         # Downsample and plot ancestor reads below x-axis (negative y) if available
         if alignment_data_anc:
@@ -267,7 +295,12 @@ def plot_junctions_coverage(
             downsampled_anc, scales_anc = _down_sample_alignments(
                 alignments_anc, jc_cov_anc, max_reads_per_plot, expected_anc
             )
-            _plot_alignments(ax, downsampled_anc, arm_len, y_sign=-1, alpha=0.7)
+            plot_alignments(
+                ax, downsampled_anc, arm_len,
+                show_events=PLOT_ALIGNMENT_SNP_INDELS,
+                y_step=-1.0,
+                read_type_to_color=READ_TYPES_TO_COLORS,
+            )
 
         # Set consistent y-axis (extend to negative if ancestor data exists)
         y_min = -(max_reads_per_plot + 1) if alignment_data_anc else 0
@@ -305,21 +338,16 @@ def plot_junctions_coverage(
 
         fs = 7
         if alignment_data_anc:
-            iso_legend = format_read_info(jc_cov, scales_iso)
-            anc_legend = format_read_info(jc_cov_anc, scales_anc)
-            leg1 = ax.legend(handles=iso_legend, loc='upper left', fontsize=fs,
-                             framealpha=0.8, title='iso', title_fontsize=fs)
+            leg1 = add_hit_legend_with_info(ax, jc_cov, scales_iso, loc='upper left', 
+                                           title='iso', fontsize=fs)
             ax.add_artist(leg1)
-            ax.legend(handles=anc_legend, loc='lower left', fontsize=fs,
-                      framealpha=0.8, title='anc', title_fontsize=fs)
+            add_hit_legend_with_info(ax, jc_cov_anc, scales_anc, loc='lower left',
+                                    title='anc', fontsize=fs)
 
             add_pie_chart(ax, jc_cov, position='top')
             add_pie_chart(ax, jc_cov_anc, position='bottom')
         else:
-            iso_legend = format_read_info(jc_cov, scales_iso)
-            ax.legend(handles=iso_legend, loc='upper left', fontsize=fs,
-                      framealpha=0.8)
-            # Add pie chart for isolate only
+            add_hit_legend_with_info(ax, jc_cov, scales_iso, loc='upper left', fontsize=fs)
             add_pie_chart(ax, jc_cov, position='top')
 
         # Draw left element (ending at x=0)
