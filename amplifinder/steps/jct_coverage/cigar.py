@@ -1,7 +1,11 @@
 """CIGAR string processing utilities."""
 
+from typing import TypeAlias
 
-def merge_consecutive_cigar_ops(cigar: list[tuple[int, int]]) -> list[tuple[int, int]]:
+Cigar: TypeAlias = list[tuple[int, int]]
+
+
+def merge_consecutive_cigar_ops(cigar: Cigar) -> Cigar:
     """Merge consecutive identical CIGAR operations."""
     if not cigar:
         return []
@@ -16,7 +20,7 @@ def merge_consecutive_cigar_ops(cigar: list[tuple[int, int]]) -> list[tuple[int,
     return merged
 
 
-def resolve_cigar_m_operations(cigar: list[tuple[int, int]], query_seq: str, ref_seq: str) -> list[tuple[int, int]]:
+def resolve_cigar_m_operations(cigar: Cigar, query_seq: str, ref_seq: str) -> Cigar:
     """Convert M operations to = (match) and X (mismatch) by comparing sequences."""
     if not any(op == 0 for op, _ in cigar):
         # No M operations, return as is

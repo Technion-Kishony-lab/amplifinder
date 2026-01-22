@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Optional, Union
+from typing import NamedTuple, Optional
 
 from pandas.core.base import np
 import pysam
@@ -9,13 +9,18 @@ from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import ReadType
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData, SingleAlignment, PairedAlignment
 from amplifinder.steps.jct_coverage.hits_container import HitsContainer
-from amplifinder.steps.jct_coverage.cigar import resolve_cigar_m_operations
+from amplifinder.steps.jct_coverage.cigar import Cigar, resolve_cigar_m_operations
 from amplifinder.env import IGNORE_DUPLICATES, LINK_PAIRED_END, \
     ALLOW_INDELS_AT_JUNCTION_DISTANCE, RESOLVE_CIGAR_MATCHES_VS_MISMATCHES
 
 
 if LINK_PAIRED_END:
     assert IGNORE_DUPLICATES, "LINK_PAIRED_END requires IGNORE_DUPLICATES"
+
+
+class ResolvedHit(NamedTuple):
+    read_type: ReadType
+    cigar: Cigar
 
 
 def get_jct_read_counts(
@@ -85,13 +90,19 @@ def _classify_bam_hits_by_jc_types_and_read_types(
             jct_type = JunctionType[hit.reference_name]
             arm_len = jct_types_to_lengths[jct_type] // 2
 
-            read_type = analyze_hit(hit, arm_len, avg_read_length, alignment_filter_params, alignment_classify_params)
-            if read_type is None:
+            resolved_hit = analyze_hit(hit, arm_len, avg_read_length, alignment_filter_params, alignment_classify_params)
+            if resolved_hit is None or resolved_hit.read_type is None:
                 continue
-
+            
             read_id = hit.query_name
-            hits_container = jctypes_to_readtypes_to_hits_container[jct_type][read_type]
-            alignment = SingleAlignment(read_type, hit.reference_start, hit.reference_end, bam_index)
+            alignment = SingleAlignment(
+                read_type=resolved_hit.read_type,
+                start=hit.reference_start,
+                end=hit.reference_end,
+                bam_index=bam_index,
+                cigar=resolved_hit.cigar,
+            )
+            hits_container = jctypes_to_readtypes_to_hits_container[jct_type][resolved_hit.read_type]
             hits_container.add_hit(alignment, read_id)
 
     return jctypes_to_readtypes_to_hits_container, jct_types_to_lengths
@@ -118,8 +129,8 @@ def _merge_hits_of_paired_end_reads(
             hit_L = readids_to_hits_L.pop(read_id)
             hit_R = readids_to_hits_R.pop(read_id)
             paired_readids_to_hits[read_id] = PairedAlignment(ReadType.PAIRED,
-                hit_L.start, hit_L.end, hit_L.bam_index,
-                hit_R.start, hit_R.end, hit_R.bam_index,
+                hit_L.start, hit_L.end, hit_L.bam_index, hit_L.cigar,
+                hit_R.start, hit_R.end, hit_R.bam_index, hit_R.cigar,
             )
 
 
@@ -129,14 +140,17 @@ def analyze_hit(
     avg_read_length: int,
     alignment_filter_params: AlignmentFilterParams,
     alignment_classify_params: AlignmentClassifyParams,
-) -> Optional[ReadType]:
+) -> Optional[ResolvedHit]:
 
     # Filter by quality
     if not passes_alignment_filters(hit, alignment_filter_params, avg_read_length):
         return None
 
-    # Filter by CIGAR string
-    if not is_hit_cigar_acceptable(hit, arm_len):
+    cigar = resolve_cigar(hit)
+    if cigar is None:
+        return None
+
+    if not _indels_within_limit(cigar, hit.reference_start, arm_len):
         return None
 
     # Get read type
@@ -144,7 +158,8 @@ def analyze_hit(
     end = hit.reference_end
     start, end = start + 1, end  # convert to 1-based coordinates, end-inclusive
 
-    return get_hit_type(start, end, arm_len, alignment_classify_params)
+    read_type = get_hit_type(start, end, arm_len, alignment_classify_params)
+    return ResolvedHit(read_type, cigar)
 
 
 def passes_alignment_filters(hit: pysam.AlignedSegment, alignment_filter_params: AlignmentFilterParams, avg_read_length: int) -> bool:
@@ -220,7 +235,7 @@ def get_hit_type(start: int, end: int, arm_len: int, alignment_classify_params: 
     assert False
 
 
-def is_hit_cigar_acceptable(hit: pysam.AlignedSegment, arm_len: int) -> bool:
+def resolve_cigar(hit: pysam.AlignedSegment) -> Optional[Cigar]:
     # CIGAR operation codes:
     # 0=M (match/mismatch)
     # 1=I (insertion)
@@ -232,20 +247,22 @@ def is_hit_cigar_acceptable(hit: pysam.AlignedSegment, arm_len: int) -> bool:
     # 7= (sequence match)
     # 8=X (sequence mismatch)
 
-    cigar = hit.cigartuples
+    cigar = list(hit.cigartuples or [])
     if not cigar:
-        return False
+        return None
 
-    # Check for operations other than M (0), indels (1, 2), and match/mismatch (7, 8)
     if any(op not in (0, 1, 2, 7, 8) for op, _ in cigar):
-        return False
-    
-    # Convert M operations to =/X by comparing to reference
-    if RESOLVE_CIGAR_MATCHES_VS_MISMATCHES:
+        return None
+
+    if RESOLVE_CIGAR_MATCHES_VS_MISMATCHES and any(op == 0 for op, _ in cigar):
         query_seq = hit.query_alignment_sequence
         ref_seq = hit.get_reference_sequence()
         cigar = resolve_cigar_m_operations(cigar, query_seq, ref_seq)
 
+    return cigar
+
+
+def _indels_within_limit(cigar: Cigar, reference_start: int, arm_len: int) -> bool:
     # Check for indels (insertions=1 or deletions=2)
     has_indels = any(op in (1, 2) for op, _ in cigar)
     
@@ -264,7 +281,7 @@ def is_hit_cigar_acceptable(hit: pysam.AlignedSegment, arm_len: int) -> bool:
     
     # Check distance of each indel from junction
     junction_pos = arm_len  # 0-based junction position
-    ref_pos = hit.reference_start  # Current position on reference (0-based)
+    ref_pos = reference_start  # Current position on reference (0-based)
     
     for op, length in cigar:
         if op == 1:  # Insertion - occurs at a single reference position
