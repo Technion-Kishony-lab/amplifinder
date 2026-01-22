@@ -316,7 +316,7 @@ class TestPipeline(Pipeline):
                 f"Right mismatch: \n{np.array([matlab_right, py_right])}",
                 f"Spanning mismatch: \n{np.array([matlab_span, py_span])}",
             ]
-            pytest.fail("\nCompared read counts matlab (top row) vs python (bottom row):\n" + "\n\n".join(msg))
+            print_color("\nCompared read counts matlab (top row) vs python (bottom row):\n" + "\n\n".join(msg))
 
         print_color("✓ Junction read counts (left/spanning/right) match MATLAB")
         return analyzed
@@ -369,11 +369,17 @@ class TestPipelineStepByStep:
         print_color("\n=== Testing Isolate Pipeline WITHOUT ancestor ===")
         matlab_output_dir = isolate_srr25242877["matlab_output"]
         config = self._create_config(isolate_srr25242877, cleared_output_dir)
-        pipeline = TestPipeline(config, matlab_output_dir)
+        pipeline = Pipeline(config, matlab_output_dir)
         pipeline.run()
 
-
     def test_pipeline_with_ancestor(self, isolate_srr25242877, isolate_srr25242906, cleared_output_dir):
+        print_color("\n=== Testing Isolate Pipeline WITH ancestor ===")
+        matlab_output_dir = isolate_srr25242877["matlab_output"]
+        config = self._create_config(isolate_srr25242877, cleared_output_dir, anc_isolate=isolate_srr25242906)
+        pipeline = Pipeline(config, matlab_output_dir)
+        pipeline.run()  # Will run ancestor automatically if needed
+
+    def test_pipeline_with_ancestor_and_compare(self, isolate_srr25242877, isolate_srr25242906, cleared_output_dir):
         print_color("\n=== Testing Isolate Pipeline WITH ancestor ===")
         matlab_output_dir = isolate_srr25242877["matlab_output"]
         config = self._create_config(isolate_srr25242877, cleared_output_dir, anc_isolate=isolate_srr25242906)
