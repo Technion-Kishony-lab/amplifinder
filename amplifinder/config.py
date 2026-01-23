@@ -17,15 +17,32 @@ class FrozenParams(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class AlignmentAnalysisParams(FrozenParams):
+class AlignmentFilterParams(FrozenParams):
+    """Parameters for read filtering."""
+
+    max_nm_score: Optional[int] = None  # 3,
+    min_as_score: Optional[int] = None  # -25
+    length_tolerance: float = 0.1
+
+
+class AlignmentClassifyParams(FrozenParams):
     """Parameters for junction alignment analysis."""
 
     min_overlap_len: int = 13
-    read_length_tolerance: float = 0.1
-    max_dist_from_junction: int = 341
-    max_nm_score: Optional[int] = None  # 3,
-    min_as_score: Optional[int] = None  # -25
 
+    # Max distance of the far end of the hit from the junction
+    # None to allow any distance
+    # Positive value to allow reads within the specified distance from the junction
+    # Negative value to specify as distance from the jc arm end
+    max_dist_from_junction: Optional[int] = -100
+
+    def get_max_dist_from_junction(self, arm_len: int) -> int:
+        max_dist = self.max_dist_from_junction
+        if max_dist is None or max_dist > arm_len:
+            return arm_len
+        if max_dist < 0:
+            return arm_len + max_dist
+        return max_dist
 
 class BowtieParams(FrozenParams):
     """Parameters for bowtie2 alignment."""
@@ -44,7 +61,8 @@ class JcCallParams(FrozenParams):
     neg_threshold_abs: int = 5  # absolute number of spanning reads, or
     neg_threshold_rel: float = 0.01  # fraction of the expected number of spanning reads
 
-    # for a jct to be positive, the number of spanning reads should be greater than the expected number minus x standard deviations
+    # for a jct to be positive, the number of spanning reads should be
+    # greater than the expected number minus x standard deviations
     pos_threshold_in_num_std_below_expected: int = 3
 
 
@@ -109,7 +127,8 @@ def _normalize_alignment_params(cfg: dict[str, Any]) -> None:
         return {k: cfg.pop(k) for k in keys if k in cfg}
 
     param_specs = [
-        (AlignmentAnalysisParams, "alignment_analysis_params"),
+        (AlignmentFilterParams, "alignment_filter_params"),
+        (AlignmentClassifyParams, "alignment_analysis_params"),
         (BowtieParams, "bowtie_params"),
         (JcCallParams, "jc_call_params"),
     ]
@@ -181,7 +200,8 @@ class Config:
     del_copy_number_threshold: float = 0.3
 
     # Alignment parameters
-    alignment_analysis_params: Optional[AlignmentAnalysisParams] = None
+    alignment_filter_params: Optional[AlignmentFilterParams] = None
+    alignment_analysis_params: Optional[AlignmentClassifyParams] = None
     bowtie_params: Optional[BowtieParams] = None
     jc_call_params: Optional[JcCallParams] = None
 
@@ -360,8 +380,8 @@ class Config:
         def validate(cls, obj):
             return (cls.model_validate(obj or {}) if hasattr(cls, "model_validate")
                     else cls.parse_obj(obj or {}))
-        self.alignment_analysis_params = validate(
-            AlignmentAnalysisParams, self.alignment_analysis_params)
+        self.alignment_filter_params = validate(AlignmentFilterParams, self.alignment_filter_params)
+        self.alignment_analysis_params = validate(AlignmentClassifyParams, self.alignment_analysis_params)
         self.bowtie_params = validate(BowtieParams, self.bowtie_params)
         self.jc_call_params = validate(JcCallParams, self.jc_call_params)
 

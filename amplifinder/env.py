@@ -51,4 +51,19 @@ SAMTOOLS_PATH: Optional[Path] = _get_path("samtools_path")
 BOWTIE2_PATH: Optional[Path] = _get_path("bowtie2_path")
 BRESEQ_DOCKER: bool = _CONFIG.get("breseq_docker", False)  # TODO: This is not used yet
 
+# Global parameters for read type classification
+IGNORE_DUPLICATES: bool = True  # If False, keep all duplicate read_ids as a list
+LINK_PAIRED_END: bool = True  # If False, don't merge LEFT and RIGHT reads into PAIRED
+
+# Maximum distance from junction to allow indels
+# (None = no limit, -1 = no indels, 0 = only indels precisely at junction, >0 = maximum distance)
+ALLOW_INDELS_AT_JUNCTION_DISTANCE: Optional[int] = 4
+
+
+# Resolve CIGAR 'M' operations to '=' (match) and 'X' (mismatch) by comparing to reference
+RESOLVE_CIGAR_MATCHES_VS_MISMATCHES: bool = True
+
+# Show SNP/indel markers on alignment plots
+PLOT_ALIGNMENT_SNP_INDELS: bool = bool(_CONFIG.get("plot_alignment_snp_indels", True))
+
 DEBUG = MutableFlag(False)

@@ -1,16 +1,27 @@
-"""Plotting utilities for read alignment visualization."""
-import numpy as np
+"""Plot junction coverage figures combining genetic elements and alignments."""
 
 from amplifinder.optional_deps import plt
-import matplotlib.gridspec as gridspec
-from matplotlib.lines import Line2D
+if plt is not None:
+    from matplotlib import gridspec
+    from matplotlib.lines import Line2D
+    from matplotlib.axes import Axes
 
+
+from collections import defaultdict
+from typing import Dict, List, Optional
 from pathlib import Path
-from typing import Dict, List, Tuple
 
+from amplifinder.env import PLOT_ALIGNMENT_SNP_INDELS
+
+from amplifinder.config import AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import Element, ReadType, JcCall
+
+from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
 from amplifinder.steps.jct_coverage.read_type import get_expected_counts
+from amplifinder.steps.jct_coverage.alignment_segments import AlignmentElements, CoordsAlignmentElements, \
+    convert_coords_to_nan_separated_arrays, get_alignment_segments
+
 from amplifinder.visualization.genetic_elements import draw_genetic_element
 
 
@@ -18,25 +29,90 @@ READ_TYPES_TO_COLORS = {
     ReadType.LEFT: '#d00000',  # vibrant red
     ReadType.LEFT_MARGINAL: '#b06060',  # soft coral
     ReadType.MIDDLE: '#606060',  # teal green
+    ReadType.PAIRED: '#606060',  # green for paired-end reads
     ReadType.RIGHT_MARGINAL: '#6060b0',  # warm amber
     ReadType.RIGHT: '#0000d0'  # bright orange
 }
 
 
-JC_CALLS_TO_COLORS = {
-    True: 'green',
-    False: 'red',
-    None: 'grey'
+JC_CALLS_TO_COLORS_AND_LABELS: dict[Optional[bool], tuple[str, str]] = {
+    True: ('green', 'Positive'),
+    False: ('red', 'Negative'),
+    None: ('grey', 'Undetermined')
 }
 
 
-def format_read_info(jc_cov: JunctionReadCounts, scales: JunctionReadCounts) -> list[Line2D]:
-    """Create legend elements with colored markers for read counts."""
-    return [
+ALIGNMENT_ELEMENTS_PLOT_KWARGS = AlignmentElements(
+    match={"color": "#000000", "linewidth": 1},
+    mismatch={"color": "#000000", "linewidth": 1},
+    deletion={"color": "#ffffff", "linewidth": 3},
+    insertion={"color": "#404040", "marker": "v", "markersize": 4},
+    snp={"color": "#000000", "linewidth": 0.25},
+)
+
+
+COMMON_PLOT_KWARGS = {
+    "solid_capstyle": "butt",
+    "marker": "None",
+    "color": "#1f77b4",
+    "linewidth": 1,
+}
+
+
+def plot_alignments(ax: Axes, alignments: list[AlignmentData], arm_len: int,
+                    show_events: bool = False,
+                    y_step: float = 1.0,
+                    read_type_to_color: dict = None,
+                    alignment_elements_plot_kwargs: AlignmentElements = None,
+                    common_plot_kwargs: dict = None) -> None:
+    """Plot multiple alignments stacked vertically, colored by read_type."""
+
+    read_type_to_color = read_type_to_color or {}
+    alignment_elements_plot_kwargs = alignment_elements_plot_kwargs or ALIGNMENT_ELEMENTS_PLOT_KWARGS
+    common_plot_kwargs = common_plot_kwargs or {}
+
+    # Group alignments by read_type, keeping original index for y-position
+    alignments_by_type = defaultdict(list)
+    for i, alignment in enumerate(alignments):
+        alignments_by_type[alignment.read_type].append((i, alignment))
+
+    # Plot each read_type group
+    for read_type, indexed_alignments in alignments_by_type.items():
+        all_segments = CoordsAlignmentElements.create()
+
+        # Collect segments from all alignments of this type
+        for i, alignment in indexed_alignments:
+            y = i * y_step
+            segments = get_alignment_segments(alignment, show_events, -arm_len, y)
+            all_segments.extend(segments)
+
+        # Determine 'match' color for this read_type
+        match_color = read_type_to_color.get(read_type)
+
+        # Plot all segments for this read_type
+        for key, segment in all_segments.items():
+            x, y = convert_coords_to_nan_separated_arrays(segment)
+
+            plot_kwargs_combined = {
+                **COMMON_PLOT_KWARGS,
+                **common_plot_kwargs,
+                **ALIGNMENT_ELEMENTS_PLOT_KWARGS[key],
+                **alignment_elements_plot_kwargs[key],
+            }
+            if match_color and key == 'match':
+                plot_kwargs_combined['color'] = match_color
+            ax.plot(x, y, **plot_kwargs_combined)
+
+
+def add_hit_legend_with_info(ax: Axes, jc_cov: JunctionReadCounts, scales: JunctionReadCounts,
+                             loc: str = 'upper left', title: str = None, fontsize: int = 7):
+    legend_elements = [
         Line2D([0], [0], marker='o', color='w', markerfacecolor=READ_TYPES_TO_COLORS[rt],
                markersize=6, label=f"{jc_cov[rt]} :{scales[rt]}")
         for rt in ReadType
     ]
+    return ax.legend(handles=legend_elements, loc=loc, fontsize=fontsize,
+                     framealpha=0.8, title=title, title_fontsize=fontsize)
 
 
 def add_pie_chart(ax, jc_cov: JunctionReadCounts, position: str = 'top'):
@@ -51,89 +127,63 @@ def add_pie_chart(ax, jc_cov: JunctionReadCounts, position: str = 'top'):
     if jc_cov.total == 0:
         return
 
-    sizes = list(jc_cov.counts.values())
-    colors = list(READ_TYPES_TO_COLORS.values())
+    sizes_to_colors = {jc_cov.counts[rt]: READ_TYPES_TO_COLORS[rt] for
+                       rt in ReadType}
 
     # Create inset axes for pie chart (bounds in axes coordinates: [left, bottom, width, height])
     y_offset = 0.32 if position == 'top' else 0.5
     inset_ax = ax.inset_axes([0.72, y_offset, 0.28, 0.18])
 
-    inset_ax.pie(sizes, colors=colors, startangle=90, counterclock=False,
+    inset_ax.pie(list(sizes_to_colors), colors=list(sizes_to_colors.values()),
+                 startangle=-90, counterclock=False,
                  wedgeprops=dict(edgecolor='white', linewidth=0.5))
     inset_ax.set_aspect('equal')
 
 
 def _down_sample_alignments(
-    alignments: List[Tuple[int, int, ReadType]], jc_cov: JunctionReadCounts,
-    max_reads_per_plot: int, arm_len: int, min_overlap_len: int, 
-    max_dist_from_junction: int,
-    read_len: int
-) -> tuple[List[Tuple[int, int, ReadType]], JunctionReadCounts]:
+    alignments: List[AlignmentData],
+    jc_cov: JunctionReadCounts,
+    max_reads_per_plot: int, expected_counts: JunctionReadCounts
+) -> tuple[List[AlignmentData], JunctionReadCounts]:
     """Downsample alignments to a maximum number of reads per plot.
 
     Left and right alignments are scaled independently to max_reads_per_plot.
     Spanning and marginal alignments are scaled by the minimum of left/right scaling factors.
 
+    Args:
+        alignments: List of SingleAlignment or PairedAlignment tuples
+        jc_cov: JunctionReadCounts with actual counts
+        max_reads_per_plot: Maximum reads to show per plot
+        expected_counts: Expected counts for calculating scaling factors
+
     Returns:
         Tuple of (downsampled_alignments, scales)
         where scales is a JunctionReadCounts with scaling factors for each read type
     """
-    # Sort alignments by start position
-    sorted_alignments = sorted(alignments, key=lambda x: x[0])
+    sorted_alignments = sorted(alignments, key=lambda a: a.middle)
 
-    expected = get_expected_counts(arm_len, min_overlap_len, max_dist_from_junction, read_len)
-    max_reads = expected * max_reads_per_plot // expected.total
+    max_reads = expected_counts * max_reads_per_plot // expected_counts.total
 
     scales = jc_cov // max_reads
+    scales = scales.max(1)
 
     counters = JunctionReadCounts()
 
     downsampled = []
-    for start, end, read_type in sorted_alignments:
+    for alignment in sorted_alignments:
+        read_type = alignment.read_type
         count = counters[read_type]
         scale = scales[read_type]
-        if scale == 0 or count % scale == 0:
-            downsampled.append((start, end, read_type))
+        if count % scale == 0:
+            downsampled.append(alignment)
         counters.increment(read_type)
 
     return downsampled, scales
 
 
-def _plot_alignments(ax, reads: List[Tuple[int, int, ReadType]], arm_len: int,
-                     y_sign: int = 1, alpha: float = 1.0, use_nan: bool = True) -> None:
-    # Plot isolate reads
-    # start, end are 0-based end-exclusive coordinates.
-    #
-    #  |---|---|---|---|---|---|---|---|
-    # -4  -3  -2  -1   0   1   2   3   4  x-axis
-    #    0   1   2   3   4   5   6   7    seq index
-    #
-    # junction_length = 8, arm_len = 4
-    # read with start=3, end=7 will be plotted as (len = 4)
-    #              |---|---|---|---|
-    #             -1               3      x-axis
-    # x_start = start - arm_len = 3 - 4 = -1
-    # x_end = end - arm_len = 7 - 4 = 3
-
-    segments_by_type = {read_type: {'x': [], 'y': []} for read_type in ReadType}
-
-    for y_pos, (start, end, read_type) in enumerate(reads, start=1):
-        x_start = start - arm_len
-        x_end = end - arm_len
-        segments_by_type[read_type]['x'].append([x_start, x_end])
-        segments_by_type[read_type]['y'].append([y_sign * y_pos, y_sign * y_pos])
-
-    for read_type, segments in segments_by_type.items():
-        x_arr = np.array(segments['x'])
-        y_arr = np.array(segments['y'])
-        if use_nan:  # Seems a bit faster to plot with nan separators
-            x_arr = np.column_stack([x_arr, np.full(len(x_arr), np.nan)]).ravel()
-            y_arr = np.column_stack([y_arr, np.full(len(y_arr), np.nan)]).ravel()
-        else:
-            x_arr = x_arr.T
-            y_arr = y_arr.T
-        ax.plot(x_arr, y_arr, color=READ_TYPES_TO_COLORS[read_type],
-                linewidth=1, solid_capstyle='butt', alpha=alpha)
+def _draw_jc_call(ax: Axes, y: float, jc_call: Optional[JcCall] = None) -> None:
+    jc_call_color, _ = JC_CALLS_TO_COLORS_AND_LABELS[jc_call]
+    ax.plot(0, y, color=jc_call_color, marker='d', markersize=30)
 
 
 def _draw_genetic_element_legend(ax_legend, h_pixels: int = 18) -> None:
@@ -175,40 +225,31 @@ def _draw_genetic_element_legend(ax_legend, h_pixels: int = 18) -> None:
     ax_legend.text(label_x, y_is, 'IS', fontsize=10, va='bottom')
 
 
-def plot_junctions_coverage(
-    jc_lengths: Dict[JunctionType, int],
-    alignment_data: Dict[JunctionType, List[Tuple[int, int, ReadType]]],
-    alignment_data_anc: Dict[JunctionType, List[Tuple[int, int, ReadType]]] | None = None,
+def plot_jc_alignments(
+    alignment_data: Dict[JunctionType, List[AlignmentData]],
+    alignment_data_anc: Dict[JunctionType, List[AlignmentData]] | None = None,
     jc_covs: Dict[JunctionType, JunctionReadCounts] | None = None,
     jc_covs_anc: Dict[JunctionType, JunctionReadCounts] | None = None,
     jc_calls: Dict[JunctionType, JcCall] | None = None,
     jc_calls_anc: Dict[JunctionType, JcCall] | None = None,
+    jc_arm_len_iso: int = 150,
+    jc_arm_len_anc: int | None = None,
+    read_len_iso: int = 150,
+    read_len_anc: int = 150,
     title: str | None = None,
     output_path: Path | str = 'junctions_coverage.png',
     max_reads_per_plot: int = 200,
-    min_overlap_len: int = 10,
-    max_dist_from_junction: int = 10,
-    iso_read_len: int = 150,
-    anc_read_len: int = 150,
+    alignment_classify_params: AlignmentClassifyParams | None = None,
 ) -> None:
-    """Plot junctions coverage by reads as horizontal lines (coverage plot).
-
-    Args:
-        alignment_data: Dict mapping JunctionType to list of (start, end, ReadType) tuples for isolate
-        jc_lengths: Dict mapping JunctionType to junction length
-        title: Plot title
-        output_path: Path to save the PNG file
-        max_reads_per_plot: Maximum reads to show per plot (downsampling)
-        alignment_data_anc: Optional dict for ancestor reads (plotted below x-axis with negative y)
-        jc_calls: Optional dict mapping JunctionType to coverage call (True/False/None) for isolate
-        jc_calls_anc: Optional dict mapping JunctionType to coverage call for ancestor
-    """
+    """Plot junctions coverage by reads as horizontal lines (coverage plot)."""
     with_calls = jc_calls is not None
     if with_calls:
         if alignment_data_anc and not jc_calls_anc:
             raise ValueError("Cannot plot with junction calls for isolate and no ancestor calls")
 
     h_pixels = 18
+
+    alignment_classify_params = alignment_classify_params or AlignmentClassifyParams()
 
     # Create figure with 7 subplots (each with genetic element axes above)
     fig = plt.figure(figsize=(15, 11))
@@ -237,44 +278,54 @@ def plot_junctions_coverage(
         # Main alignment axes
         ax = fig.add_subplot(inner_gs[1])
 
-        jc_length = jc_lengths[jt]  # TODO: what happen when anc/iso have different lengths?
-        arm_len = jc_length // 2
-
         # Downsample and plot isolate
         alignments = alignment_data[jt]
         jc_cov = jc_covs[jt]
+        expected_iso = get_expected_counts(read_len_iso, jc_arm_len_iso, alignment_classify_params)
         downsampled, scales_iso = _down_sample_alignments(
-            alignments, jc_cov, max_reads_per_plot, arm_len, min_overlap_len, max_dist_from_junction, iso_read_len
+            alignments, jc_cov, max_reads_per_plot, expected_iso
         )
-        _plot_alignments(ax, downsampled, arm_len, y_sign=1)
+        plot_alignments(
+            ax, downsampled, jc_arm_len_iso,
+            show_events=PLOT_ALIGNMENT_SNP_INDELS,
+            y_step=1.0,
+            read_type_to_color=READ_TYPES_TO_COLORS,
+        )
 
         # Downsample and plot ancestor reads below x-axis (negative y) if available
         if alignment_data_anc:
             alignments_anc = alignment_data_anc[jt]
             jc_cov_anc = jc_covs_anc[jt]
+            expected_anc = get_expected_counts(read_len_anc, jc_arm_len_anc, alignment_classify_params)
             downsampled_anc, scales_anc = _down_sample_alignments(
-                alignments_anc, jc_cov_anc, max_reads_per_plot, arm_len, min_overlap_len, max_dist_from_junction, anc_read_len
+                alignments_anc, jc_cov_anc, max_reads_per_plot, expected_anc
             )
-            _plot_alignments(ax, downsampled_anc, arm_len, y_sign=-1, alpha=0.7)
+            plot_alignments(
+                ax, downsampled_anc, jc_arm_len_anc,
+                show_events=PLOT_ALIGNMENT_SNP_INDELS,
+                y_step=-1.0,
+                read_type_to_color=READ_TYPES_TO_COLORS,
+            )
 
         # Set consistent y-axis (extend to negative if ancestor data exists)
         y_min = -(max_reads_per_plot + 1) if alignment_data_anc else 0
         y_max = max_reads_per_plot + 1
         ax.set_ylim(y_min, y_max)
-        ax.set_xlim(-arm_len, arm_len)
+        # Use max arm length for x-axis to accommodate both iso and anc
+        arm_len_max = jc_arm_len_iso if jc_arm_len_anc is None \
+            else max(jc_arm_len_iso, jc_arm_len_anc)
+        ax.set_xlim(-arm_len_max, arm_len_max)
 
-        # Add vertical line at junction point with color based on jc_calls (isolate) - from y=0 to y_max
-        jc_call_color = JC_CALLS_TO_COLORS[jc_calls[jt]] if with_calls else 'black'
-        ax.plot([0, 0], [0, y_max], color=jc_call_color, linestyle='--', linewidth=2.5)
-
-        # Add vertical line for jc_calls_anc (ancestor) if available - from y=0 to y_min
-        if alignment_data_anc:
-            jc_call_anc_color = JC_CALLS_TO_COLORS[jc_calls_anc[jt]] if with_calls else 'black'
-            ax.plot([0, 0], [y_min, 0], color=jc_call_anc_color, linestyle='--', linewidth=2.5)
+        # Add a junction call marker at the junction point
+        if with_calls:
+            _draw_jc_call(ax, y_max, jc_calls[jt])
+            if alignment_data_anc:
+                _draw_jc_call(ax, y_min, jc_calls_anc[jt])
 
         # Add horizontal line at y=0 if ancestor data exists
         if alignment_data_anc:
             ax.axhline(0, color='black', linestyle='-', linewidth=0.5)
+        ax.axvline(0, color='black', linestyle='--', linewidth=0.5, zorder=-10)
 
         # Set x-axis limits centered at junction
         ax.set_xlabel('Position relative to junction (bp)')
@@ -285,36 +336,35 @@ def plot_junctions_coverage(
         left_elem_type, right_elem_type = jt.elements
 
         # Set up genetic element axes
-        max_read_len = max(iso_read_len, anc_read_len)
-        x_lim = max_read_len + max_dist_from_junction
-        ax_gene.set_xlim(-x_lim, x_lim)
+        max_dist_iso = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_iso)
+        if jc_arm_len_anc is None:
+            max_dist = max_dist_iso
+        else:
+            max_dist_anc = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_anc)
+            max_dist = max(max_dist_iso, max_dist_anc)
+        ax_gene.set_xlim(-max_dist, max_dist)
         ax_gene.set_ylim(0, 1)
         ax_gene.set_aspect('auto')
 
         fs = 7
         if alignment_data_anc:
-            iso_legend = format_read_info(jc_cov, scales_iso)
-            anc_legend = format_read_info(jc_cov_anc, scales_anc)
-            leg1 = ax.legend(handles=iso_legend, loc='upper left', fontsize=fs,
-                             framealpha=0.8, title='iso', title_fontsize=fs)
+            leg1 = add_hit_legend_with_info(ax, jc_cov, scales_iso, loc='upper left',
+                                            title='iso', fontsize=fs)
             ax.add_artist(leg1)
-            ax.legend(handles=anc_legend, loc='lower left', fontsize=fs,
-                      framealpha=0.8, title='anc', title_fontsize=fs)
+            add_hit_legend_with_info(ax, jc_cov_anc, scales_anc, loc='lower left',
+                                     title='anc', fontsize=fs)
 
             add_pie_chart(ax, jc_cov, position='top')
             add_pie_chart(ax, jc_cov_anc, position='bottom')
         else:
-            iso_legend = format_read_info(jc_cov, scales_iso)
-            ax.legend(handles=iso_legend, loc='upper left', fontsize=fs,
-                      framealpha=0.8)
-            # Add pie chart for isolate only
+            add_hit_legend_with_info(ax, jc_cov, scales_iso, loc='upper left', fontsize=fs)
             add_pie_chart(ax, jc_cov, position='top')
 
         # Draw left element (ending at x=0)
-        draw_genetic_element(ax_gene, 0.1, -arm_len, 0, left_elem_type, h_pixels=h_pixels, wave_tail=True)
+        draw_genetic_element(ax_gene, 0.1, -max_dist, 0, left_elem_type, h_pixels=h_pixels, wave_tail=True)
 
         # Draw right element (starting at x=0)
-        draw_genetic_element(ax_gene, 0.1, 0, arm_len, right_elem_type, h_pixels=h_pixels, wave_head=True)
+        draw_genetic_element(ax_gene, 0.1, 0, max_dist, right_elem_type, h_pixels=h_pixels, wave_head=True)
 
     # Add legend in empty subplot position (2, 4)
     ax_legend = fig.add_subplot(gs[1, 3])
@@ -332,9 +382,9 @@ def plot_junctions_coverage(
     # Junction call legend (bottom)
     if with_calls:
         jc_legend_elements = [
-            Line2D([0], [0], color='green', linestyle='--', linewidth=2.5, label='Positive'),
-            Line2D([0], [0], color='red', linestyle='--', linewidth=2.5, label='Negative'),
-            Line2D([0], [0], color='grey', linestyle='--', linewidth=2.5, label='Undetermined'),
+            Line2D([0], [0], marker='v', linestyle='None', markerfacecolor=color, 
+                   markersize=10, markeredgecolor='None', label=label)
+                   for color, label in JC_CALLS_TO_COLORS_AND_LABELS.values()
         ]
         ax_legend.legend(handles=jc_legend_elements, bbox_to_anchor=(0.5, 0.05),
                          loc='center', fontsize=11, frameon=True, title='Junction call')
