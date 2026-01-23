@@ -277,7 +277,7 @@ class Pipeline:
             genome=genome,
             ref_tns=ref_tns,
             output_dir=iso_output,
-            junction_length=read_lengths.iso_junction_length,
+            junction_length=read_lengths.jc_arm_len_iso,
         ).run()
 
         # Create junctions for ancestor if needed
@@ -287,7 +287,7 @@ class Pipeline:
                 genome=genome,
                 ref_tns=ref_tns,
                 output_dir=anc_output,
-                junction_length=read_lengths.anc_junction_length,
+                junction_length=read_lengths.jc_arm_len_anc,
             ).run()
 
         return syn_tnjc2s
@@ -334,8 +334,9 @@ class Pipeline:
         analyzed_tnjc2s = AnalyzeTnJc2AlignmentsStep(
             tnjc2s=synjct_tnjc2s,
             output_dir=iso_output,
-            read_length=read_lengths.iso_read_length,
-            jct_align_params=cfg.alignment_analysis_params,
+            read_length=read_lengths.read_len_iso,
+            alignment_classify_params=cfg.alignment_analysis_params,
+            alignment_filter_params=cfg.alignment_filter_params,
             jc_call_params=cfg.jc_call_params,
         ).run()
 
@@ -344,8 +345,9 @@ class Pipeline:
             analyzed_tnjc2s = AncAnalyzeTnJc2AlignmentsStep(
                 tnjc2s=analyzed_tnjc2s,
                 output_dir=anc_output,
-                read_length=read_lengths.anc_read_length,
-                jct_align_params=cfg.alignment_analysis_params,
+                read_length=read_lengths.read_len_anc,
+                alignment_classify_params=cfg.alignment_analysis_params,
+                alignment_filter_params=cfg.alignment_filter_params,
                 jc_call_params=cfg.jc_call_params,
             ).run()
 
@@ -379,11 +381,11 @@ class Pipeline:
             classified_tnjc2s=classified_tnjc2s,
             output_dir=iso_output,
             iso_breseq_path=iso_breseq_path,
+            read_lengths=read_lengths,
             anc_output_dir=anc_output,
             anc_breseq_path=anc_breseq_path,
-            iso_read_length=read_lengths.iso_read_length,
-            anc_read_length=read_lengths.anc_read_length,
-            jct_align_params=cfg.alignment_analysis_params,
+            alignment_classify_params=cfg.alignment_analysis_params,
+            alignment_filter_params=cfg.alignment_filter_params,
         ).run()
 
     def _export(

@@ -2,14 +2,15 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.config import AlignmentAnalysisParams
+from amplifinder.config import AlignmentClassifyParams, AlignmentFilterParams
 from amplifinder.optional_deps import plt
-from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2
+from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, JunctionType
 from amplifinder.steps.base import Step
+from amplifinder.steps.read_length import ReadLengths
 from amplifinder.steps.jct_coverage.analyze_alignments import get_jct_read_counts_by_tnjc2
 from amplifinder.tools.breseq import load_breseq_coverage
-from amplifinder.visualization.plot_alignments import plot_junctions_coverage
-from amplifinder.visualization.plot_coverage import plot_amplicon_coverage
+from amplifinder.visualization.plot_jc_alignments import plot_jc_alignments
+from amplifinder.visualization.plot_amp_coverage import plot_amplicon_coverage
 
 
 class PlotTnJc2CoverageStep(Step):
@@ -20,11 +21,11 @@ class PlotTnJc2CoverageStep(Step):
         classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
         output_dir: Path,
         iso_breseq_path: Path,
+        read_lengths: ReadLengths,
         anc_output_dir: Optional[Path] = None,
         anc_breseq_path: Optional[Path] = None,
-        iso_read_length: int = 150,
-        anc_read_length: Optional[int] = None,
-        jct_align_params: AlignmentAnalysisParams = None,
+        alignment_classify_params: AlignmentClassifyParams = None,
+        alignment_filter_params: AlignmentFilterParams = None,
         force: Optional[bool] = None,
     ):
         self.classified_tnjc2s = classified_tnjc2s
@@ -32,9 +33,9 @@ class PlotTnJc2CoverageStep(Step):
         self._anc_output_dir = Path(anc_output_dir) if anc_output_dir else None
         self.iso_breseq_path = Path(iso_breseq_path)
         self.anc_breseq_path = Path(anc_breseq_path) if anc_breseq_path else None
-        self.iso_read_length = iso_read_length
-        self.anc_read_length = anc_read_length if anc_read_length else iso_read_length
-        self.jct_align_params = jct_align_params or AlignmentAnalysisParams()
+        self.read_lengths = read_lengths
+        self.alignment_classify_params = alignment_classify_params or AlignmentClassifyParams()
+        self.alignment_filter_params = alignment_filter_params or AlignmentFilterParams()
         self.has_ancestor = self._anc_output_dir is not None
 
         if plt is None:
@@ -76,18 +77,19 @@ class PlotTnJc2CoverageStep(Step):
         for tnjc2 in self.classified_tnjc2s:
             jct_cov_path = tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png"
             amp_cov_path = tnjc2.analysis_dir_path(self._iso_output_dir) / "amplicon_coverage.png"
-            
+
             # Skip if both plots already exist
             if jct_cov_path.exists() and amp_cov_path.exists():
                 print('-', end='', flush=True)
                 continue
-            
-            jc_covs, alignment_data, jc_lengths = get_jct_read_counts_by_tnjc2(
+
+            jc_covs, alignment_data, _ = get_jct_read_counts_by_tnjc2(
                 synjct_tnjc2=tnjc2,
                 base_dir=self._iso_output_dir,
                 is_ancestor=False,
-                avg_read_length=self.iso_read_length,
-                jct_align_params=self.jct_align_params,
+                avg_read_length=self.read_lengths.read_len_iso,
+                alignment_classify_params=self.alignment_classify_params,
+                alignment_filter_params=self.alignment_filter_params,
             )
             assert jc_covs == tnjc2.jc_covs
             jc_calls = tnjc2.jc_calls
@@ -100,29 +102,30 @@ class PlotTnJc2CoverageStep(Step):
                     synjct_tnjc2=tnjc2,
                     base_dir=self._anc_output_dir,
                     is_ancestor=True,
-                    avg_read_length=self.anc_read_length,
-                    jct_align_params=self.jct_align_params,
+                    avg_read_length=self.read_lengths.read_len_anc,
+                    alignment_classify_params=self.alignment_classify_params,
+                    alignment_filter_params=self.alignment_filter_params,
                 )
                 assert jc_covs_anc == tnjc2.jc_covs_anc
                 jc_calls_anc = tnjc2.jc_calls_anc
 
             if not jct_cov_path.exists():
-                plot_junctions_coverage(
-                    jc_lengths=jc_lengths,
+                plot_jc_alignments(
                     alignment_data=alignment_data,
                     alignment_data_anc=alignment_data_anc,
                     jc_covs=jc_covs,
                     jc_covs_anc=jc_covs_anc,
                     jc_calls=jc_calls,
                     jc_calls_anc=jc_calls_anc,
+                    jc_arm_len_iso=self.read_lengths.jc_arm_len_iso,
+                    jc_arm_len_anc=self.read_lengths.jc_arm_len_anc,
+                    read_len_iso=self.read_lengths.read_len_iso,
+                    read_len_anc=self.read_lengths.read_len_anc,
                     title=f'Jcts coverage - {tnjc2.analysis_dir_name(is_ancestor=False)}',
                     output_path=jct_cov_path,
-                    min_overlap_len=self.jct_align_params.min_overlap_len,
-                    max_dist_from_junction=self.jct_align_params.max_dist_from_junction,
-                    iso_read_len=self.iso_read_length,
-                    anc_read_len=self.anc_read_length,
+                    alignment_classify_params=self.alignment_classify_params,
                 )
-            
+
             if not amp_cov_path.exists():
                 plot_amplicon_coverage(
                     tnjc2=tnjc2,
@@ -130,7 +133,7 @@ class PlotTnJc2CoverageStep(Step):
                     anc_scafs_to_covs=anc_scafs_to_covs,
                     output_path=amp_cov_path,
                 )
-            
+
             print('.', end='', flush=True)
 
         print('\n', flush=True)
