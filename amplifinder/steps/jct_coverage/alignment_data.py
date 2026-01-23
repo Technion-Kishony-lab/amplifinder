@@ -29,6 +29,10 @@ class AlignmentData(ABC):
     def get_plotting_segments(self) -> list[tuple[int, int]]:
         pass
 
+    @property
+    def middle(self) -> int:
+        return (self.left + self.right) / 2
+
 
 @dataclass(frozen=True)
 class SingleAlignment(AlignmentData):
