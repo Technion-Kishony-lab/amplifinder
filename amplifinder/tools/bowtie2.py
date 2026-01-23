@@ -163,7 +163,7 @@ def sam_to_sorted_bam(
         ]
         run_command(cmd_view, check=True, capture_output=True, text=True)
         input_for_sort = temp_bam
-    
+
     cmd_sort = [
         samtools, "sort",
         "-@", str(threads),
@@ -171,7 +171,7 @@ def sam_to_sorted_bam(
         str(input_for_sort),
     ]
     run_command(cmd_sort, check=True, capture_output=True, text=True)
-    
+
     if min_qlen is not None and temp_bam.exists():
         temp_bam.unlink()
 

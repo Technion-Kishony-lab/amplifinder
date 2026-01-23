@@ -74,7 +74,7 @@ class AlignmentElements(Generic[T]):
         """Iterate over field values."""
         for _, value in self.items():
             yield value
-    
+
     def __getitem__(self, key: str) -> T:
         return getattr(self, key)
 
@@ -90,7 +90,7 @@ class CoordsAlignmentElements(AlignmentElements[Coords]):
     @classmethod
     def create(cls) -> "CoordsAlignmentElements":
         return cls(*[Coords() for _ in fields(cls)])
-    
+
     def extend(self, other: "CoordsAlignmentElements") -> None:
         """Extend segments by adding segments from other."""
         for self_coord, other_coord in zip(self, other):
@@ -109,14 +109,14 @@ def get_alignment_segments_from_single_alignment(
     if not show_events:
         segments.match.append([alignment.left + x0, alignment.right + x0], [y0, y0])
         return segments
-    
+
     for op, length, x_start in alignment.cigar.iter_with_ref_pos(alignment.left):
         x_end = x_start + length
 
         if op in INSERT_OPS:
             segments.insertion.append(x_start + x0, y0)
             continue
-    
+
         segment = ([x_start + x0, x_end + x0], [y0, y0])
 
         if op in MATCH_OPS:
@@ -130,7 +130,7 @@ def get_alignment_segments_from_single_alignment(
                 segments.snp.append([x_pos + x0, x_pos + x0], [y0 - SNP_VLINE_HALF_HEIGHT, y0 + SNP_VLINE_HALF_HEIGHT])
         else:
             raise ValueError(f"Unsupported CIGAR operation: {op}")
-    
+
     return segments
 
 

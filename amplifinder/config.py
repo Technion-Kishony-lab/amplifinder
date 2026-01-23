@@ -49,7 +49,8 @@ class JcCallParams(FrozenParams):
     neg_threshold_abs: int = 5  # absolute number of spanning reads, or
     neg_threshold_rel: float = 0.01  # fraction of the expected number of spanning reads
 
-    # for a jct to be positive, the number of spanning reads should be greater than the expected number minus x standard deviations
+    # for a jct to be positive, the number of spanning reads should be
+    # greater than the expected number minus x standard deviations
     pos_threshold_in_num_std_below_expected: int = 3
 
 
