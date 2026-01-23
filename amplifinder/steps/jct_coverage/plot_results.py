@@ -8,8 +8,8 @@ from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2
 from amplifinder.steps.base import Step
 from amplifinder.steps.jct_coverage.analyze_alignments import get_jct_read_counts_by_tnjc2
 from amplifinder.tools.breseq import load_breseq_coverage
-from amplifinder.visualization.plot_alignments import plot_junctions_coverage
-from amplifinder.visualization.plot_coverage import plot_amplicon_coverage
+from amplifinder.visualization.plot_jc_alignments import plot_jc_alignments
+from amplifinder.visualization.plot_amp_coverage import plot_amplicon_coverage
 
 
 class PlotTnJc2CoverageStep(Step):
@@ -111,7 +111,7 @@ class PlotTnJc2CoverageStep(Step):
                 jc_calls_anc = tnjc2.jc_calls_anc
 
             if not jct_cov_path.exists():
-                plot_junctions_coverage(
+                plot_jc_alignments(
                     jc_lengths=jc_lengths,
                     alignment_data=alignment_data,
                     alignment_data_anc=alignment_data_anc,

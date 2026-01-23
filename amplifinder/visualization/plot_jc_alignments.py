@@ -218,7 +218,7 @@ def _draw_genetic_element_legend(ax_legend, h_pixels: int = 18) -> None:
     ax_legend.text(label_x, y_is, 'IS', fontsize=10, va='bottom')
 
 
-def plot_junctions_coverage(
+def plot_jc_alignments(
     jc_lengths: Dict[JunctionType, int],
     alignment_data: Dict[JunctionType, List[AlignmentData]],
     alignment_data_anc: Dict[JunctionType, List[AlignmentData]] | None = None,

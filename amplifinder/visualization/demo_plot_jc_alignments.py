@@ -5,7 +5,7 @@ from amplifinder.config import AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.steps.jct_coverage.read_type import get_hit_type
 from amplifinder.utils.timing import timer
-from amplifinder.visualization.plot_alignments import plot_junctions_coverage
+from amplifinder.visualization.plot_jc_alignments import plot_jc_alignments
 
 
 def main():
@@ -61,7 +61,7 @@ def main():
         jc_calls_anc[jt] = random.choice([True, False, None])
 
     with timer('plot_junctions_coverage'):
-        plot_junctions_coverage(
+        plot_jc_alignments(
             alignment_data=alignment_data,
             alignment_data_anc=alignment_data_anc,
             jc_lengths=jct_lengths,
