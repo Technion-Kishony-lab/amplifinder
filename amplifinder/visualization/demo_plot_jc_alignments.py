@@ -41,7 +41,7 @@ def generate_dummy_hits(n_reads, length, read_len, arm_len, align_params, indel_
         end = start + cigar.get_total_length()
         read_type = get_hit_type(start + 1, end, arm_len, align_params)
         if read_type is not None:
-            alignment = SingleAlignment(start=start, end=end, bam_index=i, cigar=cigar, read_type=read_type)
+            alignment = SingleAlignment(read_type=read_type, start=start, end=end, cigar=cigar, bam_index=i)
             reads.append(alignment)
             jc_cov.increment(read_type)
 

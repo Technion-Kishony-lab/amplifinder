@@ -2,13 +2,14 @@ import pysam
 
 from pathlib import Path
 from typing import NamedTuple, Optional
+from collections import defaultdict
 
 from amplifinder.config import AlignmentFilterParams, AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.data_types.enums import ReadType
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData, SingleAlignment, PairedAlignment
 from amplifinder.steps.jct_coverage.hits_container import HitsContainer
-from amplifinder.steps.jct_coverage.cigar import Cigar, resolve_cigar_m_operations
+from amplifinder.steps.jct_coverage.cigar import Cigar, resolve_cigar_m_operations, merge_consecutive_cigar_ops
 from amplifinder.env import IGNORE_DUPLICATES, LINK_PAIRED_END, \
     ALLOW_INDELS_AT_JUNCTION_DISTANCE, RESOLVE_CIGAR_MATCHES_VS_MISMATCHES
 
@@ -101,8 +102,8 @@ def _classify_bam_hits_by_jc_types_and_read_types(
                 read_type=resolved_hit.read_type,
                 start=hit.reference_start,
                 end=hit.reference_end,
-                bam_index=bam_index,
                 cigar=resolved_hit.cigar,
+                bam_index=bam_index,
             )
             hits_container = jctypes_to_readtypes_to_hits_container[jct_type][resolved_hit.read_type]
             hits_container.add_hit(alignment, read_id)
@@ -131,9 +132,9 @@ def _merge_hits_of_paired_end_reads(
             hit_L = readids_to_hits_L.pop(read_id)
             hit_R = readids_to_hits_R.pop(read_id)
             paired_readids_to_hits[read_id] = PairedAlignment(
-                ReadType.PAIRED,
-                hit_L.start, hit_L.end, hit_L.bam_index, hit_L.cigar,
-                hit_R.start, hit_R.end, hit_R.bam_index, hit_R.cigar,
+                read_type=ReadType.PAIRED,
+                alignment1=hit_L,
+                alignment2=hit_R,
             )
 
 
