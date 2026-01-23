@@ -51,7 +51,7 @@ def generate_dummy_reads(n_reads, length, read_len, arm_len, align_params, indel
 def main():
     random.seed(42)
 
-    jct_lengths = {jt: 600 for jt in JunctionType}
+    jc_arm_len = 300
     read_len = 100
     min_overlap_len = 12
     align_params = AlignmentClassifyParams(min_overlap_len=min_overlap_len)
@@ -65,11 +65,10 @@ def main():
     jc_calls_anc = {}
 
     for jt in JunctionType:
-        length = jct_lengths[jt]
-        arm_len = length // 2
+        jct_length = jc_arm_len * 2
 
-        reads_iso, jc_cov_iso = generate_dummy_reads(255, length, read_len, arm_len, align_params, indel_at_junction='insertion')
-        reads_anc, jc_cov_anc = generate_dummy_reads(130, length, read_len, arm_len, align_params, indel_at_junction='deletion')
+        reads_iso, jc_cov_iso = generate_dummy_reads(255, jct_length, read_len, jc_arm_len, align_params, indel_at_junction='insertion')
+        reads_anc, jc_cov_anc = generate_dummy_reads(130, jct_length, read_len, jc_arm_len, align_params, indel_at_junction='deletion')
 
         alignment_data[jt] = reads_iso
         jc_covs[jt] = jc_cov_iso
@@ -83,16 +82,17 @@ def main():
         plot_jc_alignments(
             alignment_data=alignment_data,
             alignment_data_anc=alignment_data_anc,
-            jc_lengths=jct_lengths,
             jc_covs=jc_covs,
             jc_covs_anc=jc_covs_anc,
             jc_calls=jc_calls,
             jc_calls_anc=jc_calls_anc,
+            jc_arm_len_iso=jc_arm_len,
+            jc_arm_len_anc=jc_arm_len,
+            read_len_iso=read_len,
+            read_len_anc=read_len,
             title='Alignment Coverage Demo (Dummy Reads)',
             output_path='demo_alignment_coverage.png',
             alignment_classify_params=AlignmentClassifyParams(min_overlap_len=min_overlap_len),
-            iso_read_len=read_len,
-            anc_read_len=read_len,
         )
 
 

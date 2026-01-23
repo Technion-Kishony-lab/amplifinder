@@ -4,8 +4,9 @@ from typing import Optional
 
 from amplifinder.config import AlignmentClassifyParams, AlignmentFilterParams
 from amplifinder.optional_deps import plt
-from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2
+from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, JunctionType
 from amplifinder.steps.base import Step
+from amplifinder.steps.read_length import ReadLengths
 from amplifinder.steps.jct_coverage.analyze_alignments import get_jct_read_counts_by_tnjc2
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.visualization.plot_jc_alignments import plot_jc_alignments
@@ -20,10 +21,9 @@ class PlotTnJc2CoverageStep(Step):
         classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
         output_dir: Path,
         iso_breseq_path: Path,
+        read_lengths: ReadLengths,
         anc_output_dir: Optional[Path] = None,
         anc_breseq_path: Optional[Path] = None,
-        iso_read_length: int = 150,
-        anc_read_length: Optional[int] = None,
         alignment_classify_params: AlignmentClassifyParams = None,
         alignment_filter_params: AlignmentFilterParams = None,
         force: Optional[bool] = None,
@@ -33,8 +33,7 @@ class PlotTnJc2CoverageStep(Step):
         self._anc_output_dir = Path(anc_output_dir) if anc_output_dir else None
         self.iso_breseq_path = Path(iso_breseq_path)
         self.anc_breseq_path = Path(anc_breseq_path) if anc_breseq_path else None
-        self.iso_read_length = iso_read_length
-        self.anc_read_length = anc_read_length if anc_read_length else iso_read_length
+        self.read_lengths = read_lengths
         self.alignment_classify_params = alignment_classify_params or AlignmentClassifyParams()
         self.alignment_filter_params = alignment_filter_params or AlignmentFilterParams()
         self.has_ancestor = self._anc_output_dir is not None
@@ -84,11 +83,11 @@ class PlotTnJc2CoverageStep(Step):
                 print('-', end='', flush=True)
                 continue
 
-            jc_covs, alignment_data, jc_lengths = get_jct_read_counts_by_tnjc2(
+            jc_covs, alignment_data, _ = get_jct_read_counts_by_tnjc2(
                 synjct_tnjc2=tnjc2,
                 base_dir=self._iso_output_dir,
                 is_ancestor=False,
-                avg_read_length=self.iso_read_length,
+                avg_read_length=self.read_lengths.read_len_iso,
                 alignment_classify_params=self.alignment_classify_params,
                 alignment_filter_params=self.alignment_filter_params,
             )
@@ -103,7 +102,7 @@ class PlotTnJc2CoverageStep(Step):
                     synjct_tnjc2=tnjc2,
                     base_dir=self._anc_output_dir,
                     is_ancestor=True,
-                    avg_read_length=self.anc_read_length,
+                    avg_read_length=self.read_lengths.read_len_anc,
                     alignment_classify_params=self.alignment_classify_params,
                     alignment_filter_params=self.alignment_filter_params,
                 )
@@ -112,18 +111,19 @@ class PlotTnJc2CoverageStep(Step):
 
             if not jct_cov_path.exists():
                 plot_jc_alignments(
-                    jc_lengths=jc_lengths,
                     alignment_data=alignment_data,
                     alignment_data_anc=alignment_data_anc,
                     jc_covs=jc_covs,
                     jc_covs_anc=jc_covs_anc,
                     jc_calls=jc_calls,
                     jc_calls_anc=jc_calls_anc,
+                    jc_arm_len_iso=self.read_lengths.jc_arm_len_iso,
+                    jc_arm_len_anc=self.read_lengths.jc_arm_len_anc,
+                    read_len_iso=self.read_lengths.read_len_iso,
+                    read_len_anc=self.read_lengths.read_len_anc,
                     title=f'Jcts coverage - {tnjc2.analysis_dir_name(is_ancestor=False)}',
                     output_path=jct_cov_path,
                     alignment_classify_params=self.alignment_classify_params,
-                    iso_read_len=self.iso_read_length,
-                    anc_read_len=self.anc_read_length,
                 )
 
             if not amp_cov_path.exists():
