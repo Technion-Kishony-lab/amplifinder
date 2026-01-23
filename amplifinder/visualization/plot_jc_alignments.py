@@ -35,19 +35,19 @@ READ_TYPES_TO_COLORS = {
 }
 
 
-JC_CALLS_TO_COLORS: dict[Optional[bool], str] = {
-    True: 'green',
-    False: 'red',
-    None: 'grey'
+JC_CALLS_TO_COLORS_AND_LABELS: dict[Optional[bool], tuple[str, str]] = {
+    True: ('green', 'Positive'),
+    False: ('red', 'Negative'),
+    None: ('grey', 'Undetermined')
 }
 
 
 ALIGNMENT_ELEMENTS_PLOT_KWARGS = AlignmentElements(
-    match={"color": "#1f77b4", "linewidth": 1},
-    mismatch={"color": "#1f77b4", "linewidth": 1},
-    deletion={"color": "#d62728", "linewidth": 3},
-    insertion={"color": "#2ca02c", "marker": "v", "markersize": 4},
-    snp={"color": "#1f77b4", "linewidth": 0.25},
+    match={"color": "#000000", "linewidth": 1},
+    mismatch={"color": "#000000", "linewidth": 1},
+    deletion={"color": "#ffffff", "linewidth": 3},
+    insertion={"color": "#404040", "marker": "v", "markersize": 4},
+    snp={"color": "#000000", "linewidth": 0.25},
 )
 
 
@@ -179,6 +179,11 @@ def _down_sample_alignments(
     return downsampled, scales
 
 
+def _draw_jc_call(ax: Axes, y: float, jc_call: Optional[JcCall] = None) -> None:
+    jc_call_color, _ = JC_CALLS_TO_COLORS_AND_LABELS[jc_call]
+    ax.plot(0, y, color=jc_call_color, marker='d', markersize=30)
+
+
 def _draw_genetic_element_legend(ax_legend, h_pixels: int = 18) -> None:
     """Draw genetic element legend showing chromosome, amplicon, and IS elements."""
     ax_legend.axis('off')
@@ -308,18 +313,16 @@ def plot_jc_alignments(
         ax.set_ylim(y_min, y_max)
         ax.set_xlim(-arm_len, arm_len)
 
-        # Add vertical line at junction point with color based on jc_calls (isolate) - from y=0 to y_max
-        jc_call_color = JC_CALLS_TO_COLORS[jc_calls[jt]] if with_calls else 'black'
-        ax.plot([0, 0], [0, y_max], color=jc_call_color, linestyle='--', linewidth=2.5)
-
-        # Add vertical line for jc_calls_anc (ancestor) if available - from y=0 to y_min
-        if alignment_data_anc:
-            jc_call_anc_color = JC_CALLS_TO_COLORS[jc_calls_anc[jt]] if with_calls else 'black'
-            ax.plot([0, 0], [y_min, 0], color=jc_call_anc_color, linestyle='--', linewidth=2.5)
+        # Add a junction call marker at the junction point
+        if with_calls:
+            _draw_jc_call(ax, y_max, jc_calls[jt])
+            if alignment_data_anc:
+                _draw_jc_call(ax, y_min, jc_calls_anc[jt])
 
         # Add horizontal line at y=0 if ancestor data exists
         if alignment_data_anc:
             ax.axhline(0, color='black', linestyle='-', linewidth=0.5)
+        ax.axvline(0, color='black', linestyle='--', linewidth=0.5, zorder=-10)
 
         # Set x-axis limits centered at junction
         ax.set_xlabel('Position relative to junction (bp)')
@@ -372,9 +375,9 @@ def plot_jc_alignments(
     # Junction call legend (bottom)
     if with_calls:
         jc_legend_elements = [
-            Line2D([0], [0], color='green', linestyle='--', linewidth=2.5, label='Positive'),
-            Line2D([0], [0], color='red', linestyle='--', linewidth=2.5, label='Negative'),
-            Line2D([0], [0], color='grey', linestyle='--', linewidth=2.5, label='Undetermined'),
+            Line2D([0], [0], marker='v', linestyle='None', markerfacecolor=color, 
+                   markersize=10, markeredgecolor='None', label=label)
+                   for color, label in JC_CALLS_TO_COLORS_AND_LABELS.values()
         ]
         ax_legend.legend(handles=jc_legend_elements, bbox_to_anchor=(0.5, 0.05),
                          loc='center', fontsize=11, frameon=True, title='Junction call')
