@@ -54,21 +54,21 @@ def get_jct_read_counts(
     jctypes_to_readtypes_to_readids_to_hits, jct_types_to_lengths = _classify_bam_hits_by_jc_types_and_read_types(
         bam_path, avg_read_length, alignment_classify_params, alignment_filter_params
     )
-    
+
     if LINK_PAIRED_END:
         _merge_hits_of_paired_end_reads(jctypes_to_readtypes_to_readids_to_hits)
-    
+
     # Count and collect hits by junction type and read type
     counts = {jt: JunctionReadCounts() for jt in JunctionType}
     alignment_data = {jt: [] for jt in JunctionType}
-    
+
     for jct_type in JunctionType:
         readtypes_to_readids_to_hits = jctypes_to_readtypes_to_readids_to_hits[jct_type]
         for read_type in ReadType:
             hits_container = readtypes_to_readids_to_hits[read_type]
             counts[jct_type][read_type] = len(hits_container)
             alignment_data[jct_type].extend(hits_container)
-    
+
     return counts, alignment_data, jct_types_to_lengths
 
 
@@ -82,7 +82,7 @@ def _classify_bam_hits_by_jc_types_and_read_types(
     jctypes_to_readtypes_to_hits_container: dict[JunctionType, dict[ReadType, HitsContainer]] = {
         jt: {rt: HitsContainer(IGNORE_DUPLICATES) for rt in ReadType} for jt in JunctionType
     }
-    
+
     with pysam.AlignmentFile(str(bam_path), "rb") as bam:
         jct_names_to_lengths = dict(zip(bam.references, bam.lengths))
         jct_types_to_lengths = {JunctionType[jct_name]: length for jct_name, length in jct_names_to_lengths.items()}
@@ -91,10 +91,13 @@ def _classify_bam_hits_by_jc_types_and_read_types(
             jct_type = JunctionType[hit.reference_name]
             arm_len = jct_types_to_lengths[jct_type] // 2
 
-            resolved_hit = analyze_hit(hit, arm_len, avg_read_length, alignment_filter_params, alignment_classify_params)
+            resolved_hit = analyze_hit(
+                hit, arm_len, avg_read_length,
+                alignment_filter_params, alignment_classify_params
+            )
             if resolved_hit is None or resolved_hit.read_type is None:
                 continue
-            
+
             read_id = hit.query_name
             alignment = SingleAlignment(
                 read_type=resolved_hit.read_type,
@@ -113,23 +116,24 @@ def _merge_hits_of_paired_end_reads(
     jctypes_to_readtypes_to_readids_to_hits: dict[JunctionType, dict[ReadType, HitsContainer]]
 ) -> None:
     """
-    Detect paired-end reads (ids appearing in both LEFT and RIGHT) 
+    Detect paired-end reads (ids appearing in both LEFT and RIGHT)
     and merge them into PAIRED category.
     """
     for jct_type in JunctionType:
         readtypes_to_readids_to_hits = jctypes_to_readtypes_to_readids_to_hits[jct_type]
-        
+
         readids_to_hits_L = readtypes_to_readids_to_hits[ReadType.LEFT]
         readids_to_hits_R = readtypes_to_readids_to_hits[ReadType.RIGHT]
         paired_read_ids = set(readids_to_hits_L.keys()) & set(readids_to_hits_R.keys())
 
         paired_readids_to_hits = readtypes_to_readids_to_hits[ReadType.PAIRED]
         assert len(paired_readids_to_hits) == 0
-        
+
         for read_id in paired_read_ids:
             hit_L = readids_to_hits_L.pop(read_id)
             hit_R = readids_to_hits_R.pop(read_id)
-            paired_readids_to_hits[read_id] = PairedAlignment(ReadType.PAIRED,
+            paired_readids_to_hits[read_id] = PairedAlignment(
+                ReadType.PAIRED,
                 hit_L.start, hit_L.end, hit_L.bam_index, hit_L.cigar,
                 hit_R.start, hit_R.end, hit_R.bam_index, hit_R.cigar,
             )
@@ -163,7 +167,11 @@ def analyze_hit(
     return ResolvedHit(read_type, cigar)
 
 
-def passes_alignment_filters(hit: pysam.AlignedSegment, alignment_filter_params: AlignmentFilterParams, avg_read_length: int) -> bool:
+def passes_alignment_filters(
+    hit: pysam.AlignedSegment,
+    alignment_filter_params: AlignmentFilterParams,
+    avg_read_length: int
+) -> bool:
 
     # Filter by alignment length
     read_length_factor = 1 + alignment_filter_params.length_tolerance
@@ -189,7 +197,10 @@ def passes_alignment_filters(hit: pysam.AlignedSegment, alignment_filter_params:
     return True
 
 
-def get_hit_type(start: int, end: int, arm_len: int, alignment_classify_params: AlignmentClassifyParams) -> Optional[ReadType]:
+def get_hit_type(
+    start: int, end: int, arm_len: int,
+    alignment_classify_params: AlignmentClassifyParams
+) -> Optional[ReadType]:
     """Determine the read type based on the start and end positions."""
     # n = arm_len
     # M = min_overlap_len
@@ -266,23 +277,23 @@ def resolve_cigar(hit: pysam.AlignedSegment) -> Optional[Cigar]:
 def _indels_within_limit(cigar: Cigar, reference_start: int, arm_len: int) -> bool:
     # Check for indels (insertions=1 or deletions=2)
     has_indels = any(op in (1, 2) for op, _ in cigar)
-    
+
     if not has_indels:
         # Only M/=/X operations - acceptable
         return True
-    
+
     # Has indels - check if they're close enough to junction
     if ALLOW_INDELS_AT_JUNCTION_DISTANCE is None:
         # No distance limit - allow all indels
         return True
-    
+
     if ALLOW_INDELS_AT_JUNCTION_DISTANCE == -1:
         # No indels allowed
         return False
-    
+
     # Check distance of each indel from junction
     junction_pos = arm_len  # 0-based junction position
-    
+
     for op, length, ref_pos in cigar.iter_with_ref_pos(reference_start):
         if op == 1:  # Insertion - occurs at a single reference position
             dist_to_junction = abs(ref_pos - junction_pos)  # 0 when precisely at junction
@@ -293,11 +304,14 @@ def _indels_within_limit(cigar: Cigar, reference_start: int, arm_len: int) -> bo
             dist_end = abs(ref_pos + length - junction_pos)
             if dist_start > ALLOW_INDELS_AT_JUNCTION_DISTANCE or dist_end > ALLOW_INDELS_AT_JUNCTION_DISTANCE:
                 return False
-    
+
     return True
 
 
-def get_expected_counts(avg_read_len: int, arm_len: int, alignment_classify_params: AlignmentClassifyParams) -> JunctionReadCounts:
+def get_expected_counts(
+    avg_read_len: int, arm_len: int,
+    alignment_classify_params: AlignmentClassifyParams
+) -> JunctionReadCounts:
     """Return the expected counts assuming uniform distribution of reads across the junction."""
     min_overlap_len = alignment_classify_params.min_overlap_len
     max_dist = alignment_classify_params.max_dist_from_junction

@@ -9,7 +9,7 @@ from amplifinder.steps.jct_coverage.cigar import Cigar
 class AlignmentData(ABC):
     """Base class for alignment data."""
     read_type: ReadType
-    
+
     @abstractmethod
     def get_bam_indices(self) -> tuple[int, ...]:
         """Return BAM indices as tuple."""
@@ -20,7 +20,7 @@ class AlignmentData(ABC):
     def left(self) -> int:
         """Return left BAM index."""
         pass
-    
+
     @property
     @abstractmethod
     def right(self) -> int:
@@ -36,7 +36,7 @@ class SingleAlignment(AlignmentData):
     end: int
     bam_index: int
     cigar: Cigar
-    
+
     def get_bam_indices(self) -> tuple[int]:
         return (self.bam_index,)
 
@@ -62,7 +62,7 @@ class PairedAlignment(AlignmentData):
     end2: int
     bam_index2: int
     cigar2: Cigar
-    
+
     def get_bam_indices(self) -> tuple[int, int]:
         return (self.bam_index1, self.bam_index2)
 

@@ -55,7 +55,7 @@ BRESEQ_DOCKER: bool = _CONFIG.get("breseq_docker", False)  # TODO: This is not u
 IGNORE_DUPLICATES: bool = True  # If False, keep all duplicate read_ids as a list
 LINK_PAIRED_END: bool = True  # If False, don't merge LEFT and RIGHT reads into PAIRED
 
-# Maximum distance from junction to allow indels 
+# Maximum distance from junction to allow indels
 # (None = no limit, -1 = no indels, 0 = only indels precisely at junction, >0 = maximum distance)
 ALLOW_INDELS_AT_JUNCTION_DISTANCE: Optional[int] = 4
 

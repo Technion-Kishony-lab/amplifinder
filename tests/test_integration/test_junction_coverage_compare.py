@@ -66,7 +66,7 @@ def _classify_read(
 ) -> Optional[Side]:
     """MATLAB-equivalent read classification (left/right/green/undetermined)."""
     alignment_length = read.query_alignment_length
-    read_length_factor = 1 + read_length_tolerance
+    read_length_factor = 1 + alignment_length_tolerance
     min_alignment_length = avg_read_length / read_length_factor
     max_alignment_length = avg_read_length * read_length_factor
     if not (min_alignment_length <= alignment_length <= max_alignment_length):

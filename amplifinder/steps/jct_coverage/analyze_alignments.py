@@ -11,7 +11,6 @@ from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
 from amplifinder.steps.jct_coverage.read_type import get_jct_read_counts
 from amplifinder.steps.jct_coverage.export_bam_indices import write_junction_read_bam_indices
-from amplifinder.data_types.enums import ReadType
 
 
 def get_jct_read_counts_by_tnjc2(
@@ -68,7 +67,9 @@ def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
 
     total_err = np.sqrt(err_expected_num_spanning**2 + err_num_spanning_reads**2)
 
-    is_above_minimal_expected = num_spanning_reads >= expected_num_spanning - jc_call_params.pos_threshold_in_num_std_below_expected * total_err
+    is_above_minimal_expected = \
+        num_spanning_reads >= expected_num_spanning \
+        - jc_call_params.pos_threshold_in_num_std_below_expected * total_err
     is_close_to_zero = num_spanning_reads <= jc_call_params.neg_threshold_abs \
         or num_spanning_reads <= expected_num_spanning * jc_call_params.neg_threshold_rel
 
@@ -126,7 +127,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 alignment_classify_params=self.alignment_classify_params,
                 alignment_filter_params=self.alignment_filter_params,
             )
-            
+
             if DEBUG:
                 write_junction_read_bam_indices(
                     alignment_data=alignment_data,

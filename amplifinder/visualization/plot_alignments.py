@@ -66,33 +66,33 @@ def plot_alignments(ax: Axes, alignments: list[AlignmentData], arm_len: int,
                     alignment_elements_plot_kwargs: AlignmentElements = None,
                     common_plot_kwargs: dict = None) -> None:
     """Plot multiple alignments stacked vertically, colored by read_type."""
-    
+
     read_type_to_color = read_type_to_color or {}
     alignment_elements_plot_kwargs = alignment_elements_plot_kwargs or ALIGNMENT_ELEMENTS_PLOT_KWARGS
     common_plot_kwargs = common_plot_kwargs or {}
-    
+
     # Group alignments by read_type, keeping original index for y-position
     alignments_by_type = defaultdict(list)
     for i, alignment in enumerate(alignments):
         alignments_by_type[alignment.read_type].append((i, alignment))
-    
+
     # Plot each read_type group
     for read_type, indexed_alignments in alignments_by_type.items():
         all_segments = CoordsAlignmentElements.create()
-        
+
         # Collect segments from all alignments of this type
         for i, alignment in indexed_alignments:
             y = i * y_step
             segments = get_alignment_segments(alignment, show_events, -arm_len, y)
             all_segments.extend(segments)
-        
+
         # Determine 'match' color for this read_type
         match_color = read_type_to_color.get(read_type)
-        
+
         # Plot all segments for this read_type
         for key, segment in all_segments.items():
             x, y = convert_coords_to_nan_separated_arrays(segment)
-            
+
             plot_kwargs_combined = {
                 **COMMON_PLOT_KWARGS,
                 **common_plot_kwargs,
@@ -104,7 +104,7 @@ def plot_alignments(ax: Axes, alignments: list[AlignmentData], arm_len: int,
             ax.plot(x, y, **plot_kwargs_combined)
 
 
-def add_hit_legend_with_info(ax: Axes, jc_cov: JunctionReadCounts, scales: JunctionReadCounts, 
+def add_hit_legend_with_info(ax: Axes, jc_cov: JunctionReadCounts, scales: JunctionReadCounts,
                              loc: str = 'upper left', title: str = None, fontsize: int = 7):
     legend_elements = [
         Line2D([0], [0], marker='o', color='w', markerfacecolor=READ_TYPES_TO_COLORS[rt],
@@ -140,7 +140,7 @@ def add_pie_chart(ax, jc_cov: JunctionReadCounts, position: str = 'top'):
 
 
 def _down_sample_alignments(
-    alignments: List[AlignmentData], 
+    alignments: List[AlignmentData],
     jc_cov: JunctionReadCounts,
     max_reads_per_plot: int, expected_counts: JunctionReadCounts
 ) -> tuple[List[AlignmentData], JunctionReadCounts]:
@@ -338,11 +338,11 @@ def plot_junctions_coverage(
 
         fs = 7
         if alignment_data_anc:
-            leg1 = add_hit_legend_with_info(ax, jc_cov, scales_iso, loc='upper left', 
-                                           title='iso', fontsize=fs)
+            leg1 = add_hit_legend_with_info(ax, jc_cov, scales_iso, loc='upper left',
+                                            title='iso', fontsize=fs)
             ax.add_artist(leg1)
             add_hit_legend_with_info(ax, jc_cov_anc, scales_anc, loc='lower left',
-                                    title='anc', fontsize=fs)
+                                     title='anc', fontsize=fs)
 
             add_pie_chart(ax, jc_cov, position='top')
             add_pie_chart(ax, jc_cov_anc, position='bottom')

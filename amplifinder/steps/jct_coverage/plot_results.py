@@ -78,12 +78,12 @@ class PlotTnJc2CoverageStep(Step):
         for tnjc2 in self.classified_tnjc2s:
             jct_cov_path = tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png"
             amp_cov_path = tnjc2.analysis_dir_path(self._iso_output_dir) / "amplicon_coverage.png"
-            
+
             # Skip if both plots already exist
             if jct_cov_path.exists() and amp_cov_path.exists():
                 print('-', end='', flush=True)
                 continue
-            
+
             jc_covs, alignment_data, jc_lengths = get_jct_read_counts_by_tnjc2(
                 synjct_tnjc2=tnjc2,
                 base_dir=self._iso_output_dir,
@@ -125,7 +125,7 @@ class PlotTnJc2CoverageStep(Step):
                     iso_read_len=self.iso_read_length,
                     anc_read_len=self.anc_read_length,
                 )
-            
+
             if not amp_cov_path.exists():
                 plot_amplicon_coverage(
                     tnjc2=tnjc2,
@@ -133,7 +133,7 @@ class PlotTnJc2CoverageStep(Step):
                     anc_scafs_to_covs=anc_scafs_to_covs,
                     output_path=amp_cov_path,
                 )
-            
+
             print('.', end='', flush=True)
 
         print('\n', flush=True)
