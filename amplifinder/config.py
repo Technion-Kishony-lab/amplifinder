@@ -29,8 +29,20 @@ class AlignmentClassifyParams(FrozenParams):
     """Parameters for junction alignment analysis."""
 
     min_overlap_len: int = 13
-    max_dist_from_junction: Optional[int] = 30  # None to allow any distance within the synthetic junction
 
+    # Max distance of the far end of the hit from the junction
+    # None to allow any distance
+    # Positive value to allow reads within the specified distance from the junction
+    # Negative value to specify as distance from the jc arm end
+    max_dist_from_junction: Optional[int] = -100
+
+    def get_max_dist_from_junction(self, arm_len: int) -> int:
+        max_dist = self.max_dist_from_junction
+        if max_dist is None or max_dist > arm_len:
+            return arm_len
+        if max_dist < 0:
+            return arm_len + max_dist
+        return max_dist
 
 class BowtieParams(FrozenParams):
     """Parameters for bowtie2 alignment."""

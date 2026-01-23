@@ -134,7 +134,8 @@ def add_pie_chart(ax, jc_cov: JunctionReadCounts, position: str = 'top'):
     y_offset = 0.32 if position == 'top' else 0.5
     inset_ax = ax.inset_axes([0.72, y_offset, 0.28, 0.18])
 
-    inset_ax.pie(list(sizes_to_colors), colors=list(sizes_to_colors.values()), startangle=90, counterclock=False,
+    inset_ax.pie(list(sizes_to_colors), colors=list(sizes_to_colors.values()),
+                 startangle=-90, counterclock=False,
                  wedgeprops=dict(edgecolor='white', linewidth=0.5))
     inset_ax.set_aspect('equal')
 
@@ -335,9 +336,13 @@ def plot_jc_alignments(
         left_elem_type, right_elem_type = jt.elements
 
         # Set up genetic element axes
-        max_read_len = max(read_len_iso, read_len_anc)
-        x_lim = max_read_len + alignment_classify_params.max_dist_from_junction
-        ax_gene.set_xlim(-x_lim, x_lim)
+        max_dist_iso = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_iso)
+        if jc_arm_len_anc is None:
+            max_dist = max_dist_iso
+        else:
+            max_dist_anc = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_anc)
+            max_dist = max(max_dist_iso, max_dist_anc)
+        ax_gene.set_xlim(-max_dist, max_dist)
         ax_gene.set_ylim(0, 1)
         ax_gene.set_aspect('auto')
 
@@ -356,10 +361,10 @@ def plot_jc_alignments(
             add_pie_chart(ax, jc_cov, position='top')
 
         # Draw left element (ending at x=0)
-        draw_genetic_element(ax_gene, 0.1, -arm_len_max, 0, left_elem_type, h_pixels=h_pixels, wave_tail=True)
+        draw_genetic_element(ax_gene, 0.1, -max_dist, 0, left_elem_type, h_pixels=h_pixels, wave_tail=True)
 
         # Draw right element (starting at x=0)
-        draw_genetic_element(ax_gene, 0.1, 0, arm_len_max, right_elem_type, h_pixels=h_pixels, wave_head=True)
+        draw_genetic_element(ax_gene, 0.1, 0, max_dist, right_elem_type, h_pixels=h_pixels, wave_head=True)
 
     # Add legend in empty subplot position (2, 4)
     ax_legend = fig.add_subplot(gs[1, 3])

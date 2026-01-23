@@ -1,9 +1,7 @@
-import numpy as np
+import pysam
 
 from pathlib import Path
 from typing import NamedTuple, Optional
-
-import pysam
 
 from amplifinder.config import AlignmentFilterParams, AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
@@ -226,9 +224,10 @@ def get_hit_type(
     assert idx_R_2 >= idx_R_1
 
     # remove reads that are too far from junction
-    if idx_L_1 >= alignment_classify_params.max_dist_from_junction:
+    max_dist = alignment_classify_params.get_max_dist_from_junction(arm_len)
+    if idx_L_2 >= max_dist:
         return None
-    if idx_R_1 >= alignment_classify_params.max_dist_from_junction:
+    if idx_R_2 >= max_dist:
         return None
 
     # classify reads
@@ -314,10 +313,7 @@ def get_expected_counts(
 ) -> JunctionReadCounts:
     """Return the expected counts assuming uniform distribution of reads across the junction."""
     min_overlap_len = alignment_classify_params.min_overlap_len
-    max_dist = alignment_classify_params.max_dist_from_junction
-    if max_dist is None:
-        max_dist = np.inf
-    max_dist = min(max_dist, arm_len - avg_read_len)
+    max_dist = alignment_classify_params.get_max_dist_from_junction(arm_len)
     return JunctionReadCounts(
         left=max_dist + 1,
         left_marginal=min_overlap_len,

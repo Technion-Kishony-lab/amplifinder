@@ -10,7 +10,7 @@ from amplifinder.utils.timing import timer
 from amplifinder.visualization.plot_jc_alignments import plot_jc_alignments
 
 
-def generate_dummy_reads(n_reads, length, read_len, arm_len, align_params, indel_at_junction=None):
+def generate_dummy_hits(n_reads, length, read_len, arm_len, align_params, indel_at_junction=None):
     """Generate dummy alignment reads.
     
     Args:
@@ -67,14 +67,14 @@ def main():
     for jt in JunctionType:
         jct_length = jc_arm_len * 2
 
-        reads_iso, jc_cov_iso = generate_dummy_reads(255, jct_length, read_len, jc_arm_len, align_params, indel_at_junction='insertion')
-        reads_anc, jc_cov_anc = generate_dummy_reads(130, jct_length, read_len, jc_arm_len, align_params, indel_at_junction='deletion')
+        hits_iso, jc_cov_iso = generate_dummy_hits(255, jct_length, read_len, jc_arm_len, align_params, indel_at_junction='insertion')
+        hits_anc, jc_cov_anc = generate_dummy_hits(130, jct_length, read_len, jc_arm_len, align_params, indel_at_junction='deletion')
 
-        alignment_data[jt] = reads_iso
+        alignment_data[jt] = hits_iso
         jc_covs[jt] = jc_cov_iso
         jc_calls[jt] = random.choice([True, False, None])
 
-        alignment_data_anc[jt] = reads_anc
+        alignment_data_anc[jt] = hits_anc
         jc_covs_anc[jt] = jc_cov_anc
         jc_calls_anc[jt] = random.choice([True, False, None])
 
