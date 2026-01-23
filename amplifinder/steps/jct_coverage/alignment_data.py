@@ -15,6 +15,11 @@ class AlignmentData(ABC):
         """Return BAM indices as tuple."""
         pass
 
+    @abstractmethod
+    def get_starts_and_cigars(self) -> tuple[tuple[int, Cigar], ...]:
+        """Return tuple of (start, cigar) pairs."""
+        pass
+
     @property
     @abstractmethod
     def left(self) -> int:
@@ -26,23 +31,16 @@ class AlignmentData(ABC):
     def right(self) -> int:
         pass
 
-    def get_plotting_segments(self) -> list[tuple[int, int]]:
-        pass
-
     @property
     def middle(self) -> int:
         return (self.left + self.right) / 2
 
 
 @dataclass(frozen=True)
-class SingleAlignment(AlignmentData):
+class BaseSingleAlignment(AlignmentData):
+    """Single alignment from one BAM hit."""
     start: int
     end: int
-    bam_index: int
-    cigar: Cigar
-
-    def get_bam_indices(self) -> tuple[int]:
-        return (self.bam_index,)
 
     @property
     def left(self) -> int:
@@ -52,37 +50,50 @@ class SingleAlignment(AlignmentData):
     def right(self) -> int:
         return self.end
 
-    def get_plotting_segments(self) -> list[tuple[int, int]]:
-        return [(self.start, self.end)]
+
+@dataclass(frozen=True)
+class SingleAlignment(BaseSingleAlignment):
+    """Single alignment from one BAM hit."""
+    cigar: Cigar
+    bam_index: int
+
+    def get_bam_indices(self) -> tuple[int]:
+        return (self.bam_index,)
+
+    def get_starts_and_cigars(self) -> tuple[tuple[int, Cigar]]:
+        return ((self.start, self.cigar),)
+
+
+@dataclass(frozen=True)
+class CombinedSingleAlignment(BaseSingleAlignment):
+    """Single alignment combined from multiple hits with same read_id and orientation."""
+    bam_indices: tuple[int, ...]
+    cigars: tuple[Cigar, ...]
+    starts: tuple[int, ...]
+    ends: tuple[int, ...]
+
+    def get_bam_indices(self) -> tuple[int, ...]:
+        return self.bam_indices
+
+    def get_starts_and_cigars(self) -> tuple[tuple[int, Cigar], ...]:
+        return tuple(zip(self.starts, self.cigars))
 
 
 @dataclass(frozen=True)
 class PairedAlignment(AlignmentData):
-    start1: int
-    end1: int
-    bam_index1: int
-    cigar1: Cigar
-    start2: int
-    end2: int
-    bam_index2: int
-    cigar2: Cigar
+    alignment1: BaseSingleAlignment
+    alignment2: BaseSingleAlignment
 
-    def get_bam_indices(self) -> tuple[int, int]:
-        return (self.bam_index1, self.bam_index2)
+    def get_bam_indices(self) -> tuple[int, ...]:
+        return (*self.alignment1.get_bam_indices(), *self.alignment2.get_bam_indices())
+
+    def get_starts_and_cigars(self) -> tuple[tuple[int, Cigar], ...]:
+        return (*self.alignment1.get_starts_and_cigars(), *self.alignment2.get_starts_and_cigars())
 
     @property
     def left(self) -> int:
-        return self.start1
+        return self.alignment1.left
 
     @property
     def right(self) -> int:
-        return self.end2
-
-    def get_plotting_segments(self) -> list[tuple[int, int]]:
-        return [(self.start1, self.end1), (self.start2, self.end2)]
-
-    def to_two_single_alignments(self) -> tuple[SingleAlignment, SingleAlignment]:
-        return (
-            SingleAlignment(self.start1, self.end1, self.bam_index1, self.cigar1),
-            SingleAlignment(self.start2, self.end2, self.bam_index2, self.cigar2),
-        )
+        return self.alignment2.right

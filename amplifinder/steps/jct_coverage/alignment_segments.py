@@ -5,7 +5,8 @@ from dataclasses import dataclass, fields
 
 from numpy import ndarray, nan, full, column_stack
 
-from amplifinder.steps.jct_coverage.alignment_data import AlignmentData, PairedAlignment, SingleAlignment
+from amplifinder.steps.jct_coverage.alignment_data import AlignmentData, PairedAlignment, BaseSingleAlignment
+from amplifinder.steps.jct_coverage.cigar import Cigar
 
 
 # Plot hits coordinate system:
@@ -97,20 +98,16 @@ class CoordsAlignmentElements(AlignmentElements[Coords]):
             self_coord.extend(other_coord)
 
 
-def get_alignment_segments_from_single_alignment(
-    alignment: SingleAlignment,
-    show_events: bool,
+def get_alignment_segments_from_cigar(
+    cigar: Cigar,
+    start: int,
     x0: int = 0,
     y0: int = 0,
 ) -> CoordsAlignmentElements:
-    """Extract segments from a single CIGAR."""
+    """Extract segments from a single CIGAR with detailed events."""
     segments = CoordsAlignmentElements.create()
 
-    if not show_events:
-        segments.match.append([alignment.left + x0, alignment.right + x0], [y0, y0])
-        return segments
-
-    for op, length, x_start in alignment.cigar.iter_with_ref_pos(alignment.left):
+    for op, length, x_start in cigar.iter_with_ref_pos(start):
         x_end = x_start + length
 
         if op in INSERT_OPS:
@@ -134,6 +131,26 @@ def get_alignment_segments_from_single_alignment(
     return segments
 
 
+def get_alignment_segments_from_single_alignment(
+    alignment: BaseSingleAlignment,
+    show_events: bool,
+    x0: int = 0,
+    y0: int = 0,
+) -> CoordsAlignmentElements:
+    """Extract segments from a single alignment."""
+    segments = CoordsAlignmentElements.create()
+
+    if not show_events:
+        segments.match.append([alignment.left + x0, alignment.right + x0], [y0, y0])
+        return segments
+
+    # Get all cigars with their start positions
+    for start, cigar in alignment.get_starts_and_cigars():
+        segments.extend(get_alignment_segments_from_cigar(cigar, start, x0, y0))
+
+    return segments
+
+
 def get_alignment_segments(
     alignment: AlignmentData,
     show_events: bool,
@@ -142,11 +159,9 @@ def get_alignment_segments(
 ) -> CoordsAlignmentElements:
     """Get segments for an AlignmentData with SNP/indel annotations."""
     if isinstance(alignment, PairedAlignment):
-        left_alignment, right_alignment = alignment.to_two_single_alignments()
-        segments = get_alignment_segments_from_single_alignment(left_alignment, show_events, x0, y0)
-        segments.extend(get_alignment_segments_from_single_alignment(right_alignment, show_events, x0, y0))
-    else:
-        assert isinstance(alignment, SingleAlignment)
-        segments = get_alignment_segments_from_single_alignment(alignment, show_events, x0, y0)
-
-    return segments
+        segments1 = get_alignment_segments_from_single_alignment(alignment.alignment1, show_events, x0, y0)
+        segments2 = get_alignment_segments_from_single_alignment(alignment.alignment2, show_events, x0, y0)
+        segments1.extend(segments2)
+        return segments1
+    assert isinstance(alignment, BaseSingleAlignment)
+    return get_alignment_segments_from_single_alignment(alignment, show_events, x0, y0)
