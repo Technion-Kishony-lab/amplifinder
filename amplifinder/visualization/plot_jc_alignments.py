@@ -224,19 +224,20 @@ def _draw_genetic_element_legend(ax_legend, h_pixels: int = 18) -> None:
 
 
 def plot_jc_alignments(
-    jc_lengths: Dict[JunctionType, int],
     alignment_data: Dict[JunctionType, List[AlignmentData]],
     alignment_data_anc: Dict[JunctionType, List[AlignmentData]] | None = None,
     jc_covs: Dict[JunctionType, JunctionReadCounts] | None = None,
     jc_covs_anc: Dict[JunctionType, JunctionReadCounts] | None = None,
     jc_calls: Dict[JunctionType, JcCall] | None = None,
     jc_calls_anc: Dict[JunctionType, JcCall] | None = None,
+    jc_arm_len_iso: int = 150,
+    jc_arm_len_anc: int | None = None,
+    read_len_iso: int = 150,
+    read_len_anc: int = 150,
     title: str | None = None,
     output_path: Path | str = 'junctions_coverage.png',
     max_reads_per_plot: int = 200,
     alignment_classify_params: AlignmentClassifyParams | None = None,
-    iso_read_len: int = 150,
-    anc_read_len: int = 150,
 ) -> None:
     """Plot junctions coverage by reads as horizontal lines (coverage plot)."""
     with_calls = jc_calls is not None
@@ -275,18 +276,15 @@ def plot_jc_alignments(
         # Main alignment axes
         ax = fig.add_subplot(inner_gs[1])
 
-        jc_length = jc_lengths[jt]  # TODO: what happen when anc/iso have different lengths?
-        arm_len = jc_length // 2
-
         # Downsample and plot isolate
         alignments = alignment_data[jt]
         jc_cov = jc_covs[jt]
-        expected_iso = get_expected_counts(iso_read_len, arm_len, alignment_classify_params)
+        expected_iso = get_expected_counts(read_len_iso, jc_arm_len_iso, alignment_classify_params)
         downsampled, scales_iso = _down_sample_alignments(
             alignments, jc_cov, max_reads_per_plot, expected_iso
         )
         plot_alignments(
-            ax, downsampled, arm_len,
+            ax, downsampled, jc_arm_len_iso,
             show_events=PLOT_ALIGNMENT_SNP_INDELS,
             y_step=1.0,
             read_type_to_color=READ_TYPES_TO_COLORS,
@@ -296,12 +294,12 @@ def plot_jc_alignments(
         if alignment_data_anc:
             alignments_anc = alignment_data_anc[jt]
             jc_cov_anc = jc_covs_anc[jt]
-            expected_anc = get_expected_counts(anc_read_len, arm_len, alignment_classify_params)
+            expected_anc = get_expected_counts(read_len_anc, jc_arm_len_anc, alignment_classify_params)
             downsampled_anc, scales_anc = _down_sample_alignments(
                 alignments_anc, jc_cov_anc, max_reads_per_plot, expected_anc
             )
             plot_alignments(
-                ax, downsampled_anc, arm_len,
+                ax, downsampled_anc, jc_arm_len_anc,
                 show_events=PLOT_ALIGNMENT_SNP_INDELS,
                 y_step=-1.0,
                 read_type_to_color=READ_TYPES_TO_COLORS,
@@ -311,7 +309,10 @@ def plot_jc_alignments(
         y_min = -(max_reads_per_plot + 1) if alignment_data_anc else 0
         y_max = max_reads_per_plot + 1
         ax.set_ylim(y_min, y_max)
-        ax.set_xlim(-arm_len, arm_len)
+        # Use max arm length for x-axis to accommodate both iso and anc
+        arm_len_max = jc_arm_len_iso if jc_arm_len_anc is None \
+            else max(jc_arm_len_iso, jc_arm_len_anc)
+        ax.set_xlim(-arm_len_max, arm_len_max)
 
         # Add a junction call marker at the junction point
         if with_calls:
@@ -333,7 +334,7 @@ def plot_jc_alignments(
         left_elem_type, right_elem_type = jt.elements
 
         # Set up genetic element axes
-        max_read_len = max(iso_read_len, anc_read_len)
+        max_read_len = max(read_len_iso, read_len_anc)
         x_lim = max_read_len + alignment_classify_params.max_dist_from_junction
         ax_gene.set_xlim(-x_lim, x_lim)
         ax_gene.set_ylim(0, 1)
@@ -354,10 +355,10 @@ def plot_jc_alignments(
             add_pie_chart(ax, jc_cov, position='top')
 
         # Draw left element (ending at x=0)
-        draw_genetic_element(ax_gene, 0.1, -arm_len, 0, left_elem_type, h_pixels=h_pixels, wave_tail=True)
+        draw_genetic_element(ax_gene, 0.1, -arm_len_max, 0, left_elem_type, h_pixels=h_pixels, wave_tail=True)
 
         # Draw right element (starting at x=0)
-        draw_genetic_element(ax_gene, 0.1, 0, arm_len, right_elem_type, h_pixels=h_pixels, wave_head=True)
+        draw_genetic_element(ax_gene, 0.1, 0, arm_len_max, right_elem_type, h_pixels=h_pixels, wave_head=True)
 
     # Add legend in empty subplot position (2, 4)
     ax_legend = fig.add_subplot(gs[1, 3])
