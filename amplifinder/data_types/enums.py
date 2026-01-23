@@ -223,6 +223,17 @@ class JunctionReadCounts:
             right=op(self.right, other.right)
         )
 
+    def max(self, other: JunctionReadCounts | int | float) -> JunctionReadCounts:
+        """Return element-wise maximum of self and other."""
+        return self._apply_op(other, max)
+
+    # Type stubs for dynamically added operators
+    def __add__(self, other: JunctionReadCounts | int | float) -> JunctionReadCounts: ...
+    def __sub__(self, other: JunctionReadCounts | int | float) -> JunctionReadCounts: ...
+    def __mul__(self, other: JunctionReadCounts | int | float) -> JunctionReadCounts: ...
+    def __truediv__(self, other: JunctionReadCounts | int | float) -> JunctionReadCounts: ...
+    def __floordiv__(self, other: JunctionReadCounts | int | float) -> JunctionReadCounts: ...
+
 
 # Dynamically add arithmetic operators to JunctionReadCounts
 for _op_name, _op_func in [

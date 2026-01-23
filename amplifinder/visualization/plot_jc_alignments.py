@@ -164,6 +164,7 @@ def _down_sample_alignments(
     max_reads = expected_counts * max_reads_per_plot // expected_counts.total
 
     scales = jc_cov // max_reads
+    scales = scales.max(1)
 
     counters = JunctionReadCounts()
 
@@ -172,7 +173,7 @@ def _down_sample_alignments(
         read_type = alignment.read_type
         count = counters[read_type]
         scale = scales[read_type]
-        if scale == 0 or count % scale == 0:
+        if count % scale == 0:
             downsampled.append(alignment)
         counters.increment(read_type)
 
