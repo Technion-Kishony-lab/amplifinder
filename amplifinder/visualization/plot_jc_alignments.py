@@ -160,7 +160,7 @@ def _down_sample_alignments(
         Tuple of (downsampled_alignments, scales)
         where scales is a JunctionReadCounts with scaling factors for each read type
     """
-    sorted_alignments = sorted(alignments, key=lambda a: a.left)
+    sorted_alignments = sorted(alignments, key=lambda a: a.middle)
 
     max_reads = expected_counts * max_reads_per_plot // expected_counts.total
 
