@@ -1,14 +1,12 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-from amplifinder.data_types.enums import ReadType
 from amplifinder.steps.jct_coverage.cigar import Cigar
 
 
 @dataclass(frozen=True)
 class AlignmentData(ABC):
     """Base class for alignment data."""
-    read_type: ReadType
 
     @abstractmethod
     def get_bam_indices(self) -> tuple[int, ...]:

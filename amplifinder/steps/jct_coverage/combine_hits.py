@@ -35,7 +35,6 @@ def combine_same_id_same_orientation_hits(
             bam_index, hit = indexed_hits[0]
             cigar = Cigar(hit.cigartuples)
             combined_alignments[key] = SingleAlignment(
-                read_type=None,  # Not yet classified
                 start=hit.reference_start,
                 end=hit.reference_end,
                 cigar=cigar,
@@ -77,7 +76,6 @@ def _combine_multiple_hits(indexed_hits: list[tuple[int, pysam.AlignedSegment]])
     combined_end = max(ends)
     
     return CombinedSingleAlignment(
-        read_type=None,  # Not yet classified
         start=combined_start,
         end=combined_end,
         bam_indices=tuple(bam_indices),
