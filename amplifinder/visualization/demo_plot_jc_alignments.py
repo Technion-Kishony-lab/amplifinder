@@ -3,9 +3,49 @@ import random
 
 from amplifinder.config import AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
+from amplifinder.steps.jct_coverage.alignment_data import SingleAlignment
+from amplifinder.steps.jct_coverage.cigar import Cigar, merge_consecutive_cigar_ops
 from amplifinder.steps.jct_coverage.read_type import get_hit_type
 from amplifinder.utils.timing import timer
 from amplifinder.visualization.plot_jc_alignments import plot_jc_alignments
+
+
+def generate_dummy_reads(n_reads, length, read_len, arm_len, align_params, indel_at_junction=None):
+    """Generate dummy alignment reads.
+    
+    Args:
+        indel_at_junction: None, 'deletion', or 'insertion' to add indel at junction
+    """
+    jc_cov = JunctionReadCounts()
+    reads = []
+    for i in range(n_reads):
+        start = random.randint(0, length - read_len)
+        total_len = read_len + random.randint(-10, 10)
+        
+        # Generate cigar with SNPs
+        cigar = Cigar()
+        for pos in range(total_len):
+            jc_pos = start + pos - arm_len
+            if jc_pos != 0:
+                prob_snp = 0.95 if jc_pos == -50 else 0.05
+                is_snp = random.random() < prob_snp
+                cigar.append((8, 1) if is_snp else (7, 1))
+            elif indel_at_junction == 'deletion':
+                cigar.append((2, 5))
+            elif indel_at_junction == 'insertion':
+                cigar.append((1, 5))
+            else:
+                cigar.append((7, 1))        
+
+        cigar = merge_consecutive_cigar_ops(cigar)
+        end = start + cigar.get_total_length()
+        read_type = get_hit_type(start + 1, end, arm_len, align_params)
+        if read_type is not None:
+            alignment = SingleAlignment(start=start, end=end, bam_index=i, cigar=cigar, read_type=read_type)
+            reads.append(alignment)
+            jc_cov.increment(read_type)
+
+    return reads, jc_cov
 
 
 def main():
@@ -28,29 +68,8 @@ def main():
         length = jct_lengths[jt]
         arm_len = length // 2
 
-        # Generate dummy reads
-        jc_cov_iso = JunctionReadCounts()
-        jc_cov_anc = JunctionReadCounts()
-        reads_iso = []
-        reads_anc = []
-
-        # Isolate: 255 reads
-        for _ in range(255):
-            start = random.randint(0, length - read_len)
-            end = min(start + read_len + random.randint(-10, 10), length)
-            read_type = get_hit_type(start + 1, end, arm_len, align_params)
-            if read_type is not None:
-                jc_cov_iso.increment(read_type)
-                reads_iso.append((start, end, read_type))
-
-        # Ancestor: 130 reads
-        for _ in range(130):
-            start = random.randint(0, length - read_len)
-            end = min(start + read_len + random.randint(-10, 10), length)
-            read_type = get_hit_type(start + 1, end, arm_len, align_params)
-            if read_type is not None:
-                jc_cov_anc.increment(read_type)
-                reads_anc.append((start, end, read_type))
+        reads_iso, jc_cov_iso = generate_dummy_reads(255, length, read_len, arm_len, align_params, indel_at_junction='insertion')
+        reads_anc, jc_cov_anc = generate_dummy_reads(130, length, read_len, arm_len, align_params, indel_at_junction='deletion')
 
         alignment_data[jt] = reads_iso
         jc_covs[jt] = jc_cov_iso

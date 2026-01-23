@@ -64,6 +64,6 @@ ALLOW_INDELS_AT_JUNCTION_DISTANCE: Optional[int] = 4
 RESOLVE_CIGAR_MATCHES_VS_MISMATCHES: bool = True
 
 # Show SNP/indel markers on alignment plots
-PLOT_ALIGNMENT_SNP_INDELS: bool = bool(_CONFIG.get("plot_alignment_snp_indels", False))
+PLOT_ALIGNMENT_SNP_INDELS: bool = bool(_CONFIG.get("plot_alignment_snp_indels", True))
 
 DEBUG = MutableFlag(False)
