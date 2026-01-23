@@ -99,7 +99,6 @@ def _classify_bam_hits_by_jc_types_and_read_types(
 
             read_id = hit.query_name
             alignment = SingleAlignment(
-                read_type=resolved_hit.read_type,
                 start=hit.reference_start,
                 end=hit.reference_end,
                 cigar=resolved_hit.cigar,
@@ -132,7 +131,6 @@ def _merge_hits_of_paired_end_reads(
             hit_L = readids_to_hits_L.pop(read_id)
             hit_R = readids_to_hits_R.pop(read_id)
             paired_readids_to_hits[read_id] = PairedAlignment(
-                read_type=ReadType.PAIRED,
                 alignment1=hit_L,
                 alignment2=hit_R,
             )
