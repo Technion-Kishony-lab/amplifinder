@@ -377,7 +377,7 @@ class TestPipelineStepByStep:
         config = self._create_config(isolate_srr25242877, cleared_output_dir, anc_isolate=isolate_srr25242906)
         self._setup_pipeline(config)
         pipeline = Pipeline(config)
-        with DEBUG.temp_set(False):
+        with DEBUG.temp_set(True):
             pipeline.run()  # Will run ancestor automatically if needed
 
     def test_pipeline_with_ancestor_and_compare(self, isolate_srr25242877, isolate_srr25242906, cleared_output_dir):

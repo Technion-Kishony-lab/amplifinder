@@ -74,6 +74,7 @@ class SingleAlignment(BaseSingleAlignment):
     cigar: Cigar
     bam_index: int
     alignment_score: int
+    read_id: str = ""
 
     def get_bam_indices(self) -> tuple[int]:
         return (self.bam_index,)

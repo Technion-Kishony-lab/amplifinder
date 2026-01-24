@@ -97,9 +97,9 @@ def _classify_alignments_by_read_types(
             )
             if not classified_alignments:
                 invalid_side_combination_count += 1
-            for alignment in classified_alignments:
-                jctypes_to_alignments[jct_type].append(alignment)
-                counts[jct_type].increment(alignment.read_type)
+            for classified_alignment in classified_alignments:
+                jctypes_to_alignments[jct_type].append(classified_alignment)
+                counts[jct_type].increment(classified_alignment.read_type)
 
     if invalid_side_combination_count > 0:
         print(f"Total invalid side combinations: {invalid_side_combination_count}", flush=True)
@@ -183,6 +183,7 @@ def classify_single_alignment(
     start = alignment.start + 1  # convert to 1-based coordinates
     end = alignment.end
     read_type = get_hit_type(start, end, arm_len, alignment_classify_params)
+    assert alignment.read_type is None
     alignment.read_type = read_type
 
 

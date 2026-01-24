@@ -76,8 +76,6 @@ class JunctionReadCounts:
 
     def increment(self, read_type: Optional[ReadType]) -> None:
         """Increment the count for the given read type."""
-        if read_type is None:
-            return
         self[read_type] += 1
 
     @classmethod

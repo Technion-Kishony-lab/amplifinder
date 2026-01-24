@@ -277,7 +277,7 @@ class Pipeline:
             genome=genome,
             ref_tns=ref_tns,
             output_dir=iso_output,
-            junction_length=read_lengths.jc_arm_len_iso,
+            jc_arm_len=read_lengths.jc_arm_len_iso,
         ).run()
 
         # Create junctions for ancestor if needed
@@ -287,7 +287,7 @@ class Pipeline:
                 genome=genome,
                 ref_tns=ref_tns,
                 output_dir=anc_output,
-                junction_length=read_lengths.jc_arm_len_anc,
+                jc_arm_len=read_lengths.jc_arm_len_anc,
             ).run()
 
         return syn_tnjc2s

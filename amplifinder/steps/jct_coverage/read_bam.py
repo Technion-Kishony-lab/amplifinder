@@ -64,6 +64,7 @@ def read_bam_and_group_single_alignments(
                 cigar=cigar,
                 bam_index=bam_index,
                 alignment_score=hit.get_tag("AS") if hit.has_tag("AS") else 0,
+                read_id=hit.query_name,  # TODO: not really needed, remove?
             )
 
             grouped_hits[hit.reference_name][hit.query_name][hit.is_reverse].append(single_alignment)
