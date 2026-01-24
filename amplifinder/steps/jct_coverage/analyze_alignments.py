@@ -11,7 +11,7 @@ from amplifinder.data_types import (
 )
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
-from amplifinder.steps.jct_coverage.read_type import get_jct_read_counts
+from amplifinder.steps.jct_coverage.classify_alignments import get_jct_read_counts
 from amplifinder.steps.jct_coverage.export_bam_indices import write_junction_read_bam_indices
 
 

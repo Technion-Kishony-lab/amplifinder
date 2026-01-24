@@ -17,7 +17,7 @@ from amplifinder.config import AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType, Element, ReadType, JcCall
 
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
-from amplifinder.steps.jct_coverage.read_type import get_expected_counts
+from amplifinder.steps.jct_coverage.classify_alignments import get_expected_counts
 from amplifinder.steps.jct_coverage.alignment_segments import AlignmentElements, CoordsAlignmentElements, \
     convert_coords_to_nan_separated_arrays, get_alignment_segments
 
