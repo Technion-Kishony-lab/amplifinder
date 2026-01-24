@@ -20,8 +20,8 @@ class FrozenParams(BaseModel):
 class AlignmentFilterParams(FrozenParams):
     """Parameters for read filtering."""
 
-    max_nm_score: Optional[int] = None  # 3,
-    min_as_score: Optional[int] = None  # -25
+    max_nm_score: Optional[int] = 3  # 3,
+    min_as_score: Optional[int] = -25  # -25
     length_tolerance: float = 0.1
 
 
