@@ -1,85 +1,74 @@
-import pysam
 from pathlib import Path
 from collections import defaultdict
 
-from amplifinder.steps.jct_coverage.alignment_data import SingleAlignment, CombinedSingleAlignment
-from amplifinder.steps.jct_coverage.cigar import Cigar
+from amplifinder.steps.jct_coverage.alignment_data import \
+    AlignmentData, BaseSingleAlignment, SingleAlignment, PairedAlignment, \
+    create_single_or_combined_alignment
 
 
-def combine_same_id_same_orientation_hits(
-    bam_path: Path,
-) -> dict[tuple[str, bool, str], SingleAlignment]:
-    """Combine hits with same read_id and same orientation into single alignments.
+def select_or_combine_single_alignments(
+    grouped_hits: dict[str, dict[str, dict[bool, list[SingleAlignment]]]],
+    select_best_by_score: bool = True,
+) -> None:
+    """Process grouped hits in place: select best by score or combine all.
+    
+    Modifies grouped_hits:
+    - If select_best_by_score=True: replaces list with best scoring SingleAlignment
+    - If select_best_by_score=False: replaces list with CombinedSingleAlignment
     
     Args:
-        bam_path: Path to BAM file
-        
-    Returns:
-        Dictionary mapping (read_id, is_reverse, reference_name) to combined SingleAlignment
+        grouped_hits: Dictionary to modify in place
+        select_best_by_score: If True, keep best scoring hit. If False, combine all hits.
     """
-    # Group hits by (read_id, is_reverse, reference_name)
-    grouped_hits: dict[tuple[str, bool, str], list[tuple[int, pysam.AlignedSegment]]] = defaultdict(list)
+    for ref_name, ref_reads in grouped_hits.items():
+        for read_id, orientations in ref_reads.items():
+            for is_reverse, alignments in orientations.items():
+                if select_best_by_score:
+                    # Take the alignment with the best (highest) score
+                    orientations[is_reverse] = max(alignments, key=lambda a: a.alignment_score)
+                else:
+                    # Combine all alignments
+                    orientations[is_reverse] = create_single_or_combined_alignment(alignments)
+
+
+def combine_same_id_different_orientation_hits(
+    combined_alignments: dict[str, dict[str, dict[bool, BaseSingleAlignment]]]
+) -> None:
+    """Combine alignments with same read_id but different orientations into PairedAlignment.
     
-    with pysam.AlignmentFile(str(bam_path), "rb") as bam:
-        for bam_index, hit in enumerate(bam.fetch(), start=1):
-            if hit.is_unmapped or hit.is_supplementary:
-                continue
-            key = (hit.query_name, hit.is_reverse, hit.reference_name)
-            grouped_hits[key].append((bam_index, hit))
-
-    # Combine each group into single alignment
-    combined_alignments = {}
-    for key, indexed_hits in grouped_hits.items():
-        if len(indexed_hits) == 1:
-            # Single hit - just extract info
-            bam_index, hit = indexed_hits[0]
-            cigar = Cigar(hit.cigartuples)
-            combined_alignments[key] = SingleAlignment(
-                start=hit.reference_start,
-                end=hit.reference_end,
-                cigar=cigar,
-                bam_index=bam_index,
-            )
-        else:
-            # Multiple hits - combine them
-            combined_alignments[key] = _combine_multiple_hits(indexed_hits)
-    
-    return combined_alignments
-
-
-def _combine_multiple_hits(indexed_hits: list[tuple[int, pysam.AlignedSegment]]) -> CombinedSingleAlignment:
-    """Combine multiple hits into a single alignment spanning leftmost to rightmost.
+    Modifies in place:
+    - Paired reads: removes is_reverse=True/False, adds is_reverse=None -> PairedAlignment
+    - Unpaired reads: unchanged (is_reverse=True/False -> BaseSingleAlignment)
     
     Args:
-        indexed_hits: List of (bam_index, hit) with same read_id, orientation, and reference
+        combined_alignments: Dictionary to modify in place
+    """
+    for ref_name, ref_reads in combined_alignments.items():
+        for read_id, orientations in ref_reads.items():
+            if len(orientations) == 2:  # Has both forward and reverse - create paired
+                fwd = orientations.pop(False)
+                rev = orientations.pop(True)
+                assert fwd.left < rev.right
+                orientations[None] = PairedAlignment(
+                    forward_alignment=fwd,
+                    reverse_alignment=rev
+                )
+
+
+def flatten_combined_alignments(
+    combined_alignments: dict[str, dict[str, dict[bool | None, BaseSingleAlignment | PairedAlignment]]]
+) -> dict[str, list[AlignmentData]]:
+    """Flatten alignments into reference_name -> list[AlignmentData].
+    
+    Args:
+        combined_alignments: reference_name -> read_id -> is_reverse/None -> AlignmentData
         
     Returns:
-        CombinedSingleAlignment with overall span and individual hit info (separate CIGARs)
+        reference_name -> list[AlignmentData]
     """
-    # Sort by reference start position
-    sorted_indexed_hits = sorted(indexed_hits, key=lambda x: x[1].reference_start)
-    
-    # Extract info from each hit
-    bam_indices = []
-    cigars = []
-    starts = []
-    ends = []
-    
-    for bam_index, hit in sorted_indexed_hits:
-        bam_indices.append(bam_index)
-        cigars.append(Cigar(hit.cigartuples))
-        starts.append(hit.reference_start)
-        ends.append(hit.reference_end)
-    
-    # Overall span
-    combined_start = min(starts)
-    combined_end = max(ends)
-    
-    return CombinedSingleAlignment(
-        start=combined_start,
-        end=combined_end,
-        bam_indices=tuple(bam_indices),
-        cigars=tuple(cigars),
-        starts=tuple(starts),
-        ends=tuple(ends),
-    )
+    flattened_alignments: dict[str, list[AlignmentData]] = defaultdict(list)
+    for ref_name, ref_reads in combined_alignments.items():
+        for read_id, orientations in ref_reads.items():
+            for is_reverse, alignment in orientations.items():
+                flattened_alignments[ref_name].append(alignment)
+    return flattened_alignments
