@@ -9,6 +9,26 @@ from amplifinder.env import BLAST_PATH
 from amplifinder.utils.run_utils import get_tool_path, run_command
 
 
+class BlastHit(Record):
+    """BLAST alignment hit record."""
+    NAME: ClassVar[str] = "BLAST hits"
+    CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
+        'evalue': '.6e',  # Scientific notation for e-values
+    }
+    query: str
+    subject: str
+    percent_identical: float
+    length: int
+    mismatch: int
+    gapopen: int
+    qstart: int
+    qend: int
+    sstart: int
+    send: int
+    evalue: float
+    bitscore: float
+
+
 def make_blast_db(
     fasta: Path,
     db_path: Path,
