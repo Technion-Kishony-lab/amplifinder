@@ -83,9 +83,7 @@ class JunctionReadCounts:
     @classmethod
     def from_scalar(cls, scalar: int | float) -> JunctionReadCounts:
         """Create a JunctionReadCounts object from a scalar."""
-        return JunctionReadCounts(
-            left=scalar, left_marginal=scalar, spanning=scalar, right_marginal=scalar, right=scalar
-        )
+        return JunctionReadCounts(**{cls.get_field(rt): scalar for rt in ReadType})
 
     def _apply_op(self, other: JunctionReadCounts | int | float, op) -> JunctionReadCounts:
         """Apply a binary operation to all fields."""
@@ -93,13 +91,9 @@ class JunctionReadCounts:
         if not isinstance(other, JunctionReadCounts):
             other = self.from_scalar(other)
 
-        return JunctionReadCounts(
-            left=op(self.left, other.left),
-            left_marginal=op(self.left_marginal, other.left_marginal),
-            spanning=op(self.spanning, other.spanning),
-            right_marginal=op(self.right_marginal, other.right_marginal),
-            right=op(self.right, other.right)
-        )
+        return JunctionReadCounts(**{
+            self.get_field(rt): op(self[rt], other[rt]) for rt in ReadType
+        })
 
     def max(self, other: JunctionReadCounts | int | float) -> JunctionReadCounts:
         """Return element-wise maximum of self and other."""

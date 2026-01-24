@@ -37,16 +37,17 @@ def load_junction_read_bam_indices(
 
 
 def extract_bam_indices_by_read_type(
-    alignments: list[AlignmentData]
+    alignments_by_read_type: dict[ReadType, list[AlignmentData]]
 ) -> dict[ReadType, list[int]]:
 
     indices_by_read_type: dict[ReadType, list[int]] = {rt: [] for rt in ReadType}
 
-    for alignment in alignments:
-        indices = alignment.get_bam_indices()
-        # Flatten all indices into a single list
-        for idx in indices:
-            indices_by_read_type[alignment.read_type].append(idx)
+    for read_type, alignments_list in alignments_by_read_type.items():
+        for alignment in alignments_list:
+            indices = alignment.get_bam_indices()
+            # Flatten all indices into a single list
+            for idx in indices:
+                indices_by_read_type[read_type].append(idx)
 
     return indices_by_read_type
 
@@ -59,7 +60,9 @@ def write_junction_read_bam_indices(
 
     output_dir = Path(output_dir)
     for jc_type, alignments in alignment_data.items():
-        indices_by_read_type = extract_bam_indices_by_read_type(alignments)
+        # Group alignments by read_type
+        alignments_by_read_type = {rt: [a for a in alignments if a.read_type == rt] for rt in ReadType}
+        indices_by_read_type = extract_bam_indices_by_read_type(alignments_by_read_type)
 
         # Write indices to text files (one per line)
         for read_type, indices in indices_by_read_type.items():

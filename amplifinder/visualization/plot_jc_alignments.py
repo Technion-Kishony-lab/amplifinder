@@ -164,9 +164,12 @@ def _down_sample_alignments(
     sorted_alignments = sorted(alignments, key=lambda a: a.middle)
 
     max_reads = expected_counts * max_reads_per_plot // expected_counts.total
+    # Avoid division by zero - set max_reads to 1 for any read type with 0 expected count
+    max_reads.paired = 1  # Avoid dividing by zero for paired reads
 
     scales = jc_cov // max_reads
     scales = scales.max(1)
+    scales.paired = scales.spanning
 
     counters = JunctionReadCounts()
 
@@ -397,5 +400,5 @@ def plot_jc_alignments(
 
     # Save figure
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=150, bbox_inches='tight')
+    fig.savefig(output_path, dpi=600, bbox_inches='tight')
     plt.close(fig)

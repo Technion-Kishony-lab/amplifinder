@@ -17,6 +17,7 @@ from amplifinder.steps.jct_coverage.combine_hits import (
 )
 from amplifinder.steps.jct_coverage.alignment_filter import bam_hit_passes_filters
 from amplifinder.env import LINK_PAIRED_END, SELECT_BEST_BY_SCORE, ALLOW_INDELS_AT_JUNCTION_DISTANCE
+from amplifinder.env import DEBUG
 
 
 def get_jct_read_counts(
@@ -27,7 +28,7 @@ def get_jct_read_counts(
     alignment_filter_params: AlignmentFilterParams,
 ) -> tuple[
     dict[JunctionType, JunctionReadCounts],
-    dict[JunctionType, dict[ReadType, list[AlignmentData]]]
+    dict[JunctionType, list[AlignmentData]]
 ]:
     """Parse BAM and get coverage for all 7 junction types.
 
@@ -41,7 +42,7 @@ def get_jct_read_counts(
     Returns:
         tuple of:
             - dict mapping JunctionType -> JunctionReadCounts
-            - dict mapping JunctionType -> ReadType -> list[AlignmentData]
+            - dict mapping JunctionType -> list[AlignmentData]
     """
     # Read BAM and group hits by read_id and orientation, with filtering
     filter_func = partial(
@@ -69,18 +70,10 @@ def get_jct_read_counts(
     # Flatten combined alignments and classify by read type
     refnames_to_alignments = flatten_combined_alignments(refnames_to_readids_to_orientations_to_alignments)
 
-    # Classify alignments by read type
-    jctypes_to_readtypes_to_alignments = _classify_alignments_by_read_types(
+    # Classify alignments by read type (also counts as it goes)
+    return _classify_alignments_by_read_types(
         refnames_to_alignments, arm_len, avg_read_length, alignment_classify_params
     )
-
-    # Count hits by junction_type and read_type
-    counts = {jt: JunctionReadCounts() for jt in JunctionType}
-    for jct_type in JunctionType:
-        for read_type in ReadType:
-            counts[jct_type][read_type] = len(jctypes_to_readtypes_to_alignments[jct_type][read_type])
-
-    return counts, jctypes_to_readtypes_to_alignments
 
 
 def _classify_alignments_by_read_types(
@@ -88,11 +81,12 @@ def _classify_alignments_by_read_types(
     arm_len: int,
     avg_read_length: int,
     alignment_classify_params: AlignmentClassifyParams,
-) -> dict[JunctionType, dict[ReadType, list[AlignmentData]]]:
-    """Classify alignments by junction and read type."""
-    jctypes_to_readtypes_to_alignments: dict[JunctionType, dict[ReadType, list[AlignmentData]]] = {
-        jt: {rt: [] for rt in ReadType} for jt in JunctionType
-    }
+) -> tuple[dict[JunctionType, JunctionReadCounts], dict[JunctionType, list[AlignmentData]]]:
+    """Classify alignments by junction and read type, returning counts + flat structure."""
+    jctypes_to_alignments: dict[JunctionType, list[AlignmentData]] = {jt: [] for jt in JunctionType}
+    counts = {jt: JunctionReadCounts() for jt in JunctionType}
+
+    invalid_side_combination_count = 0
 
     for ref_name, alignments in refnames_to_alignments.items():
         jct_type = JunctionType[ref_name]
@@ -101,10 +95,16 @@ def _classify_alignments_by_read_types(
             classified_alignments = _classify_alignment(
                 alignment, arm_len, avg_read_length, alignment_classify_params
             )
+            if not classified_alignments:
+                invalid_side_combination_count += 1
             for alignment in classified_alignments:
-                jctypes_to_readtypes_to_alignments[jct_type][alignment.read_type].append(alignment)
+                jctypes_to_alignments[jct_type].append(alignment)
+                counts[jct_type].increment(alignment.read_type)
 
-    return jctypes_to_readtypes_to_alignments
+    if invalid_side_combination_count > 0:
+        print(f"Total invalid side combinations: {invalid_side_combination_count}", flush=True)
+
+    return counts, jctypes_to_alignments
 
 
 def _classify_alignment(
@@ -122,8 +122,10 @@ def _classify_alignment(
         alignment_classify_params: Classification parameters
 
     Returns:
-        list[tuple[AlignmentData, ReadType]]
+        list[AlignmentData] (empty list if invalid side combination)
     """
+    max_debug_examples = 1
+
     # Check indels within limit for all nested single alignments
     if isinstance(alignment, BaseSingleAlignment):
         classify_single_alignment(alignment, arm_len, alignment_classify_params)
@@ -160,8 +162,15 @@ def _classify_alignment(
         alignment.read_type = ReadType.PAIRED
         # We have evience for left, right and spanning
         return [fwd_alignment, rev_alignment, alignment]
-    assert (fwd_side == Side.MIDDLE and rev_side == Side.RIGHT) \
-        or (fwd_side == Side.RIGHT and rev_side == Side.LEFT)
+
+    ok = (fwd_side == Side.LEFT and rev_side == Side.MIDDLE) \
+        or (fwd_side == Side.MIDDLE and rev_side == Side.RIGHT)
+    if not ok:
+        if DEBUG and max_debug_examples > 0:
+            max_debug_examples -= 1
+            print(f"Example of invalid side combination: fwd_side={fwd_side}, rev_side={rev_side}", flush=True)
+            print(alignment, flush=True)
+        return []
     return [fwd_alignment, rev_alignment]
 
 
@@ -234,11 +243,12 @@ def get_expected_counts(
     max_dist = alignment_classify_params.get_max_dist_from_junction(arm_len)
     counts = JunctionReadCounts(
         left_far=arm_len - max_dist,
-        left=max_dist - avg_read_len,
+        left=max_dist - avg_read_len + 1,
         left_marginal=min_overlap_len,
         spanning=avg_read_len - 2 * min_overlap_len - 1,
+        paired=0,  # Not part of expected distribution
         right_marginal=min_overlap_len,
-        right=max_dist - avg_read_len,
+        right=max_dist - avg_read_len + 1,
         right_far=arm_len - max_dist,
     )
     assert counts.total == 2 * arm_len - avg_read_len + 1

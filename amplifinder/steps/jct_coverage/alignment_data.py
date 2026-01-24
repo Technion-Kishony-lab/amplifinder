@@ -63,6 +63,10 @@ class BaseSingleAlignment(AlignmentData):
     def right(self) -> int:
         return self.end
 
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}(start={self.start}, end={self.end}, is_reverse={self.is_reverse})"
+
 
 @dataclass
 class SingleAlignment(BaseSingleAlignment):
@@ -109,16 +113,11 @@ class CombinedSingleAlignment(BaseSingleAlignment):
         return self.alignments
 
 
-def create_single_or_combined_alignment(alignments: list[SingleAlignment]) -> BaseSingleAlignment:
-    if len(alignments) == 1:
-        return alignments[0]
-    return CombinedSingleAlignment.from_alignments(alignments)
-
-
 @dataclass
 class PairedAlignment(AlignmentData):
     forward_alignment: BaseSingleAlignment
     reverse_alignment: BaseSingleAlignment
+    is_swapped: bool = False
 
     def get_bam_indices(self) -> tuple[int, ...]:
         return (*self.forward_alignment.get_bam_indices(), *self.reverse_alignment.get_bam_indices())
@@ -147,3 +146,7 @@ class PairedAlignment(AlignmentData):
     def overlapping_length(self) -> int:
         # >0 if overlapping, 0 if not overlapping, <0 if there is distance between the two alignments
         return self.forward_alignment.right - self.reverse_alignment.left
+
+    def __repr__(self) -> str:
+        class_name = self.__class__.__name__
+        return f"{class_name}(\n\tfwd={self.forward_alignment},\n\trev={self.reverse_alignment},\n\tis_swapped={self.is_swapped})"
