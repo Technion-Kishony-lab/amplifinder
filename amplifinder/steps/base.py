@@ -9,8 +9,8 @@ from amplifinder.logger import info
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import remove_file_or_dir, ensure_dir
 from amplifinder.utils.timing import print_timer as _print_timer
-from amplifinder.data_types.typed_df import RecordTypedDf
-from amplifinder.data_types.records import Record
+from amplifinder.data_types import RecordTypedDf
+from amplifinder.records.base_records import Record
 from amplifinder.steps.io_naming import default_filename
 
 T = TypeVar("T")

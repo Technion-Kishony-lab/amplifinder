@@ -1,35 +1,33 @@
 """Data types and structures."""
 
-from amplifinder.data_types.typed_df import RecordTypedDf, TypedDF
+from amplifinder.records.typed_df import RecordTypedDf, TypedDF
+from amplifinder.records.base_records import Column, Schema, Record
 from amplifinder.data_types.genome import Genome, GenomeRegistry, get_genome
-from amplifinder.data_types.records import Column, Schema, Record
-from amplifinder.data_types.enums import Terminal, Side, Orientation, AverageMethod, JunctionType, \
-    EventModifier, JunctionReadCounts, BaseRawEvent
-from amplifinder.data_types.scaffold import JcArm, Scaffold, SeqScaffold
-from amplifinder.data_types.record_types import RefTn, BlastHit, Junction, BreseqJunction, \
-    RefTnJunction, TnJunction, RawTnJc2, RefTnSide, OffsetRefTnSide, \
-    CoveredTnJc2, RawEvent, SingleLocusLinkedTnJc2, SynJctsTnJc2, \
+from amplifinder.data_types.basic_enums import Terminal, Side, Orientation, AverageMethod
+from amplifinder.data_types.events import BaseRawEvent, RawEvent, EventModifier
+from amplifinder.data_types.read_types import ReadType, JunctionReadCounts
+from amplifinder.data_types.jc_types import Element, JunctionType, JcCall
+from amplifinder.data_types.scaffold import Scaffold, SeqScaffold
+from amplifinder.data_types.junctions import JcArm, Junction, NumJunction, BreseqJunction
+from amplifinder.data_types.ref_tn import TnId, RefTn, RefTnSide, OffsetRefTnSide, RefTnJunction, TnJunction
+from amplifinder.data_types.tnjc2s import RawTnJc2, CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, \
     AnalyzedTnJc2, ClassifiedTnJc2, ExportedTnJc2
 
 __all__ = [
+    # Basic enums
     "Terminal",
     "Side",
     "Orientation",
     "AverageMethod",
+
+    # Records base
     "Column",
     "Schema",
+    "Record",
     "RecordTypedDf",
     "TypedDF",
-    "Record",
-    "RefTn",
-    "BlastHit",
-    "Junction",
-    "BreseqJunction",
-    "RefTnJunction",
-    "TnJunction",
-    "RawTnJc2",
-    "RefTnSide",
-    "OffsetRefTnSide",
+
+    # Genome
     "Genome",
     "GenomeRegistry",
     "get_genome",
@@ -39,15 +37,38 @@ __all__ = [
     "Scaffold",
     "SeqScaffold",
 
-    # Coverage types
-    "JunctionReadCounts",
-    "CoveredTnJc2",
+    # Events
     "BaseRawEvent",
     "RawEvent",
+    "EventModifier",
+
+    # Read types
+    "ReadType",
+    "JunctionReadCounts",
+
+    # Junction types
+    "Element",
+    "JunctionType",
+    "JcCall",
+
+    # Reference TN
+    "TnId",
+    "RefTn",
+    "RefTnSide",
+    "OffsetRefTnSide",
+
+    # Junctions
+    "Junction",
+    "NumJunction",
+    "BreseqJunction",
+    "RefTnJunction",
+    "TnJunction",
+
+    # TN junction pairs
+    "RawTnJc2",
+    "CoveredTnJc2",
     "SingleLocusLinkedTnJc2",
     "SynJctsTnJc2",
-    "JunctionType",
-    "EventModifier",
     "AnalyzedTnJc2",
     "ClassifiedTnJc2",
     "ExportedTnJc2",

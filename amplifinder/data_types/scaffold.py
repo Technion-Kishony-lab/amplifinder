@@ -57,65 +57,16 @@ from __future__ import annotations
 import numpy as np
 
 from typing import ClassVar, Optional, TypeVar
-from pydantic import field_validator, model_validator
+from pydantic import model_validator
 
 from Bio.Seq import reverse_complement
 
-from amplifinder.data_types.records import Record
-from amplifinder.data_types.enums import Orientation
+from amplifinder.records.base_records import Record
+from amplifinder.data_types.basic_enums import Orientation
 from amplifinder.utils.sequence_utils import concatenate_sequence
+from amplifinder.data_types.junctions import JcArm, Junction
 
 T = TypeVar('T', str, np.ndarray)
-
-
-class JcArm(Record):
-    """Junction arm coordinates and orientation."""
-    NAME: ClassVar[str] = "Junction arms"
-    scaf: str
-    start: int
-    dir: Orientation
-    flank: int
-
-    @field_validator('dir')
-    @classmethod
-    def validate_dir(cls, v: Orientation) -> Orientation:
-        if v not in [Orientation.FORWARD, Orientation.REVERSE]:
-            raise ValueError("Invalid orientation")
-        return v
-
-    @property
-    def end(self) -> int:
-        """Compute end position based on start position, flank length, and direction."""
-        return self.start + (self.flank - 1) * self.dir
-
-    def shift_by_offset(self, offset: int) -> 'JcArm':
-        """Shift arm by offset in the direction of the arm.
-
-        Args:
-            offset: Distance to shift (positive = in arm direction, negative = opposite)
-
-        Returns:
-            New JcArm with shifted start position
-        """
-        return JcArm(
-            scaf=self.scaf,
-            start=self.start + offset * self.dir,
-            dir=self.dir,
-            flank=self.flank
-        )
-
-    def mirror(self) -> 'JcArm':
-        """Create a mirror arm at the adjacent position.
-        ~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~
-                           |------>           self
-                    <------|                  mirror
-        """
-        return JcArm(
-            scaf=self.scaf,
-            start=self.start - self.dir,
-            dir=self.dir.opposite(),
-            flank=self.flank
-        )
 
 
 class Scaffold(Record):
@@ -326,7 +277,6 @@ class SegmentMixin:
         In each junction arm1 is inward and arm2 is outward.
         """
         if junction_class is None:
-            from amplifinder.data_types.record_types import Junction
             junction_class = Junction
 
         inward_arms = self.get_inward_arms(flanks=in_flanks)

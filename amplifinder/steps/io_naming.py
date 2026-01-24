@@ -7,7 +7,7 @@ from amplifinder.data_types import (
     RefTnJunction, TnJunction, RawTnJc2, CoveredTnJc2, SingleLocusLinkedTnJc2,
     SynJctsTnJc2, AnalyzedTnJc2, ClassifiedTnJc2, ExportedTnJc2,
 )
-from amplifinder.data_types.records import Record
+from amplifinder.records.base_records import Record
 
 
 DEFAULT_FILENAMES: Dict[Type[Record], str] = {

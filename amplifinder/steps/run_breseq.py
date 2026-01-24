@@ -5,8 +5,7 @@ from typing import Optional
 
 from amplifinder.steps.base import OutputStep
 from amplifinder.tools.breseq import run_breseq, parse_breseq_output
-from amplifinder.data_types.record_types import BreseqJunction
-from amplifinder.data_types.typed_df import RecordTypedDf
+from amplifinder.data_types import BreseqJunction, RecordTypedDf
 
 
 class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):

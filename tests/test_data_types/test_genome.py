@@ -2,8 +2,7 @@ import pytest
 from Bio.Seq import reverse_complement
 
 from amplifinder.data_types.genome import Genome
-from amplifinder.data_types.enums import Orientation
-from amplifinder.data_types.record_types import Junction
+from amplifinder.data_types import Orientation, Junction
 
 
 @pytest.fixture

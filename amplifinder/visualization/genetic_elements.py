@@ -5,7 +5,7 @@ from pathlib import Path
 from matplotlib.patches import Polygon
 from enum import Enum
 
-from amplifinder.data_types.enums import Element
+from amplifinder.data_types import Element
 
 
 class ArrowHead(str, Enum):

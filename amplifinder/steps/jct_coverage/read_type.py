@@ -1,13 +1,13 @@
+"""Classify read types from alignments."""
 from pathlib import Path
 from typing import Optional
-from collections import defaultdict
 from functools import partial
 
 from amplifinder.config import AlignmentFilterParams, AlignmentClassifyParams
-from amplifinder.data_types import JunctionReadCounts, JunctionType, Side
-from amplifinder.data_types.enums import ReadType
-from amplifinder.steps.jct_coverage.alignment_data import AlignmentData, BaseSingleAlignment, SingleAlignment, PairedAlignment
-from amplifinder.steps.jct_coverage.cigar import Cigar
+from amplifinder.data_types import JunctionReadCounts, JunctionType, Side, ReadType
+from amplifinder.steps.jct_coverage.alignment_data import (
+    AlignmentData, BaseSingleAlignment, PairedAlignment
+)
 from amplifinder.steps.jct_coverage.read_bam import \
     read_bam_and_group_single_alignments
 from amplifinder.steps.jct_coverage.combine_hits import (
@@ -43,7 +43,7 @@ def get_jct_read_counts(
             - dict mapping JunctionType -> JunctionReadCounts
             - dict mapping JunctionType -> ReadType -> list[AlignmentData]
     """
-     # Read BAM and group hits by read_id and orientation, with filtering
+    # Read BAM and group hits by read_id and orientation, with filtering
     filter_func = partial(
         bam_hit_passes_filters,
         avg_read_length=avg_read_length,
@@ -51,9 +51,9 @@ def get_jct_read_counts(
         arm_len=arm_len,
         allow_indels_at_junction_distance=ALLOW_INDELS_AT_JUNCTION_DISTANCE
     )
-    
+
     refnames_to_readids_to_orientations_to_alignments = read_bam_and_group_single_alignments(
-        bam_path, 
+        bam_path,
         filter_func=filter_func
     )
 
@@ -61,14 +61,14 @@ def get_jct_read_counts(
     select_or_combine_single_alignments(
         refnames_to_readids_to_orientations_to_alignments, select_best_by_score=SELECT_BEST_BY_SCORE
     )
-    
+
     # Combine hits with same read_id but different orientations (paired-end) in place
     if LINK_PAIRED_END:
         combine_same_id_different_orientation_hits(refnames_to_readids_to_orientations_to_alignments)
 
     # Flatten combined alignments and classify by read type
     refnames_to_alignments = flatten_combined_alignments(refnames_to_readids_to_orientations_to_alignments)
-    
+
     # Classify alignments by read type
     jctypes_to_readtypes_to_alignments = _classify_alignments_by_read_types(
         refnames_to_alignments, arm_len, avg_read_length, alignment_classify_params
@@ -114,13 +114,13 @@ def _classify_alignment(
     alignment_classify_params: AlignmentClassifyParams,
 ) -> list[AlignmentData]:
     """Classify alignment by read type.
-    
+
     Args:
         alignment: BaseSingleAlignment or PairedAlignment
         arm_len: Half the junction length
         avg_read_length: Average read length (unused, kept for consistency)
         alignment_classify_params: Classification parameters
-        
+
     Returns:
         list[tuple[AlignmentData, ReadType]]
     """
@@ -148,9 +148,14 @@ def _classify_alignment(
         alignment.read_type = fwd_read_type
         return [alignment]
     if fwd_side == rev_side:
-        if fwd_side == Side.LEFT: return [rev_alignment]
-        if fwd_side == Side.RIGHT: return [fwd_alignment]
-        assert False, "fwd_side == rev_side == Side.MIDDLE, so fwd_read_type == rev_read_type == ReadType.SPANNING"
+        if fwd_side == Side.LEFT:
+            return [rev_alignment]
+        if fwd_side == Side.RIGHT:
+            return [fwd_alignment]
+        assert False, (
+            "fwd_side == rev_side == Side.MIDDLE, "
+            "so fwd_read_type == rev_read_type == ReadType.SPANNING"
+        )
     if fwd_side == Side.LEFT and rev_side == Side.RIGHT:
         alignment.read_type = ReadType.PAIRED
         # We have evience for left, right and spanning

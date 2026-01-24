@@ -1,4 +1,20 @@
-# Paired TN junctions
+"""TN junction pairs and amplicon records for AmpliFinder."""
+from __future__ import annotations
+import numpy as np
+
+from pathlib import Path
+from typing import ClassVar, Dict, List, Optional
+from pydantic import field_validator
+
+from amplifinder.records.base_records import Record
+from amplifinder.data_types.basic_enums import Terminal, Orientation
+from amplifinder.data_types.events import BaseRawEvent, RawEvent, EventModifier
+from amplifinder.data_types.jc_types import JunctionType
+from amplifinder.data_types.read_types import JunctionReadCounts
+from amplifinder.data_types.ref_tn import TnId, OffsetRefTnSide, TnJunction
+from amplifinder.data_types.scaffold import SeqScaffold, SeqSegmentScaffold
+from amplifinder.data_types.junctions import JcArm
+
 
 class RawTnJc2(Record):
     """Paired TN junctions (candidate amplicon).

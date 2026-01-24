@@ -14,8 +14,7 @@ from pathlib import Path
 from amplifinder.env import PLOT_ALIGNMENT_SNP_INDELS
 
 from amplifinder.config import AlignmentClassifyParams
-from amplifinder.data_types import JunctionReadCounts, JunctionType
-from amplifinder.data_types.enums import Element, ReadType, JcCall
+from amplifinder.data_types import JunctionReadCounts, JunctionType, Element, ReadType, JcCall
 
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
 from amplifinder.steps.jct_coverage.read_type import get_expected_counts
@@ -384,9 +383,11 @@ def plot_jc_alignments(
     # Junction call legend (bottom)
     if with_calls:
         jc_legend_elements = [
-            Line2D([0], [0], marker='v', linestyle='None', markerfacecolor=color, 
-                   markersize=10, markeredgecolor='None', label=label)
-                   for color, label in JC_CALLS_TO_COLORS_AND_LABELS.values()
+            Line2D(
+                [0], [0], marker='v', linestyle='None', markerfacecolor=color,
+                markersize=10, markeredgecolor='None', label=label
+            )
+            for color, label in JC_CALLS_TO_COLORS_AND_LABELS.values()
         ]
         ax_legend.legend(handles=jc_legend_elements, bbox_to_anchor=(0.5, 0.05),
                          loc='center', fontsize=11, frameon=True, title='Junction call')

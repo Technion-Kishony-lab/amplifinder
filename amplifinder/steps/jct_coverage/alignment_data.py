@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from amplifinder.steps.jct_coverage.cigar import Cigar
-from amplifinder.data_types.enums import ReadType
+from amplifinder.data_types import ReadType
 
 
 @dataclass
 class AlignmentData(ABC):
     """Base class for alignment data."""
 
-    read_type: ReadType = None
+    read_type: ReadType | None = field(default=None, kw_only=True)
 
     @abstractmethod
     def get_bam_indices(self) -> tuple[int, ...]:
@@ -90,13 +90,13 @@ class CombinedSingleAlignment(BaseSingleAlignment):
     def from_alignments(cls, alignments: list[SingleAlignment]) -> "CombinedSingleAlignment":
         # Sort by reference start position
         sorted_alignments = tuple(sorted(alignments, key=lambda a: a.start))
-        
+
         # Overall span
         start = min(a.start for a in sorted_alignments)
         end = max(a.end for a in sorted_alignments)
         assert all(a.is_reverse == sorted_alignments[0].is_reverse for a in sorted_alignments)
         is_reverse = sorted_alignments[0].is_reverse
-        
+
         return cls(start=start, end=end, is_reverse=is_reverse, alignments=sorted_alignments)
 
     def get_bam_indices(self) -> tuple[int, ...]:
@@ -124,10 +124,16 @@ class PairedAlignment(AlignmentData):
         return (*self.forward_alignment.get_bam_indices(), *self.reverse_alignment.get_bam_indices())
 
     def get_starts_and_cigars(self) -> tuple[tuple[int, Cigar], ...]:
-        return (*self.forward_alignment.get_starts_and_cigars(), *self.reverse_alignment.get_starts_and_cigars())
+        return (
+            *self.forward_alignment.get_starts_and_cigars(),
+            *self.reverse_alignment.get_starts_and_cigars()
+        )
 
     def get_all_single_alignments(self) -> tuple[SingleAlignment, ...]:
-        return (*self.forward_alignment.get_all_single_alignments(), *self.reverse_alignment.get_all_single_alignments())
+        return (
+            *self.forward_alignment.get_all_single_alignments(),
+            *self.reverse_alignment.get_all_single_alignments()
+        )
 
     @property
     def left(self) -> int:

@@ -4,7 +4,7 @@ from typing import Optional
 
 from amplifinder.config import AlignmentClassifyParams, AlignmentFilterParams
 from amplifinder.optional_deps import plt
-from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, JunctionType
+from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2
 from amplifinder.steps.base import Step
 from amplifinder.steps.read_length import ReadLengths
 from amplifinder.steps.jct_coverage.analyze_alignments import get_jct_read_counts_by_tnjc2
