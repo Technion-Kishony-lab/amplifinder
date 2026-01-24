@@ -36,11 +36,6 @@ class JunctionType(Enum):
     TN_RIGHT_TO_CHR       = (6, '>>-~~', Element.TN,  Element.CHR, +2)  # noqa: E221, E203
     AMP_RIGHT_TO_CHR      = (7, '==-~~', Element.AMP, Element.CHR, +1)  # noqa: E221, E203
 
-    @classmethod
-    def sorted(cls) -> list[JunctionType]:
-        """Return the JunctionType enum members sorted by value."""
-        return sorted(cls, key=lambda x: x.num)
-
     @property
     def num(self) -> int:
         """Return the number of the junction. (1-7, matlab legacy)"""
