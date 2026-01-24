@@ -146,7 +146,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                     read_len=self.read_length,
                     min_overlap_len=self.alignment_classify_params.min_overlap_len
                 )
-                for jt in JunctionType.sorted()
+                for jt in JunctionType
             }
 
             analyzed_records.append(AnalyzedTnJc2.from_other(

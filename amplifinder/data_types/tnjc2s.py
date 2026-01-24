@@ -350,7 +350,7 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     def jc_cov_vector(self) -> List[tuple[int, int, int]]:
         """Junction coverage vector."""
         return [(self.jc_covs[jt].left, self.jc_covs[jt].spanning, self.jc_covs[jt].right)
-                for jt in JunctionType.sorted()]
+                for jt in JunctionType]
 
     @property
     def jc_cov_anc_vector(self) -> Optional[List[tuple[int, int, int]]]:
@@ -358,7 +358,7 @@ class AnalyzedTnJc2(SynJctsTnJc2):
         if self.jc_covs_anc is None:
             return None
         return [(self.jc_covs_anc[jt].left, self.jc_covs_anc[jt].spanning, self.jc_covs_anc[jt].right)
-                for jt in JunctionType.sorted()]
+                for jt in JunctionType]
 
 
 class ClassifiedTnJc2(AnalyzedTnJc2):

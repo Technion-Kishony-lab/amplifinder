@@ -278,7 +278,7 @@ class TestPipeline(Pipeline):
         output_dir = python_alignment_dir
 
         # Create comparison table for each junction
-        for jt in JunctionType.sorted():
+        for jt in JunctionType:
             jct_num = jt.num
 
             df, confusion_matrix = create_jct_comparison_table(
