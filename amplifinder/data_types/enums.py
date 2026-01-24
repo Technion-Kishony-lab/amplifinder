@@ -140,43 +140,50 @@ class EventModifier(str, Enum):
 
 class ReadType(str, Enum):
     """Type of a read at a junction."""
+    LEFT_FAR = "left_far"
     LEFT = "left"
-    LEFT_MARGINAL = "left-marginal"
-    MIDDLE = "spanning"
+    LEFT_MARGINAL = "left_marginal"
+    SPANNING = "spanning"
     PAIRED = "paired"
-    RIGHT_MARGINAL = "right-marginal"
+    RIGHT_MARGINAL = "right_marginal"
     RIGHT = "right"
+    RIGHT_FAR = "right_far"
 
     def is_marginal(self) -> bool:
         """Return True if this is a marginal read type."""
         return self in [self.LEFT_MARGINAL, self.RIGHT_MARGINAL]
+    
+    def is_far(self) -> bool:
+        """Return True if this is a far read type."""
+        return self in [self.LEFT_FAR, self.RIGHT_FAR]
+
+    def get_side(self) -> Side:
+        """Return the side of the read type."""
+        if self in [self.LEFT_FAR, self.LEFT, self.LEFT_MARGINAL]:
+            return Side.LEFT
+        elif self in [self.RIGHT_FAR, self.RIGHT, self.RIGHT_MARGINAL]:
+            return Side.RIGHT
+        return Side.MIDDLE
 
 
 @dataclass
 class JunctionReadCounts:
     """Read counts at a junction.
-    Order: LEFT, LEFT_MARGINAL, MIDDLE, RIGHT_MARGINAL, RIGHT.
+    Order: LEFT_FAR, LEFT, LEFT_MARGINAL, SPANNING, PAIRED, RIGHT_MARGINAL, RIGHT, RIGHT_FAR.
     """
+    left_far: int = 0        # reads far on left side of junction
     left: int = 0            # reads on left side of junction
     left_marginal: int = 0   # reads partially overlapping from left
-    spanning: int = 0        # reads spanning the junction (MIDDLE)
-    paired: int = 0          # paired-end reads supporting the left and right sides
+    spanning: int = 0        # reads spanning the junction
+    paired: int = 0          # paired-end reads with different classifications
     right_marginal: int = 0  # reads partially overlapping from right
     right: int = 0           # reads on right side of junction
-
-    _FIELD_MAP: ClassVar[dict[ReadType, str]] = {
-        ReadType.LEFT: "left",
-        ReadType.LEFT_MARGINAL: "left_marginal",
-        ReadType.MIDDLE: "spanning",
-        ReadType.PAIRED: "paired",
-        ReadType.RIGHT_MARGINAL: "right_marginal",
-        ReadType.RIGHT: "right"
-    }
+    right_far: int = 0       # reads far on right side of junction
 
     @classmethod
     def get_field(cls, read_type: ReadType) -> str:
         """Get the field name for a read type."""
-        return cls._FIELD_MAP[read_type]
+        return read_type.value
 
     def __getitem__(self, read_type: ReadType) -> int:
         """Get count for a read type."""
@@ -189,7 +196,7 @@ class JunctionReadCounts:
     @property
     def counts(self) -> dict[ReadType, int]:
         """Return counts as a dict mapping ReadType to count."""
-        return {k: self[k] for k in self._FIELD_MAP.keys()}
+        return {k: self[k] for k in ReadType}
 
     @property
     def total(self) -> int:

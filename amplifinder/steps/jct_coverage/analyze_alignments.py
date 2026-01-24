@@ -7,6 +7,7 @@ from typing import Optional
 from amplifinder.config import AlignmentClassifyParams, JcCallParams, AlignmentFilterParams
 from amplifinder.env import DEBUG
 from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
+from amplifinder.data_types.enums import ReadType
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
 from amplifinder.steps.jct_coverage.read_type import get_jct_read_counts
@@ -17,34 +18,33 @@ def get_jct_read_counts_by_tnjc2(
     synjct_tnjc2: SynJctsTnJc2,
     base_dir: Path,
     is_ancestor: bool,
+    arm_len: int,
     avg_read_length: int,
     alignment_classify_params: AlignmentClassifyParams,
     alignment_filter_params: AlignmentFilterParams,
 ) -> tuple[
     dict[JunctionType, JunctionReadCounts],
-    dict[JunctionType, list[AlignmentData]],
-    dict[JunctionType, int]
+    dict[JunctionType, dict[ReadType, dict[str, AlignmentData]]]
 ]:
     """A wrapper around get_jct_read_counts to get the read counts based on a SynJctsTnJc2."""
     bam_path = synjct_tnjc2.bam_path(base_dir, is_ancestor=is_ancestor)
-    return get_jct_read_counts(bam_path, avg_read_length, alignment_classify_params, alignment_filter_params)
+    return get_jct_read_counts(bam_path, arm_len, avg_read_length, alignment_classify_params, alignment_filter_params)
 
 
 def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
-               jc_len: int, read_len: int, min_overlap_len: int) -> Optional[bool]:
+               arm_len: int, read_len: int, min_overlap_len: int) -> Optional[bool]:
     """Determine if junction is covered based on spanning read statistics.
 
     Args:
         cov: Junction read counts (left, right, spanning)
         jc_call_params: Junction calling parameters. See JcCallParams for details.
-        jc_len: Junction length
+        arm_len: Junction arm length
         read_len: Read length
         min_overlap_len: Minimum overlap length for spanning reads
 
     Returns:
         True if junction is covered, False if not covered, None if ambiguous
     """
-    arm_len = jc_len // 2
 
     # num options of read-alignments for the left or right side
     num_options_side_aligned_reads = arm_len - read_len
@@ -91,6 +91,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         self,
         tnjc2s: RecordTypedDf[SynJctsTnJc2],
         output_dir: Path,
+        arm_len: int,
         read_length: int = 150,
         alignment_classify_params: AlignmentClassifyParams = None,
         alignment_filter_params: AlignmentFilterParams = None,
@@ -98,6 +99,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         force: Optional[bool] = None,
     ):
         self.tnjc2s = tnjc2s
+        self.arm_len = arm_len
         self.read_length = read_length
         self.alignment_classify_params = alignment_classify_params or AlignmentClassifyParams()
         self.alignment_filter_params = alignment_filter_params or AlignmentFilterParams()
@@ -119,10 +121,11 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         """Analyze alignments for each candidate."""
         analyzed_records = []
         for tnjc2 in self.tnjc2s:
-            jc_covs, alignment_data, jc_lengths = get_jct_read_counts_by_tnjc2(
+            jc_covs, alignment_data = get_jct_read_counts_by_tnjc2(
                 synjct_tnjc2=tnjc2,
                 base_dir=self._output_dir,
                 is_ancestor=self.IS_ANCESTOR,
+                arm_len=self.arm_len,
                 avg_read_length=self.read_length,
                 alignment_classify_params=self.alignment_classify_params,
                 alignment_filter_params=self.alignment_filter_params,
@@ -138,7 +141,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 jt: is_covered(
                     jc_covs[jt],
                     jc_call_params=self.jc_call_params,
-                    jc_len=jc_lengths[jt],
+                    arm_len=self.arm_len,
                     read_len=self.read_length,
                     min_overlap_len=self.alignment_classify_params.min_overlap_len
                 )

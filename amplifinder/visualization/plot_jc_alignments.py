@@ -26,12 +26,14 @@ from amplifinder.visualization.genetic_elements import draw_genetic_element
 
 
 READ_TYPES_TO_COLORS = {
-    ReadType.LEFT: '#d00000',  # vibrant red
-    ReadType.LEFT_MARGINAL: '#b06060',  # soft coral
-    ReadType.MIDDLE: '#606060',  # teal green
-    ReadType.PAIRED: '#606060',  # green for paired-end reads
-    ReadType.RIGHT_MARGINAL: '#6060b0',  # warm amber
-    ReadType.RIGHT: '#0000d0'  # bright orange
+    ReadType.LEFT_FAR: '#d00000',
+    ReadType.LEFT: '#d00000',
+    ReadType.LEFT_MARGINAL: '#b06060',
+    ReadType.SPANNING: '#606060',
+    ReadType.PAIRED: '#808080',
+    ReadType.RIGHT_MARGINAL: '#6060b0',
+    ReadType.RIGHT: '#0000d0',
+    ReadType.RIGHT_FAR: '#0000d0',
 }
 
 
@@ -123,7 +125,7 @@ def add_pie_chart(ax, jc_cov: JunctionReadCounts, position: str = 'top'):
         jc_cov: JunctionReadCounts with left, left_marginal, spanning, right_marginal, right
         position: 'top' for top-left or 'bottom' for bottom-right
     """
-    # Calculate fractions (order: LEFT, LEFT_MARGINAL, MIDDLE, RIGHT_MARGINAL, RIGHT)
+    # Calculate fractions (order: LEFT, LEFT_MARGINAL, SPANNING, RIGHT_MARGINAL, RIGHT)
     if jc_cov.total == 0:
         return
 

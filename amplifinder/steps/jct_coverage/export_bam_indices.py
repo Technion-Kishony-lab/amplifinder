@@ -7,16 +7,16 @@ from amplifinder.data_types.enums import JunctionType, ReadType
 
 def load_junction_read_bam_indices(
     indices_dir: Path
-) -> dict[JunctionType, dict[ReadType, list[int] | list[tuple[int, int]]]]:
+) -> dict[JunctionType, dict[ReadType, list[int]]]:
     """Load BAM indices from files (reflection of write_junction_read_bam_indices).
 
     Args:
         indices_dir: Directory containing reads_jct_*_*.bam_indices files
 
     Returns:
-        dict[JunctionType, dict[ReadType, list[int] | list[tuple[int, int]]]]
+        dict[JunctionType, dict[ReadType, list[int]]]
     """
-    result: dict[JunctionType, dict[ReadType, list[int] | list[tuple[int, int]]]] = {}
+    result: dict[JunctionType, dict[ReadType, list[int]]] = {}
 
     for jct_type in JunctionType:
         result[jct_type] = {}
@@ -29,12 +29,7 @@ def load_junction_read_bam_indices(
                     line = line.strip()
                     if not line:
                         continue
-
-                    if read_type == ReadType.PAIRED:
-                        parts = line.split()
-                        indices.append((int(parts[0]), int(parts[1])))
-                    else:
-                        indices.append(int(line))
+                    indices.append(int(line))
 
             result[jct_type][read_type] = indices
 
@@ -43,14 +38,15 @@ def load_junction_read_bam_indices(
 
 def extract_bam_indices_by_read_type(
     alignments: list[AlignmentData]
-) -> dict[ReadType, list[int] | list[tuple[int, int]]]:
+) -> dict[ReadType, list[int]]:
 
-    indices_by_read_type: dict[ReadType, list[int] | list[tuple[int, int]]] = {rt: [] for rt in ReadType}
+    indices_by_read_type: dict[ReadType, list[int]] = {rt: [] for rt in ReadType}
 
     for alignment in alignments:
         indices = alignment.get_bam_indices()
-        indices = indices[0] if len(indices) == 1 else indices
-        indices_by_read_type[alignment.read_type].append(indices)
+        # Flatten all indices into a single list
+        for idx in indices:
+            indices_by_read_type[alignment.read_type].append(idx)
 
     return indices_by_read_type
 
@@ -65,16 +61,12 @@ def write_junction_read_bam_indices(
     for jc_type, alignments in alignment_data.items():
         indices_by_read_type = extract_bam_indices_by_read_type(alignments)
 
-        # Write indices to text files (one per line, pairs for PAIRED)
+        # Write indices to text files (one per line)
         for read_type, indices in indices_by_read_type.items():
 
             # Convert JunctionType and ReadType enum values to filename-safe string
             output_path = output_dir / f"reads_jct_{jc_type.num}_{read_type.value}.bam_indices"
 
             with open(output_path, 'w') as f:
-                for item in indices:
-                    # Handle both single int and tuple[int, int] uniformly
-                    if isinstance(item, tuple):
-                        f.write(f"{item[0]} {item[1]}\n")
-                    else:
-                        f.write(f"{item}\n")
+                for idx in indices:
+                    f.write(f"{idx}\n")
