@@ -9,9 +9,10 @@ from amplifinder.env import DEBUG
 from amplifinder.data_types import (
     RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts, ReadType
 )
+from amplifinder.logger import warning
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
-from amplifinder.steps.jct_coverage.classify_alignments import get_jct_read_counts
+from amplifinder.steps.jct_coverage.classify_alignments import get_expected_counts, get_jct_read_counts
 from amplifinder.steps.jct_coverage.export_bam_indices import write_junction_read_bam_indices
 
 
@@ -33,7 +34,7 @@ def get_jct_read_counts_by_tnjc2(
 
 
 def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
-               arm_len: int, read_len: int, min_overlap_len: int) -> Optional[bool]:
+               arm_len: int, read_len: int, alignment_classify_params: AlignmentClassifyParams) -> Optional[bool]:
     """Determine if junction is covered based on spanning read statistics.
 
     Args:
@@ -41,19 +42,15 @@ def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
         jc_call_params: Junction calling parameters. See JcCallParams for details.
         arm_len: Junction arm length
         read_len: Read length
-        min_overlap_len: Minimum overlap length for spanning reads
+        alignment_classify_params: Alignment classification parameters
 
     Returns:
         True if junction is covered, False if not covered, None if ambiguous
     """
 
-    # num options of read-alignments for the left or right side
-    num_options_side_aligned_reads = arm_len - read_len
-
-    # num options of read-alignments spanning the junction
-    num_options_spanning_reads = read_len - 2 * min_overlap_len
-
-    ratio_spanning_reads = num_options_spanning_reads / num_options_side_aligned_reads
+    expected_counts = get_expected_counts(read_len, arm_len, alignment_classify_params)
+    assert expected_counts.left == expected_counts.right
+    ratio_spanning_reads = expected_counts.spanning / expected_counts.left
 
     # if the junction connects a single-copy region with a multi-copy region,
     # the junction, if exists, should be covered as expected based on the low-copy region
@@ -79,6 +76,14 @@ def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
     if not is_above_minimal_expected and is_close_to_zero:
         return False
     return None  # ambiguous
+
+
+def warn_if_paired_and_not_spanning(jc_covs: dict[JunctionType, JunctionReadCounts]) -> None:
+    """Warn if paired reads are present and no spanning reads are present."""
+    for jt in JunctionType:
+        if jc_covs[jt].paired > 0 and jc_covs[jt].spanning == 0:
+            warning(f"Junction {jt} has {jc_covs[jt].paired} paired-end reads "
+                    "transversing the junction but no spanning reads.")
 
 
 class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
@@ -144,10 +149,12 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                     jc_call_params=self.jc_call_params,
                     arm_len=self.arm_len,
                     read_len=self.read_length,
-                    min_overlap_len=self.alignment_classify_params.min_overlap_len
+                    alignment_classify_params=self.alignment_classify_params
                 )
                 for jt in JunctionType
             }
+
+            warn_if_paired_and_not_spanning(jc_covs)
 
             analyzed_records.append(AnalyzedTnJc2.from_other(
                 tnjc2,
