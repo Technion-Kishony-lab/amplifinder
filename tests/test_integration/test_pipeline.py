@@ -13,6 +13,8 @@ from amplifinder.data_types import JunctionType
 from amplifinder.steps.base import Step
 from amplifinder.config import Config
 from amplifinder.pipeline import Pipeline
+from amplifinder.env import DEBUG
+
 
 from tests.test_integration.matlab_compare import (
     convert_python_records_to_standard,
@@ -364,17 +366,19 @@ class TestPipelineStepByStep:
 
     def test_pipeline_without_ancestor(self, isolate_srr25242877, cleared_output_dir):
         print_color("\n=== Testing Isolate Pipeline WITHOUT ancestor ===")
-        matlab_output_dir = isolate_srr25242877["matlab_output"]
+        self._setup_pipeline(config)
         config = self._create_config(isolate_srr25242877, cleared_output_dir)
-        pipeline = Pipeline(config, matlab_output_dir)
-        pipeline.run()
+        pipeline = Pipeline(config)
+        with DEBUG.temp_set(True):
+            pipeline.run()
 
     def test_pipeline_with_ancestor(self, isolate_srr25242877, isolate_srr25242906, cleared_output_dir):
         print_color("\n=== Testing Isolate Pipeline WITH ancestor ===")
-        matlab_output_dir = isolate_srr25242877["matlab_output"]
         config = self._create_config(isolate_srr25242877, cleared_output_dir, anc_isolate=isolate_srr25242906)
-        pipeline = Pipeline(config, matlab_output_dir)
-        pipeline.run()  # Will run ancestor automatically if needed
+        self._setup_pipeline(config)
+        pipeline = Pipeline(config)
+        with DEBUG.temp_set(False):
+            pipeline.run()  # Will run ancestor automatically if needed
 
     def test_pipeline_with_ancestor_and_compare(self, isolate_srr25242877, isolate_srr25242906, cleared_output_dir):
         print_color("\n=== Testing Isolate Pipeline WITH ancestor ===")

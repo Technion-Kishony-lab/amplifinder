@@ -6,7 +6,8 @@ from typing import Optional, Callable
 
 from amplifinder.steps.jct_coverage.alignment_data import SingleAlignment
 from amplifinder.steps.jct_coverage.cigar import Cigar, resolve_cigar_m_operations
-from amplifinder.env import RESOLVE_CIGAR_MATCHES_VS_MISMATCHES
+from amplifinder.env import DEBUG, RESOLVE_CIGAR_MATCHES_VS_MISMATCHES
+from amplifinder.utils.file_utils import fmt_count
 
 
 def read_bam_and_group_single_alignments(
@@ -26,11 +27,25 @@ def read_bam_and_group_single_alignments(
         lambda: defaultdict(lambda: defaultdict(list))
     )
 
+    # Statistics counters
+    total_hits = 0
+    pass_filter_total = 0
+    pass_filter_forward = 0
+    pass_filter_reverse = 0
+
     with pysam.AlignmentFile(str(bam_path), "rb") as bam:
         for bam_index, hit in enumerate(bam.fetch(), start=1):
+            total_hits += 1
+            
             # Apply filter if provided
             if filter_func is not None and not filter_func(hit):
                 continue
+
+            pass_filter_total += 1
+            if hit.is_reverse:
+                pass_filter_reverse += 1
+            else:
+                pass_filter_forward += 1
 
             # Create CIGAR (filter already validated it)
             cigar = Cigar(hit.cigartuples or [])
@@ -52,5 +67,13 @@ def read_bam_and_group_single_alignments(
             )
 
             grouped_hits[hit.reference_name][hit.query_name][hit.is_reverse].append(single_alignment)
+
+    print(
+        f"BAM statistics: total hits={fmt_count(total_hits)}, "
+        f"pass_filter={fmt_count(pass_filter_total, total_hits)}, "
+        f"forward={fmt_count(pass_filter_forward, pass_filter_total)}, "
+        f"reverse={fmt_count(pass_filter_reverse, pass_filter_total)}",
+        flush=True
+    )
 
     return grouped_hits

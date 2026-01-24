@@ -1,10 +1,10 @@
 """Combine aligned segments."""
 from collections import defaultdict
 
+from amplifinder.env import DEBUG
 from amplifinder.steps.jct_coverage.alignment_data import \
-    AlignmentData, BaseSingleAlignment, SingleAlignment, PairedAlignment, \
-    create_single_or_combined_alignment
-
+    AlignmentData, BaseSingleAlignment, CombinedSingleAlignment, SingleAlignment, PairedAlignment
+from amplifinder.utils.file_utils import fmt_count
 
 def select_or_combine_single_alignments(
     grouped_hits: dict[str, dict[str, dict[bool, list[SingleAlignment]]]],
@@ -20,15 +20,31 @@ def select_or_combine_single_alignments(
         grouped_hits: Dictionary to modify in place
         select_best_by_score: If True, keep best scoring hit. If False, combine all hits.
     """
+    total_alignments = defaultdict(int)
+    single_alignments = defaultdict(int)
+    
     for ref_name, ref_reads in grouped_hits.items():
         for read_id, orientations in ref_reads.items():
             for is_reverse, alignments in orientations.items():
-                if select_best_by_score:
+                total_alignments[is_reverse] += 1
+                if len(alignments) == 1:
+                    # There is only one alignment for this read_id and orientation, so we can use it directly
+                    alignment = alignments[0]
+                    single_alignments[is_reverse] += 1
+                elif select_best_by_score:
                     # Take the alignment with the best (highest) score
-                    orientations[is_reverse] = max(alignments, key=lambda a: a.alignment_score)
+                    alignment = max(alignments, key=lambda a: a.alignment_score)
                 else:
-                    # Combine all alignments
-                    orientations[is_reverse] = create_single_or_combined_alignment(alignments)
+                    # Create a combined alignment from all alignments
+                    alignment = CombinedSingleAlignment.from_alignments(alignments)
+                orientations[is_reverse] = alignment
+    
+    print(
+        f"More than one alignment per read: "
+        f"forward={fmt_count(total_alignments[False] - single_alignments[False], total_alignments[False])}, "
+        f"reverse={fmt_count(total_alignments[True] - single_alignments[True], total_alignments[True])}, ",
+        flush=True
+    )
 
 
 def combine_same_id_different_orientation_hits(
@@ -43,16 +59,47 @@ def combine_same_id_different_orientation_hits(
     Args:
         combined_alignments: Dictionary to modify in place
     """
+    max_debug_examples = 1
+
+    total_reads = 0
+    total_normal_pairs = 0
+    total_swapped_pairs = 0
+    sum_distances_normal = 0
+    sum_distances_swapped = 0
+    
     for ref_name, ref_reads in combined_alignments.items():
         for read_id, orientations in ref_reads.items():
+            total_reads += 1
             if len(orientations) == 2:  # Has both forward and reverse - create paired
                 fwd = orientations.pop(False)
                 rev = orientations.pop(True)
-                assert fwd.left < rev.right
-                orientations[None] = PairedAlignment(
-                    forward_alignment=fwd,
-                    reverse_alignment=rev
-                )
+                if fwd.left < rev.right:
+                    total_normal_pairs += 1
+                    paired = PairedAlignment(
+                        forward_alignment=fwd,
+                        reverse_alignment=rev,
+                        is_swapped=False
+                    )
+                    sum_distances_normal += paired.overlapping_length
+                else:
+                    total_swapped_pairs += 1
+                    paired = PairedAlignment(
+                        forward_alignment=rev,
+                        reverse_alignment=fwd,
+                        is_swapped=True
+                    )
+                    sum_distances_swapped += paired.overlapping_length
+                    if DEBUG and max_debug_examples > 0:
+                        print(f"Example of a swapped paired alignment:\n{paired}", flush=True)
+                        max_debug_examples -= 1
+                orientations[None] = paired
+    
+    total_pairs = total_normal_pairs + total_swapped_pairs
+    avg_distance_normal = sum_distances_normal / total_normal_pairs if total_normal_pairs > 0 else 0
+    avg_distance_swapped = sum_distances_swapped / total_swapped_pairs if total_swapped_pairs > 0 else 0
+    print(f"Total reads: {total_reads:6}, Paired: {total_pairs:6} ({total_pairs/total_reads*100:6.1f}%); "
+          f"Normal pairs: {total_normal_pairs:6}, Avg overlap: {avg_distance_normal:6.1f}; "
+          f"Swapped pairs: {total_swapped_pairs:6}, Avg overlap: {avg_distance_swapped:6.1f}", flush=True)
 
 
 def flatten_combined_alignments(

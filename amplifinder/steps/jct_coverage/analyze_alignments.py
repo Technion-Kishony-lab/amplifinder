@@ -26,7 +26,7 @@ def get_jct_read_counts_by_tnjc2(
     alignment_filter_params: AlignmentFilterParams,
 ) -> tuple[
     dict[JunctionType, JunctionReadCounts],
-    dict[JunctionType, dict[ReadType, dict[str, AlignmentData]]]
+    dict[JunctionType, list[AlignmentData]]
 ]:
     """A wrapper around get_jct_read_counts to get the read counts based on a SynJctsTnJc2."""
     bam_path = synjct_tnjc2.bam_path(base_dir, is_ancestor=is_ancestor)
@@ -78,6 +78,19 @@ def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
     return None  # ambiguous
 
 
+def print_jc_read_counts_and_calls(jc_covs: dict[JunctionType, JunctionReadCounts], jc_calls: dict[JunctionType, Optional[bool]]) -> None:
+    """Print junction coverage and calls."""
+    # Print header
+    print(f"{'junction':<23} {'left_far':>10} {'left':>10} {'left_marg':>10} {'spanning':>10} {'paired':>10} {'right_marg':>10} {'right':>10} {'right_far':>10} {'call':>10}", flush=True)
+    print("-" * 110, flush=True)
+    
+    # Print rows
+    for jt in JunctionType:
+        cov = jc_covs[jt]
+        call_str = str(jc_calls[jt]) if jc_calls[jt] is not None else "None"
+        print(f"{jt.name:<23} {cov.left_far:>10} {cov.left:>10} {cov.left_marginal:>10} {cov.spanning:>10} {cov.paired:>10} {cov.right_marginal:>10} {cov.right:>10} {cov.right_far:>10} {call_str:>10}", flush=True)
+        
+
 def warn_if_paired_and_not_spanning(jc_covs: dict[JunctionType, JunctionReadCounts]) -> None:
     """Warn if paired reads are present and no spanning reads are present."""
     for jt in JunctionType:
@@ -127,6 +140,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         """Analyze alignments for each candidate."""
         analyzed_records = []
         for tnjc2 in self.tnjc2s:
+            print(f"\nAnalyzing {tnjc2.analysis_dir}", flush=True)
             jc_covs, alignment_data = get_jct_read_counts_by_tnjc2(
                 synjct_tnjc2=tnjc2,
                 base_dir=self._output_dir,
@@ -155,6 +169,8 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             }
 
             warn_if_paired_and_not_spanning(jc_covs)
+
+            print_jc_read_counts_and_calls(jc_covs, jc_calls)
 
             analyzed_records.append(AnalyzedTnJc2.from_other(
                 tnjc2,
