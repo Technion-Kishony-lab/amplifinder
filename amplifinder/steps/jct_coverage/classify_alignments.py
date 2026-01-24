@@ -232,10 +232,14 @@ def get_expected_counts(
     """Return the expected counts assuming uniform distribution of reads across the junction."""
     min_overlap_len = alignment_classify_params.min_overlap_len
     max_dist = alignment_classify_params.get_max_dist_from_junction(arm_len)
-    return JunctionReadCounts(
-        left=max_dist + 1,
+    counts = JunctionReadCounts(
+        left_far=arm_len - max_dist,
+        left=max_dist - avg_read_len,
         left_marginal=min_overlap_len,
         spanning=avg_read_len - 2 * min_overlap_len - 1,
         right_marginal=min_overlap_len,
-        right=max_dist + 1
+        right=max_dist - avg_read_len,
+        right_far=arm_len - max_dist,
     )
+    assert counts.total == 2 * arm_len - avg_read_len + 1
+    return counts
