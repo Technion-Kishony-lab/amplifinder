@@ -23,7 +23,7 @@ class Cigar(list[tuple[int, int]]):
             if op in (0, 2, 7, 8):  # M, D, =, X consume reference
                 ref_pos += length
             # I (1) does not consume reference
-    
+
     def get_total_length(self) -> int:
         """Get the total length of the CIGAR string."""
         return sum(length for _, length in self)

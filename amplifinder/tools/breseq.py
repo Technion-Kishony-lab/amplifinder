@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from amplifinder.logger import info, warning
-from amplifinder.data_types.typed_df import Schema
+from amplifinder.records.base_records import Schema
 from amplifinder.data import load_all_field_defs
 from amplifinder.utils.run_utils import run_command
 from amplifinder.utils.file_utils import ensure_dir

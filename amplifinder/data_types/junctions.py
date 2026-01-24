@@ -1,5 +1,62 @@
+"""Junction types for AmpliFinder."""
+from __future__ import annotations
 
-# ===== Junctions =====
+from typing import Any, ClassVar, Dict, List, Optional, TypeVar
+from pydantic import ConfigDict, field_validator
+
+from amplifinder.records.base_records import Record
+from amplifinder.data_types.basic_enums import Orientation
+
+
+class JcArm(Record):
+    """Junction arm coordinates and orientation."""
+    NAME: ClassVar[str] = "Junction arms"
+    scaf: str
+    start: int
+    dir: Orientation
+    flank: int
+
+    @field_validator('dir')
+    @classmethod
+    def validate_dir(cls, v: Orientation) -> Orientation:
+        if v not in [Orientation.FORWARD, Orientation.REVERSE]:
+            raise ValueError("Invalid orientation")
+        return v
+
+    @property
+    def end(self) -> int:
+        """Compute end position based on start position, flank length, and direction."""
+        return self.start + (self.flank - 1) * self.dir
+
+    def shift_by_offset(self, offset: int) -> 'JcArm':
+        """Shift arm by offset in the direction of the arm.
+
+        Args:
+            offset: Distance to shift (positive = in arm direction, negative = opposite)
+
+        Returns:
+            New JcArm with shifted start position
+        """
+        return JcArm(
+            scaf=self.scaf,
+            start=self.start + offset * self.dir,
+            dir=self.dir,
+            flank=self.flank
+        )
+
+    def mirror(self) -> 'JcArm':
+        """Create a mirror arm at the adjacent position.
+        ~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~
+                           |------>           self
+                    <------|                  mirror
+        """
+        return JcArm(
+            scaf=self.scaf,
+            start=self.start - self.dir,
+            dir=self.dir.opposite(),
+            flank=self.flank
+        )
+
 
 JunctionT = TypeVar("JunctionT", bound="Junction")
 
@@ -68,37 +125,3 @@ class BreseqJunction(NumJunction):
     NAME: ClassVar[str] = "Breseq junctions"
     model_config = ConfigDict(extra='allow')
     ALLOW_EXTRA: ClassVar[bool] = True
-
-
-class RefTnJunction(NumJunction):
-    """Synthetic junction for reference TN element.
-
-    For RefTnJunction, arm 1 is always the TN side, arm 2 is the chromosome side.
-    ref_tn_side indicates which TN boundary (START or END) this junction represents.
-    """
-    NAME: ClassVar[str] = "Reference TN junctions"
-
-    #   chr      TN       chr
-    # ~~~~~~~|>>>>>>>>>|~~~~~~~    ref_tn_side.side == Terminal.START
-    #        |------>              arm1, flanking1 (into TN)
-    #     <--|                     arm2, flanking2 (out of TN)
-
-    #   chr      TN       chr
-    # ~~~~~~~|>>>>>>>>>|~~~~~~~    ref_tn_side.side == Terminal.END
-    #           <------|           arm1, flanking1 (into TN)
-    #                  |-->        arm2, flanking2 (out of TN)
-
-    ref_tn_side: RefTnSide
-
-
-class TnJunction(NumJunction):
-    """Junction matched to TN element(s)."""
-    NAME: ClassVar[str] = "TN-associated junctions"
-    ref_tn_side: Optional[RefTnSide] = None  # None for breseq junctions
-    ref_tn_sides: List[OffsetRefTnSide]      # Reference TN matches with offsets
-    swapped: bool                            # True if BRESEQ arms were swapped (to normalize to TN on arm 1)
-
-    def is_ref_tn_junction(self) -> bool:
-        """Return True if this is a reference TN junction."""
-        return self.ref_tn_side is not None
-

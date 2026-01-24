@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
-from amplifinder.data_types.enums import JunctionType, ReadType
+from amplifinder.data_types import JunctionType, ReadType
 
 
 def load_junction_read_bam_indices(

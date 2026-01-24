@@ -17,7 +17,7 @@ def bam_hit_passes_filters(
     allow_indels_at_junction_distance: Optional[int]
 ) -> bool:
     """Filter BAM hit based on CIGAR validation, flags, alignment params, and indels check.
-    
+
     Returns:
         True if all filters pass, False otherwise
     """
@@ -25,11 +25,11 @@ def bam_hit_passes_filters(
     cigar = Cigar(hit.cigartuples or [])
     if not cigar or not cigar.has_only_operations(ALLOWED_CIGAR_OPERATIONS):
         return False
-    
+
     # Skip unmapped, supplementary
     if hit.is_unmapped or hit.is_supplementary:
         return False
-    
+
     # Check alignment length
     read_length_factor = 1 + alignment_filter_params.length_tolerance
     min_alignment_length = avg_read_length / read_length_factor
@@ -37,21 +37,23 @@ def bam_hit_passes_filters(
     alignment_length = hit.reference_end - hit.reference_start
     if not (min_alignment_length <= alignment_length <= max_alignment_length):
         return False
-    
+
     # Check alignment score filters
     if alignment_filter_params.min_as_score is not None:
         as_score = hit.get_tag("AS")
         if as_score < alignment_filter_params.min_as_score:
             return False
-    
+
     # Check NM score if specified
     if alignment_filter_params.max_nm_score is not None:
         nm_score = hit.get_tag("NM")
         if nm_score > alignment_filter_params.max_nm_score:
             return False
-    
+
     # Check indels within limit
-    return _indels_within_limit(hit.reference_start, cigar, arm_len, allow_indels_at_junction_distance)
+    return _indels_within_limit(
+        hit.reference_start, cigar, arm_len, allow_indels_at_junction_distance
+    )
 
 
 def _indels_within_limit(

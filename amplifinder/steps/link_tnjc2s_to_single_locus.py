@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.data_types.enums import BaseRawEvent, RawEvent
+from amplifinder.data_types import BaseRawEvent, RawEvent
 from amplifinder.data_types.genome import Genome
 from amplifinder.data_types import RecordTypedDf, CoveredTnJc2, RefTn, Side, SingleLocusLinkedTnJc2, TnJunction
 

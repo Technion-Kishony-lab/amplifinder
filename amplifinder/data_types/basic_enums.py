@@ -1,11 +1,7 @@
 """Enum definitions for AmpliFinder."""
 from __future__ import annotations
-import numpy as np
-import operator
 
-from dataclasses import dataclass
 from enum import Enum
-from typing import ClassVar, Optional, TypeAlias
 
 
 class ReversibleIntEnum(int, Enum):

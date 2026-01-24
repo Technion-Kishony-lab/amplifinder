@@ -7,7 +7,7 @@ from typing import Any, Type, Union, get_origin, get_args
 
 from pydantic import TypeAdapter
 
-from amplifinder.data_types.records import Schema
+from amplifinder.records.base_records import Record, Schema
 
 
 # Cache TypeAdapters for performance
@@ -57,7 +57,6 @@ def _is_namedtuple(t: Type) -> bool:
 def _is_record(t: Type) -> bool:
     """Check if type is a Record subclass."""
     try:
-        from amplifinder.data_types.records import Record
         return isinstance(t, type) and issubclass(t, Record)
     except TypeError:
         return False

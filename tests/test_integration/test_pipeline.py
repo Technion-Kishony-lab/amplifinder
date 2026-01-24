@@ -9,7 +9,7 @@ from pathlib import Path
 from Bio import SeqIO
 
 from amplifinder.utils.file_utils import remove_file_or_dir
-from amplifinder.data_types.enums import JunctionType
+from amplifinder.data_types import JunctionType
 from amplifinder.steps.base import Step
 from amplifinder.config import Config
 from amplifinder.pipeline import Pipeline

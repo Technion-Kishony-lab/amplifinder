@@ -1,3 +1,12 @@
+"""Read types and junction read counts for AmpliFinder."""
+from __future__ import annotations
+import operator
+
+from dataclasses import dataclass
+from enum import Enum
+from typing import Optional
+
+from amplifinder.data_types.basic_enums import Side
 
 
 class ReadType(str, Enum):
@@ -14,7 +23,7 @@ class ReadType(str, Enum):
     def is_marginal(self) -> bool:
         """Return True if this is a marginal read type."""
         return self in [self.LEFT_MARGINAL, self.RIGHT_MARGINAL]
-    
+
     def is_far(self) -> bool:
         """Return True if this is a far read type."""
         return self in [self.LEFT_FAR, self.RIGHT_FAR]

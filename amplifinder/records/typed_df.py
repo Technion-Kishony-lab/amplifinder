@@ -7,8 +7,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Callable, Dict, Generic, Iterator, List, Optional, Type, TypeVar, get_args
 
-from amplifinder.data_types.records import Record, Schema
-from amplifinder.data_types.validate_and_cast_df import validate_and_cast_df
+from amplifinder.records.base_records import Record, Schema
+from amplifinder.records.validate_and_cast_df import validate_and_cast_df, _is_optional
 
 T = TypeVar("T", bound=Record)
 SelfTypedDF = TypeVar("SelfTypedDF", bound="TypedDF")
@@ -26,7 +26,6 @@ def _clean_nan(v: Any) -> Any:
 
 def _serialize_for_csv(v: Any) -> Any:
     """Convert enums to values for CSV serialization (handles nested in lists/tuples/Records)."""
-    from amplifinder.data_types.records import Record
     if isinstance(v, Enum):
         return v.value
     if isinstance(v, Record):
@@ -73,8 +72,6 @@ class TypedDF:
 
         Only serializes columns defined in schema.
         """
-        from amplifinder.data_types.validate_and_cast_df import _is_optional
-
         # Filter DataFrame to schema columns only
         df = self.df[list(self.schema.column_names)].copy()
 

@@ -1,10 +1,11 @@
 """BLAST runner and parser."""
 
 from pathlib import Path
-from typing import List, Optional
+from typing import ClassVar, Dict, List, Optional
 
 from amplifinder.logger import info
-from amplifinder.data_types import RecordTypedDf, BlastHit
+from amplifinder.records.base_records import Record
+from amplifinder.data_types import RecordTypedDf
 from amplifinder.env import BLAST_PATH
 from amplifinder.utils.run_utils import get_tool_path, run_command
 

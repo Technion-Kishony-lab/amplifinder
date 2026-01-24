@@ -44,6 +44,7 @@ class AlignmentClassifyParams(FrozenParams):
             return arm_len + max_dist
         return max_dist
 
+
 class BowtieParams(FrozenParams):
     """Parameters for bowtie2 alignment."""
 

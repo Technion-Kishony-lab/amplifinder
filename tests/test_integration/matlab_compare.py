@@ -3,7 +3,7 @@
 import pandas as pd
 from pathlib import Path
 from typing import Optional, List, Dict
-from amplifinder.data_types.record_types import RawTnJc2, RefTn
+from amplifinder.data_types import RawTnJc2, RefTn
 
 
 def _load_matlab_xlsx(

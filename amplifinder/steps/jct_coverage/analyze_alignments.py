@@ -6,8 +6,9 @@ from typing import Optional
 
 from amplifinder.config import AlignmentClassifyParams, JcCallParams, AlignmentFilterParams
 from amplifinder.env import DEBUG
-from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
-from amplifinder.data_types.enums import ReadType
+from amplifinder.data_types import (
+    RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts, ReadType
+)
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
 from amplifinder.steps.jct_coverage.read_type import get_jct_read_counts

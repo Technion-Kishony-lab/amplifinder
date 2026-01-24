@@ -1,3 +1,7 @@
+"""Event classification enums for AmpliFinder."""
+from __future__ import annotations
+
+from enum import Enum
 
 
 class BaseRawEvent(str, Enum):

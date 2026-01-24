@@ -1,4 +1,4 @@
-from pathlib import Path
+"""Combine aligned segments."""
 from collections import defaultdict
 
 from amplifinder.steps.jct_coverage.alignment_data import \
@@ -11,11 +11,11 @@ def select_or_combine_single_alignments(
     select_best_by_score: bool = True,
 ) -> None:
     """Process grouped hits in place: select best by score or combine all.
-    
+
     Modifies grouped_hits:
     - If select_best_by_score=True: replaces list with best scoring SingleAlignment
     - If select_best_by_score=False: replaces list with CombinedSingleAlignment
-    
+
     Args:
         grouped_hits: Dictionary to modify in place
         select_best_by_score: If True, keep best scoring hit. If False, combine all hits.
@@ -35,11 +35,11 @@ def combine_same_id_different_orientation_hits(
     combined_alignments: dict[str, dict[str, dict[bool, BaseSingleAlignment]]]
 ) -> None:
     """Combine alignments with same read_id but different orientations into PairedAlignment.
-    
+
     Modifies in place:
     - Paired reads: removes is_reverse=True/False, adds is_reverse=None -> PairedAlignment
     - Unpaired reads: unchanged (is_reverse=True/False -> BaseSingleAlignment)
-    
+
     Args:
         combined_alignments: Dictionary to modify in place
     """
@@ -59,10 +59,10 @@ def flatten_combined_alignments(
     combined_alignments: dict[str, dict[str, dict[bool | None, BaseSingleAlignment | PairedAlignment]]]
 ) -> dict[str, list[AlignmentData]]:
     """Flatten alignments into reference_name -> list[AlignmentData].
-    
+
     Args:
         combined_alignments: reference_name -> read_id -> is_reverse/None -> AlignmentData
-        
+
     Returns:
         reference_name -> list[AlignmentData]
     """

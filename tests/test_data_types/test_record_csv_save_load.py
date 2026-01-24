@@ -5,11 +5,12 @@ from pathlib import Path
 
 from amplifinder.data_types import (
     RecordTypedDf,
-    RefTnSide, OffsetRefTnSide, RefTn, BlastHit,
+    RefTnSide, OffsetRefTnSide, RefTn,
     Junction, RefTnJunction, TnJunction,
     RawTnJc2, CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ClassifiedTnJc2, ExportedTnJc2,
     Terminal, Orientation, RawEvent, EventModifier, SeqScaffold,
 )
+from amplifinder.tools.blast import BlastHit
 
 
 # Output directory for test CSV files (visible after test run)
