@@ -83,10 +83,11 @@ class PlotTnJc2CoverageStep(Step):
                 print('-', end='', flush=True)
                 continue
 
-            jc_covs, alignment_data, _ = get_jct_read_counts_by_tnjc2(
+            jc_covs, alignment_data = get_jct_read_counts_by_tnjc2(
                 synjct_tnjc2=tnjc2,
                 base_dir=self._iso_output_dir,
                 is_ancestor=False,
+                arm_len=self.read_lengths.jc_arm_len_iso,
                 avg_read_length=self.read_lengths.read_len_iso,
                 alignment_classify_params=self.alignment_classify_params,
                 alignment_filter_params=self.alignment_filter_params,
@@ -98,10 +99,11 @@ class PlotTnJc2CoverageStep(Step):
             alignment_data_anc = None
             jc_calls_anc = None
             if self.has_ancestor:
-                jc_covs_anc, alignment_data_anc, _ = get_jct_read_counts_by_tnjc2(
+                jc_covs_anc, alignment_data_anc = get_jct_read_counts_by_tnjc2(
                     synjct_tnjc2=tnjc2,
                     base_dir=self._anc_output_dir,
                     is_ancestor=True,
+                    arm_len=self.read_lengths.jc_arm_len_anc,
                     avg_read_length=self.read_lengths.read_len_anc,
                     alignment_classify_params=self.alignment_classify_params,
                     alignment_filter_params=self.alignment_filter_params,

@@ -2,7 +2,7 @@
 """Test script for combine_same_id_same_orientation_hits function."""
 
 from pathlib import Path
-from amplifinder.steps.jct_coverage.combine_hits import combine_same_id_same_orientation_hits
+from amplifinder.steps.jct_coverage.combine_hits import process_same_id_and_orientation_hits
 from amplifinder.steps.jct_coverage.alignment_data import CombinedSingleAlignment
 
 # Test with a real BAM file
@@ -10,7 +10,7 @@ bam_path = Path("path/to/your/test.bam")  # Update this path
 
 if bam_path.exists():
     print(f"Processing: {bam_path}")
-    combined = combine_same_id_same_orientation_hits(bam_path)
+    combined = process_same_id_and_orientation_hits(bam_path)
     
     print(f"\nTotal combined alignments: {len(combined)}")
     

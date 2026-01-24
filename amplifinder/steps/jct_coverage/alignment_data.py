@@ -1,12 +1,17 @@
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
 from amplifinder.steps.jct_coverage.cigar import Cigar
+from amplifinder.data_types.enums import ReadType
 
 
-@dataclass(frozen=True)
+@dataclass
 class AlignmentData(ABC):
     """Base class for alignment data."""
+
+    read_type: ReadType = None
 
     @abstractmethod
     def get_bam_indices(self) -> tuple[int, ...]:
@@ -16,6 +21,11 @@ class AlignmentData(ABC):
     @abstractmethod
     def get_starts_and_cigars(self) -> tuple[tuple[int, Cigar], ...]:
         """Return tuple of (start, cigar) pairs."""
+        pass
+
+    @abstractmethod
+    def get_all_single_alignments(self) -> tuple["SingleAlignment", ...]:
+        """Return all SingleAlignment objects, recursively from nested structures."""
         pass
 
     @property
@@ -33,12 +43,17 @@ class AlignmentData(ABC):
     def middle(self) -> int:
         return (self.left + self.right) / 2
 
+    @property
+    def length(self) -> int:
+        return self.right - self.left + 1
 
-@dataclass(frozen=True)
+
+@dataclass
 class BaseSingleAlignment(AlignmentData):
     """Single alignment from one BAM hit."""
     start: int
     end: int
+    is_reverse: bool
 
     @property
     def left(self) -> int:
@@ -49,11 +64,12 @@ class BaseSingleAlignment(AlignmentData):
         return self.end
 
 
-@dataclass(frozen=True)
+@dataclass
 class SingleAlignment(BaseSingleAlignment):
     """Single alignment from one BAM hit."""
     cigar: Cigar
     bam_index: int
+    alignment_score: int
 
     def get_bam_indices(self) -> tuple[int]:
         return (self.bam_index,)
@@ -61,37 +77,67 @@ class SingleAlignment(BaseSingleAlignment):
     def get_starts_and_cigars(self) -> tuple[tuple[int, Cigar]]:
         return ((self.start, self.cigar),)
 
+    def get_all_single_alignments(self) -> tuple[SingleAlignment, ...]:
+        return (self,)
 
-@dataclass(frozen=True)
+
+@dataclass
 class CombinedSingleAlignment(BaseSingleAlignment):
     """Single alignment combined from multiple hits with same read_id and orientation."""
-    bam_indices: tuple[int, ...]
-    cigars: tuple[Cigar, ...]
-    starts: tuple[int, ...]
-    ends: tuple[int, ...]
+    alignments: tuple[SingleAlignment, ...]
+
+    @classmethod
+    def from_alignments(cls, alignments: list[SingleAlignment]) -> "CombinedSingleAlignment":
+        # Sort by reference start position
+        sorted_alignments = tuple(sorted(alignments, key=lambda a: a.start))
+        
+        # Overall span
+        start = min(a.start for a in sorted_alignments)
+        end = max(a.end for a in sorted_alignments)
+        assert all(a.is_reverse == sorted_alignments[0].is_reverse for a in sorted_alignments)
+        is_reverse = sorted_alignments[0].is_reverse
+        
+        return cls(start=start, end=end, is_reverse=is_reverse, alignments=sorted_alignments)
 
     def get_bam_indices(self) -> tuple[int, ...]:
-        return self.bam_indices
+        return tuple(a.bam_index for a in self.alignments)
 
     def get_starts_and_cigars(self) -> tuple[tuple[int, Cigar], ...]:
-        return tuple(zip(self.starts, self.cigars))
+        return tuple((a.start, a.cigar) for a in self.alignments)
+
+    def get_all_single_alignments(self) -> tuple[SingleAlignment, ...]:
+        return self.alignments
 
 
-@dataclass(frozen=True)
+def create_single_or_combined_alignment(alignments: list[SingleAlignment]) -> BaseSingleAlignment:
+    if len(alignments) == 1:
+        return alignments[0]
+    return CombinedSingleAlignment.from_alignments(alignments)
+
+
+@dataclass
 class PairedAlignment(AlignmentData):
-    alignment1: BaseSingleAlignment
-    alignment2: BaseSingleAlignment
+    forward_alignment: BaseSingleAlignment
+    reverse_alignment: BaseSingleAlignment
 
     def get_bam_indices(self) -> tuple[int, ...]:
-        return (*self.alignment1.get_bam_indices(), *self.alignment2.get_bam_indices())
+        return (*self.forward_alignment.get_bam_indices(), *self.reverse_alignment.get_bam_indices())
 
     def get_starts_and_cigars(self) -> tuple[tuple[int, Cigar], ...]:
-        return (*self.alignment1.get_starts_and_cigars(), *self.alignment2.get_starts_and_cigars())
+        return (*self.forward_alignment.get_starts_and_cigars(), *self.reverse_alignment.get_starts_and_cigars())
+
+    def get_all_single_alignments(self) -> tuple[SingleAlignment, ...]:
+        return (*self.forward_alignment.get_all_single_alignments(), *self.reverse_alignment.get_all_single_alignments())
 
     @property
     def left(self) -> int:
-        return self.alignment1.left
+        return self.forward_alignment.left
 
     @property
     def right(self) -> int:
-        return self.alignment2.right
+        return self.reverse_alignment.right
+
+    @property
+    def overlapping_length(self) -> int:
+        # >0 if overlapping, 0 if not overlapping, <0 if there is distance between the two alignments
+        return self.forward_alignment.right - self.reverse_alignment.left

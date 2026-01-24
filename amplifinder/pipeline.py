@@ -334,6 +334,7 @@ class Pipeline:
         analyzed_tnjc2s = AnalyzeTnJc2AlignmentsStep(
             tnjc2s=synjct_tnjc2s,
             output_dir=iso_output,
+            arm_len=read_lengths.jc_arm_len_iso,
             read_length=read_lengths.read_len_iso,
             alignment_classify_params=cfg.alignment_analysis_params,
             alignment_filter_params=cfg.alignment_filter_params,
@@ -345,6 +346,7 @@ class Pipeline:
             analyzed_tnjc2s = AncAnalyzeTnJc2AlignmentsStep(
                 tnjc2s=analyzed_tnjc2s,
                 output_dir=anc_output,
+                arm_len=read_lengths.jc_arm_len_anc,
                 read_length=read_lengths.read_len_anc,
                 alignment_classify_params=cfg.alignment_analysis_params,
                 alignment_filter_params=cfg.alignment_filter_params,

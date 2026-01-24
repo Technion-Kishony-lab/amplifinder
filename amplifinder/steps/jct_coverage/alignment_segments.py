@@ -159,8 +159,8 @@ def get_alignment_segments(
 ) -> CoordsAlignmentElements:
     """Get segments for an AlignmentData with SNP/indel annotations."""
     if isinstance(alignment, PairedAlignment):
-        segments1 = get_alignment_segments_from_single_alignment(alignment.alignment1, show_events, x0, y0)
-        segments2 = get_alignment_segments_from_single_alignment(alignment.alignment2, show_events, x0, y0)
+        segments1 = get_alignment_segments_from_single_alignment(alignment.forward_alignment, show_events, x0, y0)
+        segments2 = get_alignment_segments_from_single_alignment(alignment.reverse_alignment, show_events, x0, y0)
         segments1.extend(segments2)
         return segments1
     assert isinstance(alignment, BaseSingleAlignment)
