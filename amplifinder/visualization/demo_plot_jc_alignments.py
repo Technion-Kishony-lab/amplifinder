@@ -5,7 +5,7 @@ from amplifinder.config import AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.steps.jct_coverage.alignment_data import SingleAlignment
 from amplifinder.steps.jct_coverage.cigar import Cigar, merge_consecutive_cigar_ops
-from amplifinder.steps.jct_coverage.read_type import get_hit_type
+from amplifinder.steps.jct_coverage.classify_alignments import get_hit_type
 from amplifinder.utils.timing import timer
 from amplifinder.visualization.plot_jc_alignments import plot_jc_alignments
 
