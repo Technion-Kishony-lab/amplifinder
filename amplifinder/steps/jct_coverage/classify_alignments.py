@@ -150,6 +150,7 @@ def _classify_alignment(
         alignment.read_type = fwd_read_type
         return [alignment]
     if fwd_side == rev_side:
+        # pick the one closer to the junction:
         if fwd_side == Side.LEFT:
             return [rev_alignment]
         if fwd_side == Side.RIGHT:
@@ -160,7 +161,7 @@ def _classify_alignment(
         )
     if fwd_side == Side.LEFT and rev_side == Side.RIGHT:
         alignment.read_type = ReadType.PAIRED
-        # We have evience for left, right and spanning
+        # We have evidence for left, right and spanning
         return [fwd_alignment, rev_alignment, alignment]
 
     ok = (fwd_side == Side.LEFT and rev_side == Side.MIDDLE) \
