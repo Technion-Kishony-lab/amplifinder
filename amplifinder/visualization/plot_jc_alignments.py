@@ -110,7 +110,7 @@ def add_hit_legend_with_info(ax: Axes, jc_cov: JunctionReadCounts, scales: Junct
     legend_elements = [
         Line2D([0], [0], marker='o', color='w', markerfacecolor=READ_TYPES_TO_COLORS[rt],
                markersize=6, label=f"{jc_cov[rt]} :{scales[rt]}")
-        for rt in ReadType
+        for rt in ReadType if not rt.is_far()
     ]
     return ax.legend(handles=legend_elements, loc=loc, fontsize=fontsize,
                      framealpha=0.8, title=title, title_fontsize=fontsize)
@@ -129,10 +129,10 @@ def add_pie_chart(ax, jc_cov: JunctionReadCounts, position: str = 'top'):
         return
 
     sizes_to_colors = {jc_cov.counts[rt]: READ_TYPES_TO_COLORS[rt] for
-                       rt in ReadType}
+                       rt in ReadType if not rt.is_far()}
 
     # Create inset axes for pie chart (bounds in axes coordinates: [left, bottom, width, height])
-    y_offset = 0.32 if position == 'top' else 0.5
+    y_offset = 0.32 if position == 'bottom' else 0.5
     inset_ax = ax.inset_axes([0.72, y_offset, 0.28, 0.18])
 
     inset_ax.pie(list(sizes_to_colors), colors=list(sizes_to_colors.values()),
@@ -162,14 +162,20 @@ def _down_sample_alignments(
         where scales is a JunctionReadCounts with scaling factors for each read type
     """
     sorted_alignments = sorted(alignments, key=lambda a: a.middle)
+    expected_counts.left_far = 0
+    expected_counts.right_far = 0
 
     max_reads = expected_counts * max_reads_per_plot // expected_counts.total
     # Avoid division by zero - set max_reads to 1 for any read type with 0 expected count
     max_reads.paired = 1  # Avoid dividing by zero for paired reads
+    max_reads.left_far = 1
+    max_reads.right_far = 1
 
     scales = jc_cov // max_reads
     scales = scales.max(1)
     scales.paired = scales.spanning
+    scales.left_far = 0
+    scales.right_far = 0
 
     counters = JunctionReadCounts()
 
@@ -178,7 +184,7 @@ def _down_sample_alignments(
         read_type = alignment.read_type
         count = counters[read_type]
         scale = scales[read_type]
-        if count % scale == 0:
+        if scale > 0 and count % scale == 0:
             downsampled.append(alignment)
         counters.increment(read_type)
 
@@ -316,9 +322,13 @@ def plot_jc_alignments(
         y_max = max_reads_per_plot + 1
         ax.set_ylim(y_min, y_max)
         # Use max arm length for x-axis to accommodate both iso and anc
-        arm_len_max = jc_arm_len_iso if jc_arm_len_anc is None \
-            else max(jc_arm_len_iso, jc_arm_len_anc)
-        ax.set_xlim(-arm_len_max, arm_len_max)
+        max_dist_iso = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_iso)
+        if jc_arm_len_anc is None:
+            max_dist = max_dist_iso
+        else:
+            max_dist_anc = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_anc)
+            max_dist = max(max_dist_iso, max_dist_anc)
+        ax.set_xlim(-max_dist, max_dist)
 
         # Add a junction call marker at the junction point
         if with_calls:
@@ -340,12 +350,6 @@ def plot_jc_alignments(
         left_elem_type, right_elem_type = jt.elements
 
         # Set up genetic element axes
-        max_dist_iso = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_iso)
-        if jc_arm_len_anc is None:
-            max_dist = max_dist_iso
-        else:
-            max_dist_anc = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_anc)
-            max_dist = max(max_dist_iso, max_dist_anc)
         ax_gene.set_xlim(-max_dist, max_dist)
         ax_gene.set_ylim(0, 1)
         ax_gene.set_aspect('auto')
