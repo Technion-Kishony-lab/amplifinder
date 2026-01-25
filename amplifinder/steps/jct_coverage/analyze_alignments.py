@@ -64,10 +64,12 @@ def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
     err_num_spanning_reads = np.sqrt(num_spanning_reads)
 
     total_err = np.sqrt(err_expected_num_spanning**2 + err_num_spanning_reads**2)
+    num_std = jc_call_params.pos_threshold_in_num_std_below_expected
 
     is_above_minimal_expected = \
-        num_spanning_reads >= expected_num_spanning \
-        - jc_call_params.pos_threshold_in_num_std_below_expected * total_err
+        num_spanning_reads * (1 + jc_call_params.pos_threshold_rel) \
+            >= expected_num_spanning - num_std * total_err
+
     is_close_to_zero = num_spanning_reads <= jc_call_params.neg_threshold_abs \
         or num_spanning_reads <= expected_num_spanning * jc_call_params.neg_threshold_rel
 
