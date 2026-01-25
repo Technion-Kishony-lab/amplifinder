@@ -72,9 +72,11 @@ class Pipeline:
         synjct_tnjc2s = self._create_synthetic_junctions(
             filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
         self._align_reads(synjct_tnjc2s, iso_output, anc_output)
-        analyzed_tnjc2s = self._analyze_alignments(synjct_tnjc2s, iso_output, anc_output, read_lengths)
+        analyzed_tnjc2s, iso_alignment_cache, anc_alignment_cache = self._analyze_alignments(
+            synjct_tnjc2s, iso_output, anc_output, read_lengths)
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
-        self._plot_coverage(classified_tnjc2s, iso_output, anc_output, read_lengths)
+        self._plot_coverage(classified_tnjc2s, iso_output, anc_output, read_lengths, 
+                           iso_alignment_cache, anc_alignment_cache)
         self._export(classified_tnjc2s, genome, iso_output)
 
         return classified_tnjc2s
@@ -326,12 +328,16 @@ class Pipeline:
         iso_output: Path,
         anc_output: Optional[Path],
         read_lengths: ReadLengths,
-    ) -> RecordTypedDf[AnalyzedTnJc2]:
-        """Step 12: Analyze read alignments."""
+    ) -> tuple[RecordTypedDf[AnalyzedTnJc2], dict, dict]:
+        """Step 12: Analyze read alignments.
+        
+        Returns:
+            Tuple of (analyzed_tnjc2s, iso_alignment_cache, anc_alignment_cache)
+        """
         cfg = self.config
 
         # Analyze isolate alignments
-        analyzed_tnjc2s = AnalyzeTnJc2AlignmentsStep(
+        analyzed_tnjc2s, iso_alignment_cache = AnalyzeTnJc2AlignmentsStep(
             tnjc2s=synjct_tnjc2s,
             output_dir=iso_output,
             arm_len=read_lengths.jc_arm_len_iso,
@@ -339,11 +345,12 @@ class Pipeline:
             alignment_classify_params=cfg.alignment_analysis_params,
             alignment_filter_params=cfg.alignment_filter_params,
             jc_call_params=cfg.jc_call_params,
-        ).run()
+        ).run_with_cache()
 
         # Analyze ancestor alignments if present
+        anc_alignment_cache = {}
         if anc_output:
-            analyzed_tnjc2s = AncAnalyzeTnJc2AlignmentsStep(
+            analyzed_tnjc2s, anc_alignment_cache = AncAnalyzeTnJc2AlignmentsStep(
                 tnjc2s=analyzed_tnjc2s,
                 output_dir=anc_output,
                 arm_len=read_lengths.jc_arm_len_anc,
@@ -351,9 +358,9 @@ class Pipeline:
                 alignment_classify_params=cfg.alignment_analysis_params,
                 alignment_filter_params=cfg.alignment_filter_params,
                 jc_call_params=cfg.jc_call_params,
-            ).run()
+            ).run_with_cache()
 
-        return analyzed_tnjc2s
+        return analyzed_tnjc2s, iso_alignment_cache, anc_alignment_cache
 
     def _classify_candidates(
         self,
@@ -372,6 +379,8 @@ class Pipeline:
         iso_output: Path,
         anc_output: Optional[Path],
         read_lengths: ReadLengths,
+        iso_alignment_cache: dict,
+        anc_alignment_cache: dict,
     ) -> None:
         """Plot junction/amplicon coverage (post-classification)."""
         cfg = self.config
@@ -388,6 +397,8 @@ class Pipeline:
             anc_breseq_path=anc_breseq_path,
             alignment_classify_params=cfg.alignment_analysis_params,
             alignment_filter_params=cfg.alignment_filter_params,
+            iso_alignments=iso_alignment_cache,
+            anc_alignments=anc_alignment_cache,
         ).run()
 
     def _export(

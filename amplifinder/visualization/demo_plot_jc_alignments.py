@@ -86,8 +86,8 @@ def main():
 
     with timer('plot_junctions_coverage'):
         plot_jc_alignments(
-            alignment_data=alignment_data,
-            alignment_data_anc=alignment_data_anc,
+            jc_to_alignments=alignment_data,
+            jc_to_alignments_anc=alignment_data_anc,
             jc_covs=jc_covs,
             jc_covs_anc=jc_covs_anc,
             jc_calls=jc_calls,

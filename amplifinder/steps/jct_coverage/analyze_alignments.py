@@ -124,6 +124,9 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         self.alignment_filter_params = alignment_filter_params or AlignmentFilterParams()
         self.jc_call_params = jc_call_params or JcCallParams()
         self._output_dir = Path(output_dir)
+        
+        # Cache for alignment data (populated during _calculate_output)
+        self.alignment_data_cache: dict[str, dict[JunctionType, list[AlignmentData]]] = {}
 
         # compatibility handle for tests/consumers
         self.synjct_tnjc2s = tnjc2s
@@ -151,6 +154,10 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 alignment_classify_params=self.alignment_classify_params,
                 alignment_filter_params=self.alignment_filter_params,
             )
+            
+            # Cache alignment data for later use (e.g., plotting)
+            cache_key = tnjc2.analysis_dir
+            self.alignment_data_cache[cache_key] = alignment_data
 
             if DEBUG:
                 write_junction_read_bam_indices(
@@ -179,6 +186,11 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             ))
 
         return RecordTypedDf.from_records(analyzed_records, AnalyzedTnJc2)
+    
+    def run_with_cache(self) -> tuple[RecordTypedDf[AnalyzedTnJc2], dict[str, dict[JunctionType, list[AlignmentData]]]]:
+        """Run the step and return both results and alignment data cache."""
+        result = self.run()
+        return result, self.alignment_data_cache
 
 
 class AncAnalyzeTnJc2AlignmentsStep(AnalyzeTnJc2AlignmentsStep):
