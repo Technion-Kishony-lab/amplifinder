@@ -79,6 +79,10 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
             if not is_arm1_tn and not is_arm2_tn:
                 continue
 
+            # Skip if both arms match a TN
+            if is_arm1_tn and is_arm2_tn:
+                continue
+
             # Normalize: arm 1 should be the TN side
             swapped = not is_arm1_tn and is_arm2_tn
             if swapped:

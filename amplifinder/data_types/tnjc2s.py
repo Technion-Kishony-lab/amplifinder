@@ -280,6 +280,9 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
 
         # TODO: Is the logic below correct? Should we perhaps return None if ref_tn is not present in the matching set?
 
+        if self.tnjc_right.is_ref_tn_junction() and self.tnjc_left.is_ref_tn_junction():
+            return self.tnjc_left.ref_tn_side.tn_id
+
         # Prefer reference TN junction ID if present in the matching set
         if self.tnjc_left.is_ref_tn_junction() and self.tnjc_left.ref_tn_side.tn_id in tn_id_set:
             return self.tnjc_left.ref_tn_side.tn_id
@@ -287,7 +290,8 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
             return self.tnjc_right.ref_tn_side.tn_id
 
         # Otherwise return first available
-        return list(tn_id_set)[0]
+        return None
+        # Other option: return list(tn_id_set)[0]
 
     def get_sides_of_chosen_tn(self) -> tuple[Optional[OffsetRefTnSide], Optional[OffsetRefTnSide]]:
         """Get sides of chosen TN (left and right amplicon sides)."""

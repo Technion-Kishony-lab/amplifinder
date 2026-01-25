@@ -34,7 +34,7 @@ class ReadType(str, Enum):
             return Side.LEFT
         elif self in [self.RIGHT_FAR, self.RIGHT, self.RIGHT_MARGINAL]:
             return Side.RIGHT
-        return Side.MIDDLE
+        return Side.MIDDLE  # SPANNING and PAIRED are both middle
 
 
 @dataclass

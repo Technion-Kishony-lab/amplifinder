@@ -34,7 +34,7 @@ class AlignmentClassifyParams(FrozenParams):
     # None to allow any distance
     # Positive value to allow reads within the specified distance from the junction
     # Negative value to specify as distance from the jc arm end
-    max_dist_from_junction: Optional[int] = -100
+    max_dist_from_junction: Optional[int] = -10
 
     def get_max_dist_from_junction(self, arm_len: int) -> int:
         max_dist = self.max_dist_from_junction
