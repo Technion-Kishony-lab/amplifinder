@@ -7,7 +7,6 @@ from amplifinder.optional_deps import plt
 from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, JunctionType
 from amplifinder.steps.base import Step
 from amplifinder.steps.read_length import ReadLengths
-from amplifinder.steps.jct_coverage.analyze_alignments import get_jct_read_counts_by_tnjc2
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
 from amplifinder.tools.breseq import load_breseq_coverage
 from amplifinder.visualization.plot_jc_alignments import plot_jc_alignments
@@ -91,7 +90,7 @@ class PlotTnJc2CoverageStep(Step):
             # Get cached alignment data or re-read BAM if not cached
             cache_key = tnjc2.analysis_dir
             jc_to_alignments = self.iso_alignment_data_cache[cache_key]
-            
+
             jc_covs = tnjc2.jc_covs
             jc_calls = tnjc2.jc_calls
 

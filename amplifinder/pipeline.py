@@ -75,8 +75,8 @@ class Pipeline:
         analyzed_tnjc2s, iso_alignment_cache, anc_alignment_cache = self._analyze_alignments(
             synjct_tnjc2s, iso_output, anc_output, read_lengths)
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
-        self._plot_coverage(classified_tnjc2s, iso_output, anc_output, read_lengths, 
-                           iso_alignment_cache, anc_alignment_cache)
+        self._plot_coverage(classified_tnjc2s, iso_output, anc_output, read_lengths,
+                            iso_alignment_cache, anc_alignment_cache)
         self._export(classified_tnjc2s, genome, iso_output)
 
         return classified_tnjc2s
@@ -330,7 +330,7 @@ class Pipeline:
         read_lengths: ReadLengths,
     ) -> tuple[RecordTypedDf[AnalyzedTnJc2], dict, dict]:
         """Step 12: Analyze read alignments.
-        
+
         Returns:
             Tuple of (analyzed_tnjc2s, iso_alignment_cache, anc_alignment_cache)
         """

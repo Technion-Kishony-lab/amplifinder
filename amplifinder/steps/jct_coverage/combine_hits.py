@@ -6,6 +6,7 @@ from amplifinder.steps.jct_coverage.alignment_data import \
     AlignmentData, BaseSingleAlignment, CombinedSingleAlignment, SingleAlignment, PairedAlignment
 from amplifinder.utils.file_utils import fmt_count
 
+
 def select_or_combine_single_alignments(
     grouped_hits: dict[str, dict[str, dict[bool, list[SingleAlignment]]]],
     select_best_by_score: bool = True,
@@ -22,7 +23,7 @@ def select_or_combine_single_alignments(
     """
     total_alignments = defaultdict(int)
     single_alignments = defaultdict(int)
-    
+
     for ref_name, ref_reads in grouped_hits.items():
         for read_id, orientations in ref_reads.items():
             for is_reverse, alignments in orientations.items():
@@ -38,7 +39,7 @@ def select_or_combine_single_alignments(
                     # Create a combined alignment from all alignments
                     alignment = CombinedSingleAlignment.from_alignments(alignments)
                 orientations[is_reverse] = alignment
-    
+
     action = "SELECT_BEST" if select_best_by_score else "COMBINE_ALL"
     print(
         f"More than one alignment per read (action: {action:12s}) " + " "*7 +
@@ -67,7 +68,7 @@ def combine_same_id_different_orientation_hits(
     total_swapped_pairs = 0
     sum_distances_normal = 0
     sum_distances_swapped = 0
-    
+
     for ref_name, ref_reads in combined_alignments.items():
         for read_id, orientations in ref_reads.items():
             total_reads += 1
@@ -94,7 +95,7 @@ def combine_same_id_different_orientation_hits(
                         print(f"Example of a swapped paired alignment:\n{paired}", flush=True)
                         max_debug_examples -= 1
                 orientations[None] = paired
-    
+
     total_pairs = total_normal_pairs + total_swapped_pairs
     avg_distance_normal = sum_distances_normal / total_normal_pairs if total_normal_pairs > 0 else 0
     avg_distance_swapped = sum_distances_swapped / total_swapped_pairs if total_swapped_pairs > 0 else 0

@@ -150,4 +150,5 @@ class PairedAlignment(AlignmentData):
 
     def __repr__(self) -> str:
         class_name = self.__class__.__name__
-        return f"{class_name}(\n\tfwd={self.forward_alignment},\n\trev={self.reverse_alignment},\n\tis_swapped={self.is_swapped})"
+        return (f"{class_name}(\n\tfwd={self.forward_alignment},\n\t"
+                f"rev={self.reverse_alignment},\n\tis_swapped={self.is_swapped})")
