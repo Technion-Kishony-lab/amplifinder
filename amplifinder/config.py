@@ -65,6 +65,7 @@ class JcCallParams(FrozenParams):
     # for a jct to be positive, the number of spanning reads should be
     # greater than the expected number minus x standard deviations
     pos_threshold_in_num_std_below_expected: int = 3
+    pos_threshold_rel: float = 0.4  # non-stochastic copy number fluctuations
 
 
 # Default configuration values (from config.txt and added alignment params)
