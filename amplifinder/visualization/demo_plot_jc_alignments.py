@@ -5,14 +5,14 @@ from amplifinder.config import AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType
 from amplifinder.steps.jct_coverage.alignment_data import SingleAlignment
 from amplifinder.steps.jct_coverage.cigar import Cigar, merge_consecutive_cigar_ops
-from amplifinder.steps.jct_coverage.read_type import get_hit_type
+from amplifinder.steps.jct_coverage.classify_alignments import get_hit_type
 from amplifinder.utils.timing import timer
 from amplifinder.visualization.plot_jc_alignments import plot_jc_alignments
 
 
 def generate_dummy_hits(n_reads, length, read_len, arm_len, align_params, indel_at_junction=None):
     """Generate dummy alignment reads.
-    
+
     Args:
         indel_at_junction: None, 'deletion', or 'insertion' to add indel at junction
     """
@@ -21,7 +21,7 @@ def generate_dummy_hits(n_reads, length, read_len, arm_len, align_params, indel_
     for i in range(n_reads):
         start = random.randint(0, length - read_len)
         total_len = read_len + random.randint(-10, 10)
-        
+
         # Generate cigar with SNPs
         cigar = Cigar()
         for pos in range(total_len):
@@ -35,13 +35,15 @@ def generate_dummy_hits(n_reads, length, read_len, arm_len, align_params, indel_
             elif indel_at_junction == 'insertion':
                 cigar.append((1, 5))
             else:
-                cigar.append((7, 1))        
+                cigar.append((7, 1))
 
         cigar = merge_consecutive_cigar_ops(cigar)
         end = start + cigar.get_total_length()
         read_type = get_hit_type(start + 1, end, arm_len, align_params)
         if read_type is not None:
-            alignment = SingleAlignment(start=start, end=end, bam_index=i, cigar=cigar, read_type=read_type)
+            alignment = SingleAlignment(
+                read_type=read_type, start=start, end=end, cigar=cigar, bam_index=i
+            )
             reads.append(alignment)
             jc_cov.increment(read_type)
 
@@ -67,8 +69,12 @@ def main():
     for jt in JunctionType:
         jct_length = jc_arm_len * 2
 
-        hits_iso, jc_cov_iso = generate_dummy_hits(255, jct_length, read_len, jc_arm_len, align_params, indel_at_junction='insertion')
-        hits_anc, jc_cov_anc = generate_dummy_hits(130, jct_length, read_len, jc_arm_len, align_params, indel_at_junction='deletion')
+        hits_iso, jc_cov_iso = generate_dummy_hits(
+            255, jct_length, read_len, jc_arm_len, align_params, indel_at_junction='insertion'
+        )
+        hits_anc, jc_cov_anc = generate_dummy_hits(
+            130, jct_length, read_len, jc_arm_len, align_params, indel_at_junction='deletion'
+        )
 
         alignment_data[jt] = hits_iso
         jc_covs[jt] = jc_cov_iso
@@ -80,8 +86,8 @@ def main():
 
     with timer('plot_junctions_coverage'):
         plot_jc_alignments(
-            alignment_data=alignment_data,
-            alignment_data_anc=alignment_data_anc,
+            jc_to_alignments=alignment_data,
+            jc_to_alignments_anc=alignment_data_anc,
             jc_covs=jc_covs,
             jc_covs_anc=jc_covs_anc,
             jc_calls=jc_calls,

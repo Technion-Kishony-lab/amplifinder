@@ -93,7 +93,7 @@ def classify_architecture(jc_calls: Dict[JunctionType, Optional[bool]]) -> RawEv
         (0, 1, 0, 0, 0, 1, 0): RawEvent.TRANSPOSITION,
     }
 
-    pattern = tuple(jc_calls[jt] for jt in JunctionType.sorted())
+    pattern = tuple(jc_calls[jt] for jt in JunctionType)
 
     if None in pattern:
         return RawEvent.UNRESOLVED

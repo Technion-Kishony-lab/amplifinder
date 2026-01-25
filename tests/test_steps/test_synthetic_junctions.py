@@ -13,7 +13,7 @@ def test_creates_junctions_fasta(tiny_genome, filtered_tnjc2_record, ref_tns_ind
         genome=tiny_genome,
         ref_tns=ref_tns_indexed,
         output_dir=tmp_path,
-        junction_length=150,
+        jc_arm_len=150,
     )
 
     result = step.run()

@@ -13,7 +13,7 @@ from Bio.Seq import reverse_complement
 from Bio.SeqRecord import SeqRecord
 
 from amplifinder.data_types.scaffold import SeqScaffold, SeqSegmentScaffold
-from amplifinder.data_types.record_types import Junction
+from amplifinder.data_types.junctions import Junction
 from amplifinder.logger import info
 from amplifinder.utils.file_utils import ensure_dir
 

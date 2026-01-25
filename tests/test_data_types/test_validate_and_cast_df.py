@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 from typing import Optional, List, Dict, Tuple
 
-from amplifinder.data_types.records import Column, Schema
-from amplifinder.data_types.validate_and_cast_df import validate_and_cast_df, parse_compound
+from amplifinder.records.base_records import Column, Schema
+from amplifinder.records.validate_and_cast_df import validate_and_cast_df, parse_compound
 
 
 @pytest.fixture

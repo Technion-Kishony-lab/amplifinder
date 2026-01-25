@@ -14,11 +14,10 @@ from pathlib import Path
 from amplifinder.env import PLOT_ALIGNMENT_SNP_INDELS
 
 from amplifinder.config import AlignmentClassifyParams
-from amplifinder.data_types import JunctionReadCounts, JunctionType
-from amplifinder.data_types.enums import Element, ReadType, JcCall
+from amplifinder.data_types import JunctionReadCounts, JunctionType, Element, ReadType, JcCall
 
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
-from amplifinder.steps.jct_coverage.read_type import get_expected_counts
+from amplifinder.steps.jct_coverage.classify_alignments import get_expected_counts
 from amplifinder.steps.jct_coverage.alignment_segments import AlignmentElements, CoordsAlignmentElements, \
     convert_coords_to_nan_separated_arrays, get_alignment_segments
 
@@ -26,12 +25,14 @@ from amplifinder.visualization.genetic_elements import draw_genetic_element
 
 
 READ_TYPES_TO_COLORS = {
-    ReadType.LEFT: '#d00000',  # vibrant red
-    ReadType.LEFT_MARGINAL: '#b06060',  # soft coral
-    ReadType.MIDDLE: '#606060',  # teal green
-    ReadType.PAIRED: '#606060',  # green for paired-end reads
-    ReadType.RIGHT_MARGINAL: '#6060b0',  # warm amber
-    ReadType.RIGHT: '#0000d0'  # bright orange
+    ReadType.LEFT_FAR: '#d00000',
+    ReadType.LEFT: '#d00000',
+    ReadType.LEFT_MARGINAL: '#b06060',
+    ReadType.SPANNING: '#606060',
+    ReadType.PAIRED: '#808080',
+    ReadType.RIGHT_MARGINAL: '#6060b0',
+    ReadType.RIGHT: '#0000d0',
+    ReadType.RIGHT_FAR: '#0000d0',
 }
 
 
@@ -109,7 +110,7 @@ def add_hit_legend_with_info(ax: Axes, jc_cov: JunctionReadCounts, scales: Junct
     legend_elements = [
         Line2D([0], [0], marker='o', color='w', markerfacecolor=READ_TYPES_TO_COLORS[rt],
                markersize=6, label=f"{jc_cov[rt]} :{scales[rt]}")
-        for rt in ReadType
+        for rt in ReadType if not rt.is_far()
     ]
     return ax.legend(handles=legend_elements, loc=loc, fontsize=fontsize,
                      framealpha=0.8, title=title, title_fontsize=fontsize)
@@ -123,15 +124,15 @@ def add_pie_chart(ax, jc_cov: JunctionReadCounts, position: str = 'top'):
         jc_cov: JunctionReadCounts with left, left_marginal, spanning, right_marginal, right
         position: 'top' for top-left or 'bottom' for bottom-right
     """
-    # Calculate fractions (order: LEFT, LEFT_MARGINAL, MIDDLE, RIGHT_MARGINAL, RIGHT)
+    # Calculate fractions (order: LEFT, LEFT_MARGINAL, SPANNING, RIGHT_MARGINAL, RIGHT)
     if jc_cov.total == 0:
         return
 
     sizes_to_colors = {jc_cov.counts[rt]: READ_TYPES_TO_COLORS[rt] for
-                       rt in ReadType}
+                       rt in ReadType if not rt.is_far()}
 
     # Create inset axes for pie chart (bounds in axes coordinates: [left, bottom, width, height])
-    y_offset = 0.32 if position == 'top' else 0.5
+    y_offset = 0.32 if position == 'bottom' else 0.5
     inset_ax = ax.inset_axes([0.72, y_offset, 0.28, 0.18])
 
     inset_ax.pie(list(sizes_to_colors), colors=list(sizes_to_colors.values()),
@@ -161,11 +162,20 @@ def _down_sample_alignments(
         where scales is a JunctionReadCounts with scaling factors for each read type
     """
     sorted_alignments = sorted(alignments, key=lambda a: a.middle)
+    expected_counts.left_far = 0
+    expected_counts.right_far = 0
 
     max_reads = expected_counts * max_reads_per_plot // expected_counts.total
+    # Avoid division by zero - set max_reads to 1 for any read type with 0 expected count
+    max_reads.paired = 1  # Avoid dividing by zero for paired reads
+    max_reads.left_far = 1
+    max_reads.right_far = 1
 
     scales = jc_cov // max_reads
     scales = scales.max(1)
+    scales.paired = scales.spanning
+    scales.left_far = 0
+    scales.right_far = 0
 
     counters = JunctionReadCounts()
 
@@ -174,7 +184,7 @@ def _down_sample_alignments(
         read_type = alignment.read_type
         count = counters[read_type]
         scale = scales[read_type]
-        if count % scale == 0:
+        if scale > 0 and count % scale == 0:
             downsampled.append(alignment)
         counters.increment(read_type)
 
@@ -226,8 +236,8 @@ def _draw_genetic_element_legend(ax_legend, h_pixels: int = 18) -> None:
 
 
 def plot_jc_alignments(
-    alignment_data: Dict[JunctionType, List[AlignmentData]],
-    alignment_data_anc: Dict[JunctionType, List[AlignmentData]] | None = None,
+    jc_to_alignments: Dict[JunctionType, List[AlignmentData]],
+    jc_to_alignments_anc: Dict[JunctionType, List[AlignmentData]] | None = None,
     jc_covs: Dict[JunctionType, JunctionReadCounts] | None = None,
     jc_covs_anc: Dict[JunctionType, JunctionReadCounts] | None = None,
     jc_calls: Dict[JunctionType, JcCall] | None = None,
@@ -244,7 +254,7 @@ def plot_jc_alignments(
     """Plot junctions coverage by reads as horizontal lines (coverage plot)."""
     with_calls = jc_calls is not None
     if with_calls:
-        if alignment_data_anc and not jc_calls_anc:
+        if jc_to_alignments_anc and not jc_calls_anc:
             raise ValueError("Cannot plot with junction calls for isolate and no ancestor calls")
 
     h_pixels = 18
@@ -279,7 +289,7 @@ def plot_jc_alignments(
         ax = fig.add_subplot(inner_gs[1])
 
         # Downsample and plot isolate
-        alignments = alignment_data[jt]
+        alignments = jc_to_alignments[jt]
         jc_cov = jc_covs[jt]
         expected_iso = get_expected_counts(read_len_iso, jc_arm_len_iso, alignment_classify_params)
         downsampled, scales_iso = _down_sample_alignments(
@@ -293,8 +303,8 @@ def plot_jc_alignments(
         )
 
         # Downsample and plot ancestor reads below x-axis (negative y) if available
-        if alignment_data_anc:
-            alignments_anc = alignment_data_anc[jt]
+        if jc_to_alignments_anc:
+            alignments_anc = jc_to_alignments_anc[jt]
             jc_cov_anc = jc_covs_anc[jt]
             expected_anc = get_expected_counts(read_len_anc, jc_arm_len_anc, alignment_classify_params)
             downsampled_anc, scales_anc = _down_sample_alignments(
@@ -308,22 +318,26 @@ def plot_jc_alignments(
             )
 
         # Set consistent y-axis (extend to negative if ancestor data exists)
-        y_min = -(max_reads_per_plot + 1) if alignment_data_anc else 0
+        y_min = -(max_reads_per_plot + 1) if jc_to_alignments_anc else 0
         y_max = max_reads_per_plot + 1
         ax.set_ylim(y_min, y_max)
         # Use max arm length for x-axis to accommodate both iso and anc
-        arm_len_max = jc_arm_len_iso if jc_arm_len_anc is None \
-            else max(jc_arm_len_iso, jc_arm_len_anc)
-        ax.set_xlim(-arm_len_max, arm_len_max)
+        max_dist_iso = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_iso)
+        if jc_arm_len_anc is None:
+            max_dist = max_dist_iso
+        else:
+            max_dist_anc = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_anc)
+            max_dist = max(max_dist_iso, max_dist_anc)
+        ax.set_xlim(-max_dist, max_dist)
 
         # Add a junction call marker at the junction point
         if with_calls:
             _draw_jc_call(ax, y_max, jc_calls[jt])
-            if alignment_data_anc:
+            if jc_to_alignments_anc:
                 _draw_jc_call(ax, y_min, jc_calls_anc[jt])
 
         # Add horizontal line at y=0 if ancestor data exists
-        if alignment_data_anc:
+        if jc_to_alignments_anc:
             ax.axhline(0, color='black', linestyle='-', linewidth=0.5)
         ax.axvline(0, color='black', linestyle='--', linewidth=0.5, zorder=-10)
 
@@ -336,18 +350,12 @@ def plot_jc_alignments(
         left_elem_type, right_elem_type = jt.elements
 
         # Set up genetic element axes
-        max_dist_iso = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_iso)
-        if jc_arm_len_anc is None:
-            max_dist = max_dist_iso
-        else:
-            max_dist_anc = alignment_classify_params.get_max_dist_from_junction(jc_arm_len_anc)
-            max_dist = max(max_dist_iso, max_dist_anc)
         ax_gene.set_xlim(-max_dist, max_dist)
         ax_gene.set_ylim(0, 1)
         ax_gene.set_aspect('auto')
 
         fs = 7
-        if alignment_data_anc:
+        if jc_to_alignments_anc:
             leg1 = add_hit_legend_with_info(ax, jc_cov, scales_iso, loc='upper left',
                                             title='iso', fontsize=fs)
             ax.add_artist(leg1)
@@ -382,9 +390,11 @@ def plot_jc_alignments(
     # Junction call legend (bottom)
     if with_calls:
         jc_legend_elements = [
-            Line2D([0], [0], marker='v', linestyle='None', markerfacecolor=color, 
-                   markersize=10, markeredgecolor='None', label=label)
-                   for color, label in JC_CALLS_TO_COLORS_AND_LABELS.values()
+            Line2D(
+                [0], [0], marker='v', linestyle='None', markerfacecolor=color,
+                markersize=10, markeredgecolor='None', label=label
+            )
+            for color, label in JC_CALLS_TO_COLORS_AND_LABELS.values()
         ]
         ax_legend.legend(handles=jc_legend_elements, bbox_to_anchor=(0.5, 0.05),
                          loc='center', fontsize=11, frameon=True, title='Junction call')
@@ -394,5 +404,5 @@ def plot_jc_alignments(
 
     # Save figure
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(output_path, dpi=150, bbox_inches='tight')
+    fig.savefig(output_path, dpi=600, bbox_inches='tight')
     plt.close(fig)

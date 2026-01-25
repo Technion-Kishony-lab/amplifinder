@@ -1,7 +1,7 @@
 import numpy as np
 
 from amplifinder.data_types.scaffold import Scaffold, SeqScaffold, SegmentScaffold, SeqSegmentScaffold
-from amplifinder.data_types.enums import Orientation
+from amplifinder.data_types import Orientation
 
 
 def test_seqscaffold_slice_forward_linear():

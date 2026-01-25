@@ -109,7 +109,7 @@ def _build_7_junctions_from_6_arms(
 
 
 def create_synthetic_junctions_and_name(
-    tnjc2: SingleLocusLinkedTnJc2, jc_width: int, ref_tns: RecordTypedDf[RefTn]
+    tnjc2: SingleLocusLinkedTnJc2, jc_arm_len: int, ref_tns: RecordTypedDf[RefTn]
 ) -> tuple[dict[JunctionType, Junction], str]:
 
     # Get TN sides that S and E junctions connect to (with offsets)
@@ -121,26 +121,26 @@ def create_synthetic_junctions_and_name(
     assert ref_tn.tn_id == chosen_tn_id
 
     # Get inward arms for Amplicon
-    amp_left_arm, amp_right_arm = tnjc2.get_inward_arms(flank=jc_width)
+    amp_left_arm, amp_right_arm = tnjc2.get_inward_arms(flank=jc_arm_len)
 
     # Get chromosome arms (outward amplicon arms)
-    chr_left_arm, chr_right_arm = tnjc2.get_outward_arms(flank=jc_width)
+    chr_left_arm, chr_right_arm = tnjc2.get_outward_arms(flank=jc_arm_len)
 
     # Handle tnjc2 flanked by ancestral TN
     paired_left = tnjc2.single_locus_tnjc2_matching_left
     is_left_ref_tn = paired_left is not None and paired_left.base_raw_event == BaseRawEvent.REFERENCE
     if is_left_ref_tn:
-        chr_left_arm = paired_left.get_outward_arms(flank=jc_width)[0]
+        chr_left_arm = paired_left.get_outward_arms(flank=jc_arm_len)[0]
 
     paired_right = tnjc2.single_locus_tnjc2_matching_right
     is_right_ref_tn = paired_right is not None and paired_right.base_raw_event == BaseRawEvent.REFERENCE
     if is_right_ref_tn:
-        chr_right_arm = paired_right.get_outward_arms(flank=jc_width)[1]
+        chr_right_arm = paired_right.get_outward_arms(flank=jc_arm_len)[1]
 
     # Get inward arms for RefTn with offset adjustments via ref_tn_side
     # The right-side of the TN is one that connects to the left-side of the amplicon
-    tn_right_arm = ref_tn.get_inward_arm_by_ref_tn_side(tn_side_left_amp, jc_width)
-    tn_left_arm = ref_tn.get_inward_arm_by_ref_tn_side(tn_side_right_amp, jc_width)
+    tn_right_arm = ref_tn.get_inward_arm_by_ref_tn_side(tn_side_left_amp, jc_arm_len)
+    tn_left_arm = ref_tn.get_inward_arm_by_ref_tn_side(tn_side_right_amp, jc_arm_len)
 
     # Create Junction objects for each junction type
     direct_jc = _build_7_junctions_from_6_arms(
@@ -156,7 +156,7 @@ def create_synthetic_junctions_and_name(
         tn_side_left_amp_side=tn_side_left_amp_side,
         chr_left_pos=chr_left_arm.start if is_left_ref_tn else None,
         chr_right_pos=chr_right_arm.start if is_right_ref_tn else None,
-        flank=jc_width,
+        flank=jc_arm_len,
     )
 
     assert direct_jc == rudimentary.create_syn_junctions()
@@ -177,16 +177,16 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
         genome: Genome,
         ref_tns: RecordTypedDf[RefTn],
         output_dir: Path,
-        junction_length: int = 150,
+        jc_arm_len: int = 150,
         force: Optional[bool] = None,
     ):
         self.genome = genome
         self.ref_tns = ref_tns
-        self.junction_length = junction_length
+        self.jc_arm_len = jc_arm_len
         self._tnjc2s_and_junctions: list[tuple[SynJctsTnJc2, dict[JunctionType, Junction]]] = []
         for tnjc2 in filtered_tnjc2s:
             junctions, analysis_dir_name = create_synthetic_junctions_and_name(
-                tnjc2=tnjc2, jc_width=self.junction_length * 2, ref_tns=self.ref_tns
+                tnjc2=tnjc2, jc_arm_len=self.jc_arm_len, ref_tns=self.ref_tns
             )
             tnjc2 = SynJctsTnJc2.from_other(tnjc2, **{self.dir_field: analysis_dir_name})
             self._tnjc2s_and_junctions.append((tnjc2, junctions))

@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Dict
 
-from amplifinder.data_types.records import Schema
+from amplifinder.records.base_records import Schema
 
 RECORD_TYPES = ["JC", "SNP", "MOB", "DEL", "UN"]
 

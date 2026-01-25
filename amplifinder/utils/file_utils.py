@@ -5,6 +5,28 @@ from pathlib import Path
 from typing import Union
 
 
+def fmt_count(num: int, total: int | None = None) -> str:
+    """Format count with optional percentage.
+
+    Args:
+        num: Number to format
+        total: Optional total for percentage calculation
+
+    Returns:
+        Formatted string: 'num:6' or 'num:6 (pct:4.1f%)' if total provided
+
+    Examples:
+        >>> fmt_count(100)
+        '   100'
+        >>> fmt_count(75, 100)
+        '    75 (  75.0%)'
+    """
+    if total is None or total == 0:
+        return f"{num:6}"
+    pct = num / total * 100
+    return f"{num:6} ({pct:4.1f}%)"
+
+
 def ensure_dir(path: Union[str, Path], cleanup: bool = False) -> Path:
     """Create directory and all parent directories if they don't exist.
 

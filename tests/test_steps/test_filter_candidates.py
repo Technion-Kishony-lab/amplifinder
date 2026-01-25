@@ -2,7 +2,7 @@
 
 import pytest
 
-from amplifinder.data_types.enums import BaseRawEvent
+from amplifinder.data_types import BaseRawEvent
 from amplifinder.steps import FilterTnJc2CandidatesStep
 from amplifinder.data_types import RecordTypedDf, SingleLocusLinkedTnJc2
 
