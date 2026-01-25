@@ -230,8 +230,8 @@ def _draw_genetic_element_legend(ax_legend, h_pixels: int = 18) -> None:
 
 
 def plot_jc_alignments(
-    alignment_data: Dict[JunctionType, List[AlignmentData]],
-    alignment_data_anc: Dict[JunctionType, List[AlignmentData]] | None = None,
+    jc_to_alignments: Dict[JunctionType, List[AlignmentData]],
+    jc_to_alignments_anc: Dict[JunctionType, List[AlignmentData]] | None = None,
     jc_covs: Dict[JunctionType, JunctionReadCounts] | None = None,
     jc_covs_anc: Dict[JunctionType, JunctionReadCounts] | None = None,
     jc_calls: Dict[JunctionType, JcCall] | None = None,
@@ -248,7 +248,7 @@ def plot_jc_alignments(
     """Plot junctions coverage by reads as horizontal lines (coverage plot)."""
     with_calls = jc_calls is not None
     if with_calls:
-        if alignment_data_anc and not jc_calls_anc:
+        if jc_to_alignments_anc and not jc_calls_anc:
             raise ValueError("Cannot plot with junction calls for isolate and no ancestor calls")
 
     h_pixels = 18
@@ -283,7 +283,7 @@ def plot_jc_alignments(
         ax = fig.add_subplot(inner_gs[1])
 
         # Downsample and plot isolate
-        alignments = alignment_data[jt]
+        alignments = jc_to_alignments[jt]
         jc_cov = jc_covs[jt]
         expected_iso = get_expected_counts(read_len_iso, jc_arm_len_iso, alignment_classify_params)
         downsampled, scales_iso = _down_sample_alignments(
@@ -297,8 +297,8 @@ def plot_jc_alignments(
         )
 
         # Downsample and plot ancestor reads below x-axis (negative y) if available
-        if alignment_data_anc:
-            alignments_anc = alignment_data_anc[jt]
+        if jc_to_alignments_anc:
+            alignments_anc = jc_to_alignments_anc[jt]
             jc_cov_anc = jc_covs_anc[jt]
             expected_anc = get_expected_counts(read_len_anc, jc_arm_len_anc, alignment_classify_params)
             downsampled_anc, scales_anc = _down_sample_alignments(
@@ -312,7 +312,7 @@ def plot_jc_alignments(
             )
 
         # Set consistent y-axis (extend to negative if ancestor data exists)
-        y_min = -(max_reads_per_plot + 1) if alignment_data_anc else 0
+        y_min = -(max_reads_per_plot + 1) if jc_to_alignments_anc else 0
         y_max = max_reads_per_plot + 1
         ax.set_ylim(y_min, y_max)
         # Use max arm length for x-axis to accommodate both iso and anc
@@ -323,11 +323,11 @@ def plot_jc_alignments(
         # Add a junction call marker at the junction point
         if with_calls:
             _draw_jc_call(ax, y_max, jc_calls[jt])
-            if alignment_data_anc:
+            if jc_to_alignments_anc:
                 _draw_jc_call(ax, y_min, jc_calls_anc[jt])
 
         # Add horizontal line at y=0 if ancestor data exists
-        if alignment_data_anc:
+        if jc_to_alignments_anc:
             ax.axhline(0, color='black', linestyle='-', linewidth=0.5)
         ax.axvline(0, color='black', linestyle='--', linewidth=0.5, zorder=-10)
 
@@ -351,7 +351,7 @@ def plot_jc_alignments(
         ax_gene.set_aspect('auto')
 
         fs = 7
-        if alignment_data_anc:
+        if jc_to_alignments_anc:
             leg1 = add_hit_legend_with_info(ax, jc_cov, scales_iso, loc='upper left',
                                             title='iso', fontsize=fs)
             ax.add_artist(leg1)
