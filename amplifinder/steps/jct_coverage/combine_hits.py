@@ -39,10 +39,11 @@ def select_or_combine_single_alignments(
                     alignment = CombinedSingleAlignment.from_alignments(alignments)
                 orientations[is_reverse] = alignment
     
+    action = "SELECT_BEST" if select_best_by_score else "COMBINE_ALL"
     print(
-        f"More than one alignment per read: "
-        f"forward={fmt_count(total_alignments[False] - single_alignments[False], total_alignments[False])}, "
-        f"reverse={fmt_count(total_alignments[True] - single_alignments[True], total_alignments[True])}, ",
+        f"More than one alignment per read (action: {action:12s}) " + " "*7 +
+        f"FWD={fmt_count(total_alignments[False] - single_alignments[False], total_alignments[False])}, "
+        f"REV={fmt_count(total_alignments[True] - single_alignments[True], total_alignments[True])}",
         flush=True
     )
 
@@ -97,9 +98,11 @@ def combine_same_id_different_orientation_hits(
     total_pairs = total_normal_pairs + total_swapped_pairs
     avg_distance_normal = sum_distances_normal / total_normal_pairs if total_normal_pairs > 0 else 0
     avg_distance_swapped = sum_distances_swapped / total_swapped_pairs if total_swapped_pairs > 0 else 0
-    print(f"Total reads: {total_reads:6}, Paired: {total_pairs:6} ({total_pairs/total_reads*100:6.1f}%); "
-          f"Normal pairs: {total_normal_pairs:6}, Avg overlap: {avg_distance_normal:6.1f}; "
-          f"Swapped pairs: {total_swapped_pairs:6}, Avg overlap: {avg_distance_swapped:6.1f}", flush=True)
+    total_singletons = total_reads - total_pairs
+    total_hits = total_singletons + total_pairs * 2
+    print(f"Total hits: {total_hits:6} = ({total_singletons:6} Singletons) + 2 * ({total_pairs:6} Pairs)\n"
+          f"\tNormal  pairs: {total_normal_pairs:6}, Avg overlap (bp): {avg_distance_normal:6.1f}\n"
+          f"\tSwapped pairs: {total_swapped_pairs:6}, Avg overlap (bp): {avg_distance_swapped:6.1f}", flush=True)
 
 
 def flatten_combined_alignments(
