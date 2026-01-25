@@ -72,8 +72,8 @@ def read_bam_and_group_single_alignments(
     print(
         f"BAM statistics: total hits={fmt_count(total_hits)}, "
         f"pass_filter={fmt_count(pass_filter_total, total_hits)}, "
-        f"forward={fmt_count(pass_filter_forward, pass_filter_total)}, "
-        f"reverse={fmt_count(pass_filter_reverse, pass_filter_total)}",
+        f"FWD={fmt_count(pass_filter_forward, pass_filter_total)}, "
+        f"REV={fmt_count(pass_filter_reverse, pass_filter_total)}",
         flush=True
     )
 

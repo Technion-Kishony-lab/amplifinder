@@ -13,7 +13,7 @@ def fmt_count(num: int, total: int | None = None) -> str:
         total: Optional total for percentage calculation
         
     Returns:
-        Formatted string: 'num:6' or 'num:6 (pct%)' if total provided
+        Formatted string: 'num:6' or 'num:6 (pct:4.1f%)' if total provided
         
     Examples:
         >>> fmt_count(100)
@@ -24,7 +24,7 @@ def fmt_count(num: int, total: int | None = None) -> str:
     if total is None or total == 0:
         return f"{num:6}"
     pct = num / total * 100
-    return f"{num:6} ({pct:6.1f}%)"
+    return f"{num:6} ({pct:4.1f}%)"
 
 
 def ensure_dir(path: Union[str, Path], cleanup: bool = False) -> Path:

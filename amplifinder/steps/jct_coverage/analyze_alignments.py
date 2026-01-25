@@ -82,7 +82,7 @@ def print_jc_read_counts_and_calls(jc_covs: dict[JunctionType, JunctionReadCount
     """Print junction coverage and calls."""
     # Print header
     print(f"{'junction':<23} {'left_far':>10} {'left':>10} {'left_marg':>10} {'spanning':>10} {'paired':>10} {'right_marg':>10} {'right':>10} {'right_far':>10} {'call':>10}", flush=True)
-    print("-" * 110, flush=True)
+    print("-" * 122, flush=True)
     
     # Print rows
     for jt in JunctionType:
@@ -95,7 +95,7 @@ def warn_if_paired_and_not_spanning(jc_covs: dict[JunctionType, JunctionReadCoun
     """Warn if paired reads are present and no spanning reads are present."""
     for jt in JunctionType:
         if jc_covs[jt].paired > 0 and jc_covs[jt].spanning == 0:
-            warning(f"Junction {jt} has {jc_covs[jt].paired} paired-end reads "
+            warning(f"Junction {jt.name} has {jc_covs[jt].paired} paired-end reads "
                     "transversing the junction but no spanning reads.")
 
 
@@ -140,7 +140,8 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         """Analyze alignments for each candidate."""
         analyzed_records = []
         for tnjc2 in self.tnjc2s:
-            print(f"\nAnalyzing {tnjc2.analysis_dir}", flush=True)
+            txt = f" CASE: '{tnjc2.analysis_dir}' "
+            print("\n======" + txt + "=" * (122 - len(txt) - 6), flush=True)
             jc_covs, alignment_data = get_jct_read_counts_by_tnjc2(
                 synjct_tnjc2=tnjc2,
                 base_dir=self._output_dir,
