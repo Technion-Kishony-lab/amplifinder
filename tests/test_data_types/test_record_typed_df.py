@@ -5,7 +5,7 @@ from enum import Enum
 from typing import List, NamedTuple, Tuple, ClassVar
 
 from amplifinder.data_types import RecordTypedDf
-from amplifinder.data_types.records import Record
+from amplifinder.records.base_records import Record
 
 
 class Color(str, Enum):
@@ -110,7 +110,7 @@ def test_save_load_namedtuple_with_enum(tmp_path):
 
 def test_list_int_type_validation(tmp_path):
     """Test that List[int] validates element types on load."""
-    from amplifinder.data_types.validate_and_cast_df import parse_compound
+    from amplifinder.records.validate_and_cast_df import parse_compound
     from pydantic import ValidationError
 
     # This should raise ValidationError - list contains string, not int

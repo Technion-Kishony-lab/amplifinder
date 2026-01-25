@@ -47,10 +47,12 @@ class ReadLenStep(OutputStep[ReadLengths]):
         stats = get_read_length_stats(fastq_dir, sample_per_file=SAMPLE_PER_FILE)
         info(f"{sample_type:<9}: {stats}")
         if not stats.is_uniform:
-            warning(f"{sample_type} read length is not uniform - may affect junction coverage accuracy")
+            warning(f"{sample_type} read length is not uniform - may affect coverage accuracy")
         return stats.max_length
 
-    def _determine_junction_arm_lengths(self, iso_read_len: int, anc_read_len: Optional[int]) -> tuple[int, Optional[int]]:
+    def _determine_junction_arm_lengths(
+        self, iso_read_len: int, anc_read_len: Optional[int]
+    ) -> tuple[int, Optional[int]]:
         """Determine junction arm length (2x read length) for iso/anc with 10% tolerance."""
         iso_jc_arm = 2 * iso_read_len
         if anc_read_len is None:
@@ -64,7 +66,7 @@ class ReadLenStep(OutputStep[ReadLengths]):
             msg = f"{prefix} iso={iso_read_len}, anc={anc_read_len}, diff={delta}, " \
                 f"{JUNCTION_LENGTH_TOLERANCE}% threshold (anc)={threshold}; using arm length={using_len}"
             func(msg)
-        anc_jc_arm = 2 * anc_read_len        
+        anc_jc_arm = 2 * anc_read_len
         if delta <= threshold:
             iso_jc_arm = anc_jc_arm
             _log_decision("isolate-ancestor read lengths within threshold;", iso_jc_arm, info)

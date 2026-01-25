@@ -7,7 +7,7 @@ import re
 
 from Bio.SeqFeature import SeqFeature
 
-from amplifinder.data_types.record_types import TnId
+from amplifinder.data_types import TnId
 from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
 from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.utils.file_lock import locked_resource

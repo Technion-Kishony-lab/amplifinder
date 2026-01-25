@@ -5,7 +5,7 @@ from matplotlib.axes import Axes
 from pathlib import Path
 from typing import Optional, Dict
 
-from amplifinder.data_types.record_types import AnalyzedTnJc2
+from amplifinder.data_types import AnalyzedTnJc2
 
 
 def _format_amplicon_axes(ax: Axes, left: int, right: int, left_pos: int, right_pos: int, scaf: str) -> None:

@@ -17,6 +17,7 @@ def test_step_initialization(filtered_tnjc2_record, tmp_path):
     step = AnalyzeTnJc2AlignmentsStep(
         tnjc2s=filtered_tnjc2s,
         output_dir=tmp_path,
+        arm_len=150,
         read_length=150,
     )
 

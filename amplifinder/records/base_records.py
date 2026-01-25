@@ -7,6 +7,8 @@ from pathlib import Path
 from pydantic import BaseModel
 from typing import Any, ClassVar, Dict, List, NamedTuple, Optional, Tuple, Type, TypeVar, get_origin, get_args, Union
 
+from amplifinder.records.type_inference import infer_property_type
+
 T = TypeVar("T", bound="Record")
 
 
@@ -138,7 +140,6 @@ class Record(BaseModel):
                 is_optional = (get_origin(dtype) is Union and type(None) in get_args(dtype))
             else:
                 # It's a property - infer type from property return annotation
-                from amplifinder.data_types.type_inference import infer_property_type
                 dtype, is_optional = infer_property_type(cls, name)
 
             columns.append(Column(name=name, dtype=dtype, optional=is_optional))
