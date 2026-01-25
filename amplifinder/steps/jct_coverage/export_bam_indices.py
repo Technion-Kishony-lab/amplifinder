@@ -43,7 +43,7 @@ def extract_bam_indices_by_read_type(
     alignments_by_read_type: dict[ReadType, list[AlignmentData]]
 ) -> dict[ReadType, list[tuple[str, int, int, bool, int]]]:
     """Extract (read_id, start, end, is_reverse, bam_index) tuples by read type."""
-    
+
     indices_by_read_type: dict[ReadType, list[tuple[str, int, int, bool, int]]] = {rt: [] for rt in ReadType}
 
     for read_type, alignments_list in alignments_by_read_type.items():

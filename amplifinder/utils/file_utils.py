@@ -7,14 +7,14 @@ from typing import Union
 
 def fmt_count(num: int, total: int | None = None) -> str:
     """Format count with optional percentage.
-    
+
     Args:
         num: Number to format
         total: Optional total for percentage calculation
-        
+
     Returns:
         Formatted string: 'num:6' or 'num:6 (pct:4.1f%)' if total provided
-        
+
     Examples:
         >>> fmt_count(100)
         '   100'

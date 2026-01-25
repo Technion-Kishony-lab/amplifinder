@@ -6,7 +6,7 @@ from typing import Optional, Callable
 
 from amplifinder.steps.jct_coverage.alignment_data import SingleAlignment
 from amplifinder.steps.jct_coverage.cigar import Cigar, resolve_cigar_m_operations
-from amplifinder.env import DEBUG, RESOLVE_CIGAR_MATCHES_VS_MISMATCHES
+from amplifinder.env import RESOLVE_CIGAR_MATCHES_VS_MISMATCHES
 from amplifinder.utils.file_utils import fmt_count
 
 
@@ -36,7 +36,7 @@ def read_bam_and_group_single_alignments(
     with pysam.AlignmentFile(str(bam_path), "rb") as bam:
         for bam_index, hit in enumerate(bam.fetch(), start=1):
             total_hits += 1
-            
+
             # Apply filter if provided
             if filter_func is not None and not filter_func(hit):
                 continue

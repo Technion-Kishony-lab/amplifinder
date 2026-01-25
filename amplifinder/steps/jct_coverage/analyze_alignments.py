@@ -7,7 +7,7 @@ from typing import Optional
 from amplifinder.config import AlignmentClassifyParams, JcCallParams, AlignmentFilterParams
 from amplifinder.env import DEBUG
 from amplifinder.data_types import (
-    RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts, ReadType
+    RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
 )
 from amplifinder.logger import warning
 from amplifinder.steps.base import RecordTypedDfStep
@@ -68,7 +68,7 @@ def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
 
     is_above_minimal_expected = \
         num_spanning_reads * (1 + jc_call_params.pos_threshold_rel) \
-            >= expected_num_spanning - num_std * total_err
+        >= expected_num_spanning - num_std * total_err
 
     is_close_to_zero = num_spanning_reads <= jc_call_params.neg_threshold_abs \
         or num_spanning_reads <= expected_num_spanning * jc_call_params.neg_threshold_rel
@@ -80,18 +80,25 @@ def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
     return None  # ambiguous
 
 
-def print_jc_read_counts_and_calls(jc_covs: dict[JunctionType, JunctionReadCounts], jc_calls: dict[JunctionType, Optional[bool]]) -> None:
+def print_jc_read_counts_and_calls(
+    jc_covs: dict[JunctionType, JunctionReadCounts],
+    jc_calls: dict[JunctionType, Optional[bool]]
+) -> None:
     """Print junction coverage and calls."""
     # Print header
-    print(f"{'junction':<23} {'left_far':>10} {'left':>10} {'left_marg':>10} {'spanning':>10} {'paired':>10} {'right_marg':>10} {'right':>10} {'right_far':>10} {'call':>10}", flush=True)
+    print(f"{'junction':<23} {'left_far':>10} {'left':>10} {'left_marg':>10} "
+          f"{'spanning':>10} {'paired':>10} {'right_marg':>10} {'right':>10} "
+          f"{'right_far':>10} {'call':>10}", flush=True)
     print("-" * 122, flush=True)
-    
+
     # Print rows
     for jt in JunctionType:
         cov = jc_covs[jt]
         call_str = str(jc_calls[jt]) if jc_calls[jt] is not None else "None"
-        print(f"{jt.name:<23} {cov.left_far:>10} {cov.left:>10} {cov.left_marginal:>10} {cov.spanning:>10} {cov.paired:>10} {cov.right_marginal:>10} {cov.right:>10} {cov.right_far:>10} {call_str:>10}", flush=True)
-        
+        print(f"{jt.name:<23} {cov.left_far:>10} {cov.left:>10} {cov.left_marginal:>10} "
+              f"{cov.spanning:>10} {cov.paired:>10} {cov.right_marginal:>10} {cov.right:>10} "
+              f"{cov.right_far:>10} {call_str:>10}", flush=True)
+
 
 def warn_if_paired_and_not_spanning(jc_covs: dict[JunctionType, JunctionReadCounts]) -> None:
     """Warn if paired reads are present and no spanning reads are present."""
@@ -126,7 +133,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         self.alignment_filter_params = alignment_filter_params or AlignmentFilterParams()
         self.jc_call_params = jc_call_params or JcCallParams()
         self._output_dir = Path(output_dir)
-        
+
         # Cache for alignment data (populated during _calculate_output)
         self.alignment_data_cache: dict[str, dict[JunctionType, list[AlignmentData]]] = {}
 
@@ -156,7 +163,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
                 alignment_classify_params=self.alignment_classify_params,
                 alignment_filter_params=self.alignment_filter_params,
             )
-            
+
             # Cache alignment data for later use (e.g., plotting)
             cache_key = tnjc2.analysis_dir
             self.alignment_data_cache[cache_key] = alignment_data
@@ -188,7 +195,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             ))
 
         return RecordTypedDf.from_records(analyzed_records, AnalyzedTnJc2)
-    
+
     def run_with_cache(self) -> tuple[RecordTypedDf[AnalyzedTnJc2], dict[str, dict[JunctionType, list[AlignmentData]]]]:
         """Run the step and return both results and alignment data cache."""
         result = self.run()
