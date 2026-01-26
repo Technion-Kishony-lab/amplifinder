@@ -1,6 +1,6 @@
 """Global environment configuration.
 
-Loads server-specific paths from config.yaml in project root.
+Loads server-specific paths from amplifinder.yaml in project root.
 """
 
 from pathlib import Path
@@ -10,16 +10,16 @@ import yaml
 from amplifinder.utils.flag_utils import MutableFlag
 
 
-# Search paths for config.yaml
+# Search paths for amplifinder.yaml
 CONFIG_SEARCH_PATHS = [
-    Path(__file__).parent.parent / "config.yaml",  # Project root
-    Path.home() / ".amplifinder" / "config.yaml",  # User home
-    Path("/etc/amplifinder/config.yaml"),          # System-wide
+    Path(__file__).parent.parent / "amplifinder.yaml",  # Project root
+    Path.home() / ".amplifinder" / "amplifinder.yaml",  # User home
+    Path("/etc/amplifinder/amplifinder.yaml"),          # System-wide
 ]
 
 
 def _find_config() -> Optional[Path]:
-    """Find config.yaml in standard locations."""
+    """Find amplifinder.yaml in standard locations."""
     for path in CONFIG_SEARCH_PATHS:
         if path.exists():
             return path
@@ -27,7 +27,7 @@ def _find_config() -> Optional[Path]:
 
 
 def _load_config() -> dict:
-    """Load global config from config.yaml."""
+    """Load global config from amplifinder.yaml."""
     config_path = _find_config()
     if config_path is None:
         return {}

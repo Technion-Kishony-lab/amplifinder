@@ -1,0 +1,25 @@
+# Example run parameter configuration file
+# Use with: amplifinder -i isolate.fastq -r U00096 --config params_example.yaml
+
+# Run-specific settings
+threads: 8
+copy_number_threshold: 1.5
+del_copy_number_threshold: 0.3
+
+# Directories
+output_dir: /path/to/output
+ref_path: genomesDB
+
+# Analysis options
+use_isfinder: false
+create_plots: true
+
+# Advanced parameters (optional)
+min_amplicon_length: 30
+max_amplicon_length: 1000000
+filter_amplicon_length: 100
+
+# Coverage parameters
+ncp_min: 0.1
+ncp_max: 1000.0
+average_method: median  # 'median', 'mean', or 'mode'

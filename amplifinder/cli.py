@@ -17,7 +17,7 @@ from amplifinder.utils.file_utils import ensure_dir
 @click.command()
 @click.option(
     "-i", "--iso-path",
-    type=click.Path(exists=True, path_type=Path),
+    type=click.Path(path_type=Path),
     required=False,
     default=None,
     help="Path to isolate FASTQ file(s) or directory.",
@@ -25,12 +25,13 @@ from amplifinder.utils.file_utils import ensure_dir
 @click.option(
     "-r", "--ref-name",
     type=str,
-    required=True,
+    required=False,
+    default=None,
     help="Reference genome name (e.g., U00096 for E. coli K-12).",
 )
 @click.option(
     "-a", "--anc-path",
-    type=click.Path(exists=True, path_type=Path),
+    type=click.Path(path_type=Path),
     default=None,
     help="Path to ancestor FASTQ file(s) or directory.",
 )
@@ -84,9 +85,16 @@ from amplifinder.utils.file_utils import ensure_dir
 @click.option(
     "--config",
     "config_file",
-    type=click.Path(exists=True, path_type=Path),
+    type=click.Path(path_type=Path),
     default=None,
     help="Path to YAML/JSON config file.",
+)
+@click.option(
+    "--create-config",
+    "create_config_path",
+    type=click.Path(path_type=Path),
+    default=None,
+    help="Create a config file with current settings and exit (does not run pipeline).",
 )
 @click.option(
     "--log-level",
@@ -113,8 +121,8 @@ from amplifinder.utils.file_utils import ensure_dir
 )
 @click.version_option(version=__version__)
 def main(
-    iso_path: Path,
-    ref_name: str,
+    iso_path: Optional[Path],
+    ref_name: Optional[str],
     anc_path: Optional[Path],
     iso_name: Optional[str],
     anc_name: Optional[str],
@@ -125,30 +133,36 @@ def main(
     ncbi: bool,
     use_isfinder: bool,
     config_file: Optional[Path],
+    create_config_path: Optional[Path],
     log_level: str,
     breseq_only: bool,
     verbose: bool,
     create_plots: bool,
 ) -> None:
     """AmpliFinder: Detect IS-mediated gene amplifications from WGS data."""
-    # Setup logger early
-    log_dir = output_dir / ref_name
-    ensure_dir(log_dir)
-    setup_logger(log_path=log_dir / "amplifinder.log", level=getattr(logging, log_level.upper()))
-
-    info(f"AmpliFinder v{__version__}")
-    info(f"Reference: {ref_name}")
-
     try:
-
-        # Full pipeline modes require iso_path
-        if iso_path is None:
-            raise click.ClickException("--iso-path is required")
-
         # Load config file if provided
         file_config = None
         if config_file is not None:
+            if not config_file.exists():
+                raise click.ClickException(f"Config file not found: {config_file}")
             file_config = load_config(config_file)
+        
+        # Check required parameters (skip if only creating config)
+        if create_config_path is None:
+            # Validate required parameters
+            if iso_path is None and (file_config is None or file_config.get("iso_path") is None):
+                raise click.ClickException("--iso-path is required (via CLI or --config file)")
+            
+            if ref_name is None and (file_config is None or file_config.get("ref_name") is None):
+                raise click.ClickException("--ref-name is required (via CLI or --config file)")
+            
+            # Validate paths exist for actual run
+            if iso_path is not None and not iso_path.exists():
+                raise click.ClickException(f"Isolate path does not exist: {iso_path}")
+            
+            if anc_path is not None and not anc_path.exists():
+                raise click.ClickException(f"Ancestor path does not exist: {anc_path}")
 
         # Collect CLI arguments
         cli_args = {
@@ -168,11 +182,25 @@ def main(
 
         # Merge configurations
         merged = merge_config(cli_args, file_config)
-
-        try:
+        
+        # If --create-config, save and exit
+        if create_config_path is not None:
             config = Config(**merged)
-        except ValueError as e:
-            raise click.ClickException(str(e))
+            config.save_to_file(create_config_path, log=False)
+            
+            click.echo(f"Config file created: {create_config_path}")
+            click.echo("\nRun with: amplifinder --config " + str(create_config_path))
+            return
+        
+        # Setup logger now that we have merged config
+        log_dir = Path(merged["output_dir"]) / merged["ref_name"]
+        ensure_dir(log_dir)
+        setup_logger(log_path=log_dir / "amplifinder.log", level=getattr(logging, log_level.upper()))
+
+        info(f"AmpliFinder v{__version__}")
+        info(f"Reference: {merged['ref_name']}")
+
+        config = Config(**merged)
 
         info(f"Isolate: {config.iso_path}")
         if config.anc_path:

@@ -279,11 +279,8 @@ class Config:
         """
         return self.get_iso_breseq_path(), self.get_anc_breseq_path()
 
-    def save(self, run_dir: Path) -> None:
-        """Save config to run_config.yaml in run directory."""
-        run_dir = ensure_dir(run_dir)
-        config_path = run_dir / self.RUN_CONFIG_FILENAME
-
+    def to_yaml_dict(self) -> dict[str, Any]:
+        """Convert config to YAML-serializable dict."""
         def convert_value(val):
             """Recursively convert values for YAML serialization."""
             if isinstance(val, Path):
@@ -309,12 +306,33 @@ class Config:
         for key, value in self.__dict__.items():
             if value is not None:
                 config_dict[key] = convert_value(value)
+        
+        return config_dict
 
+    def save_to_file(self, config_path: Path, log: bool = True) -> None:
+        """Save config to specified path.
+        
+        Args:
+            config_path: Path to save config file
+            log: Whether to log the save location (default: True)
+        """
+        config_path = Path(config_path)
+        config_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        config_dict = self.to_yaml_dict()
+        
         with open(config_path, 'w') as f:
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
-
-        from amplifinder.logger import info
-        info(f"Saved config to:\n{config_path}")
+        
+        if log:
+            from amplifinder.logger import info
+            info(f"Saved config to:\n{config_path}")
+    
+    def save(self, run_dir: Path) -> None:
+        """Save config to run_config.yaml in run directory."""
+        run_dir = ensure_dir(run_dir)
+        config_path = run_dir / self.RUN_CONFIG_FILENAME
+        self.save_to_file(config_path, log=True)
 
     @classmethod
     def load_from_run(cls, run_dir: Path) -> "Config":

@@ -154,22 +154,50 @@ output/
 - **Without ancestor**: Raw coverage depth
 - **With ancestor**: Normalized coverage (isolate/ancestor ratio)
 
-## Configuration File
+## Configuration
 
-You can provide a YAML configuration file instead of CLI arguments:
+### Global Configuration (`amplifinder.yaml`)
+
+Server-specific tool paths and environment settings. Auto-loaded at import time.
+
+**Location:** Project root (or `~/.amplifinder/` or `/etc/amplifinder/`)
 
 ```yaml
+# amplifinder.yaml
+blast_path: /path/to/blast/bin
+samtools_path: /path/to/samtools
+breseq_docker: true
+```
+
+### Run Configuration (`--config`)
+
+Override default run parameters with a custom config file:
+
+```yaml
+# params.yaml
 iso_path: "path/to/isolate.fastq"
 ref_name: "U00096"
 anc_path: "path/to/ancestor.fastq"
-iso_name: "my_isolate"
-anc_name: "my_ancestor"
 output_dir: "output"
-ref_path: "genomesDB"
-use_isfinder: false
+threads: 8
+copy_number_threshold: 1.5
 ```
 
-Use with `--config config.yaml`. CLI arguments override config file values.
+**Usage:**
+```bash
+# With CLI args (CLI overrides config)
+amplifinder -i isolate.fastq -r U00096 --config params.yaml
+
+# Config only (all params from file)
+amplifinder --config params.yaml
+
+# Rerun using saved run_config.yaml
+amplifinder --config output/U00096/ancestor/isolate/run_config.yaml
+
+# Create a complete config file with all defaults (doesn't run)
+amplifinder -i isolate.fastq -r U00096 --create-config my_run.yaml
+# Then run with: amplifinder --config my_run.yaml
+```
 
 ## Examples
 
@@ -208,6 +236,20 @@ amplifinder \
     -a data/ancestor.fastq \
     --anc-name my_ancestor \
     --anc-breseq-path existing_anc_breseq_output
+```
+
+### Example 4: Create and Use Config Files
+
+```bash
+# Create a complete config file from CLI args (shows all defaults)
+amplifinder -i data/isolate.fastq -r U00096 -a data/ancestor.fastq \
+    --create-config my_run.yaml
+
+# Edit my_run.yaml to customize parameters, then run:
+amplifinder --config my_run.yaml
+
+# Rerun from saved run_config.yaml:
+amplifinder --config output/U00096/ancestor/isolate/run_config.yaml
 ```
 
 ## Troubleshooting
