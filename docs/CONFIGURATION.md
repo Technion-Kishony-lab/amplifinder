@@ -5,8 +5,8 @@
 AmpliFinder uses a three-level configuration system:
 
 ```
-DEFAULT_CONFIG → amplifinder.yaml → --config params.yaml → CLI args
-(hardcoded)      (global env)        (run params)         (highest priority)
+Config defaults → amplifinder.yaml → --config params.yaml → CLI args
+(from Config)    (global env)        (run params)         (highest priority)
 ```
 
 ---
@@ -82,7 +82,7 @@ When the same parameter is specified in multiple places:
 1. CLI arguments (e.g., `-i isolate.fastq`)
 2. `--config` file (e.g., `params.yaml`)
 3. `amplifinder.yaml` (global environment)
-4. `DEFAULT_CONFIG` (hardcoded defaults in `config.py`)
+4. Config class defaults (defined in `config.py`)
 
 ---
 
