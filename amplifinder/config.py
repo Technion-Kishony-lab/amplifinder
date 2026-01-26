@@ -1,6 +1,6 @@
 """Configuration management for AmpliFinder."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, MISSING
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional, Tuple, ClassVar, Union
@@ -66,61 +66,6 @@ class JcCallParams(FrozenParams):
     # greater than the expected number minus x standard deviations
     pos_threshold_in_num_std_below_expected: int = 3
     pos_threshold_rel: float = 0.4  # non-stochastic copy number fluctuations
-
-
-# Default configuration values (from config.txt and added alignment params)
-DEFAULT_CONFIG = {
-    # External tools
-    "breseq_docker": True,
-    "blastn_path": None,  # Auto-detect from PATH
-    "samtools_path": None,  # Auto-detect from PATH
-    "isdb_path": None,  # Use bundled ISfinderDB
-
-    # IS/TN detection parameters
-    "max_dist_to_IS": 10,
-    "trim_jc_flanking": 5,
-    "reference_IS_in_span": None,
-    "reference_IS_out_span": 100,
-    "isfinder_evalue": 1e-4,
-    "isfinder_critical_coverage": 0.9,
-
-    # Alignment threads (breseq, bowtie2)
-    "threads": 4,
-
-    # Junction filtering
-    "min_amplicon_length": 30,
-    "max_amplicon_length": 1_000_000,
-    "filter_amplicon_length": 100,
-
-    # Coverage parameters
-    "ncp_min": 0.1,
-    "ncp_max": 1000.0,
-    "ncp_n": 150,
-    "average_method": "median",  # 'median', 'mode', or 'mean' (converted to AverageMethod enum)
-
-    # Copy number thresholds
-    "copy_number_threshold": 1.5,
-    "del_copy_number_threshold": 0.3,
-
-    # File size thresholds
-    "breseq_output_size_threshold": 10_000,  # Terminates if breseq output.gd exceeds this line count
-    # TODO: These are not used yet
-    "max_fastq_size": 500_000_000,
-    "min_num_bases": 80_000_000,
-
-    # Filtering options
-    # TODO: These are not used yet
-    "shortest_amplicon": 1,
-    "true_transposition_length": 0,
-    "remove_jc_breseq_reject": False,
-    "remove_isjc2_breseq_reject": True,
-
-    # Logging
-    "log_path": "amplifinder.log",
-
-    # Plotting
-    "create_plots": True,
-}
 
 
 def _normalize_alignment_params(cfg: dict[str, Any]) -> None:
@@ -430,6 +375,35 @@ class Config:
                 )
 
 
+def _get_config_defaults() -> dict[str, Any]:
+    """Extract default values from Config dataclass fields.
+    
+    Returns dictionary of defaults for optional Config fields,
+    converting Enum defaults to their values.
+    """
+    defaults = {}
+    for f in fields(Config):
+        # Skip required fields (iso_path, ref_name)
+        if f.default is MISSING and f.default_factory is MISSING:
+            continue
+        
+        # Get default value
+        if f.default is not MISSING:
+            value = f.default
+        elif f.default_factory is not MISSING:
+            value = f.default_factory()
+        else:
+            continue
+        
+        # Convert Enum to value for serialization
+        if isinstance(value, Enum):
+            value = value.value
+        
+        defaults[f.name] = value
+    
+    return defaults
+
+
 def load_config(config_path: Path) -> dict[str, Any]:
     """Load configuration from YAML or JSON file.
 
@@ -473,7 +447,7 @@ def merge_config(
     Returns:
         Merged configuration dictionary
     """
-    merged = DEFAULT_CONFIG.copy()
+    merged = _get_config_defaults()
 
     # Apply config file values
     if config_file:
