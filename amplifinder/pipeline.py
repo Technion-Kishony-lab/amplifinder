@@ -1,9 +1,11 @@
 """Pipeline orchestration for AmpliFinder."""
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Optional
 
 from amplifinder.config import Config
+from amplifinder.exceptions import PrematureTerminationError
 from amplifinder.data_types import (
     Genome, RecordTypedDf, RefTn, RefTnJunction, BreseqJunction, TnJunction, RawTnJc2,
     CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ClassifiedTnJc2,
@@ -47,13 +49,39 @@ class Pipeline:
             anc_read_length=self.config.anc_read_length,
         ).run()
 
-    def run(self) -> RecordTypedDf[ClassifiedTnJc2]:
-        """Run full pipeline, return classified candidates."""
-
+    def run(self) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
+        """Run full pipeline with exception handling and status tracking."""
+        
         info(
             f"Running AmpliFinder pipeline, reference: {self.config.ref_name}, "
             f"isolate: {self.config.iso_name}, ancestor: {self.config.anc_name}\n"
         )
+        
+        try:
+            # Clear old status files and mark start
+            self._clear_status_files()
+            self._write_status_file('started')
+            
+            # Run the pipeline
+            classified_tnjc2s = self._run()
+            
+            # Mark successful completion
+            self._write_status_file('completed')
+            return classified_tnjc2s
+            
+        except PrematureTerminationError as e:
+            # Graceful early termination - not an error
+            self._write_status_file('terminated', e.get_detailed_message())
+            info(f"Pipeline terminated early:\n{e}")
+            return None  # Graceful exit
+                
+        except Exception as e:
+            # Actual errors
+            self._write_status_file('failed', str(e))
+            raise
+
+    def _run(self) -> RecordTypedDf[ClassifiedTnJc2]:
+        """Execute pipeline steps, return classified candidates."""
         iso_output, anc_output = self._initialize()
 
         # Load reference genome (needed for ancestor breseq and isolate pipeline)
@@ -91,6 +119,29 @@ class Pipeline:
     def ref_tn_source(self) -> str:
         """Get the source of the reference TN data."""
         return self.config.use_isfinder and "isfinder" or "genbank"
+
+    def _write_status_file(self, status: str, reason: str = "") -> None:
+        """Write status marker file to output directory.
+        
+        Args:
+            status: Status name (started, completed, terminated, failed)
+            reason: Optional reason/message to include in the status file
+        """
+        status_file = self.config.output_dir / f"run.{status}"
+        with open(status_file, 'w') as f:
+            f.write(f"timestamp: {datetime.now().isoformat()}\n")
+            f.write(f"reference: {self.config.ref_name}\n")
+            f.write(f"isolate: {self.config.iso_name}\n")
+            f.write(f"ancestor: {self.config.anc_name}\n")
+            if reason:
+                f.write(f"reason: {reason}\n")
+
+    def _clear_status_files(self) -> None:
+        """Remove all status marker files from output directory."""
+        for status in ['started', 'completed', 'terminated', 'failed']:
+            status_file = self.config.output_dir / f"run.{status}"
+            if status_file.exists():
+                status_file.unlink()
 
     def _initialize(self) -> Tuple[Path, Optional[Path]]:
         """Step 0: Initialize output directories."""
@@ -421,6 +472,6 @@ class Pipeline:
         ).run()
 
 
-def run_pipeline(config: Config) -> RecordTypedDf[ClassifiedTnJc2]:
+def run_pipeline(config: Config) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
     """Run the AmpliFinder pipeline."""
     return Pipeline(config).run()

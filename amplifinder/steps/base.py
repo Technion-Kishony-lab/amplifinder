@@ -12,6 +12,8 @@ from amplifinder.utils.timing import print_timer as _print_timer
 from amplifinder.data_types import RecordTypedDf
 from amplifinder.records.base_records import Record
 from amplifinder.steps.io_naming import default_filename
+from amplifinder.exceptions import PrematureTerminationError
+
 
 T = TypeVar("T")
 
@@ -134,6 +136,22 @@ class Step(ABC):
     def missing_input_files(self) -> list[Path]:
         """Check if all inputs exist."""
         return [p for p in self.input_files if not p.exists()]
+
+    def _terminate_run(self, reason: str, details: Optional[dict] = None) -> None:
+        """Raise PrematureTerminationError with step name.
+        
+        Args:
+            reason: Human-readable explanation of why termination occurred
+            details: Optional dict with additional context (metrics, thresholds, etc.)
+        
+        Raises:
+            PrematureTerminationError: Always raises with step name prepended
+        """
+        raise PrematureTerminationError(
+            reason=reason,
+            step=self.name,
+            details=details or {}
+        )
 
     def _generate_artifacts_if_needed(self):
         """Generate artifacts if needed. Subclasses override to return computed output."""
