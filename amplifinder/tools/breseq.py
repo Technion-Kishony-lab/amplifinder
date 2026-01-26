@@ -270,6 +270,8 @@ def parse_breseq_output(
             record = _parse_record(parts, RECORD_TYPES[record_type])
             records[record_type].append(record)
 
+    print(f"File read. Total lines: {line_count} (max allowed: {max_lines})")
+    
     # Convert to DataFrames
     results = {}
     lengths = {}
