@@ -50,13 +50,19 @@ class Pipeline:
             anc_read_length=self.config.anc_read_length,
         ).run()
 
+    def _log_run_info(self, include_no_ancestor_warning: bool = True) -> None:
+        """Log run information: reference, isolate, and ancestor."""
+        if self.config.anc_path:
+            anc_msg = f"Ancestor: {self.config.anc_path}"
+        elif include_no_ancestor_warning:
+            anc_msg = "No ancestor assigned; using raw (non-normalized) coverage analysis"
+        else:
+            anc_msg = "No ancestor"
+        info(f"\nReference: {self.config.ref_name}\nIsolate: {self.config.iso_path}\n{anc_msg}")
+
     def run(self) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
         """Run full pipeline with exception handling and status tracking."""
-        
-        info(
-            f"Running AmpliFinder pipeline, reference: {self.config.ref_name}, "
-            f"isolate: {self.config.iso_name}, ancestor: {self.config.anc_name}\n"
-        )
+        self._log_run_info()
         
         # Initialize output directories first
         iso_output, anc_output = self._initialize()
@@ -114,6 +120,8 @@ class Pipeline:
 
     def run_breseq_only(self) -> None:
         """Run only breseq steps (ancestor and isolate), then exit."""
+        self._log_run_info(include_no_ancestor_warning=False)
+        
         genome = self._load_reference()
         self._run_breseq(genome)
         info("breseq-only mode completed")
