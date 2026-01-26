@@ -63,6 +63,7 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
             output_path=self.breseq_path,
             docker=self.docker,
             threads=self.threads,
+            verbose=self.global_verbose,
         )
 
     def _calculate_output(self) -> RecordTypedDf[BreseqJunction]:
@@ -75,6 +76,7 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
             PrematureTerminationError: If breseq output is too long (wrong reference)
         """
         # Parse breseq output, catching ValueError if output too long
+        self.log("Parsing breseq output")
         try:
             outputs = parse_breseq_output(
                 self.breseq_path,
@@ -89,6 +91,11 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
                     "breseq_path": str(self.breseq_path),
                 }
             )
+        
+        # Log what we found
+        record_counts = ", ".join(f"{name}: {len(df)}" for name, df in outputs.items() if len(df) > 0)
+        if record_counts:
+            self.log(f"Found breseq records: {record_counts}")
         
         jc_df = outputs.get("JC")
 

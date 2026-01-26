@@ -1,6 +1,5 @@
 """Command-line interface for AmpliFinder."""
 
-import logging
 from pathlib import Path
 from typing import Optional
 
@@ -198,7 +197,7 @@ def main(
         # Setup logger now that we have merged config
         log_dir = Path(merged["output_dir"]) / merged["ref_name"]
         ensure_dir(log_dir)
-        setup_logger(log_path=log_dir / "amplifinder.log", level=getattr(logging, log_level.upper()))
+        setup_logger(log_path=log_dir / "amplifinder.log", use_colors=True)
 
         # Set global verbose flag
         Step.set_global_verbose(verbose)
