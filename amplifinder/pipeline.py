@@ -1,9 +1,11 @@
 """Pipeline orchestration for AmpliFinder."""
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Optional
 
 from amplifinder.config import Config
+from amplifinder.exceptions import PrematureTerminationError
 from amplifinder.data_types import (
     Genome, RecordTypedDf, RefTn, RefTnJunction, BreseqJunction, TnJunction, RawTnJc2,
     CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ClassifiedTnJc2,
@@ -47,14 +49,42 @@ class Pipeline:
             anc_read_length=self.config.anc_read_length,
         ).run()
 
-    def run(self) -> RecordTypedDf[ClassifiedTnJc2]:
-        """Run full pipeline, return classified candidates."""
-
+    def run(self) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
+        """Run full pipeline with exception handling and status tracking."""
+        
         info(
             f"Running AmpliFinder pipeline, reference: {self.config.ref_name}, "
             f"isolate: {self.config.iso_name}, ancestor: {self.config.anc_name}\n"
         )
+        
+        # Initialize output directories first
         iso_output, anc_output = self._initialize()
+        
+        try:
+            # Clear old status files and mark start
+            self._clear_status_files(iso_output)
+            self._write_status_file(iso_output, 'started')
+            
+            # Run the pipeline
+            classified_tnjc2s = self._run(iso_output, anc_output)
+            
+            # Mark successful completion
+            self._write_status_file(iso_output, 'completed')
+            return classified_tnjc2s
+            
+        except PrematureTerminationError as e:
+            # Graceful early termination - not an error
+            self._write_status_file(iso_output, 'terminated', e.get_detailed_message())
+            info(f"Pipeline terminated early:\n{e}")
+            return None  # Graceful exit
+                
+        except Exception as e:
+            # Actual errors
+            self._write_status_file(iso_output, 'failed', str(e))
+            raise
+
+    def _run(self, iso_output: Path, anc_output: Optional[Path]) -> RecordTypedDf[ClassifiedTnJc2]:
+        """Execute pipeline steps, return classified candidates."""
 
         # Load reference genome (needed for ancestor breseq and isolate pipeline)
         genome = self._load_reference()
@@ -91,6 +121,30 @@ class Pipeline:
     def ref_tn_source(self) -> str:
         """Get the source of the reference TN data."""
         return self.config.use_isfinder and "isfinder" or "genbank"
+
+    def _write_status_file(self, iso_output: Path, status: str, reason: str = "") -> None:
+        """Write status marker file to isolate run directory.
+        
+        Args:
+            iso_output: Isolate run directory
+            status: Status name (started, completed, terminated, failed)
+            reason: Optional reason/message to include in the status file
+        """
+        status_file = iso_output / f"run.{status}"
+        with open(status_file, 'w') as f:
+            f.write(f"timestamp: {datetime.now().isoformat()}\n")
+            f.write(f"reference: {self.config.ref_name}\n")
+            f.write(f"isolate: {self.config.iso_name}\n")
+            f.write(f"ancestor: {self.config.anc_name}\n")
+            if reason:
+                f.write(f"reason: {reason}\n")
+
+    def _clear_status_files(self, iso_output: Path) -> None:
+        """Remove all status marker files from isolate run directory."""
+        for status in ['started', 'completed', 'terminated', 'failed']:
+            status_file = iso_output / f"run.{status}"
+            if status_file.exists():
+                status_file.unlink()
 
     def _initialize(self) -> Tuple[Path, Optional[Path]]:
         """Step 0: Initialize output directories."""
@@ -162,6 +216,8 @@ class Pipeline:
                 breseq_path=cfg.get_anc_breseq_path(),
                 docker=cfg.breseq_docker,
                 threads=cfg.threads,
+                breseq_output_size_threshold=cfg.breseq_output_size_threshold,
+                sample_name=f"ancestor ({cfg.anc_name})",
             ).run()
 
         return BreseqStep(
@@ -170,6 +226,8 @@ class Pipeline:
             breseq_path=cfg.get_iso_breseq_path(),
             docker=cfg.breseq_docker,
             threads=cfg.threads,
+            breseq_output_size_threshold=cfg.breseq_output_size_threshold,
+            sample_name=f"isolate ({cfg.iso_name})",
         ).run()
 
     def _create_tnjcs(
@@ -421,6 +479,6 @@ class Pipeline:
         ).run()
 
 
-def run_pipeline(config: Config) -> RecordTypedDf[ClassifiedTnJc2]:
+def run_pipeline(config: Config) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
     """Run the AmpliFinder pipeline."""
     return Pipeline(config).run()
