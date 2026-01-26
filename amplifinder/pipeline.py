@@ -312,12 +312,13 @@ class Pipeline:
         linked_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
         iso_output: Path,
     ) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
-        """Step 9: Filter candidates by amplicon length."""
+        """Step 9: Filter candidates by amplicon length and copy number."""
         return FilterTnJc2CandidatesStep(
             linked_tnjc2s=linked_tnjc2s,
             output_dir=iso_output,
             min_amplicon_length=self.config.min_amplicon_length,
             max_amplicon_length=self.config.max_amplicon_length,
+            copy_number_threshold=self.config.copy_number_threshold,
         ).run()
 
     def _create_synthetic_junctions(

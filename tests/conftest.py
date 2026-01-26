@@ -322,7 +322,7 @@ def locate_tns_step(locate_tns_step_factory):
 @pytest.fixture
 def raw_tnjc2_record(tiny_genome):
     """Base RawTnJc2 for step fixtures."""
-    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, Terminal
+    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, RefTnSide, Terminal
 
     tn_jc_S = TnJunction(
         num=1,
@@ -334,6 +334,7 @@ def raw_tnjc2_record(tiny_genome):
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
+        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.START),
         ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.START, offset=0)],
         swapped=False,
     )
@@ -347,6 +348,7 @@ def raw_tnjc2_record(tiny_genome):
         dir2=Orientation.REVERSE,
         flanking1=50,
         flanking2=50,
+        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.END),
         ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.END, offset=0)],
         swapped=False,
     )
