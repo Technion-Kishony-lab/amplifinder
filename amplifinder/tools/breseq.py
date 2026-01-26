@@ -35,6 +35,7 @@ def run_breseq(
     output_path: Path,
     docker: bool = True,
     threads: int = 4,
+    verbose: bool = False,
 ) -> Path:
     """Run breseq alignment pipeline.
 
@@ -44,6 +45,7 @@ def run_breseq(
         output_path: Path to output directory
         docker: Use Docker to run breseq (default: True)
         threads: Number of threads for breseq (default: 4)
+        verbose: If True, show breseq output in real-time
 
     Returns:
         Path to breseq output directory
@@ -75,9 +77,9 @@ def run_breseq(
     ensure_dir(output_path)
 
     if docker:
-        _run_breseq_docker(ref_paths, fastq_path, fastq_files, output_path, threads)
+        _run_breseq_docker(ref_paths, fastq_path, fastq_files, output_path, threads, verbose)
     else:
-        _run_breseq_local(ref_paths, fastq_files, output_path, threads)
+        _run_breseq_local(ref_paths, fastq_files, output_path, threads, verbose)
 
     # Verify output
     if not output_gd.exists():
@@ -93,6 +95,7 @@ def _run_breseq_docker(
     fastq_files: List[Path],
     output_path: Path,
     threads: int,
+    verbose: bool = False,
 ) -> None:
     """Run breseq using Docker."""
     # Get absolute paths for Docker mounts
@@ -131,9 +134,10 @@ def _run_breseq_docker(
     run_command(
         cmd,
         check=True,
-        capture_output=True,
+        capture_output=not verbose,
         text=True,
         error_msg="breseq failed",
+        verbose=verbose,
     )
 
 
@@ -142,6 +146,7 @@ def _run_breseq_local(
     fastq_files: List[Path],
     output_path: Path,
     threads: int,
+    verbose: bool = False,
 ) -> None:
     """Run breseq locally (requires breseq in PATH)."""
     # Build reference arguments
@@ -164,9 +169,10 @@ def _run_breseq_local(
     run_command(
         cmd,
         check=True,
-        capture_output=True,
+        capture_output=not verbose,
         text=True,
         error_msg="breseq failed",
+        verbose=verbose,
     )
 
 
@@ -219,6 +225,7 @@ def get_breseq_version(breseq_path: Path) -> Optional[str]:
 def parse_breseq_output(
     breseq_path: Path,
     max_lines: Optional[int] = None,
+    verbose: bool = False,
 ) -> Dict[str, pd.DataFrame]:
     """Parse breseq output.gd file into DataFrames.
 
@@ -269,18 +276,13 @@ def parse_breseq_output(
 
             record = _parse_record(parts, RECORD_TYPES[record_type])
             records[record_type].append(record)
-
-    print(f"File read. Total lines: {line_count} (max allowed: {max_lines})")
     
     # Convert to DataFrames
     results = {}
-    lengths = {}
     for name, recs in records.items():
         df = pd.DataFrame(recs) if recs else pd.DataFrame()
         results[name] = df
-        lengths[name] = len(df)
-    print("Found the following breseq records: ", end="")
-    print(", ".join(f"{name}: {lengths[name]}" for name in lengths.keys()))
+    
     return results
 
 

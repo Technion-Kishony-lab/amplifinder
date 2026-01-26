@@ -76,7 +76,7 @@ class PlotTnJc2CoverageStep(Step):
 
     def _generate_artifacts(self) -> None:
         iso_scafs_to_covs, anc_scafs_to_covs = self._load_coverage_for_plotting()
-        print(f'Creating coverage plots (n={len(self.classified_tnjc2s)}) ', end='', flush=True)
+        self.print(f'Creating coverage plots (n={len(self.classified_tnjc2s)}) ', end='')
 
         for tnjc2 in self.classified_tnjc2s:
             jct_cov_path = tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png"
@@ -84,7 +84,7 @@ class PlotTnJc2CoverageStep(Step):
 
             # Skip if both plots already exist
             if jct_cov_path.exists() and amp_cov_path.exists():
-                print('-', end='', flush=True)
+                self.print('-', end='')
                 continue
 
             # Get cached alignment data or re-read BAM if not cached
@@ -127,9 +127,9 @@ class PlotTnJc2CoverageStep(Step):
                     output_path=amp_cov_path,
                 )
 
-            print('.', end='', flush=True)
+            self.print('.', end='')
 
-        print('\n', flush=True)
+        self.print('')  # Newline
 
     def _artifact_labels(self) -> list[str]:
         """Summarize outputs as count."""

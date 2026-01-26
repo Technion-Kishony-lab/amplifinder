@@ -32,6 +32,7 @@ dependencies = [
     "click>=8.0",
     "pyyaml>=6.0",
     "matplotlib>=3.7",
+    "rich>=13.0",
 ]
 
 [project.optional-dependencies]

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 from functools import partial
 
+from amplifinder.logger import debug, warning
 from amplifinder.config import AlignmentFilterParams, AlignmentClassifyParams
 from amplifinder.data_types import JunctionReadCounts, JunctionType, Side, ReadType
 from amplifinder.steps.jct_coverage.alignment_data import (
@@ -102,7 +103,7 @@ def _classify_alignments_by_read_types(
                 counts[jct_type].increment(classified_alignment.read_type)
 
     if invalid_side_combination_count > 0:
-        print(f"Total invalid side combinations: {invalid_side_combination_count}", flush=True)
+        warning(f"Total invalid side combinations: {invalid_side_combination_count}")
 
     return counts, jctypes_to_alignments
 
@@ -169,8 +170,8 @@ def _classify_alignment(
     if not ok:
         if DEBUG and max_debug_examples > 0:
             max_debug_examples -= 1
-            print(f"Example of invalid side combination: fwd_side={fwd_side}, rev_side={rev_side}", flush=True)
-            print(alignment, flush=True)
+            debug(f"Example of invalid side combination: fwd_side={fwd_side}, rev_side={rev_side}")
+            debug(str(alignment))
         return []
     return [fwd_alignment, rev_alignment]
 

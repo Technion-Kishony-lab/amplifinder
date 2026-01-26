@@ -5,7 +5,7 @@ from typing import Generic, List, Optional, TypeVar, get_args, get_origin, Type
 
 from line_profiler import LineProfiler
 
-from amplifinder.logger import info
+from amplifinder.logger import get_logger
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import remove_file_or_dir, ensure_dir
 from amplifinder.utils.timing import print_timer as _print_timer
@@ -70,16 +70,27 @@ class Step(ABC):
         """Set global verbose flag for all steps."""
         cls.global_verbose = verbose
 
-    def log(self, msg: str, *, verbose_only: bool = True, extra: Optional[dict[str, str]] = None) -> None:
-        """Step-aware info log that honors global verbosity."""
-        if verbose_only and not self.global_verbose:
-            return
-        info(msg, extra=extra)
-
+    def log(self, msg: str, *,
+        level: str = "info",
+        timestamp: bool = True, verbose_only: bool = True, to_file: bool = True,
+        end: str = "\n",
+    ) -> None:
+        # Determine if we show on screen
+        to_screen = not verbose_only or self.global_verbose
+        
+        # Log the message
+        logger = get_logger()
+        logger.log(
+            msg,
+            level=level.upper(),
+            timestamp=timestamp,
+            to_screen=to_screen,
+            to_file=to_file,
+            end=end,
+        )
+    
     def print(self, msg: str, end: str = "\n") -> None:
-        """Step-aware print that respects global verbosity."""
-        if self.global_verbose:
-            print(msg, end=end, flush=True)
+        self.log(msg, timestamp=False, to_file=False, end=end)
 
     def print_timer(
         self, start_msg: str, end_msg: Optional[str] = None,
