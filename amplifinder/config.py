@@ -114,12 +114,6 @@ class Config:
     ncbi: bool = True
     use_isfinder: bool = False
 
-    # External tools
-    breseq_docker: bool = True
-    blastn_path: Optional[Path] = None
-    samtools_path: Optional[Path] = None
-    isdb_path: Optional[Path] = None
-
     # IS/TN detection parameters
     max_dist_to_IS: int = 10
     trim_jc_flanking: int = 5
@@ -297,8 +291,7 @@ class Config:
 
         # Convert string paths back to Path objects
         path_fields = ['iso_path', 'anc_path', 'output_dir', 'ref_path',
-                       'iso_breseq_path', 'anc_breseq_path', 'blastn_path',
-                       'samtools_path', 'isdb_path']
+                       'iso_breseq_path', 'anc_breseq_path']
         for path_field in path_fields:
             if path_field in config_dict and config_dict[path_field] is not None:
                 config_dict[path_field] = Path(config_dict[path_field])
@@ -324,12 +317,6 @@ class Config:
             self.iso_breseq_path = Path(self.iso_breseq_path).resolve()
         if self.anc_breseq_path is not None:
             self.anc_breseq_path = Path(self.anc_breseq_path).resolve()
-        if self.blastn_path is not None:
-            self.blastn_path = Path(self.blastn_path).resolve()
-        if self.samtools_path is not None:
-            self.samtools_path = Path(self.samtools_path).resolve()
-        if self.isdb_path is not None:
-            self.isdb_path = Path(self.isdb_path).resolve()
 
         # Derive names from paths if not provided
         if self.iso_name is None:

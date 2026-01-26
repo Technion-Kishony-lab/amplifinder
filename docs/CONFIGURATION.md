@@ -76,13 +76,16 @@ All parameters come from the config file - no CLI args needed!
 
 ## Configuration Priority
 
-When the same parameter is specified in multiple places:
+**Environment settings** (tool paths, docker settings):
+- Only in `amplifinder.yaml` → loaded at import time
+- Not configurable per run (blastn_path, samtools_path, breseq_docker, isdb_path)
+
+**Run parameters** (paths, thresholds, options):
 
 **Highest → Lowest:**
 1. CLI arguments (e.g., `-i isolate.fastq`)
 2. `--config` file (e.g., `params.yaml`)
-3. `amplifinder.yaml` (global environment)
-4. Config class defaults (defined in `config.py`)
+3. Config class defaults (defined in `config.py`)
 
 ---
 
