@@ -8,7 +8,6 @@ from amplifinder.tools.breseq import (
     parse_breseq_output,
     load_breseq_coverage,
     get_breseq_summary,
-    count_output_lines,
     BRESEQ_DOCKER_IMAGE,
 )
 
@@ -22,6 +21,5 @@ __all__ = [
     "parse_breseq_output",
     "load_breseq_coverage",
     "get_breseq_summary",
-    "count_output_lines",
     "BRESEQ_DOCKER_IMAGE",
 ]

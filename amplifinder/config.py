@@ -103,8 +103,8 @@ DEFAULT_CONFIG = {
     "del_copy_number_threshold": 0.3,
 
     # File size thresholds
+    "breseq_output_size_threshold": 10_000,  # Terminates if breseq output.gd exceeds this line count
     # TODO: These are not used yet
-    "breseq_output_size_threshold": 10_000,
     "max_fastq_size": 500_000_000,
     "min_num_bases": 80_000_000,
 
@@ -208,8 +208,8 @@ class Config:
     jc_call_params: Optional[JcCallParams] = None
 
     # File size thresholds
+    breseq_output_size_threshold: int = 10_000  # Terminates if breseq output.gd exceeds this line count
     # TODO: These are not used yet
-    breseq_output_size_threshold: int = 10_000
     max_fastq_size: int = 500_000_000
     min_num_bases: int = 80_000_000
 

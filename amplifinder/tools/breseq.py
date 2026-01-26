@@ -216,15 +216,23 @@ def get_breseq_version(breseq_path: Path) -> Optional[str]:
 # Parser functions
 # =============================================================================
 
-def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
+def parse_breseq_output(
+    breseq_path: Path,
+    max_lines: Optional[int] = None,
+) -> Dict[str, pd.DataFrame]:
     """Parse breseq output.gd file into DataFrames.
 
     Args:
         breseq_path: Path to breseq output directory
+        max_lines: Maximum allowed lines (raises ValueError if exceeded)
 
     Returns:
         Dictionary with keys: JC, SNP, MOB, DEL, UN
         Each value is a DataFrame with parsed records
+        
+    Raises:
+        ValueError: If max_lines exceeded
+        FileNotFoundError: If output.gd doesn't exist
     """
     output_gd = Path(breseq_path) / "output" / "output.gd"
 
@@ -239,7 +247,16 @@ def parse_breseq_output(breseq_path: Path) -> Dict[str, pd.DataFrame]:
     info(f"Parsing breseq output:\n{output_gd}")
 
     with open(output_gd) as f:
+        line_count = 0
         for line in f:
+            line_count += 1
+            
+            # Check line count threshold
+            if max_lines is not None and line_count > max_lines:
+                raise ValueError(
+                    f"breseq output exceeds {max_lines} lines ({line_count}+ lines found):\n{output_gd}"
+                )
+            
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
@@ -430,21 +447,3 @@ def get_breseq_summary(breseq_path: Path) -> Dict[str, Any]:
         summary["total_mapped_bases"] = sum(mapped_bases)
 
     return summary
-
-
-def count_output_lines(breseq_path: Path) -> int:
-    """Count lines in breseq output.gd file.
-
-    Args:
-        breseq_path: Path to breseq output directory
-
-    Returns:
-        Number of lines in output.gd
-    """
-    output_gd = Path(breseq_path) / "output" / "output.gd"
-
-    if not output_gd.exists():
-        return 0
-
-    with open(output_gd) as f:
-        return sum(1 for _ in f)
