@@ -24,12 +24,16 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
         ref_file: Optional[Path] = None,
         docker: bool = False,
         threads: int = 1,
+        breseq_output_size_threshold: int = 10_000,
+        sample_name: Optional[str] = None,
         force: Optional[bool] = None,
     ):
         self.fastq_path = Path(fastq_path) if fastq_path else None
         self.ref_file = Path(ref_file) if ref_file else None
         self.docker = docker
         self.threads = threads
+        self.breseq_output_size_threshold = breseq_output_size_threshold
+        self.sample_name = sample_name or "sample"
 
         # Breseq output location
         self.breseq_path = Path(breseq_path)
@@ -66,8 +70,26 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
 
         Returns:
             RecordTypedDf[BreseqJunction] with column renaming applied
+            
+        Raises:
+            PrematureTerminationError: If breseq output is too long (wrong reference)
         """
-        outputs = parse_breseq_output(self.breseq_path)
+        # Parse breseq output, catching ValueError if output too long
+        try:
+            outputs = parse_breseq_output(
+                self.breseq_path,
+                max_lines=self.breseq_output_size_threshold,
+            )
+        except ValueError as e:
+            self._terminate_run(
+                reason=f"{self.sample_name}:\n{str(e)}\n - likely wrong reference",
+                details={
+                    "sample": self.sample_name,
+                    "threshold": self.breseq_output_size_threshold,
+                    "breseq_path": str(self.breseq_path),
+                }
+            )
+        
         jc_df = outputs.get("JC")
 
         if jc_df is None or jc_df.empty:

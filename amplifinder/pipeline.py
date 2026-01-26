@@ -213,6 +213,8 @@ class Pipeline:
                 breseq_path=cfg.get_anc_breseq_path(),
                 docker=cfg.breseq_docker,
                 threads=cfg.threads,
+                breseq_output_size_threshold=cfg.breseq_output_size_threshold,
+                sample_name=f"ancestor ({cfg.anc_name})",
             ).run()
 
         return BreseqStep(
@@ -221,6 +223,8 @@ class Pipeline:
             breseq_path=cfg.get_iso_breseq_path(),
             docker=cfg.breseq_docker,
             threads=cfg.threads,
+            breseq_output_size_threshold=cfg.breseq_output_size_threshold,
+            sample_name=f"isolate ({cfg.iso_name})",
         ).run()
 
     def _create_tnjcs(
