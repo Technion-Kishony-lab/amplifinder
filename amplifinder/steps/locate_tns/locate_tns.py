@@ -211,12 +211,12 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         return f"ISfinder: found {len(output)} TN elements"
 
     def _calculate_output(self) -> RecordTypedDf[RefTn]:
-        """Parse BLAST results."""
-        # Parse BLAST output
+        """Parse BLAST results, handling multiple hits per IS (following MATLAB blast2ISloc.m)."""
         blast_hits = parse_blast_csv(self.blast_output)
-
-        tn_lengths = read_fasta_lengths(self.isdb_path)
         df = blast_hits.df.copy()
+
+        if df.empty:
+            return self._build_ref_tns_dict([])
 
         # qstart and qend are 1-based from BLAST output, qstart < qend always
         assert (df["qstart"] < df["qend"]).all(), "BLAST query coordinates must have qstart < qend"
@@ -225,19 +225,40 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         df = df.drop_duplicates(subset=["qstart", "qend"], keep="first")
 
         # Add subject length
+        tn_lengths = read_fasta_lengths(self.isdb_path)
         df["subject_length"] = df["subject"].map(tn_lengths).fillna(0).astype(int)
 
         # Sort by query, qstart, bitscore
-        df = df.sort_values(["query", "qstart", "bitscore"])
+        df = df.sort_values(["query", "qstart", "bitscore"]).reset_index(drop=True)
 
-        # Filter by coverage (alignment covers >90% of TN element)
+        # Find overlapping hit groups
+        # Gap between consecutive hits: qstart[i] - qend[i-1]
+        df.loc[1:, "gap"] = df["qstart"].iloc[1:].values - df["qend"].iloc[:-1].values
+
+        # Identify group boundaries (positive gaps)
+        group_starts = [0] + [i for i in range(1, len(df)) if df.loc[i, "gap"] > 0] + [len(df)]
+
+        # For each group, select best hit
+        keep_mask = []
+        for i in range(len(group_starts) - 1):
+            group_idx = list(range(group_starts[i], group_starts[i+1]))
+            group = df.iloc[group_idx]
+
+            # Find hit with alignment length closest to subject length
+            alignment_len = group["qend"] - group["qstart"]
+            length_diff = abs(alignment_len - group["subject_length"])
+            best_idx = length_diff.idxmin()
+            keep_mask.append(best_idx)
+
+        df = df.loc[keep_mask]
+
+        # Filter by coverage
         df["coverage"] = abs(df["sstart"] - df["send"]) / df["subject_length"]
         df = df[df["coverage"] > self.critical_coverage]
 
-        # Build ref_tns table indexed by tn_id
+        # Build ref_tns table
         items = []
         for _, row in df.iterrows():
-            # Detect strand: sstart > send means reverse complement
             is_complement = row["sstart"] > row["send"]
             orientation = Orientation.REVERSE if is_complement else Orientation.FORWARD
             items.append((row["query"], row["qstart"], row["qend"], orientation, row["subject"]))
