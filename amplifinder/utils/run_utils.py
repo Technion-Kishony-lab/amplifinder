@@ -75,7 +75,7 @@ def get_tool_path(
             config_hint = f" (config path: {config_path})" if config_path else ""
             raise FileNotFoundError(
                 f"{tool_name} not found. "
-                f"Set path in config.yaml or ensure {tool_name} is in PATH.{config_hint}"
+                f"Set path in amplifinder.yaml or ensure {tool_name} is in PATH.{config_hint}"
             )
         return Path(tool_name)  # Fallback to name only
 

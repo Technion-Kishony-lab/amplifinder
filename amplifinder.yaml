@@ -1,5 +1,6 @@
-# AmpliFinder global configuration
-# Server-specific paths and settings
+# AmpliFinder Global Configuration (amplifinder.yaml)
+# Server-specific tool paths and environment settings
+# This file is auto-loaded at import time from project root
 
 # External tool paths (null = use system PATH)
 blast_path: /opt/anaconda3/envs/shared_env/bin
