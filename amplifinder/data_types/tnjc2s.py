@@ -3,11 +3,11 @@ from __future__ import annotations
 import numpy as np
 
 from pathlib import Path
-from typing import ClassVar, Dict, List, Optional
+from typing import ClassVar, Dict, List, NamedTuple, Optional
 from pydantic import field_validator
 
 from amplifinder.records.base_records import Record
-from amplifinder.data_types.basic_enums import Terminal, Orientation
+from amplifinder.data_types.basic_enums import Side, Terminal, Orientation
 from amplifinder.data_types.events import BaseRawEvent, RawEvent, EventModifier
 from amplifinder.data_types.jc_types import JunctionType
 from amplifinder.data_types.read_types import JunctionReadCounts
@@ -201,25 +201,30 @@ class CoveredTnJc2(RawTnJc2):
         return self.avg_norm_cov if self.avg_norm_cov is not None else self.iso_scaf_norm_copy_number
 
 
+class TnJc2AndSide(NamedTuple):
+    tnjc2: SingleLocusLinkedTnJc2
+    side: Side
+
+
 class SingleLocusLinkedTnJc2(CoveredTnJc2):
     """CoveredTnJc2 with structural classification (Step 8 output)."""
     NAME: ClassVar[str] = "Classified Amplicons"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
         'single_locus_left_pair_id', 'single_locus_right_pair_id', 'raw_event', 'chosen_tn_id'
     ]
-    single_locus_tnjc2_left_matchings: List[tuple[SingleLocusLinkedTnJc2, Terminal]]
-    single_locus_tnjc2_right_matchings: List[tuple[SingleLocusLinkedTnJc2, Terminal]]
+    single_locus_tnjc2_left_matchings: List[TnJc2AndSide]
+    single_locus_tnjc2_right_matchings: List[TnJc2AndSide]
     base_raw_event: BaseRawEvent
 
     @property
     def single_locus_tnjc2_matching_left(self) -> Optional[SingleLocusLinkedTnJc2]:
         """First single-locus TN junction matching the left junction."""
-        return self.single_locus_tnjc2_left_matchings[0][0] if self.single_locus_tnjc2_left_matchings else None
+        return self.single_locus_tnjc2_left_matchings[0].tnjc2 if self.single_locus_tnjc2_left_matchings else None
 
     @property
     def single_locus_tnjc2_matching_right(self) -> Optional[SingleLocusLinkedTnJc2]:
         """First single-locus TN junction matching the right junction."""
-        return self.single_locus_tnjc2_right_matchings[0][0] if self.single_locus_tnjc2_right_matchings else None
+        return self.single_locus_tnjc2_right_matchings[0].tnjc2 if self.single_locus_tnjc2_right_matchings else None
 
     @property
     def is_multiple_single_locus_tnjc2_left(self) -> bool:
@@ -265,32 +270,44 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
     @property
     def chosen_tn_id(self) -> Optional[TnId]:
         """Selected TN for analysis."""
-        # Start with TN IDs from this tnjc2
-        tn_id_set = set(self.tn_ids)
 
-        # Intersect with matching left/right tnjc2 if exists
+        # TODO: Is the logic below correct?
+
+        # For each junction, get the reference TN side ID if it it is a reference TN junction (None for breseq junctions)
+        ref_tn_id_left = self.tnjc_left.ref_tn_side.tn_id if self.tnjc_left.is_ref_tn_junction() else None
+        ref_tn_id_right = self.tnjc_right.ref_tn_side.tn_id if self.tnjc_right.is_ref_tn_junction() else None
+
+        if ref_tn_id_left is None and ref_tn_id_right is not None:
+            # The right junction is a reference TN junction. Left is de novo.
+            # We assume that the chosen TN is the one on the right side (i.e. the reference TN)
+            return ref_tn_id_right
+
+        if ref_tn_id_left is not None and ref_tn_id_right is None:
+            # The left junction is a reference TN junction. Right is de novo.
+            # We assume that the chosen TN is the one on the left side (i.e. the reference TN)
+            return ref_tn_id_left
+
+        if ref_tn_id_left is not None and ref_tn_id_right is not None:
+            # Both junctions are sides of a reference TN
+            # We are looking at an amplification between two reference TNs
+            # We assume they are very similar, and arbitrarily choose one of them (left)
+            return ref_tn_id_left
+
+        # Intersect with matching left/right single-locus tnjc2 if exists
+        tn_id_set = set(self.tn_ids)  # Start with TN IDs from this tnjc2
         if self.single_locus_tnjc2_matching_left is not None:
+            # Intersect with matching left single-locus tnjc2
             tn_id_set &= set(self.single_locus_tnjc2_matching_left.tn_ids)
         if self.single_locus_tnjc2_matching_right is not None:
+            # Intersect with matching right single-locus tnjc2
             tn_id_set &= set(self.single_locus_tnjc2_matching_right.tn_ids)
 
-        # TODO: Needed?
-        if not tn_id_set:
-            return None
+        # If we have matches, return one of them arbitrarily
+        if tn_id_set:
+            return tn_id_set.pop()  # Arbitrarily choose one of the matches
 
-        # TODO: Is the logic below correct? Should we perhaps return None if ref_tn is not present in the matching set?
-
-        if self.tnjc_right.is_ref_tn_junction() and self.tnjc_left.is_ref_tn_junction():
-            return self.tnjc_left.ref_tn_side.tn_id
-
-        # Prefer reference TN junction ID if present in the matching set
-        if self.tnjc_left.is_ref_tn_junction() and self.tnjc_left.ref_tn_side.tn_id in tn_id_set:
-            return self.tnjc_left.ref_tn_side.tn_id
-        if self.tnjc_right.is_ref_tn_junction() and self.tnjc_right.ref_tn_side.tn_id in tn_id_set:
-            return self.tnjc_right.ref_tn_side.tn_id
-
-        # Otherwise return first available
-        return list(tn_id_set)[0]
+        # Otherwise return None (no matches)
+        return None
 
     def get_sides_of_chosen_tn(self) -> tuple[Optional[OffsetRefTnSide], Optional[OffsetRefTnSide]]:
         """Get sides of chosen TN (left and right amplicon sides)."""

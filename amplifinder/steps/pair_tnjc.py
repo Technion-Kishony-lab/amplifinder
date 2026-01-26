@@ -78,9 +78,9 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
                 matching_tn_sides = RawTnJc2.find_matching_tn_sides(jc_i.ref_tn_sides, jc_j.ref_tn_sides)
                 if not matching_tn_sides:
                     continue
+                matching_tn_ids = [tn_side_i.tn_id for tn_side_i, tn_side_j in matching_tn_sides]
 
                 # (d) A reference TN junction must appear in the matching TNs
-                matching_tn_ids = [tn_side_i.tn_id for tn_side_i, tn_side_j in matching_tn_sides]
                 if jc_i.is_ref_tn_junction() and jc_i.ref_tn_side.tn_id not in matching_tn_ids:
                     continue
                 if jc_j.is_ref_tn_junction() and jc_j.ref_tn_side.tn_id not in matching_tn_ids:
