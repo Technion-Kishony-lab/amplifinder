@@ -8,7 +8,7 @@ import click
 
 from amplifinder import __version__
 from amplifinder.config import Config, load_config, merge_config
-from amplifinder.logger import setup_logger, info, warning, error
+from amplifinder.logger import setup_logger, error
 from amplifinder.pipeline import Pipeline
 from amplifinder.steps.base import Step
 from amplifinder.utils.file_utils import ensure_dir
@@ -182,38 +182,31 @@ def main(
 
         # Merge configurations
         merged = merge_config(cli_args, file_config)
+        config = Config(**merged)
         
         # If --create-config, save and exit
         if create_config_path is not None:
-            config = Config(**merged)
             config.save_to_file(create_config_path, log=False)
             
             click.echo(f"Config file created: {create_config_path}")
             click.echo("\nRun with: amplifinder --config " + str(create_config_path))
             return
         
+        # CLI startup message
+        click.echo(f"AmpliFinder v{__version__}")
+        
         # Setup logger now that we have merged config
         log_dir = Path(merged["output_dir"]) / merged["ref_name"]
         ensure_dir(log_dir)
         setup_logger(log_path=log_dir / "amplifinder.log", level=getattr(logging, log_level.upper()))
 
-        info(f"AmpliFinder v{__version__}")
-        info(f"Reference: {merged['ref_name']}")
-
-        config = Config(**merged)
-
-        info(f"Isolate: {config.iso_path}")
-        if config.anc_path:
-            info(f"Ancestor: {config.anc_path}")
-        else:
-            warning("No ancestor assigned; using raw (non-normalized) coverage analysis")
-
         # Set global verbose flag
         Step.set_global_verbose(verbose)
 
+        # Run pipeline
         pipeline = Pipeline(config)
         if breseq_only:
-            info("Running breseq-only mode")
+            click.echo("Running breseq-only mode")
             pipeline.run_breseq_only()
         else:
             pipeline.run()
@@ -222,7 +215,7 @@ def main(
         error(f"Pipeline failed: {e}")
         raise click.ClickException(str(e))
 
-    info("Done")
+    click.echo("Done")
 
 
 if __name__ == "__main__":
