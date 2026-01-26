@@ -290,8 +290,7 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
             return self.tnjc_right.ref_tn_side.tn_id
 
         # Otherwise return first available
-        return None
-        # Other option: return list(tn_id_set)[0]
+        return list(tn_id_set)[0]
 
     def get_sides_of_chosen_tn(self) -> tuple[Optional[OffsetRefTnSide], Optional[OffsetRefTnSide]]:
         """Get sides of chosen TN (left and right amplicon sides)."""
