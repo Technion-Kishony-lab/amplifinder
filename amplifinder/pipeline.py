@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Tuple, Optional
 
 from amplifinder.config import Config
+from amplifinder.env import BRESEQ_DOCKER, ISDB_PATH
 from amplifinder.exceptions import PrematureTerminationError
 from amplifinder.data_types import (
     Genome, RecordTypedDf, RefTn, RefTnJunction, BreseqJunction, TnJunction, RawTnJc2,
@@ -174,7 +175,7 @@ class Pipeline:
         ref_tns_isfinder = LocateTNsUsingISfinderStep(
             genome=genome,
             output_dir=tn_loc_dir,
-            isdb_path=cfg.isdb_path or get_builtin_isfinder_db_path(),
+            isdb_path=ISDB_PATH or get_builtin_isfinder_db_path(),
             evalue=cfg.isfinder_evalue,
             critical_coverage=cfg.isfinder_critical_coverage,
         ).run()
@@ -214,7 +215,7 @@ class Pipeline:
                 fastq_path=cfg.anc_path,
                 ref_file=genome.genbank_path or genome.fasta_path,
                 breseq_path=cfg.get_anc_breseq_path(),
-                docker=cfg.breseq_docker,
+                docker=BRESEQ_DOCKER,
                 threads=cfg.threads,
                 breseq_output_size_threshold=cfg.breseq_output_size_threshold,
                 sample_name=f"ancestor ({cfg.anc_name})",
@@ -224,7 +225,7 @@ class Pipeline:
             fastq_path=cfg.iso_path,
             ref_file=genome.genbank_path or genome.fasta_path,
             breseq_path=cfg.get_iso_breseq_path(),
-            docker=cfg.breseq_docker,
+            docker=BRESEQ_DOCKER,
             threads=cfg.threads,
             breseq_output_size_threshold=cfg.breseq_output_size_threshold,
             sample_name=f"isolate ({cfg.iso_name})",
