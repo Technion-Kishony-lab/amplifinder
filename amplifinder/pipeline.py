@@ -57,32 +57,34 @@ class Pipeline:
             f"isolate: {self.config.iso_name}, ancestor: {self.config.anc_name}\n"
         )
         
+        # Initialize output directories first
+        iso_output, anc_output = self._initialize()
+        
         try:
             # Clear old status files and mark start
-            self._clear_status_files()
-            self._write_status_file('started')
+            self._clear_status_files(iso_output)
+            self._write_status_file(iso_output, 'started')
             
             # Run the pipeline
-            classified_tnjc2s = self._run()
+            classified_tnjc2s = self._run(iso_output, anc_output)
             
             # Mark successful completion
-            self._write_status_file('completed')
+            self._write_status_file(iso_output, 'completed')
             return classified_tnjc2s
             
         except PrematureTerminationError as e:
             # Graceful early termination - not an error
-            self._write_status_file('terminated', e.get_detailed_message())
+            self._write_status_file(iso_output, 'terminated', e.get_detailed_message())
             info(f"Pipeline terminated early:\n{e}")
             return None  # Graceful exit
                 
         except Exception as e:
             # Actual errors
-            self._write_status_file('failed', str(e))
+            self._write_status_file(iso_output, 'failed', str(e))
             raise
 
-    def _run(self) -> RecordTypedDf[ClassifiedTnJc2]:
+    def _run(self, iso_output: Path, anc_output: Optional[Path]) -> RecordTypedDf[ClassifiedTnJc2]:
         """Execute pipeline steps, return classified candidates."""
-        iso_output, anc_output = self._initialize()
 
         # Load reference genome (needed for ancestor breseq and isolate pipeline)
         genome = self._load_reference()
@@ -120,14 +122,15 @@ class Pipeline:
         """Get the source of the reference TN data."""
         return self.config.use_isfinder and "isfinder" or "genbank"
 
-    def _write_status_file(self, status: str, reason: str = "") -> None:
-        """Write status marker file to output directory.
+    def _write_status_file(self, iso_output: Path, status: str, reason: str = "") -> None:
+        """Write status marker file to isolate run directory.
         
         Args:
+            iso_output: Isolate run directory
             status: Status name (started, completed, terminated, failed)
             reason: Optional reason/message to include in the status file
         """
-        status_file = self.config.output_dir / f"run.{status}"
+        status_file = iso_output / f"run.{status}"
         with open(status_file, 'w') as f:
             f.write(f"timestamp: {datetime.now().isoformat()}\n")
             f.write(f"reference: {self.config.ref_name}\n")
@@ -136,10 +139,10 @@ class Pipeline:
             if reason:
                 f.write(f"reason: {reason}\n")
 
-    def _clear_status_files(self) -> None:
-        """Remove all status marker files from output directory."""
+    def _clear_status_files(self, iso_output: Path) -> None:
+        """Remove all status marker files from isolate run directory."""
         for status in ['started', 'completed', 'terminated', 'failed']:
-            status_file = self.config.output_dir / f"run.{status}"
+            status_file = iso_output / f"run.{status}"
             if status_file.exists():
                 status_file.unlink()
 
