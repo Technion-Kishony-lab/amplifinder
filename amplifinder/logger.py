@@ -1,5 +1,6 @@
 """Simple custom logger for AmpliFinder."""
 
+from collections import defaultdict
 import sys
 import re
 
@@ -7,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from amplifinder.env import DEBUG
 from rich.console import Console
 from rich.text import Text
 
@@ -42,6 +44,8 @@ class SimpleLogger:
         "WARNING": "yellow",
         "ERROR": "red",
     }
+
+    CATEGORIES_TO_COUNTS: dict[str, int] = defaultdict(int)
     
     def __init__(self, log_file: Optional[Path] = None, use_colors: bool = True, verbose: bool = False):
         """Initialize logger.
@@ -225,6 +229,27 @@ class SimpleLogger:
     def print_progress(self, msg: str, end: str = "\n") -> None:
         """Print without timestamp (always shows, ignores verbose mode)."""
         self.log(msg, timestamp=False, to_file=False, force_screen=True, end=end)
+
+    def debug_message(self, message, category: Optional[str] = None, folder: Optional[Path] = None, max_prints: Optional[bool] = 1):
+        if not DEBUG:
+            return
+        if category is None:
+            count = 0
+        else:
+            count = self.CATEGORIES_TO_COUNTS[category]
+            self.CATEGORIES_TO_COUNTS[category] += 1
+
+        if max_prints is None or count < max_prints:
+            # print to screen
+            if category:
+                print(f'DEBUG[{category}]')
+            print(message)
+        
+        if folder and category:
+            # print to file
+            filepath = folder / (category + ".txt")
+            with open(filepath, 'wa') as f:
+                f.write(message)
 
 
 # Global logger instance
