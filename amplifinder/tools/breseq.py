@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
 import numpy as np
 import pandas as pd
 
-from amplifinder.logger import info, warning
+from amplifinder.logger import logger
 from amplifinder.records.base_records import Schema
 from amplifinder.data import load_all_field_defs
 from amplifinder.utils.run_utils import run_command
@@ -35,7 +35,6 @@ def run_breseq(
     output_path: Path,
     docker: bool = True,
     threads: int = 4,
-    verbose: bool = False,
 ) -> Path:
     """Run breseq alignment pipeline.
 
@@ -45,7 +44,6 @@ def run_breseq(
         output_path: Path to output directory
         docker: Use Docker to run breseq (default: True)
         threads: Number of threads for breseq (default: 4)
-        verbose: If True, show breseq output in real-time
 
     Returns:
         Path to breseq output directory
@@ -59,7 +57,7 @@ def run_breseq(
     # Check if already completed
     output_gd = output_path / "output" / "output.gd"
     if output_gd.exists():
-        info(f"breseq output already exists: {output_gd}")
+        logger.info(f"breseq output already exists: {output_gd}")
         return output_path
 
     # Find FASTQ files
@@ -67,25 +65,25 @@ def run_breseq(
     if not fastq_files:
         raise FileNotFoundError(f"No FASTQ files found in {fastq_path}")
 
-    info(f"Found {len(fastq_files)} FASTQ file(s)")
+    logger.info(f"Found {len(fastq_files)} FASTQ file(s)")
 
     # Clean output directory if partial run exists
     if output_path.exists():
-        warning(f"Cleaning incomplete breseq output: {output_path}")
+        logger.warning(f"Cleaning incomplete breseq output: {output_path}")
         run_command(["rm", "-rf", str(output_path)], check=True)
 
     ensure_dir(output_path)
 
     if docker:
-        _run_breseq_docker(ref_paths, fastq_path, fastq_files, output_path, threads, verbose)
+        _run_breseq_docker(ref_paths, fastq_path, fastq_files, output_path, threads)
     else:
-        _run_breseq_local(ref_paths, fastq_files, output_path, threads, verbose)
+        _run_breseq_local(ref_paths, fastq_files, output_path, threads)
 
     # Verify output
     if not output_gd.exists():
         raise RuntimeError(f"breseq failed: {output_gd} not created")
 
-    info("breseq completed successfully")
+    logger.info("breseq completed successfully")
     return output_path
 
 
@@ -95,7 +93,6 @@ def _run_breseq_docker(
     fastq_files: List[Path],
     output_path: Path,
     threads: int,
-    verbose: bool = False,
 ) -> None:
     """Run breseq using Docker."""
     # Get absolute paths for Docker mounts
@@ -130,14 +127,13 @@ def _run_breseq_docker(
         *fastq_args,
     ]
 
-    info(f"Running breseq (Docker): {' '.join(str(c) for c in cmd[:10])}...")
+    logger.info(f"Running breseq (Docker): {' '.join(str(c) for c in cmd[:10])}...")
     run_command(
         cmd,
         check=True,
-        capture_output=not verbose,
+        capture_output=True,
         text=True,
         error_msg="breseq failed",
-        verbose=verbose,
     )
 
 
@@ -146,7 +142,6 @@ def _run_breseq_local(
     fastq_files: List[Path],
     output_path: Path,
     threads: int,
-    verbose: bool = False,
 ) -> None:
     """Run breseq locally (requires breseq in PATH)."""
     # Build reference arguments
@@ -165,14 +160,13 @@ def _run_breseq_local(
         *fastq_args,
     ]
 
-    info(f"Running breseq (local): {' '.join(str(c) for c in cmd[:8])}...")
+    logger.info(f"Running breseq (local): {' '.join(str(c) for c in cmd[:8])}...")
     run_command(
         cmd,
         check=True,
-        capture_output=not verbose,
+        capture_output=True,
         text=True,
         error_msg="breseq failed",
-        verbose=verbose,
     )
 
 
@@ -225,7 +219,6 @@ def get_breseq_version(breseq_path: Path) -> Optional[str]:
 def parse_breseq_output(
     breseq_path: Path,
     max_lines: Optional[int] = None,
-    verbose: bool = False,
 ) -> Dict[str, pd.DataFrame]:
     """Parse breseq output.gd file into DataFrames.
 
@@ -250,8 +243,6 @@ def parse_breseq_output(
     records: Dict[str, List[Dict[str, Any]]] = {
         name: [] for name in RECORD_TYPES.keys()
     }
-
-    info(f"Parsing breseq output:\n{output_gd}")
 
     with open(output_gd) as f:
         line_count = 0
@@ -372,7 +363,7 @@ def _load_cov_file(cov_file: Path) -> np.ndarray:
     if fast is not None:
         return fast
 
-    warning(f"Falling back to pandas for coverage load: {cov_file}")
+    logger.warning(f"Falling back to pandas for coverage load: {cov_file}")
     df = pd.read_csv(
         cov_file,
         sep="\t",
@@ -433,7 +424,7 @@ def get_breseq_summary(breseq_path: Path) -> Dict[str, Any]:
     summary_file = Path(breseq_path) / "05_alignment_correction" / "summary.json"
 
     if not summary_file.exists():
-        warning(f"Summary file not found: {summary_file}")
+        logger.warning(f"Summary file not found: {summary_file}")
         return {}
 
     with open(summary_file) as f:

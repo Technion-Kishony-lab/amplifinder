@@ -3,19 +3,19 @@
 from pathlib import Path
 from typing import Optional, Union, Tuple
 
+from amplifinder.logger import logger
 from amplifinder.env import SAMTOOLS_PATH, BOWTIE2_PATH
 from amplifinder.utils.run_utils import get_tool_path, run_command
 from amplifinder.utils.file_utils import ensure_parent_dir
 from amplifinder.utils.timing import print_timer
 
 
-def run_bowtie2_build(ref_fasta: Path, index_prefix: Path, verbose: bool = False) -> None:
+def run_bowtie2_build(ref_fasta: Path, index_prefix: Path) -> None:
     """Build bowtie2 index from FASTA file.
 
     Args:
         ref_fasta: Path to reference FASTA file
         index_prefix: Prefix for output index files (e.g., /path/to/index)
-        verbose: If True, show bowtie2-build output in real-time
 
     Raises:
         FileNotFoundError: If bowtie2-build not found or ref_fasta doesn't exist
@@ -36,7 +36,7 @@ def run_bowtie2_build(ref_fasta: Path, index_prefix: Path, verbose: bool = False
         str(index_prefix),
     ]
 
-    run_command(cmd, check=True, capture_output=not verbose, text=True, verbose=verbose)
+    run_command(cmd, check=True, capture_output=True, text=True)
 
 
 def _format_score_min(score_min: Union[str, Tuple[float, float]], local: bool) -> str:
@@ -65,7 +65,6 @@ def run_bowtie2_align(
     num_alignments: int = 100,
     # resources
     threads: int = 4,
-    verbose: bool = False,
 ) -> None:
     """Align reads to index using bowtie2.
 
@@ -79,7 +78,6 @@ def run_bowtie2_align(
         num_alignments: Maximum alignments to report per read (-k)
         threads: Number of threads to use
         local: Use local alignment (default True for junction alignment)
-        verbose: If True, show bowtie2 output in real-time
 
     Raises:
         FileNotFoundError: If bowtie2 not found or inputs don't exist
@@ -125,7 +123,7 @@ def run_bowtie2_align(
     else:
         cmd.append("--end-to-end")  # Explicitly match MATLAB's --end-to-end flag
 
-    run_command(cmd, check=True, capture_output=not verbose, text=True, verbose=verbose)
+    run_command(cmd, check=True, capture_output=True, text=True)
 
 
 def sam_to_sorted_bam(
@@ -134,7 +132,6 @@ def sam_to_sorted_bam(
     samtools_path: Optional[Path] = None,
     threads: int = 1,
     min_qlen: Optional[int] = None,
-    verbose: bool = False,
 ) -> None:
     """Convert SAM to sorted BAM and index.
 
@@ -144,7 +141,6 @@ def sam_to_sorted_bam(
         samtools_path: Path to samtools (auto-detect if None)
         threads: Number of threads for sorting
         min_qlen: Minimum query length for filtering
-        verbose: If True, show samtools output in real-time
 
     Raises:
         FileNotFoundError: If samtools not found or SAM doesn't exist
@@ -167,7 +163,7 @@ def sam_to_sorted_bam(
             "-o", str(temp_bam),
             str(sam_path),
         ]
-        run_command(cmd_view, check=True, capture_output=not verbose, text=True, verbose=verbose)
+        run_command(cmd_view, check=True, capture_output=True, text=True)
         input_for_sort = temp_bam
 
     cmd_sort = [
@@ -176,7 +172,7 @@ def sam_to_sorted_bam(
         "-o", str(bam_path),
         str(input_for_sort),
     ]
-    run_command(cmd_sort, check=True, capture_output=not verbose, text=True, verbose=verbose)
+    run_command(cmd_sort, check=True, capture_output=True, text=True)
 
     if min_qlen is not None and temp_bam.exists():
         temp_bam.unlink()
@@ -184,7 +180,7 @@ def sam_to_sorted_bam(
     # Index
     cmd_index = [samtools, "index", str(bam_path)]
 
-    run_command(cmd_index, check=True, capture_output=not verbose, text=True, verbose=verbose)
+    run_command(cmd_index, check=True, capture_output=True, text=True)
 
 
 def align_reads_to_fasta(
@@ -198,7 +194,6 @@ def align_reads_to_fasta(
     local: bool = False,  # Default: end-to-end (matches MATLAB)
     min_qlen: Optional[int] = None,
     keep_sam: bool = False,
-    verbose: bool = False,
 ) -> None:
     """Full alignment pipeline: build index, align, convert to sorted BAM.
 
@@ -213,7 +208,6 @@ def align_reads_to_fasta(
         local: Use local alignment (default False = end-to-end).
         min_qlen: Minimum query length for filtering
         keep_sam: Keep intermediate SAM file (default False).
-        verbose: If True, show tool output in real-time
     """
     # Paths
     work_dir = output_bam.parent
@@ -222,7 +216,7 @@ def align_reads_to_fasta(
 
     # Build index
     with print_timer("Indexing... ", end_msg=", ", seperate_prints=True):
-        run_bowtie2_build(ref_fasta, index_prefix, verbose=verbose)
+        run_bowtie2_build(ref_fasta, index_prefix)
 
     # Align
     with print_timer("Aligning... ", end_msg=", ", seperate_prints=True):
@@ -235,13 +229,12 @@ def align_reads_to_fasta(
             local=local,
             num_alignments=num_alignments,
             threads=threads,
-            verbose=verbose,
         )
 
     # Convert to sorted BAM
     with print_timer("BAM... ", end_msg="", seperate_prints=True):
-        sam_to_sorted_bam(sam_path, output_bam, threads=threads, min_qlen=min_qlen, verbose=verbose)
-    print()  # Newline after final step
+        sam_to_sorted_bam(sam_path, output_bam, threads=threads, min_qlen=min_qlen)
+    logger.info("")  # Newline after final step
 
     # Cleanup
     if not keep_sam:

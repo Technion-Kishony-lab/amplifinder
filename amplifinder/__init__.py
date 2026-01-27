@@ -4,6 +4,14 @@ __version__ = "1.0.0"
 
 from amplifinder.config import Config, load_config
 from amplifinder.exceptions import PrematureTerminationError
-from amplifinder.logger import setup_logger
+from amplifinder.logger import logger, colorize, c
 
-__all__ = ["Config", "load_config", "setup_logger", "PrematureTerminationError", "__version__"]
+__all__ = [
+    "Config",
+    "load_config",
+    "logger",
+    "colorize",
+    "c",
+    "PrematureTerminationError",
+    "__version__",
+]

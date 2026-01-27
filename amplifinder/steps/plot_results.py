@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.config import AlignmentClassifyParams, AlignmentFilterParams
+from amplifinder.logger import logger
 from amplifinder.optional_deps import plt
 from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, JunctionType
 from amplifinder.steps.base import Step
@@ -76,7 +77,7 @@ class PlotTnJc2CoverageStep(Step):
 
     def _generate_artifacts(self) -> None:
         iso_scafs_to_covs, anc_scafs_to_covs = self._load_coverage_for_plotting()
-        self.print(f'Creating coverage plots (n={len(self.classified_tnjc2s)}) ', end='')
+        logger.print_progress(f'Creating coverage plots (n={len(self.classified_tnjc2s)}) ', end='')
 
         for tnjc2 in self.classified_tnjc2s:
             jct_cov_path = tnjc2.analysis_dir_path(self._iso_output_dir) / "jct_coverages.png"
@@ -84,7 +85,7 @@ class PlotTnJc2CoverageStep(Step):
 
             # Skip if both plots already exist
             if jct_cov_path.exists() and amp_cov_path.exists():
-                self.print('-', end='')
+                logger.print_progress('-', end='')
                 continue
 
             # Get cached alignment data or re-read BAM if not cached
@@ -127,11 +128,11 @@ class PlotTnJc2CoverageStep(Step):
                     output_path=amp_cov_path,
                 )
 
-            self.print('.', end='')
+            logger.print_progress('.', end='')
 
-        self.print('')  # Newline
+        logger.print_progress('')  # Newline
 
     def _artifact_labels(self) -> list[str]:
         """Summarize outputs as count."""
         n = len(self.classified_tnjc2s)
-        return [f"{n}x amplicon_coverage.png and jct_coverages.png"]
+        return [f"{n} amplicon_coverage.png and {n} jct_coverages.png"]

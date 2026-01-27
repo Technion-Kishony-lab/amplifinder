@@ -5,10 +5,10 @@ from typing import Generic, List, Optional, TypeVar, get_args, get_origin, Type
 
 from line_profiler import LineProfiler
 
-from amplifinder.logger import get_logger
+from amplifinder.logger import logger
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import remove_file_or_dir, ensure_dir
-from amplifinder.utils.timing import print_timer as _print_timer
+from amplifinder.utils.timing import timer
 from amplifinder.data_types import RecordTypedDf
 from amplifinder.records.base_records import Record
 from amplifinder.steps.io_naming import default_filename
@@ -34,8 +34,7 @@ class Step(ABC):
 
     # Global force flag (applies to all steps)
     global_force: bool = False
-    # Global verbose flag (applies to all steps)
-    global_verbose: bool = False
+
     # Global profile flag (applies to all steps)
     should_profile: bool = False
 
@@ -64,45 +63,6 @@ class Step(ABC):
         self._artifacts_generated: Optional[bool] = None
 
     """ Logging """
-
-    @classmethod
-    def set_global_verbose(cls, verbose: bool) -> None:
-        """Set global verbose flag for all steps."""
-        cls.global_verbose = verbose
-
-    def log(self, msg: str, *,
-        level: str = "info",
-        timestamp: bool = True, verbose_only: bool = True, to_file: bool = True,
-        end: str = "\n",
-    ) -> None:
-        # Determine if we show on screen
-        to_screen = not verbose_only or self.global_verbose
-        
-        # Log the message
-        logger = get_logger()
-        logger.log(
-            msg,
-            level=level.upper(),
-            timestamp=timestamp,
-            to_screen=to_screen,
-            to_file=to_file,
-            end=end,
-        )
-    
-    def print(self, msg: str, end: str = "\n") -> None:
-        self.log(msg, timestamp=False, to_file=False, end=end)
-
-    def print_timer(
-        self, start_msg: str, end_msg: Optional[str] = None,
-        time_format: str = "{:7.1f} sec", seperate_prints: bool = False,
-        use_log: bool = False
-    ):
-        """Context manager for timing code blocks."""
-        return _print_timer(
-            start_msg, end_msg=end_msg, time_format=time_format,
-            should_log=self.global_verbose, seperate_prints=seperate_prints,
-            use_log=use_log
-        )
 
     @property
     def name(self) -> str:
@@ -164,27 +124,40 @@ class Step(ABC):
             details=details or {}
         )
 
-    def _generate_artifacts_if_needed(self):
-        """Generate artifacts if needed. Subclasses override to return computed output."""
+    def _should_skip_artifacts(self) -> bool:
+        """Check if we should skip artifact generation."""
+        return not self.force and self.has_artifact_files()
+    
+    def _get_status_message(self) -> str:
+        """Determine what work will be done and return status message."""
+        if self.artifact_files:
+            return "skip artifacts" if self._should_skip_artifacts() else "create artifacts"
+        else:
+            return "no artifacts to generate"
+    
+    def _do_work(self):
+        """Execute the work. Returns None for base Step."""
+        self._generate_artifacts_if_needed()
+        return None
+    
+    def _generate_artifacts_if_needed(self) -> None:
+        """Generate artifacts if needed."""
         self._artifacts_generated = False
 
         if self.artifact_files:
             # Fast path: skip artifact generation if already present
-            if not self.force and self.has_artifact_files():
-                self._log_run_status("skip artifacts")
+            if self._should_skip_artifacts():
+                return
             else:
                 # Acquire lock and re-check (TOCTOU)
                 lock_target = self._get_lock_target()
                 with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
-                    if not self.force and self.has_artifact_files():
-                        self._log_run_status("skip artifacts")
+                    if self._should_skip_artifacts():
+                        return
                     else:
                         if self.force:
                             self._clean_artifacts()
-                        self._log_run_status("create artifacts")
                         self._run_generate_artifacts()
-        else:
-            self._log_run_status("no artifacts to generate")
 
     def _run_generate_artifacts(self):
         """Run the creation of artifacts."""
@@ -206,20 +179,30 @@ class Step(ABC):
         if self._artifacts_generated is not None:
             raise RuntimeError(f"{self.name}: already ran; cannot run again")
 
-        with self.print_timer("=" * 92 + " ", use_log=True, end_msg=" ========\n"):
-            return self._generate_artifacts_if_needed()
+        # Determine and log what we're about to do
+        status_msg = self._get_status_message()
+        self._log_run_status(status_msg)
+        
+        # Do the work (timed)
+        with timer(log=False) as t:
+            output = self._do_work()
+        
+        logger.info("-" * 107 + f" [cyan]{t.elapsed:.1f} sec[/cyan] --------\n")
+        return output
 
     def _log_run_status(self, log_msg: str) -> None:
         """Standardized run status logging."""
         step_name = self.name
-        step_name_color = f"\033[36m{step_name}\033[0m"
+        step_name_color = f"[cyan]{step_name}[/cyan]"
+        log_msg_color = f"[cyan]{log_msg}[/cyan]"
 
         labels = self._artifact_labels()
         output_str = ", ".join(labels) if labels else "none"
 
-        remaining = 120 - 40 - len(log_msg)
-        formatted = f"{step_name_color:<42s}{output_str:<{remaining}s}{log_msg}"
-        self.log(formatted)
+        remaining = 100 - len(step_name) - len(log_msg) - 2
+        formatted = f"{step_name_color} " + "=" * remaining + f" {log_msg_color} ========"
+        logger.info(formatted, timestamp=True)
+        logger.info(f"Output: {output_str}")
 
     def _get_lock_target(self) -> Path:
         """Path used for step lock; override to customize lock scope."""
@@ -284,17 +267,17 @@ class Step(ABC):
         stats_file = self._get_profiler_stats_path(suffix)
         if stats_file:
             lp.dump_stats(str(stats_file))
-            self.log(f"Line profiler stats saved to {stats_file}", verbose_only=False)
+            logger.info(f"Line profiler stats saved to {stats_file}")
 
         # Print stats if verbose
-        if self.global_verbose:
+        if logger.verbose:
             output_stream = StringIO()
             lp.print_stats(stream=output_stream, stripzeros=True)
             stats_text = output_stream.getvalue()
             if stats_text.strip():
-                self.log(f"Line profiler stats ({suffix or 'all'}):")
+                logger.info(f"Line profiler stats ({suffix or 'all'}):")
                 for line in stats_text.strip().split('\n'):
-                    self.log(f"  {line}")
+                    logger.info(f"  {line}")
 
 
 class OutputStep(Step, Generic[T]):
@@ -357,13 +340,17 @@ class OutputStep(Step, Generic[T]):
         """Save output to artifact files (e.g., CSV). Override in subclass."""
         pass
 
-    def _generate_artifacts_if_needed(self) -> T:
-        """Generate artifacts AND compute/save output. Returns calculated output."""
-        # Generate external artifacts (BAMs, indexes, etc.)
+    def _get_status_message(self) -> str:
+        """Determine what work will be done and return status message."""
+        artifact_status = super()._get_status_message()
+        return f"{artifact_status}, calc output"
+    
+    def _do_work(self) -> T:
+        """Execute the work and return output."""
+        # Generate artifacts
         super()._generate_artifacts_if_needed()
-
-        # Calculate output (always - we need to return it)
-        self.log("calculating output")
+        
+        # Calculate output
         if self.should_profile:
             lp = self._create_profiler()
             lp.add_function(self._calculate_output)
@@ -380,7 +367,7 @@ class OutputStep(Step, Generic[T]):
         # Report
         msg = self.report_output_message(output)
         if msg:
-            self.log(msg, verbose_only=False)
+            logger.log_always(msg)
 
         return output
 

@@ -264,8 +264,8 @@ class Config:
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
         
         if log:
-            from amplifinder.logger import info
-            info(f"Saved config to:\n{config_path}")
+            from amplifinder.logger import logger
+            logger.info(f"Saved config to:\n{config_path}")
     
     def save(self, run_dir: Path) -> None:
         """Save config to run_config.yaml in run directory."""

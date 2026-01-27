@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Optional
 
+from amplifinder.logger import logger
 from amplifinder.steps.base import OutputStep
 from amplifinder.data_types.genome import Genome, get_genome, exists_genome
 
@@ -40,7 +41,7 @@ class GetRefGenomeStep(OutputStep[Genome]):
 
     def _generate_artifacts(self) -> None:
         """Fetch genome from NCBI or load from cache (creates mapping file)."""
-        self.log(f"Fetching reference genome: {self.ref_name}")
+        logger.info(f"Fetching reference genome: {self.ref_name}")
         get_genome(self.ref_name, self.ref_path, self.ncbi)
 
     def _calculate_output(self) -> Genome:

@@ -4,6 +4,7 @@ from pathlib import Path
 from collections import defaultdict
 from typing import Optional, Callable
 
+from amplifinder.logger import logger
 from amplifinder.steps.jct_coverage.alignment_data import SingleAlignment
 from amplifinder.steps.jct_coverage.cigar import Cigar, resolve_cigar_m_operations
 from amplifinder.env import RESOLVE_CIGAR_MATCHES_VS_MISMATCHES
@@ -69,12 +70,12 @@ def read_bam_and_group_single_alignments(
 
             grouped_hits[hit.reference_name][hit.query_name][hit.is_reverse].append(single_alignment)
 
-    print(
-        f"BAM statistics: total hits={fmt_count(total_hits)}, "
+    logger.info(
+        f"BAM statistics: total_hits={fmt_count(total_hits)}, "
         f"pass_filter={fmt_count(pass_filter_total, total_hits)}, "
         f"FWD={fmt_count(pass_filter_forward, pass_filter_total)}, "
         f"REV={fmt_count(pass_filter_reverse, pass_filter_total)}",
-        flush=True
+        timestamp=False,
     )
 
     return grouped_hits

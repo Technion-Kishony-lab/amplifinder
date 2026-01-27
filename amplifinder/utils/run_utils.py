@@ -5,7 +5,7 @@ import shutil
 from pathlib import Path
 from typing import List, Optional, Union
 
-from amplifinder.logger import warning
+from amplifinder.logger import logger
 
 
 def find_tool(
@@ -132,7 +132,7 @@ def run_command(
             msg = f"Command failed with exit code {result.returncode}"
 
         if not verbose and capture_output and result.stderr:
-            warning(f"Command stderr: {result.stderr}")
+            logger.warning(f"Command stderr: {result.stderr}")
 
         raise RuntimeError(msg)
 

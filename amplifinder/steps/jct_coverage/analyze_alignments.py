@@ -9,7 +9,7 @@ from amplifinder.env import DEBUG
 from amplifinder.data_types import (
     RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
 )
-from amplifinder.logger import warning
+from amplifinder.logger import logger
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
 from amplifinder.steps.jct_coverage.classify_alignments import get_expected_counts, get_jct_read_counts
@@ -85,26 +85,30 @@ def print_jc_read_counts_and_calls(
     jc_calls: dict[JunctionType, Optional[bool]]
 ) -> None:
     """Print junction coverage and calls."""
-    # Print header
-    print(f"{'junction':<23} {'left_far':>10} {'left':>10} {'left_marg':>10} "
-          f"{'spanning':>10} {'paired':>10} {'right_marg':>10} {'right':>10} "
-          f"{'right_far':>10} {'call':>10}", flush=True)
-    print("-" * 122, flush=True)
+    # Print header (two rows)
+    logger.info(f"{'junction':<23} {'left':>6} {'':>6} {'left':>6} "
+          f"{'':>6} {'':>6} {'right':>6} {'':>6} "
+          f"{'right':>6} {'':>6}", timestamp=False)
+    logger.info(f"{'type':<23} {'far':>6} {'left':>6} {'marg':>6} "
+          f"{'span':>6} {'pair':>6} {'marg':>6} {'right':>6} "
+          f"{'far':>6} {'call':>6}", timestamp=False)
+    logger.info("-" * 86, timestamp=False)
 
     # Print rows
     for jt in JunctionType:
         cov = jc_covs[jt]
         call_str = str(jc_calls[jt]) if jc_calls[jt] is not None else "None"
-        print(f"{jt.name:<23} {cov.left_far:>10} {cov.left:>10} {cov.left_marginal:>10} "
-              f"{cov.spanning:>10} {cov.paired:>10} {cov.right_marginal:>10} {cov.right:>10} "
-              f"{cov.right_far:>10} {call_str:>10}", flush=True)
+        logger.info(f"{jt.name:<23} {cov.left_far:>6} {cov.left:>6} {cov.left_marginal:>6} "
+              f"{cov.spanning:>6} {cov.paired:>6} {cov.right_marginal:>6} {cov.right:>6} "
+              f"{cov.right_far:>6} {call_str:>6}", timestamp=False)
+    logger.info("", timestamp=False)
 
 
 def warn_if_paired_and_not_spanning(jc_covs: dict[JunctionType, JunctionReadCounts]) -> None:
     """Warn if paired reads are present and no spanning reads are present."""
     for jt in JunctionType:
         if jc_covs[jt].paired > 0 and jc_covs[jt].spanning == 0:
-            warning(f"Junction {jt.name} has {jc_covs[jt].paired} paired-end reads "
+            logger.warning(f"Junction {jt.name} has {jc_covs[jt].paired} paired-end reads "
                     "transversing the junction but no spanning reads.")
 
 
@@ -152,8 +156,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         """Analyze alignments for each candidate."""
         analyzed_records = []
         for tnjc2 in self.tnjc2s:
-            txt = f" CASE: '{tnjc2.analysis_dir}' "
-            print("\n======" + txt + "=" * (122 - len(txt) - 6), flush=True)
+            logger.info(f"\nCASE: '{tnjc2.analysis_dir}'")
             jc_covs, alignment_data = get_jct_read_counts_by_tnjc2(
                 synjct_tnjc2=tnjc2,
                 base_dir=self._output_dir,

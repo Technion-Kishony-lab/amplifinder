@@ -20,7 +20,6 @@ from amplifinder.utils.file_utils import (
     ensure_parent_dir,
     remove_file_or_dir,
 )
-from amplifinder.utils.timing import start_timer, end_timer
 
 __all__ = [
     # FASTA utilities
@@ -42,10 +41,6 @@ __all__ = [
     "ensure_dir",
     "ensure_parent_dir",
     "remove_file_or_dir",
-
-    # Timing utilities
-    "start_timer",
-    "end_timer",
 
     # Flag utilities
     "MutableFlag",

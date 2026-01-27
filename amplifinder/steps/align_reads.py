@@ -5,6 +5,7 @@ from typing import Optional
 
 from amplifinder.data_types import RecordTypedDf, SynJctsTnJc2
 from amplifinder.config import BowtieParams
+from amplifinder.logger import logger
 from amplifinder.steps.base import Step
 from amplifinder.tools.bowtie2 import align_reads_to_fasta
 
@@ -59,9 +60,9 @@ class AlignReadsToJunctionsStep(Step):
 
             bam_path = filtered_tnjc2.bam_path(self.output_dir, is_ancestor=self.is_ancestor)
             name = filtered_tnjc2.analysis_dir_name(is_ancestor=self.is_ancestor)
-            self.print(f"{name:<{max_name_length}}: ", end="")
+            logger.print_progress(f"{name:<{max_name_length}}: ", end="")
             if bam_path.exists():
-                self.print("file exists, skipping")
+                logger.print_progress("file exists, skipping")
                 continue
             align_reads_to_fasta(
                 ref_fasta=junctions_fasta,
@@ -73,7 +74,6 @@ class AlignReadsToJunctionsStep(Step):
                 num_alignments=self.bowtie_params.num_alignments,
                 local=self.bowtie_params.local,
                 min_qlen=self.bowtie_params.min_qlen,
-                verbose=self.global_verbose,
             )
             assert bam_path.exists()
 

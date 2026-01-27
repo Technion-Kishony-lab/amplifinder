@@ -7,10 +7,7 @@ import click
 
 from amplifinder import __version__
 from amplifinder.config import Config, load_config, merge_config
-from amplifinder.logger import setup_logger, error
 from amplifinder.pipeline import Pipeline
-from amplifinder.steps.base import Step
-from amplifinder.utils.file_utils import ensure_dir
 
 
 @click.command()
@@ -193,17 +190,9 @@ def main(
         
         # CLI startup message
         click.echo(f"AmpliFinder v{__version__}")
-        
-        # Setup logger now that we have merged config
-        log_dir = Path(merged["output_dir"]) / merged["ref_name"]
-        ensure_dir(log_dir)
-        setup_logger(log_path=log_dir / "amplifinder.log", use_colors=True)
 
-        # Set global verbose flag
-        Step.set_global_verbose(verbose)
-
-        # Run pipeline
-        pipeline = Pipeline(config)
+        # Run pipeline (pipeline handles all logger setup)
+        pipeline = Pipeline(config, verbose=verbose)
         if breseq_only:
             click.echo("Running breseq-only mode")
             pipeline.run_breseq_only()
@@ -211,7 +200,6 @@ def main(
             pipeline.run()
 
     except Exception as e:
-        error(f"Pipeline failed: {e}")
         raise click.ClickException(str(e))
 
     click.echo("Done")
