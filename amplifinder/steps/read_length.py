@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.steps.base import OutputStep
-from amplifinder.logger import info, warning
+from amplifinder.logger import logger, c
 from amplifinder.utils.fasta import get_read_length_stats
 
 
@@ -45,9 +45,9 @@ class ReadLenStep(OutputStep[ReadLengths]):
             return provided_length
 
         stats = get_read_length_stats(fastq_dir, sample_per_file=SAMPLE_PER_FILE)
-        info(f"{sample_type:<9}: {stats}")
+        logger.info(f"{sample_type:<9}: {c(str(stats), 'cyan')}")
         if not stats.is_uniform:
-            warning(f"{sample_type} read length is not uniform - may affect coverage accuracy")
+            logger.warning(f"{sample_type} read length is not uniform - may affect coverage accuracy")
         return stats.max_length
 
     def _determine_junction_arm_lengths(
@@ -56,7 +56,7 @@ class ReadLenStep(OutputStep[ReadLengths]):
         """Determine junction arm length (2x read length) for iso/anc with 10% tolerance."""
         iso_jc_arm = 2 * iso_read_len
         if anc_read_len is None:
-            info(f"Junction arm length: no ancestor; using 2*iso_read_len = {iso_jc_arm} for isolate junctions")
+            logger.info(f"Junction arm length: no ancestor; using 2*iso_read_len = {iso_jc_arm} for isolate junctions")
             return iso_jc_arm, None
 
         delta = abs(iso_read_len - anc_read_len)
@@ -64,14 +64,14 @@ class ReadLenStep(OutputStep[ReadLengths]):
 
         def _log_decision(prefix: str, using_len: int, func: callable) -> None:
             msg = f"{prefix} iso={iso_read_len}, anc={anc_read_len}, diff={delta}, " \
-                f"{JUNCTION_LENGTH_TOLERANCE}% threshold (anc)={threshold}; using arm length={using_len}"
+                f"{JUNCTION_LENGTH_TOLERANCE}% threshold (anc)={threshold}; using arm_length={using_len}"
             func(msg)
         anc_jc_arm = 2 * anc_read_len
         if delta <= threshold:
             iso_jc_arm = anc_jc_arm
-            _log_decision("isolate-ancestor read lengths within threshold;", iso_jc_arm, info)
+            _log_decision("isolate-ancestor read lengths within threshold;", iso_jc_arm, logger.info)
         else:
-            _log_decision("isolate-ancestor read lengths exceed threshold;", iso_jc_arm, warning)
+            _log_decision("isolate-ancestor read lengths exceed threshold;", iso_jc_arm, logger.warning)
         return iso_jc_arm, anc_jc_arm
 
     def _calculate_output(self) -> ReadLengths:

@@ -12,6 +12,7 @@ from amplifinder.utils.file_utils import remove_file_or_dir
 from amplifinder.data_types import JunctionType
 from amplifinder.steps.base import Step
 from amplifinder.config import Config
+from amplifinder.logger import logger
 from amplifinder.pipeline import Pipeline
 from amplifinder.env import DEBUG
 
@@ -85,8 +86,8 @@ class TestPipeline(Pipeline):
     """Pipeline subclass for testing with step-by-step MATLAB comparisons."""
     __test__ = False  # avoid pytest collection warning for helper class
 
-    def __init__(self, config, matlab_output_dir):
-        super().__init__(config)
+    def __init__(self, config, matlab_output_dir, verbose=True):
+        super().__init__(config, verbose=verbose)
         self.matlab_output_dir = matlab_output_dir
         self.ref_tns = None  # Store reference TNs for IS name mapping
 
@@ -333,8 +334,7 @@ class TestPipelineStepByStep:
 
     @staticmethod
     def _setup_pipeline(config, return_run_dir=False):
-        """Common setup: enable verbose reporting."""
-        Step.set_global_verbose(True)
+        """Common setup placeholder (verbose is now passed to Pipeline)."""
         if return_run_dir:
             return config.iso_run_dir
         return None
@@ -366,9 +366,9 @@ class TestPipelineStepByStep:
 
     def test_pipeline_without_ancestor(self, isolate_srr25242877, cleared_output_dir):
         print_color("\n=== Testing Isolate Pipeline WITHOUT ancestor ===")
-        self._setup_pipeline(config)
         config = self._create_config(isolate_srr25242877, cleared_output_dir)
-        pipeline = Pipeline(config)
+        self._setup_pipeline(config)
+        pipeline = Pipeline(config, verbose=True)
         with DEBUG.temp_set(True):
             pipeline.run()
 
@@ -376,7 +376,7 @@ class TestPipelineStepByStep:
         print_color("\n=== Testing Isolate Pipeline WITH ancestor ===")
         config = self._create_config(isolate_srr25242877, cleared_output_dir, anc_isolate=isolate_srr25242906)
         self._setup_pipeline(config)
-        pipeline = Pipeline(config)
+        pipeline = Pipeline(config, verbose=True)
         with DEBUG.temp_set(False):
             pipeline.run()  # Will run ancestor automatically if needed
 
@@ -384,5 +384,5 @@ class TestPipelineStepByStep:
         print_color("\n=== Testing Isolate Pipeline WITH ancestor ===")
         matlab_output_dir = isolate_srr25242877["matlab_output"]
         config = self._create_config(isolate_srr25242877, cleared_output_dir, anc_isolate=isolate_srr25242906)
-        pipeline = TestPipeline(config, matlab_output_dir)
+        pipeline = TestPipeline(config, matlab_output_dir, verbose=True)
         pipeline.run()  # Will run ancestor automatically if needed

@@ -11,7 +11,9 @@ from amplifinder.data_types import (
     Genome, RecordTypedDf, RefTn, RefTnJunction, BreseqJunction, TnJunction, RawTnJc2,
     CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ClassifiedTnJc2,
 )
-from amplifinder.logger import info
+from amplifinder.logger import logger, c, setup_logger
+from amplifinder.utils.file_utils import ensure_dir
+
 from amplifinder.steps import (
     InitializingStep,
     GetRefGenomeStep,
@@ -40,6 +42,13 @@ class Pipeline:
     """AmpliFinder pipeline with phased execution."""
 
     config: Config
+    verbose: bool = False
+
+    def _setup_logger(self) -> None:
+        """Set up logger with file in run directory."""
+        ensure_dir(self.config.iso_run_dir)
+        log_file = self.config.iso_run_dir / "run_log.txt"
+        setup_logger(log_path=log_file, use_colors=True, verbose=self.verbose)
 
     def _calc_read_lengths(self) -> ReadLengths:
         """Calculate read lengths and junction lengths."""
@@ -58,13 +67,14 @@ class Pipeline:
             anc_msg = "No ancestor assigned; using raw (non-normalized) coverage analysis"
         else:
             anc_msg = "No ancestor"
-        info(f"\nReference: {self.config.ref_name}\nIsolate: {self.config.iso_path}\n{anc_msg}")
+        logger.info(f"\nReference: {c(self.config.ref_name, 'cyan')}\nIsolate: {c(str(self.config.iso_path), 'magenta')}\n{anc_msg}")
 
     def run(self) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
         """Run full pipeline with exception handling and status tracking."""
+        self._setup_logger()
         self._log_run_info()
         
-        # Initialize output directories first
+        # Initialize output directories
         iso_output, anc_output = self._initialize()
         
         try:
@@ -82,7 +92,7 @@ class Pipeline:
         except PrematureTerminationError as e:
             # Graceful early termination - not an error
             self._write_status_file(iso_output, 'terminated', e.get_detailed_message())
-            info(f"Pipeline terminated early:\n{e}")
+            logger.info(f"Pipeline terminated early:\n{e}")
             return None  # Graceful exit
                 
         except Exception as e:
@@ -120,11 +130,15 @@ class Pipeline:
 
     def run_breseq_only(self) -> None:
         """Run only breseq steps (ancestor and isolate), then exit."""
+        self._setup_logger()
         self._log_run_info(include_no_ancestor_warning=False)
+        
+        # Initialize output directories
+        iso_output, anc_output = self._initialize()
         
         genome = self._load_reference()
         self._run_breseq(genome)
-        info("breseq-only mode completed")
+        logger.info("breseq-only mode completed")
 
     @property
     def ref_tn_source(self) -> str:
@@ -489,6 +503,6 @@ class Pipeline:
         ).run()
 
 
-def run_pipeline(config: Config) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
+def run_pipeline(config: Config, verbose: bool = False) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
     """Run the AmpliFinder pipeline."""
-    return Pipeline(config).run()
+    return Pipeline(config, verbose=verbose).run()

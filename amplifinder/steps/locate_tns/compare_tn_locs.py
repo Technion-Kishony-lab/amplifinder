@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from amplifinder.logger import warning
+from amplifinder.logger import logger
 
 if TYPE_CHECKING:
     from amplifinder.data_types import RecordTypedDf
@@ -85,8 +85,8 @@ def compare_tn_locations(
             with open(output_file, 'w') as f:
                 for diff in diffs:
                     f.write(diff + '\n')
-            warning(f"TN location differences found between {name1} and {name2}. See:\n{output_file}\n")
+            logger.warning(f"TN location differences found between {name1} and {name2}. See:\n{output_file}\n")
         else:
             # Log each diff as a separate warning for better visibility in tests/logs
             for diff in diffs:
-                warning(diff)
+                logger.warning(diff)

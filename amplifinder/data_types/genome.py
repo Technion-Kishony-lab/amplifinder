@@ -14,7 +14,7 @@ from Bio.SeqRecord import SeqRecord
 
 from amplifinder.data_types.scaffold import SeqScaffold, SeqSegmentScaffold
 from amplifinder.data_types.junctions import Junction
-from amplifinder.logger import info
+from amplifinder.logger import logger, c
 from amplifinder.utils.file_utils import ensure_dir
 
 T = TypeVar('T', str, np.ndarray)
@@ -168,12 +168,12 @@ class GenomeRegistry:
         # Try to load from cache
         genome = self._load_cached(ref_name)
         if genome:
-            info(f"Reference {ref_name} loaded from cache")
+            logger.info(f"Reference {c(ref_name, 'cyan')} loaded from cache")
             return genome
 
         # Fetch from NCBI
         if ncbi:
-            info(f"Fetching {ref_name} from NCBI...")
+            logger.info(f"Fetching {c(ref_name, 'cyan')} from NCBI...")
             return self._fetch_from_ncbi(ref_name)
 
         raise FileNotFoundError(f"Genome {ref_name} not found in {self.ref_path}")
@@ -232,11 +232,11 @@ class GenomeRegistry:
 
         record = SeqIO.read(genbank_file, "genbank")
         locus_name = record.name
-        info(f"Fetched {locus_name}: {len(record.seq):,} bp")
+        logger.info(f"Fetched {locus_name}: {len(record.seq):,} bp")
 
         # Rename to locus name if different
         if locus_name != ref_name:
-            info(f"Reference locus name: {locus_name}")
+            logger.info(f"Reference locus name: {locus_name}")
             actual_genbank = self.genbank_dir / f"{locus_name}.gb"
             if not actual_genbank.exists():
                 genbank_file.rename(actual_genbank)
@@ -248,7 +248,7 @@ class GenomeRegistry:
         # Create FASTA
         fasta_file = self.fasta_dir / f"{locus_name}.fasta"
         if not fasta_file.exists():
-            info(f"Creating FASTA for {locus_name}")
+            logger.info(f"Creating FASTA for {locus_name}")
             ensure_dir(self.fasta_dir)
             record.id = locus_name
             record.description = ""

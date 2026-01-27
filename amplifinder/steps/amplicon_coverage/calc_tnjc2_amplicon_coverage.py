@@ -6,6 +6,8 @@ from typing import Optional
 import numpy as np
 
 from amplifinder.data_types import RecordTypedDf, RawTnJc2, CoveredTnJc2, AverageMethod
+from amplifinder.logger import logger
+from amplifinder.utils.timing import print_timer
 
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.tools.breseq import load_breseq_coverage
@@ -82,11 +84,11 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         self, breseq_path: Path, label: str, unique_scaffolds: list[str]
     ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, float]]:
         """Load coverage and calculate scaffold statistics."""
-        self.print(f"{label} breseq: {breseq_path}")
-        with self.print_timer("loading coverage ... ", end_msg="\n", seperate_prints=True):
+        logger.print_progress(f"\n{label} breseq: {breseq_path}")
+        with print_timer("Loading coverage ... ", end_msg="\n", seperate_prints=True, should_log=True):
             scafs_to_covs = load_breseq_coverage(breseq_path)
-        with self.print_timer(f"calculating scaffold stats ({len(unique_scaffolds)} scaffolds) ... ",
-                              end_msg="\n", seperate_prints=True):
+        with print_timer(f"Calculating scaffold stats ({len(unique_scaffolds)} scaffolds) ... ",
+                         end_msg="\n", seperate_prints=True, should_log=True):
             scaf_covs, scaf_avgs = calc_scaffold_coverages_and_averages(
                 scafs_to_covs, unique_scaffolds, self.average_method)
         return scafs_to_covs, scaf_covs, scaf_avgs
@@ -112,9 +114,9 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             anc_scaf_avgs = {}
 
         # Process each raw_tnjc2s
-        with self.print_timer("Calculating coverage for each raw_tnjc2 ...", end_msg="\n", seperate_prints=True):
+        with print_timer("\nCalculating coverage for each raw_tnjc2:\n", end_msg="\n", seperate_prints=True, should_log=True):
             covered_records = []
-            for raw_tnjc2 in self.raw_tnjc2s:
+            for i, raw_tnjc2 in enumerate(self.raw_tnjc2s):
                 covered = self._calc_candidate_coverage(
                     raw_tnjc2,
                     iso_scaf_covs[raw_tnjc2.scaf],
@@ -123,9 +125,9 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                     anc_scaf_avgs[raw_tnjc2.scaf] if self.has_ancestor else None,
                 )
                 covered_records.append(covered)
-                self.print(".", end="")
+                logger.print_progress(".", end="\n" if (i + 1) % 60 == 0 else "")
 
-        self.print(f"\nTotal amplicons: {len(self.raw_tnjc2s)}, "
+        logger.print_progress(f"\nTotal amplicons: {len(self.raw_tnjc2s)}, "
                    f"too long: {self._too_long_amplicons}, "
                    f"too short: {self._too_short_amplicons}")
 

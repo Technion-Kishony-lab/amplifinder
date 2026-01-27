@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Optional
 
+from amplifinder.logger import logger
 from amplifinder.steps.base import OutputStep
 from amplifinder.tools.breseq import run_breseq, parse_breseq_output
 from amplifinder.data_types import BreseqJunction, RecordTypedDf
@@ -63,7 +64,6 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
             output_path=self.breseq_path,
             docker=self.docker,
             threads=self.threads,
-            verbose=self.global_verbose,
         )
 
     def _calculate_output(self) -> RecordTypedDf[BreseqJunction]:
@@ -76,7 +76,7 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
             PrematureTerminationError: If breseq output is too long (wrong reference)
         """
         # Parse breseq output, catching ValueError if output too long
-        self.log("Parsing breseq output")
+        logger.info("Parsing breseq output")
         try:
             outputs = parse_breseq_output(
                 self.breseq_path,
@@ -95,7 +95,7 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
         # Log what we found
         record_counts = ", ".join(f"{name}: {len(df)}" for name, df in outputs.items() if len(df) > 0)
         if record_counts:
-            self.log(f"Found breseq records: {record_counts}")
+            logger.info(f"Found breseq records: {record_counts}")
         
         jc_df = outputs.get("JC")
 

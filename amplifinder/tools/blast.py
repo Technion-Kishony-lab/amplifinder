@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import ClassVar, Dict, List, Optional
 
-from amplifinder.logger import info
+from amplifinder.logger import logger
 from amplifinder.records.base_records import Record
 from amplifinder.data_types import RecordTypedDf
 from amplifinder.env import BLAST_PATH
@@ -43,7 +43,7 @@ def make_blast_db(
         "-dbtype", dbtype,
         "-out", str(db_path),
     ]
-    info(f"Creating BLAST DB: {' '.join(str(c) for c in cmd)}")
+    logger.info(f"Creating BLAST DB: {' '.join(str(c) for c in cmd)}")
     run_command(cmd, check=True)
 
 
@@ -80,7 +80,7 @@ def run_blastn(
     if extra_args:
         cmd.extend(extra_args)
 
-    info(f"Running BLAST: {' '.join(str(c) for c in cmd)}")
+    logger.info(f"Running BLAST: {' '.join(str(c) for c in cmd)}")
     run_command(cmd, check=True)
 
 

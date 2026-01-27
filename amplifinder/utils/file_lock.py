@@ -6,10 +6,11 @@ shared resources. Uses filelock for cross-platform file locks.
 
 from contextlib import contextmanager
 from pathlib import Path
+from amplifinder.env import DEBUG
 
 from filelock import FileLock, Timeout
 
-from amplifinder.logger import debug
+from amplifinder.logger import logger
 
 
 DEFAULT_LOCK_TIMEOUT = 3600  # 1 hour
@@ -32,7 +33,8 @@ def _locked_operation(
     lock = FileLock(lock_filepath)
     try:
         lock.acquire(timeout=timeout)
-        debug(f"Lock acquired for {description}: {lock_filepath}")
+        if DEBUG:
+            logger.debug(f"Lock acquired for {description}: {lock_filepath}")
     except Timeout as exc:
         raise LockTimeout(
             f"Could not acquire lock for {description} within {timeout}s. "
@@ -44,7 +46,8 @@ def _locked_operation(
     finally:
         if lock.is_locked:
             lock.release()
-            debug(f"Lock released for {description}")
+            if DEBUG:
+                logger.debug(f"Lock released for {description}")
 
 
 @contextmanager
