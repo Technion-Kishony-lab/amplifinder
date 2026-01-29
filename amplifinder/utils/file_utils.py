@@ -1,5 +1,6 @@
 """File and directory utilities."""
 
+import os
 import shutil
 from pathlib import Path
 from typing import Union
@@ -70,3 +71,8 @@ def remove_file_or_dir(path: Union[str, Path]) -> None:
             shutil.rmtree(path)
         else:
             path.unlink()
+
+
+def is_writable_dir(path: Path) -> bool:
+    """Check if a directory is writable by the current user."""
+    return path.exists() and os.access(path, os.W_OK)
