@@ -301,7 +301,7 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
         """Get sides of chosen TN (left and right amplicon sides)."""
         chosen_id = self.chosen_tn_id
         if chosen_id is None:
-            return None, None
+            raise ValueError("This tnjc2 does not have a chosen tn")
         matching_tns = self._find_matching_tn_sides()
         for tn_side_left_amplicon, tn_side_right_amplicon in matching_tns:
             if tn_side_left_amplicon.tn_id == chosen_id:
