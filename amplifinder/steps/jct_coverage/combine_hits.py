@@ -1,7 +1,6 @@
 """Combine aligned segments."""
 from collections import defaultdict
 
-from amplifinder.env import DEBUG
 from amplifinder.logger import logger
 from amplifinder.steps.jct_coverage.alignment_data import \
     AlignmentData, BaseSingleAlignment, CombinedSingleAlignment, SingleAlignment, PairedAlignment
@@ -62,8 +61,6 @@ def combine_same_id_different_orientation_hits(
     Args:
         combined_alignments: Dictionary to modify in place
     """
-    max_debug_examples = 1
-
     total_reads = 0
     total_normal_pairs = 0
     total_swapped_pairs = 0
@@ -92,9 +89,11 @@ def combine_same_id_different_orientation_hits(
                         is_swapped=True
                     )
                     sum_distances_swapped += paired.overlapping_length
-                    if DEBUG and max_debug_examples > 0:
-                        logger.debug(f"Example of a swapped paired alignment:\n{paired}")
-                        max_debug_examples -= 1
+                    logger.debug_message(
+                        f"Example of a swapped paired alignment:\n{paired}",
+                        category="swapped_paired_alignment",
+                        max_prints=1
+                    )
                 orientations[None] = paired
 
     total_pairs = total_normal_pairs + total_swapped_pairs

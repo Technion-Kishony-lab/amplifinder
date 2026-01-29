@@ -227,18 +227,6 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
         return self.single_locus_tnjc2_right_matchings[0].tnjc2 if self.single_locus_tnjc2_right_matchings else None
 
     @property
-    def is_multiple_single_locus_tnjc2_left(self) -> bool:
-        """Whether there are multiple single-locus matchings for the left junction."""
-        # TODO: This is not used yet
-        return len(self.single_locus_tnjc2_left_matchings) > 1
-
-    @property
-    def is_multiple_single_locus_tnjc2_right(self) -> bool:
-        """Whether there are multiple single-locus matchings for the right junction."""
-        # TODO: This is not used yet
-        return len(self.single_locus_tnjc2_right_matchings) > 1
-
-    @property
     def single_locus_left_pair_id(self) -> Optional[int]:
         """Pair ID of the single-locus TN junction matching the left junction."""
         return self.single_locus_tnjc2_matching_left.pair_id if self.single_locus_tnjc2_matching_left else None
