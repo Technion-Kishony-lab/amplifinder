@@ -62,5 +62,30 @@ class JunctionType(Enum):
         return Side(np.sign(self.order))
 
 
-JcCall: TypeAlias = bool | None
-"""Junction call: True if the junction is called, False if not, None if not enough evidence."""
+class JcCall(Enum):
+
+    POS = True
+    NEG = False
+    AMBIGIOUS = None
+
+    """Junction call: True if the junction is called, False if not, None if not enough evidence."""
+    value: bool | None
+
+    def __bool__(self):
+        return self.present
+
+    @property
+    def exist(self):
+        return self is JcCall.POS
+
+    @property
+    def absent(self):
+        return self is JcCall.NEG
+
+    @property
+    def maybe_present(self):
+        return self is not JcCall.NEG
+
+    @property
+    def maybe_ansent(self):
+        return self is not JcCall.POS
