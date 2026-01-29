@@ -4,6 +4,8 @@ from pathlib import Path
 import os
 import shutil
 
+from amplifinder.utils.file_utils import is_writable_dir
+
 
 def get_builtin_isfinder_db_path() -> Path:
     """Get path to bundled ISfinder database (IS.fna).
@@ -13,7 +15,7 @@ def get_builtin_isfinder_db_path() -> Path:
     """
     bundled = Path(__file__).parent / "ISfinderDB"
     is_fna = bundled / "IS.fna"
-    if _is_writable_dir(bundled):
+    if is_writable_dir(bundled):
         return is_fna
 
     cache_root = Path(
@@ -27,7 +29,3 @@ def get_builtin_isfinder_db_path() -> Path:
     if not cached_is_fna.exists():
         shutil.copytree(bundled, cache_root, dirs_exist_ok=True)
     return cached_is_fna
-
-
-def _is_writable_dir(path: Path) -> bool:
-    return path.exists() and os.access(path, os.W_OK)
