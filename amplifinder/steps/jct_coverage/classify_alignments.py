@@ -18,7 +18,6 @@ from amplifinder.steps.jct_coverage.combine_hits import (
 )
 from amplifinder.steps.jct_coverage.alignment_filter import bam_hit_passes_filters
 from amplifinder.env import LINK_PAIRED_END, SELECT_BEST_BY_SCORE, ALLOW_INDELS_AT_JUNCTION_DISTANCE
-from amplifinder.env import DEBUG
 
 
 def get_jct_read_counts(
@@ -125,8 +124,6 @@ def _classify_alignment(
     Returns:
         list[AlignmentData] (empty list if invalid side combination)
     """
-    max_debug_examples = 1
-
     # Check indels within limit for all nested single alignments
     if isinstance(alignment, BaseSingleAlignment):
         classify_single_alignment(alignment, arm_len, alignment_classify_params)
@@ -168,10 +165,11 @@ def _classify_alignment(
     ok = (fwd_side == Side.LEFT and rev_side == Side.MIDDLE) \
         or (fwd_side == Side.MIDDLE and rev_side == Side.RIGHT)
     if not ok:
-        if DEBUG and max_debug_examples > 0:
-            max_debug_examples -= 1
-            logger.debug(f"Example of invalid side combination: fwd_side={fwd_side}, rev_side={rev_side}")
-            logger.debug(str(alignment))
+        logger.debug_message(
+            f"Invalid side combination: fwd_side={fwd_side}, rev_side={rev_side}\n{alignment}",
+            category="invalid_side_combination",
+            max_prints=1
+        )
         return []
     return [fwd_alignment, rev_alignment]
 
