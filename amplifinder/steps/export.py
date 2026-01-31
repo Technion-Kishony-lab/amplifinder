@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 from dataclasses import asdict
 import yaml
 
-from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2
+from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, RefTn
 from amplifinder.steps.base import OutputStep
 from amplifinder.steps.read_length import ReadLengths
 
@@ -20,6 +20,7 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
         ref_name: str,
         iso_name: str,
         read_lengths: ReadLengths,
+        ref_tns: RecordTypedDf[RefTn],
         anc_name: Optional[str] = None,
         force: Optional[bool] = None,
     ):
@@ -28,6 +29,7 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
         self.iso_name = iso_name
         self.anc_name = anc_name
         self.read_lengths = read_lengths
+        self.ref_tns = ref_tns
 
         self.yaml_file = output_dir / "amplifications.yaml"
 
@@ -37,14 +39,19 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
         """Build export structure."""
         amplicons = []
         for tnjc2 in self.classified_tnjc2s:
+            # Map tn_ids to tn_names
+            tn_names = [self.ref_tns.df.loc[tn_id, 'tn_name'] for tn_id in tnjc2.tn_ids]
+            chosen_tn_name = self.ref_tns.df.loc[tnjc2.chosen_tn_id, 'tn_name'] if tnjc2.chosen_tn_id else None
+            
             amplicons.append({
                 'positions': f"{tnjc2.left}-{tnjc2.right}",
                 'span_origin': tnjc2.span_origin,
                 'length': tnjc2.amplicon_length,
-                'IS_elements': tnjc2.tn_ids,
-                'chosen_tn_id': tnjc2.chosen_tn_id,
-                'copy_number': tnjc2.copy_number,
+                'possible_ISs': tn_names,
+                'chosen_IS': chosen_tn_name,
+                'copy_number': round(tnjc2.copy_number, 1),
                 'architecture': tnjc2.iso_architecture.description,
+                'ancestor_architecture': tnjc2.anc_architecture.description if tnjc2.anc_architecture else None,
                 'descriptors': [event_descriptor.value for event_descriptor in tnjc2.event_descriptors],
                 'left_is_ref_tn': tnjc2.tnjc_left.is_ref_tn_junction(),
                 'right_is_ref_tn': tnjc2.tnjc_right.is_ref_tn_junction(),

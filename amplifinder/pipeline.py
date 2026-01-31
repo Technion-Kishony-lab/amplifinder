@@ -125,7 +125,7 @@ class Pipeline:
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
         self._plot_coverage(classified_tnjc2s, iso_output, anc_output, read_lengths,
                             iso_alignment_cache, anc_alignment_cache)
-        self._export(classified_tnjc2s, genome, iso_output, read_lengths)
+        self._export(classified_tnjc2s, ref_tns, iso_output, read_lengths)
 
         return classified_tnjc2s
 
@@ -484,7 +484,7 @@ class Pipeline:
     def _export(
         self,
         classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
-        genome: Genome,
+        ref_tns: RecordTypedDf[RefTn],
         iso_output: Path,
         read_lengths: ReadLengths,
     ) -> None:
@@ -495,6 +495,7 @@ class Pipeline:
             ref_name=self.config.ref_name,
             iso_name=self.config.iso_name,
             read_lengths=read_lengths,
+            ref_tns=ref_tns,
             anc_name=self.config.anc_name,
         ).run()
 
