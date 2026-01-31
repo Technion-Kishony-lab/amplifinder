@@ -4,7 +4,7 @@ from amplifinder.records.typed_df import RecordTypedDf, TypedDF
 from amplifinder.records.base_records import Column, Schema, Record
 from amplifinder.data_types.genome import Genome, GenomeRegistry, get_genome
 from amplifinder.data_types.basic_enums import Terminal, Side, Orientation, AverageMethod
-from amplifinder.data_types.events import BaseRawEvent, RawEvent, EventModifier
+from amplifinder.data_types.events import BaseEvent, Architecture, EventDescriptor
 from amplifinder.data_types.read_types import ReadType, JunctionReadCounts
 from amplifinder.data_types.jc_types import Element, JunctionType, JcCall
 from amplifinder.data_types.scaffold import Scaffold, SeqScaffold
@@ -38,9 +38,9 @@ __all__ = [
     "SeqScaffold",
 
     # Events
-    "BaseRawEvent",
-    "RawEvent",
-    "EventModifier",
+    "BaseEvent",
+    "Architecture",
+    "EventDescriptor",
 
     # Read types
     "ReadType",

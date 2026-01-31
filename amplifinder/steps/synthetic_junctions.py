@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Optional, NamedTuple
 
 from amplifinder.data_types import (
-    BaseRawEvent, RecordTypedDf, SingleLocusLinkedTnJc2, SynJctsTnJc2, Genome,
+    BaseEvent, RecordTypedDf, SingleLocusLinkedTnJc2, SynJctsTnJc2, Genome,
     JunctionType, RefTn, Junction, Terminal, JcArm, Orientation
 )
 
@@ -98,13 +98,13 @@ def _build_7_junctions_from_6_arms(
 ) -> dict[JunctionType, Junction]:
     """Create Junction objects for each junction type."""
     return {
-        JunctionType.CHR_TO_AMP_LEFT: Junction.from_jc_arms(chr_left, amp_left),
-        JunctionType.CHR_TO_TN_LEFT: Junction.from_jc_arms(chr_left, tn_left),
-        JunctionType.AMP_RIGHT_TO_TN_LEFT: Junction.from_jc_arms(amp_right, tn_left),
-        JunctionType.AMP_RIGHT_TO_AMP_LEFT: Junction.from_jc_arms(amp_right, amp_left),
-        JunctionType.TN_RIGHT_TO_AMP_LEFT: Junction.from_jc_arms(tn_right, amp_left),
-        JunctionType.TN_RIGHT_TO_CHR: Junction.from_jc_arms(tn_right, chr_right),
-        JunctionType.AMP_RIGHT_TO_CHR: Junction.from_jc_arms(amp_right, chr_right),
+        JunctionType.CHR_AMP: Junction.from_jc_arms(chr_left, amp_left),
+        JunctionType.CHR_TN: Junction.from_jc_arms(chr_left, tn_left),
+        JunctionType.AMP_TN: Junction.from_jc_arms(amp_right, tn_left),
+        JunctionType.AMP_AMP: Junction.from_jc_arms(amp_right, amp_left),
+        JunctionType.TN_AMP: Junction.from_jc_arms(tn_right, amp_left),
+        JunctionType.TN_CHR: Junction.from_jc_arms(tn_right, chr_right),
+        JunctionType.AMP_CHR: Junction.from_jc_arms(amp_right, chr_right),
     }
 
 
@@ -128,12 +128,12 @@ def create_synthetic_junctions_and_name(
 
     # Handle tnjc2 flanked by ancestral TN
     paired_left = tnjc2.single_locus_tnjc2_matching_left
-    is_left_ref_tn = paired_left is not None and paired_left.base_raw_event == BaseRawEvent.REFERENCE
+    is_left_ref_tn = paired_left is not None and paired_left.base_event == BaseEvent.REFERENCE_TN
     if is_left_ref_tn:
         chr_left_arm = paired_left.get_outward_arms(flank=jc_arm_len)[0]
 
     paired_right = tnjc2.single_locus_tnjc2_matching_right
-    is_right_ref_tn = paired_right is not None and paired_right.base_raw_event == BaseRawEvent.REFERENCE
+    is_right_ref_tn = paired_right is not None and paired_right.base_event == BaseEvent.REFERENCE_TN
     if is_right_ref_tn:
         chr_right_arm = paired_right.get_outward_arms(flank=jc_arm_len)[1]
 

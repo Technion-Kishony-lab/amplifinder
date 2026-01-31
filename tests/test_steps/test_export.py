@@ -3,7 +3,7 @@
 import pytest
 from amplifinder.steps import ExportTnJc2Step
 from amplifinder.data_types import (
-    RecordTypedDf, ClassifiedTnJc2, RawEvent, EventModifier,
+    RecordTypedDf, ClassifiedTnJc2, Architecture, EventDescriptor,
 )
 
 
@@ -12,14 +12,14 @@ def sample_analyzed(analyzed_tnjc2_record):
     """Create sample ClassifiedTnJc2 records."""
     first = ClassifiedTnJc2.from_other(
         analyzed_tnjc2_record,
-        isolate_architecture=RawEvent.FLANKED,
-        event_modifiers=[EventModifier.DENOVO_LEFT],
+        iso_architecture=Architecture.FLANKED,
+        event_descriptors=[EventDescriptor.DENOVO_LEFT],
     )
 
     second = ClassifiedTnJc2.from_other(
         analyzed_tnjc2_record,
-        isolate_architecture=RawEvent.UNFLANKED,
-        event_modifiers=[EventModifier.DENOVO_LEFT],
+        iso_architecture=Architecture.UNFLANKED,
+        event_descriptors=[EventDescriptor.DENOVO_LEFT],
     )
 
     return RecordTypedDf.from_records([first, second], ClassifiedTnJc2)

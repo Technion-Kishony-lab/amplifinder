@@ -4,8 +4,10 @@ import numpy as np
 
 from enum import Enum
 from typing import TypeAlias
+from functools import wraps
 
 from amplifinder.data_types.basic_enums import Side
+from amplifinder.visualization.plot_jc_alignments import JC_CALLS_TO_COLORS_AND_LABELS
 
 
 class Element(str, Enum):
@@ -20,21 +22,35 @@ class JunctionType(Enum):
 
     Amplicon structure:
 
-    ~~~~~~~~~>>>======>>>======>>>~~~~~~~~~
-
-    legend:
-    ~~~    chromosome
-    >>>    IS
-    ====== cassette (amplicon)
+    ~~~~~~~~~~> |---> |========> |---> |========> |---> |~~~~~~~~~~
+    chromosome   IS    amplicon   IS    amplicon   IS    chromosome
 
     """
-    CHR_TO_AMP_LEFT       = (1, '~~-==', Element.CHR, Element.AMP, -1)  # noqa: E221, E203
-    CHR_TO_TN_LEFT        = (2, '~~->>', Element.CHR, Element.TN , -2)  # noqa: E221, E203
-    AMP_RIGHT_TO_TN_LEFT  = (3, '==->>', Element.AMP, Element.TN , +3)  # noqa: E221, E203
-    AMP_RIGHT_TO_AMP_LEFT = (4, '==-==', Element.AMP, Element.AMP,  0)  # noqa: E221, E203
-    TN_RIGHT_TO_AMP_LEFT  = (5, '>>-==', Element.TN,  Element.AMP, -3)  # noqa: E221, E203
-    TN_RIGHT_TO_CHR       = (6, '>>-~~', Element.TN,  Element.CHR, +2)  # noqa: E221, E203
-    AMP_RIGHT_TO_CHR      = (7, '==-~~', Element.AMP, Element.CHR, +1)  # noqa: E221, E203
+    CHR_AMP = (1, '~~> |==', Element.CHR, Element.AMP, -1)  # noqa: E221, E203
+    CHR_TN  = (2, '~~> |--', Element.CHR, Element.TN , -2)  # noqa: E221, E203
+    AMP_TN  = (3, '==> |--', Element.AMP, Element.TN , +3)  # noqa: E221, E203
+    AMP_AMP = (4, '==> |==', Element.AMP, Element.AMP,  0)  # noqa: E221, E203
+    TN_AMP  = (5, '--> |==', Element.TN,  Element.AMP, -3)  # noqa: E221, E203
+    TN_CHR  = (6, '--> |~~', Element.TN,  Element.CHR, +2)  # noqa: E221, E203
+    AMP_CHR = (7, '==> |~~', Element.AMP, Element.CHR, +1)  # noqa: E221, E203
+
+    @classmethod
+    def from_elements(cls, element_left: Element, element_right: Element):
+        for jc in cls:
+            if jc.element_pair == (element_left, element_right):
+                return jc
+
+    @classmethod
+    def get_element_pairs_to_jcs(cls, side: Side) -> dict[tuple[Element, Element], JunctionType]:
+        pairs_to_jcs: dict[tuple[Element, Element], JunctionType] = {}
+        for jc in JunctionType:
+            pair = jc.element_pair
+            left, right = pair
+            if side == Side.LEFT:
+                pairs_to_jcs[pair] = cls.get_element_pairs_to_jcs(left, right)
+            elif side == Side.RIGHT:
+                pairs_to_jcs[pair] = cls.get_element_pairs_to_jcs(right, left)
+        return pairs_to_jcs
 
     @property
     def num(self) -> int:
@@ -47,7 +63,7 @@ class JunctionType(Enum):
         return self.value[1]
 
     @property
-    def elements(self) -> tuple[Element, Element]:
+    def element_pair(self) -> tuple[Element, Element]:
         """Return the elements of the junction."""
         return self.value[2], self.value[3]
 
@@ -72,20 +88,4 @@ class JcCall(Enum):
     value: bool | None
 
     def __bool__(self):
-        return self.present
-
-    @property
-    def exist(self):
-        return self is JcCall.POS
-
-    @property
-    def absent(self):
-        return self is JcCall.NEG
-
-    @property
-    def maybe_present(self):
-        return self is not JcCall.NEG
-
-    @property
-    def maybe_ansent(self):
-        return self is not JcCall.POS
+        return bool(self.value)
