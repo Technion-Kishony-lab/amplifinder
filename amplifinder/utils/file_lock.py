@@ -6,6 +6,7 @@ shared resources. Uses filelock for cross-platform file locks.
 
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Optional
 
 from filelock import FileLock, Timeout
 
@@ -57,11 +58,21 @@ def _locked_operation(
 
 @contextmanager
 def locked_resource(
-    resource_path: Path,
+    resource_path: Optional[Path],
     resource_type: str,
     timeout: int = DEFAULT_LOCK_TIMEOUT,
 ):
-    """Lock a shared resource for exclusive access."""
+    """Lock a shared resource for exclusive access.
+    
+    If resource_path is None, this becomes a no-op context manager (no locking).
+    This allows conditional locking without code duplication.
+    """
+    if resource_path is None:
+        # No lock needed - just yield
+        yield
+        return
+    
+    resource_path = Path(resource_path)
     if resource_path.is_dir():
         lock_filepath = resource_path / f".{resource_type}.lock"
     else:
