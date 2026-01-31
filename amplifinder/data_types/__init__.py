@@ -11,7 +11,7 @@ from amplifinder.data_types.scaffold import Scaffold, SeqScaffold
 from amplifinder.data_types.junctions import JcArm, Junction, NumJunction, BreseqJunction
 from amplifinder.data_types.ref_tn import TnId, RefTn, RefTnSide, OffsetRefTnSide, RefTnJunction, TnJunction
 from amplifinder.data_types.tnjc2s import RawTnJc2, CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, \
-    AnalyzedTnJc2, ClassifiedTnJc2, ExportedTnJc2
+    AnalyzedTnJc2, ClassifiedTnJc2
 
 __all__ = [
     # Basic enums
@@ -71,5 +71,4 @@ __all__ = [
     "SynJctsTnJc2",
     "AnalyzedTnJc2",
     "ClassifiedTnJc2",
-    "ExportedTnJc2",
 ]
