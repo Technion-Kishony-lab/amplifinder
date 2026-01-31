@@ -12,7 +12,7 @@ from amplifinder.pipeline import Pipeline
 
 @click.command()
 @click.option(
-    "-i", "--iso-path",
+    "-i", "--iso-path", "--iso-fastq-path",
     type=click.Path(path_type=Path),
     required=False,
     default=None,
@@ -26,7 +26,7 @@ from amplifinder.pipeline import Pipeline
     help="Reference genome name (e.g., U00096 for E. coli K-12).",
 )
 @click.option(
-    "-a", "--anc-path",
+    "-a", "--anc-path", "--anc-fastq-path",
     type=click.Path(path_type=Path),
     default=None,
     help="Path to ancestor FASTQ file(s) or directory.",
@@ -117,9 +117,9 @@ from amplifinder.pipeline import Pipeline
 )
 @click.version_option(version=__version__)
 def main(
-    iso_path: Optional[Path],
+    iso_fastq_path: Optional[Path],
     ref_name: Optional[str],
-    anc_path: Optional[Path],
+    anc_fastq_path: Optional[Path],
     iso_name: Optional[str],
     anc_name: Optional[str],
     ref_path: Path,
@@ -147,24 +147,24 @@ def main(
         # Check required parameters (skip if only creating config)
         if create_config_path is None:
             # Validate required parameters
-            if iso_path is None and (file_config is None or file_config.get("iso_path") is None):
+            if iso_fastq_path is None and (file_config is None or file_config.get("iso_fastq_path") is None):
                 raise click.ClickException("--iso-path is required (via CLI or --config file)")
             
             if ref_name is None and (file_config is None or file_config.get("ref_name") is None):
                 raise click.ClickException("--ref-name is required (via CLI or --config file)")
             
             # Validate paths exist for actual run
-            if iso_path is not None and not iso_path.exists():
-                raise click.ClickException(f"Isolate path does not exist: {iso_path}")
+            if iso_fastq_path is not None and not iso_fastq_path.exists():
+                raise click.ClickException(f"Isolate path does not exist: {iso_fastq_path}")
             
-            if anc_path is not None and not anc_path.exists():
-                raise click.ClickException(f"Ancestor path does not exist: {anc_path}")
+            if anc_fastq_path is not None and not anc_fastq_path.exists():
+                raise click.ClickException(f"Ancestor path does not exist: {anc_fastq_path}")
 
         # Collect CLI arguments
         cli_args = {
-            "iso_path": iso_path,
+            "iso_fastq_path": iso_fastq_path,
             "ref_name": ref_name,
-            "anc_path": anc_path,
+            "anc_fastq_path": anc_fastq_path,
             "iso_name": iso_name,
             "anc_name": anc_name,
             "ref_path": ref_path,

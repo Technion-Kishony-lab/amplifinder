@@ -28,28 +28,16 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         self,
         raw_tnjc2s: RecordTypedDf[RawTnJc2],
         output_dir: Path,
-        ref_name: str,
         iso_breseq_path: Path,
-        iso_name: str,
         anc_breseq_path: Optional[Path] = None,
-        anc_name: Optional[str] = None,
-        ncp_min: float = 0.1,
-        ncp_max: float = 1000.0,
-        ncp_n: int = 150,
         average_method: AverageMethod = AverageMethod.MEDIAN,
         min_amplicon_length: int = 30,
         max_amplicon_length: int = 1_000_000,
         force: Optional[bool] = None,
     ):
         self.raw_tnjc2s = raw_tnjc2s
-        self.ref_name = ref_name
         self.iso_breseq_path = Path(iso_breseq_path)
-        self.iso_name = iso_name
         self.anc_breseq_path = Path(anc_breseq_path) if anc_breseq_path else None
-        self.anc_name = anc_name
-        self.ncp_min = ncp_min
-        self.ncp_max = ncp_max
-        self.ncp_n = ncp_n
         self.average_method = average_method
         self.min_amplicon_length = min_amplicon_length
         self.max_amplicon_length = max_amplicon_length

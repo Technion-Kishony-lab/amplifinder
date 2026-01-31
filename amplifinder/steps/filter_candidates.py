@@ -34,15 +34,15 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
         output_dir: Path,
         min_amplicon_length: int,
         max_amplicon_length: int,
-        copy_number_threshold: float,
-        del_copy_number_threshold: float,
+        replication_copy_number_threshold: float,
+        delition_copy_number_threshold: float,
         force: Optional[bool] = None,
     ):
         self.linked_tnjc2s = linked_tnjc2s
         self.min_amplicon_length = min_amplicon_length
         self.max_amplicon_length = max_amplicon_length
-        self.copy_number_threshold = copy_number_threshold
-        self.del_copy_number_threshold = del_copy_number_threshold
+        self.replication_copy_number_threshold = replication_copy_number_threshold
+        self.delition_copy_number_threshold = delition_copy_number_threshold
 
         super().__init__(output_dir=output_dir, force=force)
 
@@ -60,8 +60,8 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
                 continue
 
             # Filter by copy number: keep amplifications and deletions
-            if not (tnjc2.copy_number >= self.copy_number_threshold or 
-                    tnjc2.copy_number < self.del_copy_number_threshold):
+            if not (tnjc2.copy_number >= self.replication_copy_number_threshold or 
+                    tnjc2.copy_number < self.delition_copy_number_threshold):
                 continue
 
             filtered_tnjc2s.append(tnjc2)

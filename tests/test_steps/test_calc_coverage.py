@@ -63,8 +63,6 @@ def test_calc_coverage_step(tiny_genome, sample_tnjc2, mock_breseq_output, tmp_p
         raw_tnjc2s=sample_tnjc2,
         iso_breseq_path=mock_breseq_output,
         output_dir=tmp_path,
-        ref_name="tiny",
-        iso_name="sample1",
         force=True,  # Force run to avoid loading from CSV
     )
 
@@ -114,9 +112,6 @@ def test_calc_coverage_with_ancestor(tiny_genome, sample_tnjc2, mock_breseq_outp
         iso_breseq_path=mock_breseq_output,
         anc_breseq_path=tmp_path / "anc_breseq",
         output_dir=tmp_path,
-        ref_name="tiny",
-        iso_name="sample1",
-        anc_name="ancestor1",
         force=True,  # Force run to avoid loading from CSV
     )
 
@@ -144,8 +139,6 @@ def test_calculates_coverage_for_all_lengths(tiny_genome, sample_tnjc2, mock_bre
         raw_tnjc2s=sample_tnjc2,
         iso_breseq_path=mock_breseq_output,
         output_dir=tmp_path,
-        ref_name="tiny",
-        iso_name="sample1",
         force=True,  # Force run to avoid loading from CSV
     )
 
@@ -171,8 +164,6 @@ def test_skips_coverage_for_too_long_amplicons(tiny_genome, sample_tnjc2, mock_b
         raw_tnjc2s=sample_tnjc2,
         iso_breseq_path=mock_breseq_output,
         output_dir=tmp_path,
-        ref_name="tiny",
-        iso_name="sample1",
         max_amplicon_length=50,  # Too short to include sample amplicons
         force=True,
     )
