@@ -345,7 +345,7 @@ class TestPipelineStepByStep:
         test_output_root = output_dir.parent
 
         config_kwargs = {
-            "iso_path": isolate["fastq_path"],
+            "iso_fastq_path": isolate["fastq_path"],
             "ref_name": "U00096",
             "iso_name": isolate["iso_name"],
             "output_dir": output_dir,
@@ -356,11 +356,11 @@ class TestPipelineStepByStep:
         }
 
         if anc_isolate is not None:
-            config_kwargs["anc_path"] = anc_isolate["fastq_path"]
+            config_kwargs["anc_fastq_path"] = anc_isolate["fastq_path"]
             config_kwargs["anc_name"] = anc_name or anc_isolate["iso_name"]
             config_kwargs["anc_breseq_path"] = anc_isolate["breseq_path"]
         else:
-            config_kwargs["anc_path"] = None
+            config_kwargs["anc_fastq_path"] = None
 
         return Config(**config_kwargs)
 

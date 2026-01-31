@@ -10,7 +10,7 @@ from amplifinder.utils.file_utils import ensure_dir
 def sample_config(tmp_path):
     """Create a sample config for testing."""
     return Config(
-        iso_path=tmp_path / "isolate.fastq",
+        iso_fastq_path=tmp_path / "isolate.fastq",
         ref_name="U00096",
         iso_name="sample1",
         anc_name="ancestor1",
