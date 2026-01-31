@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import (
-    RecordTypedDf, SingleLocusLinkedTnJc2, Architecture,
+    BaseEvent, RecordTypedDf, SingleLocusLinkedTnJc2, Architecture,
 )
 from amplifinder.steps.base import RecordTypedDfStep
 
@@ -51,6 +51,10 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
         filtered_tnjc2s: list[SingleLocusLinkedTnJc2] = []
 
         for tnjc2 in self.linked_tnjc2s:
+            # Filter out candidates with a base event not locus joining
+            if tnjc2.base_event != BaseEvent.LOCUS_JOINING:
+                continue
+
             # Filter by length
             if not (self.min_amplicon_length <= tnjc2.amplicon_length <= self.max_amplicon_length):
                 continue

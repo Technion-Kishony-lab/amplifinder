@@ -319,8 +319,8 @@ class TestPipeline(Pipeline):
         print_color("✓ Junction read counts (left/spanning/right) match MATLAB")
         return analyzed
 
-    def _export(self, analyzed, genome, iso_output):
-        super()._export(analyzed, genome, iso_output)
+    def _export(self, classified, linked, genome, iso_output):
+        super()._export(classified, linked, genome, iso_output)
 
         # Note: Final comparison done in test methods
         # Skipping intermediate export comparison here
