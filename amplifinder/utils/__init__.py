@@ -20,6 +20,9 @@ from amplifinder.utils.file_utils import (
     ensure_parent_dir,
     remove_file_or_dir,
 )
+from amplifinder.utils.json_utils import (
+    compact_short_lists,
+)
 
 __all__ = [
     # FASTA utilities
@@ -41,6 +44,9 @@ __all__ = [
     "ensure_dir",
     "ensure_parent_dir",
     "remove_file_or_dir",
+
+    # JSON utilities
+    "compact_short_lists",
 
     # Flag utilities
     "MutableFlag",

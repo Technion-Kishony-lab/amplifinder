@@ -5,7 +5,7 @@ from typing import Optional, List
 
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.data_types.genome import Genome
-from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, Orientation
+from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, Orientation, BaseEvent
 
 
 class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
@@ -23,6 +23,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         tnjcs: RecordTypedDf[TnJunction],
         genome: Genome,
         output_dir: Path,
+        transposition_threshold: int,
         force: Optional[bool] = None,
     ):
         """Initialize step.
@@ -31,10 +32,12 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
             tnjcs: TN-associated junctions from CreateTnJcStep
             genome: Reference genome (for circularity and length per scaffold)
             output_dir: Directory to write output
+            transposition_threshold: Max distance for transposition classification
             force: Force re-run
         """
         self.tnjcs = tnjcs
         self.genome = genome
+        self.transposition_threshold = transposition_threshold
         super().__init__(output_dir=output_dir, force=force)
 
     def _calculate_output(self) -> RecordTypedDf[RawTnJc2]:
@@ -114,6 +117,33 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         # Get scaffold object
         scaffold = self.genome.get_scaffold(tnjc_left.scaf2)
 
-        # Create RawTnJc2 with the two junction objects and scaffold
-        pair = RawTnJc2(pair_id=pair_id, tnjc_left=tnjc_left, tnjc_right=tnjc_right, scaffold=scaffold)
+        # Compute base_event before creating RawTnJc2
+        base_event = self._compute_base_event(tnjc_left, tnjc_right)
+
+        # Create RawTnJc2 with the two junction objects, scaffold, and base_event
+        pair = RawTnJc2(
+            pair_id=pair_id,
+            tnjc_left=tnjc_left,
+            tnjc_right=tnjc_right,
+            scaffold=scaffold,
+            base_event=base_event,
+        )
         return pair
+
+    def _compute_base_event(
+        self, tnjc_left: TnJunction, tnjc_right: TnJunction
+    ) -> BaseEvent:
+        """Classify base event type for junction pair."""
+        # Check for reference TN
+        if tnjc_left.is_ref_tn_junction() and \
+                tnjc_right.is_ref_tn_junction() and \
+                tnjc_left.ref_tn_side.tn_id == tnjc_right.ref_tn_side.tn_id:
+            return BaseEvent.REFERENCE_TN
+
+        # Check for transposition
+        left_pos = tnjc_left.pos2
+        right_pos = tnjc_right.pos2
+        if abs(left_pos - right_pos) < self.transposition_threshold:
+            return BaseEvent.TRANSPOSITION
+
+        return BaseEvent.LOCUS_JOINING
