@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 from dataclasses import asdict
 import yaml
 
-from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, SingleLocusLinkedTnJc2, RefTn, BaseEvent
+from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, CoveredTnJc2, RefTn, BaseEvent
 from amplifinder.steps.base import OutputStep
 from amplifinder.steps.read_length import ReadLengths
 
@@ -16,7 +16,7 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
     def __init__(
         self,
         classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
-        linked_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
+        linked_tnjc2s: RecordTypedDf[CoveredTnJc2],
         output_dir: Path,
         ref_name: str,
         iso_name: str,
@@ -37,7 +37,7 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
 
         super().__init__(output_files=[self.yaml_file], force=force)
 
-    def _tn_ids_to_names(self, tnjc2: SingleLocusLinkedTnJc2 | ClassifiedTnJc2) -> tuple[list[str], Optional[str]]:
+    def _tn_ids_to_names(self, tnjc2: CoveredTnJc2 | ClassifiedTnJc2) -> tuple[list[str], Optional[str]]:
         """Map TN IDs to names."""
         tn_names = [self.ref_tns.df.loc[tn_id, 'tn_name'] for tn_id in tnjc2.tn_ids]
         chosen_tn_name = self.ref_tns.df.loc[tnjc2.chosen_tn_id, 'tn_name'] if tnjc2.chosen_tn_id else None

@@ -6,7 +6,7 @@ from typing import Optional
 from amplifinder.logger import logger
 from amplifinder.data_types import BaseEvent
 from amplifinder.data_types.genome import Genome
-from amplifinder.data_types import RecordTypedDf, CoveredTnJc2, RefTn, Side, SingleLocusLinkedTnJc2, TnJunction
+from amplifinder.data_types import RecordTypedDf, RawTnJc2, RefTn, Side, SingleLocusLinkedTnJc2, TnJunction
 from amplifinder.data_types.tnjc2s import TnJc2AndSide
 
 from .base import RecordTypedDfStep
@@ -31,7 +31,7 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
 
     def __init__(
         self,
-        covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
+        covered_tnjc2s: RecordTypedDf[RawTnJc2],
         genome: Genome,
         tn_locs: RecordTypedDf[RefTn],
         output_dir: Path,
@@ -73,7 +73,7 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
 
         return RecordTypedDf.from_records(linked_tnjc2s, SingleLocusLinkedTnJc2)
 
-    def _compute_base_event(self, tnjc2: CoveredTnJc2) -> BaseEvent:
+    def _compute_base_event(self, tnjc2: RawTnJc2) -> BaseEvent:
         if tnjc2.tnjc_left.is_ref_tn_junction() and \
                 tnjc2.tnjc_right.is_ref_tn_junction() and \
                 tnjc2.tnjc_left.ref_tn_side.tn_id == tnjc2.tnjc_right.ref_tn_side.tn_id and \

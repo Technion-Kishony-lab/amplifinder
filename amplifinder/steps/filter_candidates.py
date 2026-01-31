@@ -4,12 +4,12 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import (
-    BaseEvent, RecordTypedDf, SingleLocusLinkedTnJc2, Architecture,
+    BaseEvent, RecordTypedDf, CoveredTnJc2, Architecture,
 )
 from amplifinder.steps.base import RecordTypedDfStep
 
 
-def _count_raw_events(records: list[SingleLocusLinkedTnJc2]) -> dict[Architecture, int]:
+def _count_raw_events(records: list[CoveredTnJc2]) -> dict[Architecture, int]:
     """Count occurrences of each RawEvent type in a list of records."""
     counts: dict[Architecture, int] = {name: 0 for name in Architecture}
     for record in records:
@@ -17,7 +17,7 @@ def _count_raw_events(records: list[SingleLocusLinkedTnJc2]) -> dict[Architectur
     return counts
 
 
-class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
+class FilterTnJc2CandidatesStep(RecordTypedDfStep[CoveredTnJc2]):
     """Filter candidates by amplicon length and copy number.
 
     Filters out candidates that are:
@@ -30,7 +30,7 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
 
     def __init__(
         self,
-        linked_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
+        linked_tnjc2s: RecordTypedDf[CoveredTnJc2],
         output_dir: Path,
         min_amplicon_length: int,
         max_amplicon_length: int,
@@ -46,9 +46,9 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
 
         super().__init__(output_dir=output_dir, force=force)
 
-    def _calculate_output(self) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
+    def _calculate_output(self) -> RecordTypedDf[CoveredTnJc2]:
         """Filter candidates by amplicon length and copy number."""
-        filtered_tnjc2s: list[SingleLocusLinkedTnJc2] = []
+        filtered_tnjc2s: list[CoveredTnJc2] = []
 
         for tnjc2 in self.linked_tnjc2s:
             # Filter out candidates with a base event not locus joining
@@ -70,9 +70,9 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
 
             filtered_tnjc2s.append(tnjc2)
 
-        return RecordTypedDf.from_records(filtered_tnjc2s, SingleLocusLinkedTnJc2)
+        return RecordTypedDf.from_records(filtered_tnjc2s, CoveredTnJc2)
 
-    def report_output_message(self, output: RecordTypedDf[SingleLocusLinkedTnJc2]) -> Optional[str]:
+    def report_output_message(self, output: RecordTypedDf[CoveredTnJc2]) -> Optional[str]:
         before_counts = _count_raw_events(self.linked_tnjc2s.to_records())
         after_counts = _count_raw_events(output.to_records())
 

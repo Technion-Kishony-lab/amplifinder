@@ -5,7 +5,7 @@ from typing import Optional
 
 import numpy as np
 
-from amplifinder.data_types import RecordTypedDf, RawTnJc2, CoveredTnJc2, AverageMethod
+from amplifinder.data_types import RecordTypedDf, SingleLocusLinkedTnJc2, CoveredTnJc2, AverageMethod
 from amplifinder.logger import logger
 from amplifinder.utils.timing import print_timer
 
@@ -26,7 +26,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
 
     def __init__(
         self,
-        raw_tnjc2s: RecordTypedDf[RawTnJc2],
+        raw_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
         output_dir: Path,
         iso_breseq_path: Path,
         anc_breseq_path: Optional[Path] = None,
@@ -143,7 +143,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         """Calculate average coverage."""
         return calc_average(coverage, average_method=self.average_method)
 
-    def _should_skip_amplicon(self, raw_tnjc2: RawTnJc2) -> bool:
+    def _should_skip_amplicon(self, raw_tnjc2: SingleLocusLinkedTnJc2) -> bool:
         """Check if amplicon should be skipped based on length filters.
         
         Updates counters and returns True if amplicon should be skipped.
@@ -158,7 +158,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
 
     def _calc_candidate_coverage(
         self,
-        raw_tnjc2: RawTnJc2,
+        raw_tnjc2: SingleLocusLinkedTnJc2,
         iso_scaf_cov: np.ndarray,
         iso_scaf_avg: float,
         anc_scaf_cov: Optional[np.ndarray],
