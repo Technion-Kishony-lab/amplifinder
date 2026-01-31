@@ -87,19 +87,19 @@ def print_jc_read_counts_and_calls(
 ) -> None:
     """Print junction coverage and calls."""
     # Print header (two rows)
-    logger.info(f"{'junction':<23} {'left':>6} {'':>6} {'left':>6} "
+    logger.info(f"{'junction':<13} {'left':>6} {'':>6} {'left':>6} "
           f"{'':>6} {'':>6} {'right':>6} {'':>6} "
           f"{'right':>6} {'':>6}", timestamp=False)
-    logger.info(f"{'type':<23} {'far':>6} {'left':>6} {'marg':>6} "
+    logger.info(f"{'type':<13} {'far':>6} {'left':>6} {'marg':>6} "
           f"{'span':>6} {'pair':>6} {'marg':>6} {'right':>6} "
           f"{'far':>6} {'call':>6}", timestamp=False)
-    logger.info("-" * 86, timestamp=False)
+    logger.info("-" * 76, timestamp=False)
 
     # Print rows
     for jt in JunctionType:
         cov = jc_covs[jt]
-        call_str = jc_calls[jt].name
-        logger.info(f"{jt.name:<23} {cov.left_far:>6} {cov.left:>6} {cov.left_marginal:>6} "
+        call_str = str(jc_calls[jt].value)
+        logger.info(f"{jt.name:<13} {cov.left_far:>6} {cov.left:>6} {cov.left_marginal:>6} "
               f"{cov.spanning:>6} {cov.paired:>6} {cov.right_marginal:>6} {cov.right:>6} "
               f"{cov.right_far:>6} {call_str:>6}", timestamp=False)
     logger.info("", timestamp=False)
