@@ -339,7 +339,7 @@ class Pipeline:
             min_amplicon_length=self.config.min_amplicon_length,
             max_amplicon_length=self.config.max_amplicon_length,
             replication_copy_number_threshold=self.config.replication_copy_number_threshold,
-            delition_copy_number_threshold=self.config.deletion_copy_number_threshold,
+            deletion_copy_number_threshold=self.config.deletion_copy_number_threshold,
         ).run()
 
     def _create_synthetic_junctions(

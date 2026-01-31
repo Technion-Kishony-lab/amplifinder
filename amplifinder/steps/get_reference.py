@@ -41,7 +41,6 @@ class GetRefGenomeStep(OutputStep[Genome]):
 
     def _generate_artifacts(self) -> None:
         """Fetch genome from NCBI or load from cache (creates mapping file)."""
-        logger.info(f"Fetching reference genome: {self.ref_name}")
         get_genome(self.ref_name, self.ref_path, self.ncbi)
 
     def _calculate_output(self) -> Genome:
