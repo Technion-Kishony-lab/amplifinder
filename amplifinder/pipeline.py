@@ -53,21 +53,22 @@ class Pipeline:
     def _calc_read_lengths(self) -> ReadLengths:
         """Calculate read lengths and junction lengths."""
         return ReadLenStep(
-            iso_fastq_path=self.config.iso_path,
-            anc_fastq_path=self.config.anc_path if self.config.has_ancestor else None,
+            iso_fastq_path=self.config.iso_fastq_path,
+            anc_fastq_path=self.config.anc_fastq_path if self.config.has_ancestor else None,
             iso_read_length=self.config.iso_read_length,
             anc_read_length=self.config.anc_read_length,
+            min_num_bases=self.config.min_num_bases,
         ).run()
 
     def _log_run_info(self, include_no_ancestor_warning: bool = True) -> None:
         """Log run information: reference, isolate, and ancestor."""
-        if self.config.anc_path:
-            anc_msg = f"Ancestor: {self.config.anc_path}"
+        if self.config.anc_fastq_path:
+            anc_msg = f"Ancestor: {self.config.anc_fastq_path}"
         elif include_no_ancestor_warning:
             anc_msg = "No ancestor assigned; using raw (non-normalized) coverage analysis"
         else:
             anc_msg = "No ancestor"
-        logger.info(f"\nReference: {c(self.config.ref_name, 'cyan')}\nIsolate: {c(str(self.config.iso_path), 'magenta')}\n{anc_msg}")
+        logger.info(f"\nReference: {c(self.config.ref_name, 'cyan')}\nIsolate: {c(str(self.config.iso_fastq_path), 'magenta')}\n{anc_msg}")
 
     def run(self) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
         """Run full pipeline with exception handling and status tracking."""
@@ -124,7 +125,7 @@ class Pipeline:
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
         self._plot_coverage(classified_tnjc2s, iso_output, anc_output, read_lengths,
                             iso_alignment_cache, anc_alignment_cache)
-        self._export(classified_tnjc2s, genome, iso_output)
+        self._export(classified_tnjc2s, genome, iso_output, read_lengths)
 
         return classified_tnjc2s
 
@@ -234,23 +235,25 @@ class Pipeline:
 
         if cfg.has_ancestor:
             AncBreseqStep(
-                fastq_path=cfg.anc_path,
+                fastq_path=cfg.anc_fastq_path,
                 ref_file=genome.genbank_path or genome.fasta_path,
                 breseq_path=cfg.get_anc_breseq_path(),
                 docker=BRESEQ_DOCKER,
                 threads=cfg.threads,
                 breseq_output_size_threshold=cfg.breseq_output_size_threshold,
                 sample_name=f"ancestor ({cfg.anc_name})",
+                remove_jc_breseq_reject=cfg.remove_jc_breseq_reject,
             ).run()
 
         return BreseqStep(
-            fastq_path=cfg.iso_path,
+            fastq_path=cfg.iso_fastq_path,
             ref_file=genome.genbank_path or genome.fasta_path,
             breseq_path=cfg.get_iso_breseq_path(),
             docker=BRESEQ_DOCKER,
             threads=cfg.threads,
             breseq_output_size_threshold=cfg.breseq_output_size_threshold,
             sample_name=f"isolate ({cfg.iso_name})",
+            remove_jc_breseq_reject=cfg.remove_jc_breseq_reject,
         ).run()
 
     def _create_tnjcs(
@@ -301,14 +304,8 @@ class Pipeline:
         return CalcTnJc2AmpliconCoverageStep(
             raw_tnjc2s=raw_tnjc2s,
             output_dir=iso_output,
-            ref_name=cfg.ref_name,
             iso_breseq_path=iso_breseq_path,
-            iso_name=cfg.iso_name,
             anc_breseq_path=anc_breseq_path,
-            anc_name=cfg.get_anc_name(),
-            ncp_min=cfg.ncp_min,
-            ncp_max=cfg.ncp_max,
-            ncp_n=cfg.ncp_n,
             average_method=cfg.average_method,
             min_amplicon_length=cfg.min_amplicon_length,
             max_amplicon_length=cfg.max_amplicon_length,
@@ -341,7 +338,8 @@ class Pipeline:
             output_dir=iso_output,
             min_amplicon_length=self.config.min_amplicon_length,
             max_amplicon_length=self.config.max_amplicon_length,
-            copy_number_threshold=self.config.copy_number_threshold,
+            replication_copy_number_threshold=self.config.replication_copy_number_threshold,
+            delition_copy_number_threshold=self.config.deletion_copy_number_threshold,
         ).run()
 
     def _create_synthetic_junctions(
@@ -389,7 +387,7 @@ class Pipeline:
         AlignReadsToJunctionsStep(
             synjcs_tnjc2s=syn_tnjc2s,
             output_dir=iso_output,
-            fastq_path=cfg.iso_path,
+            fastq_path=cfg.iso_fastq_path,
             threads=cfg.threads,
             bowtie_params=cfg.bowtie_params,
         ).run()
@@ -399,7 +397,7 @@ class Pipeline:
             AncAlignReadsToJunctionsStep(
                 synjcs_tnjc2s=syn_tnjc2s,
                 output_dir=anc_output,
-                fastq_path=cfg.anc_path,
+                fastq_path=cfg.anc_fastq_path,
                 threads=cfg.threads,
                 bowtie_params=cfg.bowtie_params,
             ).run()
@@ -488,18 +486,16 @@ class Pipeline:
         classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
         genome: Genome,
         iso_output: Path,
+        read_lengths: ReadLengths,
     ) -> None:
-        """Step 14: Export results to CSV."""
+        """Step 14: Export results to YAML."""
         ExportTnJc2Step(
             classified_tnjc2s=classified_tnjc2s,
-            genome=genome,
             output_dir=iso_output,
             ref_name=self.config.ref_name,
             iso_name=self.config.iso_name,
-            anc_name=self.config.get_anc_name(),
-            copy_number_threshold=self.config.copy_number_threshold,
-            del_copy_number_threshold=self.config.del_copy_number_threshold,
-            filter_amplicon_length=self.config.filter_amplicon_length,
+            read_lengths=read_lengths,
+            anc_name=self.config.anc_name,
         ).run()
 
 

@@ -6,7 +6,7 @@ from typing import Optional
 
 from amplifinder.steps.base import OutputStep
 from amplifinder.logger import logger, c
-from amplifinder.utils.fasta import get_read_length_stats
+from amplifinder.utils.fasta import get_read_length_stats, count_total_bases
 
 
 JUNCTION_LENGTH_TOLERANCE: float = 0.10
@@ -31,11 +31,13 @@ class ReadLenStep(OutputStep[ReadLengths]):
         anc_fastq_path: Optional[Path] = None,
         iso_read_length: Optional[int] = None,
         anc_read_length: Optional[int] = None,
+        min_num_bases: Optional[int] = None,
     ):
         self.iso_fastq_path = iso_fastq_path
         self.anc_fastq_path = anc_fastq_path
         self._iso_read_length = iso_read_length
         self._anc_read_length = anc_read_length
+        self.min_num_bases = min_num_bases
         super().__init__()
 
     @staticmethod
@@ -81,6 +83,23 @@ class ReadLenStep(OutputStep[ReadLengths]):
         read_len_anc = None
         if self.anc_fastq_path:
             read_len_anc = self._calc_read_length(self.anc_fastq_path, self._anc_read_length, "ancestor")
+
+        # Check minimum bases if specified
+        if self.min_num_bases is not None:
+            total_bases_iso = count_total_bases(self.iso_fastq_path, read_len_iso)
+            if total_bases_iso < self.min_num_bases:
+                logger.warning(
+                    f"Low isolate sequencing depth: {total_bases_iso:,} bases "
+                    f"(min recommended: {self.min_num_bases:,})"
+                )
+            
+            if self.anc_fastq_path:
+                total_bases_anc = count_total_bases(self.anc_fastq_path, read_len_anc)
+                if total_bases_anc < self.min_num_bases:
+                    logger.warning(
+                        f"Low ancestor sequencing depth: {total_bases_anc:,} bases "
+                        f"(min recommended: {self.min_num_bases:,})"
+                    )
 
         jc_arm_len_iso, jc_arm_len_anc = self._determine_junction_arm_lengths(read_len_iso, read_len_anc)
 

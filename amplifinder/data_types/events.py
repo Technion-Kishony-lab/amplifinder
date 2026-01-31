@@ -15,7 +15,7 @@ class BaseEvent(str, Enum):
         return self in [self.REFERENCE_TN, self.TRANSPOSITION]
 
 
-class Architecture(str, Enum):
+class Architecture(Enum):
     """Structural classification based on junction pair relationships (Step 8)."""
     # NOTE: For each event, the tuple contains:
     # - description
