@@ -94,11 +94,10 @@ def sample_tn_locs(ref_tn_record):
     return RecordTypedDf.from_records([first, second], RefTn)
 
 
-def test_link_tnjc2s_to_single_locus(sample_covered_tnjc2, sample_tn_locs, tmp_path, tiny_genome):
+def test_link_tnjc2s_to_single_locus(sample_covered_tnjc2, sample_tn_locs, tmp_path):
     """Should classify junction pairs."""
     step = LinkTnJc2ToSingleLocusPairsStep(
         covered_tnjc2s=sample_covered_tnjc2,
-        genome=tiny_genome,
         tn_locs=sample_tn_locs,
         output_dir=tmp_path,
     )
@@ -116,7 +115,7 @@ def test_link_tnjc2s_to_single_locus(sample_covered_tnjc2, sample_tn_locs, tmp_p
     assert result_list[4].raw_event == Architecture.TRANSPOSITION
 
 
-def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_record, tmp_path, tiny_genome):
+def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_record, tmp_path):
     """Should filter candidates by amplicon length."""
     # Create a short amplicon
     short_record = CoveredTnJc2.from_other(
@@ -130,7 +129,6 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_r
 
     step = LinkTnJc2ToSingleLocusPairsStep(
         covered_tnjc2s=all_records,
-        genome=tiny_genome,
         tn_locs=sample_tn_locs,
         output_dir=tmp_path,
     )

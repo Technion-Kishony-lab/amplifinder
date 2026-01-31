@@ -115,7 +115,7 @@ class Pipeline:
         breseq_jcs = self._run_breseq(genome)
         tnjcs = self._create_tnjcs(breseq_jcs, ref_tnjcs, genome, iso_output)
         raw_tnjc2s = self._create_tnjc2s(tnjcs, genome, iso_output)
-        linked_tnjc2s = self._link_side_of_tnjc2s_to_single_locus_pairs(raw_tnjc2s, genome, ref_tns, iso_output)
+        linked_tnjc2s = self._link_side_of_tnjc2s_to_single_locus_pairs(raw_tnjc2s, ref_tns, iso_output)
         covered_tnjc2s = self._calc_amplicon_coverage(linked_tnjc2s, iso_output)
         filtered_tnjc2s = self._filter_candidates(covered_tnjc2s, iso_output)
         read_lengths = self._calc_read_lengths()
@@ -291,22 +291,20 @@ class Pipeline:
             tnjcs=tnjcs,
             genome=genome,
             output_dir=iso_output,
+            transposition_threshold=self.config.min_amplicon_length,
         ).run()
 
     def _link_side_of_tnjc2s_to_single_locus_pairs(
         self,
         raw_tnjc2s: RecordTypedDf[RawTnJc2],
-        genome: Genome,
         tn_loc: RecordTypedDf[RefTn],
         iso_output: Path,
     ) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
         """Step 7: Classify junction pair structures."""
         return LinkTnJc2ToSingleLocusPairsStep(
             covered_tnjc2s=raw_tnjc2s,
-            genome=genome,
             tn_locs=tn_loc,
             output_dir=iso_output,
-            transposition_threshold=self.config.min_amplicon_length,
         ).run()
 
     def _calc_amplicon_coverage(

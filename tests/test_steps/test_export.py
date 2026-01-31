@@ -26,7 +26,7 @@ def sample_analyzed(analyzed_tnjc2_record):
 
 
 def test_export_creates_files(sample_analyzed, filtered_tnjc2_record, tmp_path, tiny_genome, ref_tns_indexed):
-    """Should create summary.yaml file."""
+    """Should create summary.yaml and summary.json files."""
     from amplifinder.steps.read_length import ReadLengths
 
     # Create a linked_tnjc2s RecordTypedDf from filtered_tnjc2_record
@@ -44,9 +44,11 @@ def test_export_creates_files(sample_analyzed, filtered_tnjc2_record, tmp_path, 
 
     result = step.run()
 
-    # Check that YAML file was created
+    # Check that YAML and JSON files were created
     yaml_file = tmp_path / "summary.yaml"
+    json_file = tmp_path / "summary.json"
     assert yaml_file.exists()
+    assert json_file.exists()
 
     # Check export result
     assert 'sample' in result
