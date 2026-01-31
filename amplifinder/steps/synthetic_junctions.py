@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Optional, NamedTuple
 
 from amplifinder.data_types import (
-    BaseEvent, RecordTypedDf, SingleLocusLinkedTnJc2, SynJctsTnJc2, Genome,
+    BaseEvent, RecordTypedDf, CoveredTnJc2, SynJctsTnJc2, Genome,
     JunctionType, RefTn, Junction, Terminal, JcArm, Orientation
 )
 
@@ -110,7 +110,7 @@ def _build_7_junctions_from_6_arms(
 
 
 def create_synthetic_junctions_and_name(
-    tnjc2: SingleLocusLinkedTnJc2, jc_arm_len: int, ref_tns: RecordTypedDf[RefTn]
+    tnjc2: CoveredTnJc2, jc_arm_len: int, ref_tns: RecordTypedDf[RefTn]
 ) -> tuple[dict[JunctionType, Junction], str]:
 
     # Get TN sides that S and E junctions connect to (with offsets)
@@ -174,7 +174,7 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
 
     def __init__(
         self,
-        filtered_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
+        filtered_tnjc2s: RecordTypedDf[CoveredTnJc2],
         genome: Genome,
         ref_tns: RecordTypedDf[RefTn],
         output_dir: Path,
@@ -206,16 +206,16 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
         """Create junction FASTA files for each candidate."""
         for tnjc2, junctions in self._tnjc2s_and_junctions:
             fasta_path = tnjc2.fasta_path(self.output_dir, is_ancestor=self.is_ancestor)
-            
+
             # Lock per-junction for ancestor (None for isolate = no lock)
             lock_path = fasta_path.parent if self.is_ancestor else None
-            
+
             with locked_resource(lock_path, "junction_fasta", timeout=300):
                 if fasta_path.exists() and not self.force:
                     continue
                 if self.force:
                     remove_file_or_dir(fasta_path)
-                
+
                 ensure_dir(fasta_path.parent)
                 sequences = [
                     (jtype.name, self.genome.get_junction_sequence_arm1_to_arm2(jc))

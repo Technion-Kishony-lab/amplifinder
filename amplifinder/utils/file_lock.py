@@ -63,7 +63,7 @@ def locked_resource(
     timeout: int = DEFAULT_LOCK_TIMEOUT,
 ):
     """Lock a shared resource for exclusive access.
-    
+
     If resource_path is None, this becomes a no-op context manager (no locking).
     This allows conditional locking without code duplication.
     """
@@ -71,7 +71,7 @@ def locked_resource(
         # No lock needed - just yield
         yield
         return
-    
+
     resource_path = Path(resource_path)
     if resource_path.is_dir():
         lock_filepath = resource_path / f".{resource_type}.lock"

@@ -9,8 +9,8 @@ from amplifinder.data_types import RecordTypedDf, SingleLocusLinkedTnJc2
 
 @pytest.fixture
 def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
-    """Create sample SingleLocusLinkedTnJc2 records with different amplicon lengths."""
-    from amplifinder.data_types import TnJunction, Orientation, OffsetRefTnSide, RefTnSide, Terminal, RawTnJc2
+    """Create sample CoveredTnJc2 records with different amplicon lengths."""
+    from amplifinder.data_types import TnJunction, Orientation, OffsetRefTnSide, RefTnSide, Terminal, RawTnJc2, SingleLocusLinkedTnJc2, CoveredTnJc2
 
     # Short amplicon (20bp) - should be filtered out
     tn_jc_S_short = TnJunction(
@@ -30,14 +30,12 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
         swapped=False,
     )
     scaffold = tiny_genome.get_scaffold("tiny")
-    short_raw = RawTnJc2(tnjc_left=tn_jc_S_short, tnjc_right=tn_jc_E_short, scaffold=scaffold)
-    short = SingleLocusLinkedTnJc2.from_other(
-        short_raw,
-        base_event=BaseEvent.TRANSPOSITION,
+    short_raw = RawTnJc2(tnjc_left=tn_jc_S_short, tnjc_right=tn_jc_E_short, scaffold=scaffold, base_event=BaseEvent.TRANSPOSITION)
+    short_linked = SingleLocusLinkedTnJc2.from_other(short_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
+    short = CoveredTnJc2.from_other(
+        short_linked,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=1.5,
-        single_locus_tnjc2_left_matchings=[],
-        single_locus_tnjc2_right_matchings=[],
     )
 
     # Medium amplicon (101bp)
@@ -57,14 +55,12 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
         ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.END, offset=0)],
         swapped=False,
     )
-    medium_raw = RawTnJc2(tnjc_left=tn_jc_S_medium, tnjc_right=tn_jc_E_medium, scaffold=scaffold)
-    medium = SingleLocusLinkedTnJc2.from_other(
-        medium_raw,
-        base_event=BaseEvent.LOCUS_JOINING,
+    medium_raw = RawTnJc2(tnjc_left=tn_jc_S_medium, tnjc_right=tn_jc_E_medium, scaffold=scaffold, base_event=BaseEvent.LOCUS_JOINING)
+    medium_linked = SingleLocusLinkedTnJc2.from_other(medium_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
+    medium = CoveredTnJc2.from_other(
+        medium_linked,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=2.0,
-        single_locus_tnjc2_left_matchings=[],
-        single_locus_tnjc2_right_matchings=[],
     )
 
     # Long amplicon (500bp)
@@ -84,33 +80,29 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
         ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.END, offset=0)],
         swapped=False,
     )
-    long_raw = RawTnJc2(tnjc_left=tn_jc_S_long, tnjc_right=tn_jc_E_long, scaffold=scaffold)
-    long = SingleLocusLinkedTnJc2.from_other(
-        long_raw,
-        base_event=BaseEvent.LOCUS_JOINING,
+    long_raw = RawTnJc2(tnjc_left=tn_jc_S_long, tnjc_right=tn_jc_E_long, scaffold=scaffold, base_event=BaseEvent.LOCUS_JOINING)
+    long_linked = SingleLocusLinkedTnJc2.from_other(long_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
+    long = CoveredTnJc2.from_other(
+        long_linked,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=3.0,
-        single_locus_tnjc2_left_matchings=[],
-        single_locus_tnjc2_right_matchings=[],
     )
 
-    return RecordTypedDf.from_records([short, medium, long], SingleLocusLinkedTnJc2)
+    return RecordTypedDf.from_records([short, medium, long], CoveredTnJc2)
 
 
 def test_filters_by_length(sample_classified_tnjc2, tmp_path):
-    """Should filter candidates by amplicon length."""
+    """Should filter candidates by copy number threshold."""
     step = FilterTnJc2CandidatesStep(
         linked_tnjc2s=sample_classified_tnjc2,
         output_dir=tmp_path,
-        min_amplicon_length=50,  # Filter out the 20bp amplicon
-        max_amplicon_length=1_000_000,
-        replication_copy_number_threshold=1.0,
+        replication_copy_number_threshold=1.6,  # Filter out short (1.5), keep medium (2.0) and long (3.0)
         deletion_copy_number_threshold=0.3,
     )
 
     result = step.run()
 
-    # Should filter out short (20bp), keep medium (101bp) and long (500bp)
+    # Should filter out short (1.5), keep medium (2.0) and long (3.0)
     assert len(result) == 2
     assert sorted([r.amplicon_length for r in result]) == [101, 500]
 
@@ -120,8 +112,6 @@ def test_filters_by_copy_number_threshold(sample_classified_tnjc2, tmp_path):
     step = FilterTnJc2CandidatesStep(
         linked_tnjc2s=sample_classified_tnjc2,
         output_dir=tmp_path,
-        min_amplicon_length=10,
-        max_amplicon_length=1_000_000,
         replication_copy_number_threshold=1.6,  # Filter out short (1.5), keep medium (2.0) and long (3.0)
         deletion_copy_number_threshold=0.3,
     )

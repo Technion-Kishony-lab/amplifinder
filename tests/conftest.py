@@ -322,7 +322,7 @@ def locate_tns_step(locate_tns_step_factory):
 @pytest.fixture
 def raw_tnjc2_record(tiny_genome):
     """Base RawTnJc2 for step fixtures."""
-    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, RefTnSide, Terminal
+    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, RefTnSide, Terminal, BaseEvent
 
     tn_jc_S = TnJunction(
         num=1,
@@ -357,41 +357,53 @@ def raw_tnjc2_record(tiny_genome):
         tnjc_left=tn_jc_S,
         tnjc_right=tn_jc_E,
         scaffold=scaffold,
+        base_event=BaseEvent.REFERENCE_TN,
     )
 
 
 @pytest.fixture
-def covered_tnjc2_record(raw_tnjc2_record):
-    """RawTnJc2 with coverage fields."""
+def covered_tnjc2_record(classified_tnjc2_record):
+    """CoveredTnJc2 with coverage fields."""
     from amplifinder.data_types import CoveredTnJc2
 
     return CoveredTnJc2.from_other(
-        raw_tnjc2_record,
+        classified_tnjc2_record,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=2.0,
     )
 
 
 @pytest.fixture
-def classified_tnjc2_record(covered_tnjc2_record):
-    """CoveredTnJc2 with structural classification."""
-    from amplifinder.data_types import SingleLocusLinkedTnJc2, BaseEvent
+def classified_tnjc2_record(raw_tnjc2_record):
+    """SingleLocusLinkedTnJc2 with structural classification."""
+    from amplifinder.data_types import SingleLocusLinkedTnJc2
 
     return SingleLocusLinkedTnJc2.from_other(
-        covered_tnjc2_record,
-        base_event=BaseEvent.LOCUS_JOINING,
+        raw_tnjc2_record,
         single_locus_tnjc2_left_matchings=[],
         single_locus_tnjc2_right_matchings=[],
     )
 
 
 @pytest.fixture
-def filtered_tnjc2_record(classified_tnjc2_record):
+def covered_classified_tnjc2_record(classified_tnjc2_record):
+    """CoveredTnJc2 with structural classification and coverage."""
+    from amplifinder.data_types import CoveredTnJc2
+
+    return CoveredTnJc2.from_other(
+        classified_tnjc2_record,
+        iso_scaf_avg=1.0,
+        iso_amplicon_avg=2.0,
+    )
+
+
+@pytest.fixture
+def filtered_tnjc2_record(covered_classified_tnjc2_record):
     """SynJctsTnJc2 with analysis directory."""
     from amplifinder.data_types import SynJctsTnJc2
 
     return SynJctsTnJc2.from_other(
-        classified_tnjc2_record,
+        covered_classified_tnjc2_record,
         analysis_dir="jc_200_300_001_L150",
     )
 

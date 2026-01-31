@@ -115,9 +115,9 @@ class Pipeline:
         breseq_jcs = self._run_breseq(genome)
         tnjcs = self._create_tnjcs(breseq_jcs, ref_tnjcs, genome, iso_output)
         raw_tnjc2s = self._create_tnjc2s(tnjcs, genome, iso_output)
-        covered_tnjc2s = self._calc_amplicon_coverage(raw_tnjc2s, genome, iso_output)
-        linked_tnjc2s = self._link_side_of_tnjc2s_to_single_locus_pairs(covered_tnjc2s, genome, ref_tns, iso_output)
-        filtered_tnjc2s = self._filter_candidates(linked_tnjc2s, iso_output)
+        linked_tnjc2s = self._link_side_of_tnjc2s_to_single_locus_pairs(raw_tnjc2s, ref_tns, iso_output)
+        covered_tnjc2s = self._calc_amplicon_coverage(linked_tnjc2s, iso_output)
+        filtered_tnjc2s = self._filter_candidates(covered_tnjc2s, iso_output)
         read_lengths = self._calc_read_lengths()
         synjct_tnjc2s = self._create_synthetic_junctions(
             filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
@@ -127,7 +127,7 @@ class Pipeline:
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
         self._plot_coverage(classified_tnjc2s, iso_output, anc_output, read_lengths,
                             iso_alignment_cache, anc_alignment_cache)
-        self._export(classified_tnjc2s, ref_tns, iso_output, read_lengths)
+        self._export(classified_tnjc2s, linked_tnjc2s, ref_tns, iso_output, read_lengths)
 
         return classified_tnjc2s
 
@@ -291,20 +291,33 @@ class Pipeline:
             tnjcs=tnjcs,
             genome=genome,
             output_dir=iso_output,
+            transposition_threshold=self.config.min_amplicon_length,
+        ).run()
+
+    def _link_side_of_tnjc2s_to_single_locus_pairs(
+        self,
+        raw_tnjc2s: RecordTypedDf[RawTnJc2],
+        tn_loc: RecordTypedDf[RefTn],
+        iso_output: Path,
+    ) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
+        """Step 7: Classify junction pair structures."""
+        return LinkTnJc2ToSingleLocusPairsStep(
+            covered_tnjc2s=raw_tnjc2s,
+            tn_locs=tn_loc,
+            output_dir=iso_output,
         ).run()
 
     def _calc_amplicon_coverage(
         self,
-        raw_tnjc2s: RecordTypedDf[RawTnJc2],
-        genome: Genome,
+        linked_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
         iso_output: Path,
     ) -> RecordTypedDf[CoveredTnJc2]:
-        """Step 7: Calculate amplicon coverage."""
+        """Step 8: Calculate amplicon coverage."""
         cfg = self.config
         iso_breseq_path, anc_breseq_path = cfg.get_breseq_paths()
 
         return CalcTnJc2AmpliconCoverageStep(
-            raw_tnjc2s=raw_tnjc2s,
+            raw_tnjc2s=linked_tnjc2s,
             output_dir=iso_output,
             iso_breseq_path=iso_breseq_path,
             anc_breseq_path=anc_breseq_path,
@@ -313,40 +326,23 @@ class Pipeline:
             max_amplicon_length=cfg.max_amplicon_length,
         ).run()
 
-    def _link_side_of_tnjc2s_to_single_locus_pairs(
-        self,
-        covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
-        genome: Genome,
-        tn_loc: RecordTypedDf[RefTn],
-        iso_output: Path,
-    ) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
-        """Step 8: Classify junction pair structures."""
-        return LinkTnJc2ToSingleLocusPairsStep(
-            covered_tnjc2s=covered_tnjc2s,
-            genome=genome,
-            tn_locs=tn_loc,
-            output_dir=iso_output,
-            transposition_threshold=self.config.min_amplicon_length,
-        ).run()
-
     def _filter_candidates(
         self,
-        linked_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
+        covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
         iso_output: Path,
-    ) -> RecordTypedDf[SingleLocusLinkedTnJc2]:
-        """Step 9: Filter candidates by amplicon length and copy number."""
+    ) -> RecordTypedDf[CoveredTnJc2]:
+        """Step 9: Filter candidates by copy number."""
+        cfg = self.config
         return FilterTnJc2CandidatesStep(
-            linked_tnjc2s=linked_tnjc2s,
+            linked_tnjc2s=covered_tnjc2s,
             output_dir=iso_output,
-            min_amplicon_length=self.config.min_amplicon_length,
-            max_amplicon_length=self.config.max_amplicon_length,
-            replication_copy_number_threshold=self.config.replication_copy_number_threshold,
-            deletion_copy_number_threshold=self.config.deletion_copy_number_threshold,
+            replication_copy_number_threshold=cfg.replication_copy_number_threshold,
+            deletion_copy_number_threshold=cfg.deletion_copy_number_threshold,
         ).run()
 
     def _create_synthetic_junctions(
         self,
-        filtered_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
+        filtered_tnjc2s: RecordTypedDf[CoveredTnJc2],
         genome: Genome,
         ref_tns: RecordTypedDf[RefTn],
         iso_output: Path,
@@ -486,6 +482,7 @@ class Pipeline:
     def _export(
         self,
         classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
+        linked_tnjc2s: RecordTypedDf[CoveredTnJc2],
         ref_tns: RecordTypedDf[RefTn],
         iso_output: Path,
         read_lengths: ReadLengths,
@@ -493,6 +490,7 @@ class Pipeline:
         """Step 14: Export results to YAML."""
         ExportTnJc2Step(
             classified_tnjc2s=classified_tnjc2s,
+            linked_tnjc2s=linked_tnjc2s,
             output_dir=iso_output,
             ref_name=self.config.ref_name,
             iso_name=self.config.iso_name,
