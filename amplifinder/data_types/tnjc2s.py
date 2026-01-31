@@ -41,6 +41,9 @@ class RawTnJc2(Record):
 
     # Scaffold object (not exported to CSV)
     scaffold: SeqScaffold
+    
+    # Base event classification
+    base_event: BaseEvent
 
     # CSV export: only export derived properties, not the complex TnJunction/Scaffold objects
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = [
@@ -157,7 +160,6 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
     ]
     single_locus_tnjc2_left_matchings: List[TnJc2AndSide]
     single_locus_tnjc2_right_matchings: List[TnJc2AndSide]
-    base_event: BaseEvent
 
     @property
     def single_locus_tnjc2_matching_left(self) -> Optional[SingleLocusLinkedTnJc2]:
