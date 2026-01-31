@@ -5,7 +5,7 @@ from typing import Optional
 
 import numpy as np
 
-from amplifinder.data_types import RecordTypedDf, SingleLocusLinkedTnJc2, CoveredTnJc2, AverageMethod
+from amplifinder.data_types import BaseEvent, RecordTypedDf, SingleLocusLinkedTnJc2, CoveredTnJc2, AverageMethod
 from amplifinder.logger import logger
 from amplifinder.utils.timing import print_timer
 
@@ -41,6 +41,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         self.average_method = average_method
         self.min_amplicon_length = min_amplicon_length
         self.max_amplicon_length = max_amplicon_length
+        self._non_locus_joining_amplicons = 0
         self._too_long_amplicons = 0
         self._too_short_amplicons = 0
 
@@ -106,20 +107,19 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                          end_msg="\n", seperate_prints=True, should_log=True):
             covered_records = []
             for i, raw_tnjc2 in enumerate(self.raw_tnjc2s):
+                if self._should_skip_amplicon(raw_tnjc2):
+                    continue
+                
                 iso_scaf_avg = iso_scaf_avgs[raw_tnjc2.scaf]
                 anc_scaf_avg = anc_scaf_avgs[raw_tnjc2.scaf] if self.has_ancestor else None
                 
-                if self._should_skip_amplicon(raw_tnjc2):
-                    iso_amplicon_avg = avg_norm_cov = np.nan
-                    anc_amplicon_avg = np.nan if self.has_ancestor else None
-                else:
-                    iso_amplicon_avg, anc_amplicon_avg, avg_norm_cov = self._calc_candidate_coverage(
-                        raw_tnjc2,
-                        iso_scaf_covs[raw_tnjc2.scaf],
-                        iso_scaf_avg,
-                        anc_scaf_covs[raw_tnjc2.scaf] if self.has_ancestor else None,
-                        anc_scaf_avg,
-                    )
+                iso_amplicon_avg, anc_amplicon_avg, avg_norm_cov = self._calc_candidate_coverage(
+                    raw_tnjc2,
+                    iso_scaf_covs[raw_tnjc2.scaf],
+                    iso_scaf_avg,
+                    anc_scaf_covs[raw_tnjc2.scaf] if self.has_ancestor else None,
+                    anc_scaf_avg,
+                )
                 
                 covered = CoveredTnJc2.from_other(
                     raw_tnjc2,
@@ -133,6 +133,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                 logger.print_progress(".", end="\n" if (i + 1) % 60 == 0 else "")
 
         logger.print_progress(f"\nTotal amplicons: {len(self.raw_tnjc2s)}, "
+                              f"non-locus-joining: {self._non_locus_joining_amplicons}, "
                               f"too long: {self._too_long_amplicons}, "
                               f"too short: {self._too_short_amplicons}")
 
@@ -148,6 +149,9 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         
         Updates counters and returns True if amplicon should be skipped.
         """
+        if raw_tnjc2.base_event != BaseEvent.LOCUS_JOINING:
+            self._non_locus_joining_amplicons += 1
+            return True
         if raw_tnjc2.amplicon_length > self.max_amplicon_length:
             self._too_long_amplicons += 1
             return True
