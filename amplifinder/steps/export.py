@@ -4,10 +4,12 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 from dataclasses import asdict
 import yaml
+import json
 
 from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, CoveredTnJc2, RefTn, BaseEvent
 from amplifinder.steps.base import OutputStep
 from amplifinder.steps.read_length import ReadLengths
+from amplifinder.utils.json_utils import compact_short_lists
 
 
 class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
@@ -34,8 +36,9 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
         self.ref_tns = ref_tns
 
         self.yaml_file = output_dir / "summary.yaml"
+        self.json_file = output_dir / "summary.json"
 
-        super().__init__(output_files=[self.yaml_file], force=force)
+        super().__init__(output_files=[self.yaml_file, self.json_file], force=force)
 
     def _tn_ids_to_names(self, tnjc2: CoveredTnJc2 | ClassifiedTnJc2) -> tuple[list[str], Optional[str]]:
         """Map TN IDs to names."""
@@ -90,11 +93,15 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
         }
 
     def _save_output(self, output: Dict[str, Any]) -> None:
-        """Write YAML file."""
+        """Write YAML and JSON files."""
         with open(self.yaml_file, 'w') as f:
             yaml.dump(output, f, default_flow_style=False, sort_keys=False)
+        json_str = json.dumps(output, indent=2, sort_keys=False)
+        json_str = compact_short_lists(json_str)
+        with open(self.json_file, 'w') as f:
+            f.write(json_str)
 
     def report_output_message(self, output: Dict[str, Any]) -> Optional[str]:
         return (f"Exported {len(output['amplicons'])} amplicons, "
                 f"{len(output['transpositions'])} transpositions to "
-                f"{self.yaml_file}")
+                f"{self.yaml_file} and {self.json_file}")
