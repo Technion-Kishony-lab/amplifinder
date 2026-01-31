@@ -10,6 +10,7 @@ def sample_config(tmp_path):
     """Create a sample config for testing."""
     return Config(
         iso_fastq_path=tmp_path / "isolate.fastq",
+        anc_fastq_path=tmp_path / "ancestor.fastq",  # Need fastq_path for has_ancestor
         ref_name="U00096",
         iso_name="sample1",
         anc_name="ancestor1",

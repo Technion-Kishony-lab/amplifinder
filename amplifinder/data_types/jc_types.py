@@ -7,7 +7,6 @@ from typing import TypeAlias
 from functools import wraps
 
 from amplifinder.data_types.basic_enums import Side
-from amplifinder.visualization.plot_jc_alignments import JC_CALLS_TO_COLORS_AND_LABELS
 
 
 class Element(str, Enum):

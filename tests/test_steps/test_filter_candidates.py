@@ -105,6 +105,7 @@ def test_filters_by_length(sample_classified_tnjc2, tmp_path):
         min_amplicon_length=50,  # Filter out the 20bp amplicon
         max_amplicon_length=1_000_000,
         replication_copy_number_threshold=1.0,
+        deletion_copy_number_threshold=0.3,
     )
 
     result = step.run()
@@ -122,6 +123,7 @@ def test_filters_by_copy_number_threshold(sample_classified_tnjc2, tmp_path):
         min_amplicon_length=10,
         max_amplicon_length=1_000_000,
         replication_copy_number_threshold=1.6,  # Filter out short (1.5), keep medium (2.0) and long (3.0)
+        deletion_copy_number_threshold=0.3,
     )
 
     result = step.run()

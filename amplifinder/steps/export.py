@@ -46,6 +46,8 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
                 'copy_number': tnjc2.copy_number,
                 'architecture': tnjc2.iso_architecture.description,
                 'descriptors': [event_descriptor.value for event_descriptor in tnjc2.event_descriptors],
+                'left_is_ref_tn': tnjc2.tnjc_left.is_ref_tn_junction(),
+                'right_is_ref_tn': tnjc2.tnjc_right.is_ref_tn_junction(),
             })
 
         return {
