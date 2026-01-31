@@ -106,12 +106,28 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                          end_msg="\n", seperate_prints=True, should_log=True):
             covered_records = []
             for i, raw_tnjc2 in enumerate(self.raw_tnjc2s):
-                covered = self._calc_candidate_coverage(
+                iso_scaf_avg = iso_scaf_avgs[raw_tnjc2.scaf]
+                anc_scaf_avg = anc_scaf_avgs[raw_tnjc2.scaf] if self.has_ancestor else None
+                
+                if self._should_skip_amplicon(raw_tnjc2):
+                    iso_amplicon_avg = avg_norm_cov = np.nan
+                    anc_amplicon_avg = np.nan if self.has_ancestor else None
+                else:
+                    iso_amplicon_avg, anc_amplicon_avg, avg_norm_cov = self._calc_candidate_coverage(
+                        raw_tnjc2,
+                        iso_scaf_covs[raw_tnjc2.scaf],
+                        iso_scaf_avg,
+                        anc_scaf_covs[raw_tnjc2.scaf] if self.has_ancestor else None,
+                        anc_scaf_avg,
+                    )
+                
+                covered = CoveredTnJc2.from_other(
                     raw_tnjc2,
-                    iso_scaf_covs[raw_tnjc2.scaf],
-                    iso_scaf_avgs[raw_tnjc2.scaf],
-                    anc_scaf_covs[raw_tnjc2.scaf] if self.has_ancestor else None,
-                    anc_scaf_avgs[raw_tnjc2.scaf] if self.has_ancestor else None,
+                    iso_scaf_avg=iso_scaf_avg,
+                    iso_amplicon_avg=iso_amplicon_avg,
+                    anc_scaf_avg=anc_scaf_avg,
+                    anc_amplicon_avg=anc_amplicon_avg,
+                    avg_norm_cov=avg_norm_cov,
                 )
                 covered_records.append(covered)
                 logger.print_progress(".", end="\n" if (i + 1) % 60 == 0 else "")
@@ -127,6 +143,19 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         """Calculate average coverage."""
         return calc_average(coverage, average_method=self.average_method)
 
+    def _should_skip_amplicon(self, raw_tnjc2: RawTnJc2) -> bool:
+        """Check if amplicon should be skipped based on length filters.
+        
+        Updates counters and returns True if amplicon should be skipped.
+        """
+        if raw_tnjc2.amplicon_length > self.max_amplicon_length:
+            self._too_long_amplicons += 1
+            return True
+        if raw_tnjc2.amplicon_length < self.min_amplicon_length:
+            self._too_short_amplicons += 1
+            return True
+        return False
+
     def _calc_candidate_coverage(
         self,
         raw_tnjc2: RawTnJc2,
@@ -134,23 +163,11 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         iso_scaf_avg: float,
         anc_scaf_cov: Optional[np.ndarray],
         anc_scaf_avg: Optional[float],
-    ) -> CoveredTnJc2:
-        """Calculate coverage for a single candidate."""
-        # Skip coverage calculation for amplicons outside length range
-        if not (self.min_amplicon_length <= raw_tnjc2.amplicon_length <= self.max_amplicon_length):
-            if raw_tnjc2.amplicon_length > self.max_amplicon_length:
-                self._too_long_amplicons += 1
-            else:
-                self._too_short_amplicons += 1
-            return CoveredTnJc2.from_other(
-                raw_tnjc2,
-                iso_scaf_avg=iso_scaf_avg,
-                iso_amplicon_avg=np.nan,
-                anc_scaf_avg=anc_scaf_avg if self.has_ancestor else None,
-                anc_amplicon_avg=np.nan if self.has_ancestor else None,
-                avg_norm_cov=np.nan,
-            )
-
+    ) -> tuple[float, Optional[float], float]:
+        """Calculate amplicon coverage stats.
+        
+        Returns: (iso_amplicon_avg, anc_amplicon_avg, avg_norm_cov)
+        """
         # Get segment scaffold for this amplicon
         seg_scaf = raw_tnjc2.get_segment_scaffold()
 
@@ -178,12 +195,5 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             avg_norm_cov = iso_amplicon_avg / iso_scaf_avg
             anc_amplicon_avg = None
 
-        # Build CoveredTnJc2 from RawTnJc2 + new coverage fields
-        return CoveredTnJc2.from_other(
-            raw_tnjc2,
-            iso_scaf_avg=iso_scaf_avg,
-            iso_amplicon_avg=iso_amplicon_avg,
-            anc_scaf_avg=anc_scaf_avg,
-            anc_amplicon_avg=anc_amplicon_avg,
-            avg_norm_cov=avg_norm_cov,
-        )
+        return (iso_amplicon_avg, anc_amplicon_avg, avg_norm_cov)
+
