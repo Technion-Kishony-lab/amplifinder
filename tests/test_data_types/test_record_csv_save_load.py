@@ -8,7 +8,7 @@ from amplifinder.data_types import (
     RefTnSide, OffsetRefTnSide, RefTn,
     Junction, RefTnJunction, TnJunction,
     RawTnJc2, CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ClassifiedTnJc2, ExportedTnJc2,
-    Terminal, Orientation, RawEvent, EventModifier, SeqScaffold,
+    Terminal, Orientation, Architecture, EventDescriptor, SeqScaffold,
 )
 from amplifinder.tools.blast import BlastHit
 
@@ -167,7 +167,7 @@ def make_classified_tnjc2() -> SingleLocusLinkedTnJc2:
     covered = make_covered_tnjc2()
     return SingleLocusLinkedTnJc2.from_other(
         covered,
-        raw_event=RawEvent.FLANKED,
+        raw_event=Architecture.FLANKED,
         shared_tn_ids=[1],
         chosen_tn_id=1,
     )
@@ -202,9 +202,9 @@ def make_classified_tnjc2_full() -> ClassifiedTnJc2:
     analyzed = make_analyzed_tnjc2()
     return ClassifiedTnJc2.from_other(
         analyzed,
-        isolate_architecture=RawEvent.FLANKED,
-        ancestor_architecture=None,
-        event_modifiers=[EventModifier.DENOVO_LEFT],
+        iso_architecture=Architecture.FLANKED,
+        anc_architecture=None,
+        event_descriptors=[EventDescriptor.DENOVO_LEFT],
     )
 
 

@@ -347,7 +347,7 @@ def plot_jc_alignments(
         ax.grid(True, alpha=0.3, axis='x')
 
         # Draw genetic elements in the narrow axes above
-        left_elem_type, right_elem_type = jt.elements
+        left_elem_type, right_elem_type = jt.element_pair
 
         # Set up genetic element axes
         ax_gene.set_xlim(-max_dist, max_dist)

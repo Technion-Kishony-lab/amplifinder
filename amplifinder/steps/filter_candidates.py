@@ -4,14 +4,14 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import (
-    RecordTypedDf, SingleLocusLinkedTnJc2, RawEvent,
+    RecordTypedDf, SingleLocusLinkedTnJc2, Architecture,
 )
 from amplifinder.steps.base import RecordTypedDfStep
 
 
-def _count_raw_events(records: list[SingleLocusLinkedTnJc2]) -> dict[RawEvent, int]:
+def _count_raw_events(records: list[SingleLocusLinkedTnJc2]) -> dict[Architecture, int]:
     """Count occurrences of each RawEvent type in a list of records."""
-    counts: dict[RawEvent, int] = {name: 0 for name in RawEvent}
+    counts: dict[Architecture, int] = {name: 0 for name in Architecture}
     for record in records:
         counts[record.raw_event] += 1
     return counts
@@ -70,5 +70,5 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
         after_counts = _count_raw_events(output.to_records())
         
         lines = [f"{event.value:22s}: {before_counts[event]:4d} -> {after_counts[event]:4d}" 
-                 for event in RawEvent]
+                 for event in Architecture]
         return "\n" + "\n".join(lines)

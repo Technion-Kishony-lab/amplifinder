@@ -2,7 +2,7 @@
 
 import pytest
 
-from amplifinder.data_types import BaseRawEvent
+from amplifinder.data_types import BaseEvent
 from amplifinder.steps import FilterTnJc2CandidatesStep
 from amplifinder.data_types import RecordTypedDf, SingleLocusLinkedTnJc2
 
@@ -33,7 +33,7 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
     short_raw = RawTnJc2(tnjc_left=tn_jc_S_short, tnjc_right=tn_jc_E_short, scaffold=scaffold)
     short = SingleLocusLinkedTnJc2.from_other(
         short_raw,
-        base_raw_event=BaseRawEvent.TRANSPOSITION,
+        base_event=BaseEvent.TRANSPOSITION,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=1.5,
         single_locus_tnjc2_left_matchings=[],
@@ -60,7 +60,7 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
     medium_raw = RawTnJc2(tnjc_left=tn_jc_S_medium, tnjc_right=tn_jc_E_medium, scaffold=scaffold)
     medium = SingleLocusLinkedTnJc2.from_other(
         medium_raw,
-        base_raw_event=BaseRawEvent.LOCUS_JOINING,
+        base_event=BaseEvent.LOCUS_JOINING,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=2.0,
         single_locus_tnjc2_left_matchings=[],
@@ -87,7 +87,7 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
     long_raw = RawTnJc2(tnjc_left=tn_jc_S_long, tnjc_right=tn_jc_E_long, scaffold=scaffold)
     long = SingleLocusLinkedTnJc2.from_other(
         long_raw,
-        base_raw_event=BaseRawEvent.LOCUS_JOINING,
+        base_event=BaseEvent.LOCUS_JOINING,
         iso_scaf_avg=1.0,
         iso_amplicon_avg=3.0,
         single_locus_tnjc2_left_matchings=[],

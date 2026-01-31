@@ -65,7 +65,7 @@ class ExportTnJc2Step(OutputStep[RecordTypedDf[ExportedTnJc2]]):
                 IS_element=','.join(map(str, tnjc2.tn_ids)) if tnjc2.tn_ids else None,
                 median_copy_number=tnjc2.copy_number,
                 mode_copy_number=tnjc2.copy_number,
-                event=tnjc2.event,
+                event=tnjc2.event_str,
                 isolate_architecture=str(tnjc2.isolate_architecture),
             ))
 
