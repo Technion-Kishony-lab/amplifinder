@@ -393,21 +393,3 @@ class ClassifiedTnJc2(AnalyzedTnJc2):
             return iso_architecture_str
 
 
-class ExportedTnJc2(Record):
-    """Export record for tnjc2_exported.csv (Step 14 output).
-
-    Represents the user-facing export format with renamed/combined fields.
-    All fields are optional to handle cases where input data may be missing.
-    """
-    NAME: ClassVar[str] = "Exported Amplicons"
-    isolate: Optional[str] = None
-    Reference: Optional[str] = None
-    Positions_in_chromosome: Optional[str] = None
-    Direction_in_chromosome: Optional[str] = None
-    amplicon_length: Optional[int] = None
-    IS_element: Optional[str] = None
-    median_copy_number: Optional[float] = None
-    mode_copy_number: Optional[float] = None
-    Ancestor: Optional[str] = None
-    event: Optional[str] = None
-    iso_architecture: Optional[str] = None

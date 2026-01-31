@@ -124,7 +124,7 @@ class Pipeline:
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
         self._plot_coverage(classified_tnjc2s, iso_output, anc_output, read_lengths,
                             iso_alignment_cache, anc_alignment_cache)
-        self._export(classified_tnjc2s, genome, iso_output)
+        self._export(classified_tnjc2s, genome, iso_output, read_lengths)
 
         return classified_tnjc2s
 
@@ -342,6 +342,7 @@ class Pipeline:
             min_amplicon_length=self.config.min_amplicon_length,
             max_amplicon_length=self.config.max_amplicon_length,
             copy_number_threshold=self.config.copy_number_threshold,
+            del_copy_number_threshold=self.config.del_copy_number_threshold,
         ).run()
 
     def _create_synthetic_junctions(
@@ -488,18 +489,17 @@ class Pipeline:
         classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
         genome: Genome,
         iso_output: Path,
+        read_lengths: ReadLengths,
     ) -> None:
-        """Step 14: Export results to CSV."""
+        """Step 14: Export results to YAML."""
         ExportTnJc2Step(
             classified_tnjc2s=classified_tnjc2s,
             genome=genome,
             output_dir=iso_output,
             ref_name=self.config.ref_name,
             iso_name=self.config.iso_name,
+            read_lengths=read_lengths,
             anc_name=self.config.get_anc_name(),
-            copy_number_threshold=self.config.copy_number_threshold,
-            del_copy_number_threshold=self.config.del_copy_number_threshold,
-            filter_amplicon_length=self.config.filter_amplicon_length,
         ).run()
 
 
