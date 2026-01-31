@@ -41,6 +41,7 @@ def run_tnjc2(tnjc_records: List[TnJunction], genome, output_dir) -> RecordTyped
         tnjcs=tnjcs,
         genome=genome,
         output_dir=output_dir,
+        transposition_threshold=50,
     ).run()
 
 
@@ -87,6 +88,7 @@ def tnjc2_step_factory(tnjc, tiny_genome, tmp_output):
             tnjcs=tnjc,
             genome=tiny_genome,
             output_dir=tmp_output,
+            transposition_threshold=50,
         )
 
     return make
