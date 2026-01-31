@@ -5,7 +5,6 @@ from typing import Optional, List
 
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.data_types.genome import Genome
-from amplifinder.data_types.scaffold import SeqScaffold
 from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, Orientation, BaseEvent
 
 
@@ -120,17 +119,17 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
 
         # Compute base_event before creating RawTnJc2
         base_event = self._compute_base_event(tnjc_left, tnjc_right)
-        
+
         # Create RawTnJc2 with the two junction objects, scaffold, and base_event
         pair = RawTnJc2(
-            pair_id=pair_id, 
-            tnjc_left=tnjc_left, 
-            tnjc_right=tnjc_right, 
+            pair_id=pair_id,
+            tnjc_left=tnjc_left,
+            tnjc_right=tnjc_right,
             scaffold=scaffold,
             base_event=base_event,
         )
         return pair
-    
+
     def _compute_base_event(
         self, tnjc_left: TnJunction, tnjc_right: TnJunction
     ) -> BaseEvent:
@@ -140,11 +139,11 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
                 tnjc_right.is_ref_tn_junction() and \
                 tnjc_left.ref_tn_side.tn_id == tnjc_right.ref_tn_side.tn_id:
             return BaseEvent.REFERENCE_TN
-        
+
         # Check for transposition
         left_pos = tnjc_left.pos2
         right_pos = tnjc_right.pos2
         if abs(left_pos - right_pos) < self.transposition_threshold:
             return BaseEvent.TRANSPOSITION
-        
+
         return BaseEvent.LOCUS_JOINING

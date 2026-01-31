@@ -55,7 +55,7 @@ class AlignReadsToJunctionsStep(Step):
         """Align reads to synthetic junctions; skip BAMs that already exist."""
         analysis_dir_names = [tnjc2.analysis_dir_name(is_ancestor=self.is_ancestor) for tnjc2 in self.synjcs_tnjc2s]
         max_name_length = max(len(name) for name in analysis_dir_names)
-        
+
         for filtered_tnjc2 in self.synjcs_tnjc2s:
             junctions_fasta = filtered_tnjc2.fasta_path(self.output_dir, is_ancestor=self.is_ancestor)
             assert junctions_fasta.exists()
@@ -63,10 +63,10 @@ class AlignReadsToJunctionsStep(Step):
             bam_path = filtered_tnjc2.bam_path(self.output_dir, is_ancestor=self.is_ancestor)
             name = filtered_tnjc2.analysis_dir_name(is_ancestor=self.is_ancestor)
             logger.print_progress(f"{name:<{max_name_length}}: ", end="")
-            
+
             # Lock per-junction for ancestor (None for isolate = no lock)
             lock_path = bam_path.parent if self.is_ancestor else None
-            
+
             with locked_resource(lock_path, "junction_bam", timeout=1800):
                 if bam_path.exists():
                     logger.print_progress("file exists, skipping")

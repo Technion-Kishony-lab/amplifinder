@@ -46,7 +46,7 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
     def _calculate_output(self) -> Dict[str, Any]:
         """Build export structure."""
         amplicons = []
-        
+
         # Export classified amplicons (went through full pipeline)
         for tnjc2 in self.classified_tnjc2s:
             tn_names, chosen_tn_name = self._tn_ids_to_names(tnjc2)
@@ -64,7 +64,7 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
                 'left_is_ref_tn': tnjc2.tnjc_left.is_ref_tn_junction(),
                 'right_is_ref_tn': tnjc2.tnjc_right.is_ref_tn_junction(),
             })
-        
+
         # Collect TRANSPOSITION events (filtered out from main pipeline)
         transpositions = []
         for tnjc2 in self.linked_tnjc2s:
@@ -73,7 +73,8 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
             tn_names, chosen_tn_name = self._tn_ids_to_names(tnjc2)
             transpositions.append({
                 'positions': f"{tnjc2.left}-{tnjc2.right}",
-                'length': tnjc2.right - tnjc2.left,  # Not using amplicon_length because if it is neg we will get the genome length
+                # Not using amplicon_length because if neg we get genome len
+                'length': tnjc2.right - tnjc2.left,
                 'possible_ISs': tn_names,
             })
 
@@ -94,4 +95,6 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
             yaml.dump(output, f, default_flow_style=False, sort_keys=False)
 
     def report_output_message(self, output: Dict[str, Any]) -> Optional[str]:
-        return f"Exported {len(output['amplicons'])} amplicons, {len(output['transpositions'])} transpositions to {self.yaml_file}"
+        return (f"Exported {len(output['amplicons'])} amplicons, "
+                f"{len(output['transpositions'])} transpositions to "
+                f"{self.yaml_file}")

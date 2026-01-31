@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.data_types import (
-    BaseEvent, RecordTypedDf, CoveredTnJc2, Architecture,
+    RecordTypedDf, CoveredTnJc2, Architecture,
 )
 from amplifinder.steps.base import RecordTypedDfStep
 

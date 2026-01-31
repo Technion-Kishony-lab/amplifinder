@@ -148,7 +148,7 @@ class Step(ABC):
             # Fast path: skip artifact generation if already present
             if self._should_skip_artifacts():
                 return
-            
+
             # Acquire lock if needed (None = no-op) and re-check (TOCTOU)
             lock_target = self._get_lock_target()
             with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
@@ -206,10 +206,10 @@ class Step(ABC):
 
     def _get_lock_target(self) -> Optional[Path]:
         """Path used for step lock; override to customize lock scope.
-        
+
         Returns:
             Path to lock file, or None if no locking is needed (isolate-specific files).
-            
+
         Override this method to:
         - Return a shared directory path for steps writing to shared resources
         - Return None for steps that only write to isolate-specific directories

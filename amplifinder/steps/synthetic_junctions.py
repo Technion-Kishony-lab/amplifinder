@@ -206,16 +206,16 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
         """Create junction FASTA files for each candidate."""
         for tnjc2, junctions in self._tnjc2s_and_junctions:
             fasta_path = tnjc2.fasta_path(self.output_dir, is_ancestor=self.is_ancestor)
-            
+
             # Lock per-junction for ancestor (None for isolate = no lock)
             lock_path = fasta_path.parent if self.is_ancestor else None
-            
+
             with locked_resource(lock_path, "junction_fasta", timeout=300):
                 if fasta_path.exists() and not self.force:
                     continue
                 if self.force:
                     remove_file_or_dir(fasta_path)
-                
+
                 ensure_dir(fasta_path.parent)
                 sequences = [
                     (jtype.name, self.genome.get_junction_sequence_arm1_to_arm2(jc))
