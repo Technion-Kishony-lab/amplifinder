@@ -8,7 +8,7 @@ if plt is not None:
 
 
 from collections import defaultdict
-from typing import Dict, List, Optional
+from typing import Dict, List
 from pathlib import Path
 
 from amplifinder.env import PLOT_ALIGNMENT_SNP_INDELS

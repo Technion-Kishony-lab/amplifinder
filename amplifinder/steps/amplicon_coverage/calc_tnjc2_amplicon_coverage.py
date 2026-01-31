@@ -102,7 +102,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             anc_scaf_avgs = {}
 
         # Process each raw_tnjc2s
-        with print_timer("\nCalculating coverage for each raw_tnjc2:\n", end_msg="\n", seperate_prints=True, should_log=True):
+        with print_timer("\nCalculating coverage for each raw_tnjc2:\n",
+                         end_msg="\n", seperate_prints=True, should_log=True):
             covered_records = []
             for i, raw_tnjc2 in enumerate(self.raw_tnjc2s):
                 covered = self._calc_candidate_coverage(
@@ -116,8 +117,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                 logger.print_progress(".", end="\n" if (i + 1) % 60 == 0 else "")
 
         logger.print_progress(f"\nTotal amplicons: {len(self.raw_tnjc2s)}, "
-                   f"too long: {self._too_long_amplicons}, "
-                   f"too short: {self._too_short_amplicons}")
+                              f"too long: {self._too_long_amplicons}, "
+                              f"too short: {self._too_short_amplicons}")
 
         df = RecordTypedDf.from_records(covered_records, CoveredTnJc2)
         return df

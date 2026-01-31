@@ -31,12 +31,12 @@ class Architecture(Enum):
     HEMI_FLANKED_LEFT = "hemi-flanked left", (False, True), False
     HEMI_FLANKED_RIGHT = "hemi-flanked right", (True, False), False
     FLANKED = "flanked", (True, True), False
-    
+
     # Locus-joining (singleton):
     HEMI_FLANKED_LEFT_SINGLETON = "hemi-flanked left singleton", (False, True), True
     HEMI_FLANKED_RIGHT_SINGLETON = "hemi-flanked right singleton", (True, False), True
     AMPLICON_ONLY = "amplicon-only", (False, False), True
-    
+
     UNRESOLVED = "unresolved", (None, None), None
 
     @property

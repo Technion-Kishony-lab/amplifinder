@@ -229,28 +229,28 @@ class Config:
         for key, value in self.__dict__.items():
             if value is not None:
                 config_dict[key] = convert_value(value)
-        
+
         return config_dict
 
     def save_to_file(self, config_path: Path, log: bool = True) -> None:
         """Save config to specified path.
-        
+
         Args:
             config_path: Path to save config file
             log: Whether to log the save location (default: True)
         """
         config_path = Path(config_path)
         config_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         config_dict = self.to_yaml_dict()
-        
+
         with open(config_path, 'w') as f:
             yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
-        
+
         if log:
             from amplifinder.logger import logger
             logger.info(f"Saved config to:\n{config_path}")
-    
+
     def save(self, run_dir: Path) -> None:
         """Save config to run_config.yaml in run directory."""
         run_dir = ensure_dir(run_dir)
@@ -344,7 +344,7 @@ class Config:
 
 def _get_config_defaults() -> dict[str, Any]:
     """Extract default values from Config dataclass fields.
-    
+
     Returns dictionary of defaults for optional Config fields,
     converting Enum defaults to their values.
     """
@@ -353,7 +353,7 @@ def _get_config_defaults() -> dict[str, Any]:
         # Skip required fields (iso_fastq_path, ref_name)
         if f.default is MISSING and f.default_factory is MISSING:
             continue
-        
+
         # Get default value
         if f.default is not MISSING:
             value = f.default
@@ -361,13 +361,13 @@ def _get_config_defaults() -> dict[str, Any]:
             value = f.default_factory()
         else:
             continue
-        
+
         # Convert Enum to value for serialization
         if isinstance(value, Enum):
             value = value.value
-        
+
         defaults[f.name] = value
-    
+
     return defaults
 
 

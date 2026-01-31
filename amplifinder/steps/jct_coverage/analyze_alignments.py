@@ -88,11 +88,11 @@ def print_jc_read_counts_and_calls(
     """Print junction coverage and calls."""
     # Print header (two rows)
     logger.info(f"{'junction':<13} {'left':>6} {'':>6} {'left':>6} "
-          f"{'':>6} {'':>6} {'right':>6} {'':>6} "
-          f"{'right':>6} {'':>6}", timestamp=False)
+                f"{'':>6} {'':>6} {'right':>6} {'':>6} "
+                f"{'right':>6} {'':>6}", timestamp=False)
     logger.info(f"{'type':<13} {'far':>6} {'left':>6} {'marg':>6} "
-          f"{'span':>6} {'pair':>6} {'marg':>6} {'right':>6} "
-          f"{'far':>6} {'call':>6}", timestamp=False)
+                f"{'span':>6} {'pair':>6} {'marg':>6} {'right':>6} "
+                f"{'far':>6} {'call':>6}", timestamp=False)
     logger.info("-" * 76, timestamp=False)
 
     # Print rows
@@ -100,8 +100,8 @@ def print_jc_read_counts_and_calls(
         cov = jc_covs[jt]
         call_str = str(jc_calls[jt].value)
         logger.info(f"{jt.name:<13} {cov.left_far:>6} {cov.left:>6} {cov.left_marginal:>6} "
-              f"{cov.spanning:>6} {cov.paired:>6} {cov.right_marginal:>6} {cov.right:>6} "
-              f"{cov.right_far:>6} {call_str:>6}", timestamp=False)
+                    f"{cov.spanning:>6} {cov.paired:>6} {cov.right_marginal:>6} {cov.right:>6} "
+                    f"{cov.right_far:>6} {call_str:>6}", timestamp=False)
     logger.info("", timestamp=False)
 
 
@@ -110,7 +110,7 @@ def warn_if_paired_and_not_spanning(jc_covs: dict[JunctionType, JunctionReadCoun
     for jt in JunctionType:
         if jc_covs[jt].paired > 0 and jc_covs[jt].spanning == 0:
             logger.warning(f"Junction {jt.name} has {jc_covs[jt].paired} paired-end reads "
-                    "transversing the junction but no spanning reads.")
+                           "transversing the junction but no spanning reads.")
 
 
 class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):

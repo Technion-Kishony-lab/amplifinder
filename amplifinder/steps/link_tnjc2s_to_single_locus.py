@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.logger import logger
-from amplifinder.data_types import BaseEvent, Architecture, Side
+from amplifinder.data_types import BaseEvent
 from amplifinder.data_types.genome import Genome
 from amplifinder.data_types import RecordTypedDf, CoveredTnJc2, RefTn, Side, SingleLocusLinkedTnJc2, TnJunction
 from amplifinder.data_types.tnjc2s import TnJc2AndSide
@@ -99,4 +99,3 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
             elif tnjc_i == tnjc2_j.tnjc_right:
                 matches.append(TnJc2AndSide(tnjc2_j, Side.RIGHT))
         return matches
-

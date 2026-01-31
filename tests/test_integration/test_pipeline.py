@@ -10,9 +10,7 @@ from Bio import SeqIO
 
 from amplifinder.utils.file_utils import remove_file_or_dir
 from amplifinder.data_types import JunctionType
-from amplifinder.steps.base import Step
 from amplifinder.config import Config
-from amplifinder.logger import logger
 from amplifinder.pipeline import Pipeline
 from amplifinder.env import DEBUG
 

@@ -68,34 +68,36 @@ class Pipeline:
             anc_msg = "No ancestor assigned; using raw (non-normalized) coverage analysis"
         else:
             anc_msg = "No ancestor"
-        logger.info(f"\nReference: {c(self.config.ref_name, 'cyan')}\nIsolate: {c(str(self.config.iso_fastq_path), 'magenta')}\n{anc_msg}")
+        logger.info(
+            f"\nReference: {c(self.config.ref_name, 'cyan')}\n"
+            f"Isolate: {c(str(self.config.iso_fastq_path), 'magenta')}\n{anc_msg}")
 
     def run(self) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
         """Run full pipeline with exception handling and status tracking."""
         self._setup_logger()
         self._log_run_info()
-        
+
         # Initialize output directories
         iso_output, anc_output = self._initialize()
-        
+
         try:
             # Clear old status files and mark start
             self._clear_status_files(iso_output)
             self._write_status_file(iso_output, 'started')
-            
+
             # Run the pipeline
             classified_tnjc2s = self._run(iso_output, anc_output)
-            
+
             # Mark successful completion
             self._write_status_file(iso_output, 'completed')
             return classified_tnjc2s
-            
+
         except PrematureTerminationError as e:
             # Graceful early termination - not an error
             self._write_status_file(iso_output, 'terminated', e.get_detailed_message())
             logger.info(f"Pipeline terminated early:\n{e}")
             return None  # Graceful exit
-                
+
         except Exception as e:
             # Actual errors
             self._write_status_file(iso_output, 'failed', str(e))
@@ -133,10 +135,10 @@ class Pipeline:
         """Run only breseq steps (ancestor and isolate), then exit."""
         self._setup_logger()
         self._log_run_info(include_no_ancestor_warning=False)
-        
+
         # Initialize output directories
         iso_output, anc_output = self._initialize()
-        
+
         genome = self._load_reference()
         self._run_breseq(genome)
         logger.info("breseq-only mode completed")
@@ -148,7 +150,7 @@ class Pipeline:
 
     def _write_status_file(self, iso_output: Path, status: str, reason: str = "") -> None:
         """Write status marker file to isolate run directory.
-        
+
         Args:
             iso_output: Isolate run directory
             status: Status name (started, completed, terminated, failed)

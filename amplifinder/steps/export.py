@@ -42,7 +42,7 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
             # Map tn_ids to tn_names
             tn_names = [self.ref_tns.df.loc[tn_id, 'tn_name'] for tn_id in tnjc2.tn_ids]
             chosen_tn_name = self.ref_tns.df.loc[tnjc2.chosen_tn_id, 'tn_name'] if tnjc2.chosen_tn_id else None
-            
+
             amplicons.append({
                 'positions': f"{tnjc2.left}-{tnjc2.right}",
                 'span_origin': tnjc2.span_origin,

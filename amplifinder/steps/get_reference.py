@@ -3,7 +3,6 @@
 from pathlib import Path
 from typing import Optional
 
-from amplifinder.logger import logger
 from amplifinder.steps.base import OutputStep
 from amplifinder.data_types.genome import Genome, get_genome, exists_genome
 

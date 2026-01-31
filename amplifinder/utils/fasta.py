@@ -124,17 +124,17 @@ def write_fasta(
 
 def count_fastq_reads(fastq_path: Path) -> int:
     """Count number of reads in FASTQ file (lines / 4).
-    
+
     Fast implementation using line counting, not parsing sequences.
     """
-    
+
     try:
         if str(fastq_path).endswith('.gz'):
-            result = subprocess.run(['zcat', str(fastq_path), '|', 'wc', '-l'], 
-                                  shell=True, capture_output=True, text=True)
+            result = subprocess.run(['zcat', str(fastq_path), '|', 'wc', '-l'],
+                                    shell=True, capture_output=True, text=True)
         else:
-            result = subprocess.run(['wc', '-l', str(fastq_path)], 
-                                  capture_output=True, text=True)
+            result = subprocess.run(['wc', '-l', str(fastq_path)],
+                                    capture_output=True, text=True)
         num_lines = int(result.stdout.split()[0])
         return num_lines // 4
     except (subprocess.CalledProcessError, ValueError, IndexError, OSError):
@@ -149,11 +149,11 @@ def count_fastq_reads(fastq_path: Path) -> int:
 
 def count_total_bases(fastq_dir: Path, read_length: int) -> int:
     """Count total bases in FASTQ directory.
-    
+
     Args:
         fastq_dir: Directory containing FASTQ files
         read_length: Read length (from get_read_length_stats)
-    
+
     Returns:
         Total number of bases
     """

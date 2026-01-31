@@ -229,7 +229,7 @@ def parse_breseq_output(
     Returns:
         Dictionary with keys: JC, SNP, MOB, DEL, UN
         Each value is a DataFrame with parsed records
-        
+
     Raises:
         ValueError: If max_lines exceeded
         FileNotFoundError: If output.gd doesn't exist
@@ -248,13 +248,13 @@ def parse_breseq_output(
         line_count = 0
         for line in f:
             line_count += 1
-            
+
             # Check line count threshold
             if max_lines is not None and line_count > max_lines:
                 raise ValueError(
                     f"breseq output exceeds {max_lines} lines ({line_count}+ lines found):\n{output_gd}"
                 )
-            
+
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
@@ -267,13 +267,13 @@ def parse_breseq_output(
 
             record = _parse_record(parts, RECORD_TYPES[record_type])
             records[record_type].append(record)
-    
+
     # Convert to DataFrames
     results = {}
     for name, recs in records.items():
         df = pd.DataFrame(recs) if recs else pd.DataFrame()
         results[name] = df
-    
+
     return results
 
 
