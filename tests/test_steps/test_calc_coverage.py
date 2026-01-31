@@ -10,8 +10,8 @@ from amplifinder.utils.file_utils import ensure_dir
 
 @pytest.fixture
 def sample_tnjc2(tiny_genome):
-    """Create sample RawTnJc2 records."""
-    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, Terminal
+    """Create sample SingleLocusLinkedTnJc2 records."""
+    from amplifinder.data_types import RawTnJc2, SingleLocusLinkedTnJc2, TnJunction, Orientation, OffsetRefTnSide, Terminal, BaseEvent
 
     tn_jc_S = TnJunction(
         num=1, scaf1="tiny", pos1=10, dir1=Orientation.FORWARD,
@@ -28,9 +28,14 @@ def sample_tnjc2(tiny_genome):
         swapped=False,
     )
     scaffold = tiny_genome.get_scaffold("tiny")
-    record = RawTnJc2(tnjc_left=tn_jc_S, tnjc_right=tn_jc_E, scaffold=scaffold)
+    raw_record = RawTnJc2(tnjc_left=tn_jc_S, tnjc_right=tn_jc_E, scaffold=scaffold, base_event=BaseEvent.LOCUS_JOINING)
+    record = SingleLocusLinkedTnJc2.from_other(
+        raw_record,
+        single_locus_tnjc2_left_matchings=[],
+        single_locus_tnjc2_right_matchings=[],
+    )
 
-    return RecordTypedDf.from_records([record, record], RawTnJc2)
+    return RecordTypedDf.from_records([record, record], SingleLocusLinkedTnJc2)
 
 
 @pytest.fixture
@@ -159,7 +164,7 @@ def test_calculates_coverage_for_all_lengths(tiny_genome, sample_tnjc2, mock_bre
 
 def test_skips_coverage_for_too_long_amplicons(tiny_genome, sample_tnjc2, mock_breseq_output, tmp_path):
     """Should skip coverage calculation for amplicons outside length range."""
-    # Set max_amplicon_length to 50, which is less than the sample amplicon length (100)
+    # Set max_amplicon_length to 50, which is less than the sample amplicon length (101)
     step = CalcTnJc2AmpliconCoverageStep(
         raw_tnjc2s=sample_tnjc2,
         iso_breseq_path=mock_breseq_output,
@@ -170,10 +175,5 @@ def test_skips_coverage_for_too_long_amplicons(tiny_genome, sample_tnjc2, mock_b
 
     result = step.run()
 
-    # Candidates should still be in result, but with NaN coverage
-    assert len(result) == 2
-
-    # Check that coverage values are NaN
-    for rec in result:
-        assert pd.isna(rec.iso_amplicon_avg)
-        assert pd.isna(rec.avg_norm_cov)
+    # Amplicons that are too long are completely filtered out
+    assert len(result) == 0

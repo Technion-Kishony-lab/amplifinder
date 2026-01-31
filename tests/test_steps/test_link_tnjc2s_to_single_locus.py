@@ -10,7 +10,7 @@ from amplifinder.data_types import (
 @pytest.fixture
 def sample_covered_tnjc2(tiny_genome):
     """Create sample CoveredTnJc2 records - one of each major type."""
-    from amplifinder.data_types import RawTnJc2, TnJunction, Orientation, OffsetRefTnSide, Terminal
+    from amplifinder.data_types import RawTnJc2, SingleLocusLinkedTnJc2, TnJunction, Orientation, OffsetRefTnSide, Terminal, BaseEvent
 
     scaffold = tiny_genome.get_scaffold("tiny")
 
@@ -29,42 +29,54 @@ def sample_covered_tnjc2(tiny_genome):
     # FLANKED: both junctions match other single-locus pairs
     jc_flank_left = make_jc(1, 10, 200, Terminal.START)
     jc_flank_right = make_jc(2, 20, 300, Terminal.END)
+    flanked_raw = RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=jc_flank_right, scaffold=scaffold, base_event=BaseEvent.LOCUS_JOINING)
+    flanked_linked = SingleLocusLinkedTnJc2.from_other(flanked_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
     flanked = CoveredTnJc2.from_other(
-        RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=jc_flank_right, scaffold=scaffold),
+        flanked_linked,
         iso_scaf_avg=1.0, iso_amplicon_avg=2.0,
     )
 
     # Single-locus pairs matching left/right junctions (for flanking classification)
     # These must be TRANSPOSITION events (amplicon_length < 30bp) to qualify as "single locus"
     # pos2 difference must be < 30 for transposition classification
+    single_locus_left_raw = RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=make_jc(3, 30, 210, Terminal.END), scaffold=scaffold, base_event=BaseEvent.TRANSPOSITION)
+    single_locus_left_linked = SingleLocusLinkedTnJc2.from_other(single_locus_left_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
     single_locus_left = CoveredTnJc2.from_other(
         # 210-200=10 < 30
-        RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=make_jc(3, 30, 210, Terminal.END), scaffold=scaffold),
+        single_locus_left_linked,
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
+    single_locus_right_raw = RawTnJc2(tnjc_left=make_jc(4, 40, 290, Terminal.START), tnjc_right=jc_flank_right, scaffold=scaffold, base_event=BaseEvent.TRANSPOSITION)
+    single_locus_right_linked = SingleLocusLinkedTnJc2.from_other(single_locus_right_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
     single_locus_right = CoveredTnJc2.from_other(
         # 300-290=10 < 30
-        RawTnJc2(tnjc_left=make_jc(4, 40, 290, Terminal.START), tnjc_right=jc_flank_right, scaffold=scaffold),
+        single_locus_right_linked,
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
 
     # TRANSPOSITION: junctions < 30bp apart (500 to 515 = 15bp)
+    transposition_raw = RawTnJc2(
+        tnjc_left=make_jc(10, 100, 500, Terminal.START),
+        tnjc_right=make_jc(11, 110, 515, Terminal.END),
+        scaffold=scaffold,
+        base_event=BaseEvent.TRANSPOSITION,
+    )
+    transposition_linked = SingleLocusLinkedTnJc2.from_other(transposition_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
     transposition = CoveredTnJc2.from_other(
-        RawTnJc2(
-            tnjc_left=make_jc(10, 100, 500, Terminal.START),
-            tnjc_right=make_jc(11, 110, 515, Terminal.END),
-            scaffold=scaffold,
-        ),
+        transposition_linked,
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
 
     # UNFLANKED: unique junctions
+    unflanked_raw = RawTnJc2(
+        tnjc_left=make_jc(20, 150, 700, Terminal.START, tn_id=2),
+        tnjc_right=make_jc(21, 160, 900, Terminal.END, tn_id=2),
+        scaffold=scaffold,
+        base_event=BaseEvent.LOCUS_JOINING,
+    )
+    unflanked_linked = SingleLocusLinkedTnJc2.from_other(unflanked_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
     unflanked = CoveredTnJc2.from_other(
-        RawTnJc2(
-            tnjc_left=make_jc(20, 150, 700, Terminal.START, tn_id=2),
-            tnjc_right=make_jc(21, 160, 900, Terminal.END, tn_id=2),
-            scaffold=scaffold,
-        ),
+        unflanked_linked,
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
 
@@ -109,8 +121,6 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_r
     # Create a short amplicon
     short_record = CoveredTnJc2.from_other(
         covered_tnjc2_record,
-        iso_scaf_avg=1.0,
-        iso_amplicon_avg=1.0,
     )
 
     all_records = RecordTypedDf.from_records(
@@ -123,7 +133,6 @@ def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_r
         genome=tiny_genome,
         tn_locs=sample_tn_locs,
         output_dir=tmp_path,
-        transposition_threshold=30,
     )
 
     result = step.run()
