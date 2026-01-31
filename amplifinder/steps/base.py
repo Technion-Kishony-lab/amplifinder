@@ -148,16 +148,16 @@ class Step(ABC):
             # Fast path: skip artifact generation if already present
             if self._should_skip_artifacts():
                 return
-            else:
-                # Acquire lock and re-check (TOCTOU)
-                lock_target = self._get_lock_target()
-                with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
-                    if self._should_skip_artifacts():
-                        return
-                    else:
-                        if self.force:
-                            self._clean_artifacts()
-                        self._run_generate_artifacts()
+            
+            # Acquire lock if needed (None = no-op) and re-check (TOCTOU)
+            lock_target = self._get_lock_target()
+            with locked_resource(lock_target, self.name, timeout=self.STEP_LOCK_TIMEOUT):
+                if self._should_skip_artifacts():
+                    return
+                else:
+                    if self.force:
+                        self._clean_artifacts()
+                    self._run_generate_artifacts()
 
     def _run_generate_artifacts(self):
         """Run the creation of artifacts."""
@@ -204,11 +204,18 @@ class Step(ABC):
         logger.info(formatted, timestamp=True)
         logger.info(f"Output: {output_str}")
 
-    def _get_lock_target(self) -> Path:
-        """Path used for step lock; override to customize lock scope."""
-        if not self.artifact_files:
-            raise ValueError(f"{self.name}: artifact_files not set; cannot derive lock target")
-        return self.artifact_files[0]
+    def _get_lock_target(self) -> Optional[Path]:
+        """Path used for step lock; override to customize lock scope.
+        
+        Returns:
+            Path to lock file, or None if no locking is needed (isolate-specific files).
+            
+        Override this method to:
+        - Return a shared directory path for steps writing to shared resources
+        - Return None for steps that only write to isolate-specific directories
+        """
+        # By default, no lock needed (isolate-specific files)
+        return None
 
     def _clean_artifacts(self) -> None:
         """Remove existing artifacts before regeneration."""

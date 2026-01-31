@@ -128,4 +128,7 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
 
 class AncBreseqStep(BreseqStep):
     """Run breseq alignment pipeline for ancestor."""
-    pass
+    
+    def _get_lock_target(self) -> Optional[Path]:
+        """Lock ancestor breseq output directory."""
+        return self.breseq_path

@@ -8,6 +8,7 @@ from amplifinder.config import BowtieParams
 from amplifinder.logger import logger
 from amplifinder.steps.base import Step
 from amplifinder.tools.bowtie2 import align_reads_to_fasta
+from amplifinder.utils.file_lock import locked_resource
 
 
 class AlignReadsToJunctionsStep(Step):
@@ -54,6 +55,7 @@ class AlignReadsToJunctionsStep(Step):
         """Align reads to synthetic junctions; skip BAMs that already exist."""
         analysis_dir_names = [tnjc2.analysis_dir_name(is_ancestor=self.is_ancestor) for tnjc2 in self.synjcs_tnjc2s]
         max_name_length = max(len(name) for name in analysis_dir_names)
+        
         for filtered_tnjc2 in self.synjcs_tnjc2s:
             junctions_fasta = filtered_tnjc2.fasta_path(self.output_dir, is_ancestor=self.is_ancestor)
             assert junctions_fasta.exists()
@@ -61,21 +63,26 @@ class AlignReadsToJunctionsStep(Step):
             bam_path = filtered_tnjc2.bam_path(self.output_dir, is_ancestor=self.is_ancestor)
             name = filtered_tnjc2.analysis_dir_name(is_ancestor=self.is_ancestor)
             logger.print_progress(f"{name:<{max_name_length}}: ", end="")
-            if bam_path.exists():
-                logger.print_progress("file exists, skipping")
-                continue
-            align_reads_to_fasta(
-                ref_fasta=junctions_fasta,
-                fastq_path=self.fastq_path,
-                output_bam=bam_path,
-                threads=self.threads,
-                score_min=self.bowtie_params.score_min,
-                mismatch_penalty=self.bowtie_params.mismatch_penalty,
-                num_alignments=self.bowtie_params.num_alignments,
-                local=self.bowtie_params.local,
-                min_qlen=self.bowtie_params.min_qlen,
-            )
-            assert bam_path.exists()
+            
+            # Lock per-junction for ancestor (None for isolate = no lock)
+            lock_path = bam_path.parent if self.is_ancestor else None
+            
+            with locked_resource(lock_path, "junction_bam", timeout=1800):
+                if bam_path.exists():
+                    logger.print_progress("file exists, skipping")
+                    continue
+                align_reads_to_fasta(
+                    ref_fasta=junctions_fasta,
+                    fastq_path=self.fastq_path,
+                    output_bam=bam_path,
+                    threads=self.threads,
+                    score_min=self.bowtie_params.score_min,
+                    mismatch_penalty=self.bowtie_params.mismatch_penalty,
+                    num_alignments=self.bowtie_params.num_alignments,
+                    local=self.bowtie_params.local,
+                    min_qlen=self.bowtie_params.min_qlen,
+                )
+                assert bam_path.exists()
 
 
 class AncAlignReadsToJunctionsStep(AlignReadsToJunctionsStep):

@@ -29,6 +29,7 @@ from amplifinder.data_types import (
 from amplifinder.steps.base import RecordTypedDfStep
 from amplifinder.utils.file_utils import ensure_dir, remove_file_or_dir
 from amplifinder.utils.fasta import write_fasta
+from amplifinder.utils.file_lock import locked_resource
 
 
 class RudimentaryJunctionValues(NamedTuple):
@@ -205,17 +206,22 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
         """Create junction FASTA files for each candidate."""
         for tnjc2, junctions in self._tnjc2s_and_junctions:
             fasta_path = tnjc2.fasta_path(self.output_dir, is_ancestor=self.is_ancestor)
-            if self.force:
-                remove_file_or_dir(fasta_path)
-            if fasta_path.exists():
-                continue
-
-            ensure_dir(fasta_path.parent)
-            sequences = [
-                (jtype.name, self.genome.get_junction_sequence_arm1_to_arm2(jc))
-                for jtype, jc in junctions.items()
-            ]
-            write_fasta(sequences, fasta_path)
+            
+            # Lock per-junction for ancestor (None for isolate = no lock)
+            lock_path = fasta_path.parent if self.is_ancestor else None
+            
+            with locked_resource(lock_path, "junction_fasta", timeout=300):
+                if fasta_path.exists() and not self.force:
+                    continue
+                if self.force:
+                    remove_file_or_dir(fasta_path)
+                
+                ensure_dir(fasta_path.parent)
+                sequences = [
+                    (jtype.name, self.genome.get_junction_sequence_arm1_to_arm2(jc))
+                    for jtype, jc in junctions.items()
+                ]
+                write_fasta(sequences, fasta_path)
 
     def _calculate_output(self) -> RecordTypedDf[SynJctsTnJc2]:
         """Return records with analysis dirs (artifacts are FASTA files)."""

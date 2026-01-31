@@ -32,7 +32,7 @@ class GetRefGenomeStep(OutputStep[Genome]):
 
     def _get_lock_target(self) -> Path:
         """Lock on shared genome directory to serialize cache writes."""
-        return self.ref_path / ".lock_genome"
+        return self.ref_path
 
     def has_artifact_files(self) -> bool:
         """Check if genome mapping file exists and is valid."""
