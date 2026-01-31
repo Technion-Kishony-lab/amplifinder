@@ -109,10 +109,10 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             for i, raw_tnjc2 in enumerate(self.raw_tnjc2s):
                 if self._should_skip_amplicon(raw_tnjc2):
                     continue
-                
+
                 iso_scaf_avg = iso_scaf_avgs[raw_tnjc2.scaf]
                 anc_scaf_avg = anc_scaf_avgs[raw_tnjc2.scaf] if self.has_ancestor else None
-                
+
                 iso_amplicon_avg, anc_amplicon_avg, avg_norm_cov = self._calc_candidate_coverage(
                     raw_tnjc2,
                     iso_scaf_covs[raw_tnjc2.scaf],
@@ -120,7 +120,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                     anc_scaf_covs[raw_tnjc2.scaf] if self.has_ancestor else None,
                     anc_scaf_avg,
                 )
-                
+
                 covered = CoveredTnJc2.from_other(
                     raw_tnjc2,
                     iso_scaf_avg=iso_scaf_avg,
@@ -146,7 +146,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
 
     def _should_skip_amplicon(self, raw_tnjc2: SingleLocusLinkedTnJc2) -> bool:
         """Check if amplicon should be skipped based on length filters.
-        
+
         Updates counters and returns True if amplicon should be skipped.
         """
         if raw_tnjc2.base_event != BaseEvent.LOCUS_JOINING:
@@ -169,7 +169,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         anc_scaf_avg: Optional[float],
     ) -> tuple[float, Optional[float], float]:
         """Calculate amplicon coverage stats.
-        
+
         Returns: (iso_amplicon_avg, anc_amplicon_avg, avg_norm_cov)
         """
         # Get segment scaffold for this amplicon
@@ -200,4 +200,3 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             anc_amplicon_avg = None
 
         return (iso_amplicon_avg, anc_amplicon_avg, avg_norm_cov)
-

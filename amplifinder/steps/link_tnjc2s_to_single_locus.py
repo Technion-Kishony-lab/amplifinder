@@ -52,7 +52,7 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
                 tncj2_i.tnjc_left, tnjc2s, exclude_idx=i)
             right_matches = self._find_all_single_locus_matching_tnjc2s(
                 tncj2_i.tnjc_right, tnjc2s, exclude_idx=i)
-            
+
             linked = SingleLocusLinkedTnJc2.from_other(
                 tncj2_i,
                 single_locus_tnjc2_left_matchings=left_matches,

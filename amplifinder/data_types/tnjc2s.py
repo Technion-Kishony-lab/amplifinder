@@ -41,7 +41,7 @@ class RawTnJc2(Record):
 
     # Scaffold object (not exported to CSV)
     scaffold: SeqScaffold
-    
+
     # Base event classification
     base_event: BaseEvent
 
