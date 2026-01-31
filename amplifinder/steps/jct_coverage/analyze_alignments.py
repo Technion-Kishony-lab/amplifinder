@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.config import AlignmentClassifyParams, JcCallParams, AlignmentFilterParams
+from amplifinder.data_types.jc_types import JcCall
 from amplifinder.env import DEBUG
 from amplifinder.data_types import (
     RecordTypedDf, SynJctsTnJc2, AnalyzedTnJc2, JunctionType, JunctionReadCounts
@@ -34,7 +35,7 @@ def get_jct_read_counts_by_tnjc2(
 
 
 def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
-               arm_len: int, read_len: int, alignment_classify_params: AlignmentClassifyParams) -> Optional[bool]:
+               arm_len: int, read_len: int, alignment_classify_params: AlignmentClassifyParams) -> JcCall:
     """Determine if junction is covered based on spanning read statistics.
 
     Args:
@@ -74,10 +75,10 @@ def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
         or num_spanning_reads <= expected_num_spanning * jc_call_params.neg_threshold_rel
 
     if is_above_minimal_expected and not is_close_to_zero:
-        return True
+        return JcCall.POS
     if not is_above_minimal_expected and is_close_to_zero:
-        return False
-    return None  # ambiguous
+        return JcCall.NEG
+    return JcCall.AMBIGIOUS
 
 
 def print_jc_read_counts_and_calls(

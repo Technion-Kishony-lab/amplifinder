@@ -8,8 +8,8 @@ from pydantic import field_validator
 
 from amplifinder.records.base_records import Record
 from amplifinder.data_types.basic_enums import Side, Terminal, Orientation
-from amplifinder.data_types.events import BaseRawEvent, RawEvent, EventModifier
-from amplifinder.data_types.jc_types import JunctionType
+from amplifinder.data_types.events import BaseEvent, Architecture, EventDescriptor
+from amplifinder.data_types.jc_types import JcCall, JunctionType
 from amplifinder.data_types.read_types import JunctionReadCounts
 from amplifinder.data_types.ref_tn import TnId, OffsetRefTnSide, TnJunction
 from amplifinder.data_types.scaffold import SeqScaffold, SeqSegmentScaffold
@@ -214,7 +214,7 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
     ]
     single_locus_tnjc2_left_matchings: List[TnJc2AndSide]
     single_locus_tnjc2_right_matchings: List[TnJc2AndSide]
-    base_raw_event: BaseRawEvent
+    base_event: BaseEvent
 
     @property
     def single_locus_tnjc2_matching_left(self) -> Optional[SingleLocusLinkedTnJc2]:
@@ -237,23 +237,23 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
         return self.single_locus_tnjc2_matching_right.pair_id if self.single_locus_tnjc2_matching_right else None
 
     @property
-    def raw_event(self) -> RawEvent:
+    def raw_event(self) -> Architecture:
         """Raw event classification."""
-        if self.base_raw_event == BaseRawEvent.REFERENCE:
-            return RawEvent.REFERENCE
-        elif self.base_raw_event == BaseRawEvent.TRANSPOSITION:
-            return RawEvent.TRANSPOSITION
-        assert self.base_raw_event == BaseRawEvent.LOCUS_JOINING
+        if self.base_event == BaseEvent.REFERENCE_TN:
+            return Architecture.REFERENCE_TN
+        elif self.base_event == BaseEvent.TRANSPOSITION:
+            return Architecture.TRANSPOSITION
+        assert self.base_event == BaseEvent.LOCUS_JOINING
         has_match_left = self.single_locus_tnjc2_matching_left is not None
         has_match_right = self.single_locus_tnjc2_matching_right is not None
         if has_match_left and has_match_right:
-            return RawEvent.FLANKED
+            return Architecture.FLANKED
         elif has_match_left:
-            return RawEvent.HEMI_FLANKED_LEFT
+            return Architecture.HEMI_FLANKED_LEFT
         elif has_match_right:
-            return RawEvent.HEMI_FLANKED_RIGHT
+            return Architecture.HEMI_FLANKED_RIGHT
         else:
-            return RawEvent.UNFLANKED
+            return Architecture.UNFLANKED
 
     @property
     def chosen_tn_id(self) -> Optional[TnId]:
@@ -301,7 +301,7 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
         """Get sides of chosen TN (left and right amplicon sides)."""
         chosen_id = self.chosen_tn_id
         if chosen_id is None:
-            return None, None
+            raise ValueError("This tnjc2 does not have a chosen tn")
         matching_tns = self._find_matching_tn_sides()
         for tn_side_left_amplicon, tn_side_right_amplicon in matching_tns:
             if tn_side_left_amplicon.tn_id == chosen_id:
@@ -351,8 +351,8 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     jc_covs_anc: Optional[Dict[JunctionType, JunctionReadCounts]] = None
 
     # For each junction type, whether it is covered (True), ambiguous (None), or not covered (False)
-    jc_calls: Optional[Dict[JunctionType, Optional[bool]]] = None
-    jc_calls_anc: Optional[Dict[JunctionType, Optional[bool]]] = None
+    jc_calls: Optional[Dict[JunctionType, JcCall]] = None
+    jc_calls_anc: Optional[Dict[JunctionType, JcCall]] = None
 
     @property
     def jc_cov_vector(self) -> List[tuple[int, int, int]]:
@@ -373,20 +373,24 @@ class ClassifiedTnJc2(AnalyzedTnJc2):
     """AnalyzedTnJc2 with architecture/event classification (Step 13 output)."""
     NAME: ClassVar[str] = "Classified Amplicons"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = AnalyzedTnJc2.CSV_EXPORT_FIELDS + [
-        'event'
+        'event_str', 'iso_architecture', 'anc_architecture', 'event_descriptors'
     ]
     # Architecture classification
-    isolate_architecture: RawEvent
-    ancestor_architecture: Optional[RawEvent] = None  # only when anc_path is set
-
-    # Final event classification
-    event_modifiers: List[EventModifier]    # de novo left/right, ancestral, etc.
+    iso_architecture: Architecture
+    anc_architecture: Optional[Architecture] = None  # only when anc_path is set
+    
+    # Event descriptors
+    event_descriptors: List[EventDescriptor]
 
     @property
-    def event(self) -> str:
-        """Full event description derived from architecture and modifiers."""
-        modifiers = [m.value for m in self.event_modifiers if m]
-        return f"{self.isolate_architecture.value} ({', '.join(modifiers)})"
+    def event_str(self) -> str:
+        """Full event description derived from architecture and descriptors."""
+        iso_architecture_str = self.iso_architecture.description
+        if self.event_descriptors:
+            descriptors_str = ', '.join(d.value for d in self.event_descriptors)
+            return f"{iso_architecture_str} ({descriptors_str})"
+        else:
+            return iso_architecture_str
 
 
 class ExportedTnJc2(Record):
@@ -406,4 +410,4 @@ class ExportedTnJc2(Record):
     mode_copy_number: Optional[float] = None
     Ancestor: Optional[str] = None
     event: Optional[str] = None
-    isolate_architecture: Optional[str] = None
+    iso_architecture: Optional[str] = None

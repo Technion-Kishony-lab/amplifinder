@@ -3,7 +3,7 @@
 import pytest
 from amplifinder.steps import LinkTnJc2ToSingleLocusPairsStep
 from amplifinder.data_types import (
-    RecordTypedDf, CoveredTnJc2, RefTn, RawEvent,
+    RecordTypedDf, CoveredTnJc2, RefTn, Architecture,
 )
 
 
@@ -96,12 +96,12 @@ def test_link_tnjc2s_to_single_locus(sample_covered_tnjc2, sample_tn_locs, tmp_p
     assert len(result) == 5  # flanked, transposition, unflanked, 2 single-locus pairs
     result_list = list(result)
     # Test the main 3 types (first 3 records)
-    assert result_list[0].raw_event == RawEvent.FLANKED
-    assert result_list[1].raw_event == RawEvent.TRANSPOSITION
-    assert result_list[2].raw_event == RawEvent.UNFLANKED
+    assert result_list[0].raw_event == Architecture.FLANKED
+    assert result_list[1].raw_event == Architecture.TRANSPOSITION
+    assert result_list[2].raw_event == Architecture.UNFLANKED
     # The other 2 are single-locus pairs (transposition events, short amplicons)
-    assert result_list[3].raw_event == RawEvent.TRANSPOSITION
-    assert result_list[4].raw_event == RawEvent.TRANSPOSITION
+    assert result_list[3].raw_event == Architecture.TRANSPOSITION
+    assert result_list[4].raw_event == Architecture.TRANSPOSITION
 
 
 def test_filters_by_length(sample_covered_tnjc2, sample_tn_locs, covered_tnjc2_record, tmp_path, tiny_genome):
