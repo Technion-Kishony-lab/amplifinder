@@ -144,72 +144,15 @@ class RawTnJc2(Record):
                 f"len={self.amplicon_length}, tn_ids={self.tn_ids})")
 
 
-class CoveredTnJc2(RawTnJc2):
-    """RawTnJc2 with coverage.
-
-    Coverage values:
-    None = not applicable (anc fields when we don't have an ancestor)
-    np.nan = value not calculated (amplicon too short/long)
-    """
-    NAME: ClassVar[str] = "Covered Junction Pairs"
-    CSV_EXPORT_FIELDS: ClassVar[List[str]] = RawTnJc2.CSV_EXPORT_FIELDS + [
-        'iso_scaf_avg', 'iso_amplicon_avg', 'anc_scaf_avg', 'anc_amplicon_avg', 'avg_norm_cov', 'copy_number'
-    ]
-    CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
-        'iso_scaf_avg': '.1f',
-        'iso_amplicon_avg': '.1f',
-        'anc_scaf_avg': '.1f',
-        'anc_amplicon_avg': '.1f',
-        'avg_norm_cov': '.1f',
-        'copy_number': '.1f',
-    }
-    iso_scaf_avg: float
-    iso_amplicon_avg: float
-    anc_scaf_avg: Optional[float] = None  # None if no ancestor
-    anc_amplicon_avg: Optional[float] = None  # None if no ancestor
-    avg_norm_cov: Optional[float] = None  # Position-by-position ancestor-normalized average
-
-    @field_validator('iso_scaf_avg', 'iso_amplicon_avg', mode='before')
-    @classmethod
-    def _none_to_nan(cls, v):
-        """Convert None to np.nan for required float fields."""
-        return np.nan if v is None else v
-
-    @property
-    def iso_scaf_norm_copy_number(self) -> float:
-        """Isolate copy number (scaffold-normalized)."""
-        return self.iso_amplicon_avg / self.iso_scaf_avg
-
-    @property
-    def anc_scaf_norm_copy_number(self) -> Optional[float]:
-        """Ancestor copy number (scaffold-normalized)."""
-        if self.anc_amplicon_avg is None or self.anc_scaf_avg is None:
-            return None
-        return self.anc_amplicon_avg / self.anc_scaf_avg
-
-    @property
-    def scaf_norm_copy_number_ratio(self) -> Optional[float]:
-        """Ratio of scaffold-normalized copy numbers (iso/anc)."""
-        anc_cn = self.anc_scaf_norm_copy_number
-        if anc_cn is None:
-            return None
-        return self.iso_scaf_norm_copy_number / anc_cn
-
-    @property
-    def copy_number(self) -> float:
-        """Final copy number: ancestor-normalized if available, else scaffold-normalized."""
-        return self.avg_norm_cov if self.avg_norm_cov is not None else self.iso_scaf_norm_copy_number
-
-
 class TnJc2AndSide(NamedTuple):
     tnjc2: SingleLocusLinkedTnJc2
     side: Side
 
 
-class SingleLocusLinkedTnJc2(CoveredTnJc2):
-    """CoveredTnJc2 with structural classification (Step 8 output)."""
+class SingleLocusLinkedTnJc2(RawTnJc2):
+    """RawTnJc2 with structural classification (Step 8 output)."""
     NAME: ClassVar[str] = "Classified Amplicons"
-    CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = RawTnJc2.CSV_EXPORT_FIELDS + [
         'single_locus_left_pair_id', 'single_locus_right_pair_id', 'raw_event', 'chosen_tn_id'
     ]
     single_locus_tnjc2_left_matchings: List[TnJc2AndSide]
@@ -310,10 +253,67 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
         assert False
 
 
-class SynJctsTnJc2(SingleLocusLinkedTnJc2):
+class CoveredTnJc2(SingleLocusLinkedTnJc2):
+    """SingleLocusLinkedTnJc2 with coverage.
+
+    Coverage values:
+    None = not applicable (anc fields when we don't have an ancestor)
+    np.nan = value not calculated (amplicon too short/long)
+    """
+    NAME: ClassVar[str] = "Covered Junction Pairs"
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = SingleLocusLinkedTnJc2.CSV_EXPORT_FIELDS + [
+        'iso_scaf_avg', 'iso_amplicon_avg', 'anc_scaf_avg', 'anc_amplicon_avg', 'avg_norm_cov', 'copy_number'
+    ]
+    CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
+        'iso_scaf_avg': '.1f',
+        'iso_amplicon_avg': '.1f',
+        'anc_scaf_avg': '.1f',
+        'anc_amplicon_avg': '.1f',
+        'avg_norm_cov': '.1f',
+        'copy_number': '.1f',
+    }
+    iso_scaf_avg: float
+    iso_amplicon_avg: float
+    anc_scaf_avg: Optional[float] = None  # None if no ancestor
+    anc_amplicon_avg: Optional[float] = None  # None if no ancestor
+    avg_norm_cov: Optional[float] = None  # Position-by-position ancestor-normalized average
+
+    @field_validator('iso_scaf_avg', 'iso_amplicon_avg', mode='before')
+    @classmethod
+    def _none_to_nan(cls, v):
+        """Convert None to np.nan for required float fields."""
+        return np.nan if v is None else v
+
+    @property
+    def iso_scaf_norm_copy_number(self) -> float:
+        """Isolate copy number (scaffold-normalized)."""
+        return self.iso_amplicon_avg / self.iso_scaf_avg
+
+    @property
+    def anc_scaf_norm_copy_number(self) -> Optional[float]:
+        """Ancestor copy number (scaffold-normalized)."""
+        if self.anc_amplicon_avg is None or self.anc_scaf_avg is None:
+            return None
+        return self.anc_amplicon_avg / self.anc_scaf_avg
+
+    @property
+    def scaf_norm_copy_number_ratio(self) -> Optional[float]:
+        """Ratio of scaffold-normalized copy numbers (iso/anc)."""
+        anc_cn = self.anc_scaf_norm_copy_number
+        if anc_cn is None:
+            return None
+        return self.iso_scaf_norm_copy_number / anc_cn
+
+    @property
+    def copy_number(self) -> float:
+        """Final copy number: ancestor-normalized if available, else scaffold-normalized."""
+        return self.avg_norm_cov if self.avg_norm_cov is not None else self.iso_scaf_norm_copy_number
+
+
+class SynJctsTnJc2(CoveredTnJc2):
     """Candidate with synthetic junction folder names."""
     NAME: ClassVar[str] = "Synthetic Junction Amplicons"
-    CSV_EXPORT_FIELDS: ClassVar[List[str]] = SingleLocusLinkedTnJc2.CSV_EXPORT_FIELDS + [
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
         'analysis_dir', 'analysis_dir_anc'
     ]
     analysis_dir: str
@@ -344,7 +344,7 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     - anc_fastq_path=set: both jc_cov and jc_cov_anc present
     """
     NAME: ClassVar[str] = "Analyzed Amplicons"
-    CSV_EXPORT_FIELDS: ClassVar[List[str]] = SingleLocusLinkedTnJc2.CSV_EXPORT_FIELDS + [
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
         'jc_cov_vector', 'jc_cov_anc_vector'
     ]
     # Junction coverage: JunctionType -> JunctionReadCounts
