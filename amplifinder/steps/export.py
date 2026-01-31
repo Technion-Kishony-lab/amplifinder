@@ -5,7 +5,7 @@ from typing import Optional, Dict, Any
 from dataclasses import asdict
 import yaml
 
-from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, Genome
+from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2
 from amplifinder.steps.base import OutputStep
 from amplifinder.steps.read_length import ReadLengths
 
@@ -16,7 +16,6 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
     def __init__(
         self,
         classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
-        genome: Genome,
         output_dir: Path,
         ref_name: str,
         iso_name: str,
@@ -25,7 +24,6 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
         force: Optional[bool] = None,
     ):
         self.classified_tnjc2s = classified_tnjc2s
-        self.genome = genome
         self.ref_name = ref_name
         self.iso_name = iso_name
         self.anc_name = anc_name

@@ -339,8 +339,8 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     """Candidate with junction coverage analysis (Step 12 output).
 
     Junction coverage fields depend on run type:
-    - anc_path=None: jc_cov only, jc_cov_anc is None
-    - anc_path=set: both jc_cov and jc_cov_anc present
+    - anc_fastq_path=None: jc_cov only, jc_cov_anc is None
+    - anc_fastq_path=set: both jc_cov and jc_cov_anc present
     """
     NAME: ClassVar[str] = "Analyzed Amplicons"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = SingleLocusLinkedTnJc2.CSV_EXPORT_FIELDS + [
@@ -377,7 +377,7 @@ class ClassifiedTnJc2(AnalyzedTnJc2):
     ]
     # Architecture classification
     iso_architecture: Architecture
-    anc_architecture: Optional[Architecture] = None  # only when anc_path is set
+    anc_architecture: Optional[Architecture] = None  # only when anc_fastq_path is set
     
     # Event descriptors
     event_descriptors: List[EventDescriptor]

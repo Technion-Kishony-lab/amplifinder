@@ -27,6 +27,7 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
         threads: int = 1,
         breseq_output_size_threshold: int = 10_000,
         sample_name: Optional[str] = None,
+        remove_jc_breseq_reject: bool = False,
         force: Optional[bool] = None,
     ):
         self.fastq_path = Path(fastq_path) if fastq_path else None
@@ -35,6 +36,7 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
         self.threads = threads
         self.breseq_output_size_threshold = breseq_output_size_threshold
         self.sample_name = sample_name or "sample"
+        self.remove_jc_breseq_reject = remove_jc_breseq_reject
 
         # Breseq output location
         self.breseq_path = Path(breseq_path)
@@ -108,6 +110,14 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
             'flanking_left': 'flanking1',
             'flanking_right': 'flanking2'
         })
+
+        # Filter breseq-rejected junctions if requested
+        if self.remove_jc_breseq_reject:
+            initial_count = len(jc_df)
+            jc_df = jc_df[jc_df['reject'].isna()]
+            removed_count = initial_count - len(jc_df)
+            if removed_count > 0:
+                logger.info(f"Removed {removed_count} breseq-rejected junctions")
 
         return RecordTypedDf(jc_df, BreseqJunction)
 

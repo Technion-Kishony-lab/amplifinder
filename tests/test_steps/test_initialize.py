@@ -9,7 +9,7 @@ from amplifinder.config import Config
 def sample_config(tmp_path):
     """Create a sample config for testing."""
     return Config(
-        iso_path=tmp_path / "isolate.fastq",
+        iso_fastq_path=tmp_path / "isolate.fastq",
         ref_name="U00096",
         iso_name="sample1",
         anc_name="ancestor1",
@@ -50,7 +50,7 @@ def test_creates_config_file(init_step_factory, tmp_path):
 def test_self_ancestor(tmp_path):
     """When iso_name == anc_name, creates {ref_name}/{name}/{name}/ structure."""
     config = Config(
-        iso_path=tmp_path / "isolate.fastq",
+        iso_fastq_path=tmp_path / "isolate.fastq",
         ref_name="U00096",
         iso_name="sample1",
         anc_name="sample1",  # same as iso_name
@@ -78,7 +78,7 @@ def test_skips_if_exists(init_step_factory):
 def test_force_reruns(tmp_path):
     """Force=True should re-run even if output exists."""
     config = Config(
-        iso_path=tmp_path / "isolate.fastq",
+        iso_fastq_path=tmp_path / "isolate.fastq",
         ref_name="U00096",
         iso_name="sample1",
         anc_name="ancestor1",

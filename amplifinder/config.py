@@ -91,56 +91,54 @@ class Config:
 
     RUN_CONFIG_FILENAME: ClassVar[str] = "run_config.yaml"
 
-    # Required paths
-    iso_path: Path
+    # Reference
     ref_name: str
-
-    # Optional paths
-    anc_path: Optional[Path] = None
-    output_dir: Path = field(default_factory=lambda: Path("output"))
     ref_path: Path = field(default_factory=lambda: Path("genomesDB"))
-    iso_breseq_path: Optional[Path] = None
-    anc_breseq_path: Optional[Path] = None
-
-    # Read length (if None, calculated from FASTQ)
-    iso_read_length: Optional[int] = None
-    anc_read_length: Optional[int] = None
-
-    # Names (derived from paths if not provided)
-    iso_name: Optional[str] = None
-    anc_name: Optional[str] = None
-
-    # Reference options
     ncbi: bool = True
-    use_isfinder: bool = False
 
-    # IS/TN detection parameters
-    max_dist_to_IS: int = 10
-    trim_jc_flanking: int = 5
-    reference_IS_in_span: Optional[int] = None  # None = use the entire IS element
-    reference_IS_out_span: int = 100
+    # Isolate
+    iso_fastq_path: Path
+    iso_name: Optional[str] = None          # None: derive from iso_fastq_path.stem
+    iso_read_length: Optional[int] = None   # None: calculate from fastq
+    iso_breseq_path: Optional[Path] = None  # None: default to iso_run_dir / "breseq"
+
+    # Ancestor (optional)
+    anc_fastq_path: Optional[Path] = None
+    anc_name: Optional[str] = None          # None: derive from anc_fastq_path.stem
+    anc_read_length: Optional[int] = None   # None: calculate from fastq
+    anc_breseq_path: Optional[Path] = None  # None: default to anc_run_dir / "breseq"
+
+    # Output
+    output_dir: Path = field(default_factory=lambda: Path("output"))
+
+    # IS-finder options
+    use_isfinder: bool = False
     isfinder_evalue: float = 1e-4
     isfinder_critical_coverage: float = 0.9
+
+    # Create ref TN junctions from reference IS elements
+    reference_IS_in_span: Optional[int] = None  # None = use the entire IS element
+    reference_IS_out_span: int = 100
+
+    # Detection parameters for Junctions which have an arm that match TN sides
+    max_dist_to_IS: int = 10
+    trim_jc_flanking: int = 5  # len to trim from the flanks of a junction (None = no trimming)
 
     # Alignment threads (breseq, bowtie2)
     threads: int = 4
 
-    # Junction filtering
-    min_amplicon_length: int = 30
-    max_amplicon_length: int = 1_000_000
-    filter_amplicon_length: int = 100
-
     # Coverage parameters
-    ncp_min: float = 0.1
-    ncp_max: float = 1000.0
-    ncp_n: int = 150
     average_method: AverageMethod = AverageMethod.MEDIAN
 
-    # Copy number thresholds
-    copy_number_threshold: float = 1.5
-    del_copy_number_threshold: float = 0.3
+    # Amplicon length filtering
+    min_amplicon_length: int = 100
+    max_amplicon_length: int = 1_000_000
 
-    # Alignment parameters
+    # Amplicon copy number filtering
+    replication_copy_number_threshold: float = 1.5
+    deletion_copy_number_threshold: float = 0.3
+
+    # Alignment of reads to synthetic junctions
     alignment_filter_params: Optional[AlignmentFilterParams] = None
     alignment_analysis_params: Optional[AlignmentClassifyParams] = None
     bowtie_params: Optional[BowtieParams] = None
@@ -148,16 +146,10 @@ class Config:
 
     # File size thresholds
     breseq_output_size_threshold: int = 10_000  # Terminates if breseq output.gd exceeds this line count
-    # TODO: These are not used yet
-    max_fastq_size: int = 500_000_000
-    min_num_bases: int = 80_000_000
+    min_num_bases: int = 80_000_000  # Warn if total sequencing depth below this
 
     # Filtering options
-    # TODO: These are not used yet
-    shortest_amplicon: int = 1
-    true_transposition_length: int = 0
     remove_jc_breseq_reject: bool = False
-    remove_isjc2_breseq_reject: bool = True
 
     # Logging
     log_path: str = "amplifinder.log"
@@ -168,23 +160,28 @@ class Config:
     @property
     def has_ancestor(self) -> bool:
         """True if ancestor comparison should be performed."""
-        return self.anc_path is not None
+        return self.anc_fastq_path is not None
+
+    @property
+    def _anc_folder_name(self) -> str:
+        """Folder name for organizing runs (anc_name if exists, else iso_name)."""
+        return self.anc_name if self.has_ancestor else self.iso_name
 
     @property
     def iso_run_dir(self) -> Path:
         """Get the isolate run directory path.
 
-        Structure: {output_dir}/{ref_name}/{anc_name}/{iso_name}/
+        Structure: {output_dir}/{ref_name}/{anc_folder}/{iso_name}/
         """
-        return self.output_dir / self.ref_name / self.anc_name / self.iso_name
+        return self.output_dir / self.ref_name / self._anc_folder_name / self.iso_name
 
     @property
     def anc_run_dir(self) -> Path:
         """Get the ancestor run directory path.
 
-        Structure: {output_dir}/{ref_name}/{anc_name}/{anc_name}/
+        Structure: {output_dir}/{ref_name}/{anc_folder}/{anc_folder}/
         """
-        return self.output_dir / self.ref_name / self.anc_name / self.anc_name
+        return self.output_dir / self.ref_name / self._anc_folder_name / self._anc_folder_name
 
     def get_anc_breseq_path(self) -> Optional[Path]:
         """Return ancestor breseq path (provided or default run dir).
@@ -199,19 +196,6 @@ class Config:
     def get_iso_breseq_path(self) -> Path:
         """Return isolate breseq path (provided or default run dir)."""
         return self.iso_breseq_path or (self.iso_run_dir / "breseq")
-
-    def get_anc_name(self) -> Optional[str]:
-        """Return ancestor name, or None if no ancestor configured.
-
-        Note: anc_name property is set to iso_name when no ancestor (for folder structure),
-        but this method returns None for semantic correctness when passing to steps.
-
-        Returns:
-            Ancestor name, or None if no ancestor.
-        """
-        if not self.has_ancestor:
-            return None
-        return self.anc_name
 
     def get_breseq_paths(self) -> tuple[Path, Optional[Path]]:
         """Get isolate and ancestor breseq paths.
@@ -290,7 +274,7 @@ class Config:
         _normalize_alignment_params(config_dict)
 
         # Convert string paths back to Path objects
-        path_fields = ['iso_path', 'anc_path', 'output_dir', 'ref_path',
+        path_fields = ['iso_fastq_path', 'anc_fastq_path', 'output_dir', 'ref_path',
                        'iso_breseq_path', 'anc_breseq_path']
         for path_field in path_fields:
             if path_field in config_dict and config_dict[path_field] is not None:
@@ -307,12 +291,12 @@ class Config:
     def __post_init__(self):
         """Convert paths and set derived values."""
         # Convert string paths to absolute Path objects
-        self.iso_path = Path(self.iso_path).resolve()
+        self.iso_fastq_path = Path(self.iso_fastq_path).resolve()
         self.output_dir = Path(self.output_dir).resolve()
         self.ref_path = Path(self.ref_path).resolve()
 
-        if self.anc_path is not None:
-            self.anc_path = Path(self.anc_path).resolve()
+        if self.anc_fastq_path is not None:
+            self.anc_fastq_path = Path(self.anc_fastq_path).resolve()
         if self.iso_breseq_path is not None:
             self.iso_breseq_path = Path(self.iso_breseq_path).resolve()
         if self.anc_breseq_path is not None:
@@ -320,13 +304,9 @@ class Config:
 
         # Derive names from paths if not provided
         if self.iso_name is None:
-            self.iso_name = self.iso_path.stem or "isolate"
-        if self.anc_name is None:
-            if self.anc_path is not None:
-                self.anc_name = self.anc_path.stem or "ancestor"
-            else:
-                # No ancestor: isolate is its own "ancestor" for folder structure
-                self.anc_name = self.iso_name
+            self.iso_name = self.iso_fastq_path.stem
+        if self.anc_name is None and self.anc_fastq_path is not None:
+            self.anc_name = self.anc_fastq_path.stem
 
         # Normalize params
         def validate(cls, obj):
@@ -370,7 +350,7 @@ def _get_config_defaults() -> dict[str, Any]:
     """
     defaults = {}
     for f in fields(Config):
-        # Skip required fields (iso_path, ref_name)
+        # Skip required fields (iso_fastq_path, ref_name)
         if f.default is MISSING and f.default_factory is MISSING:
             continue
         
