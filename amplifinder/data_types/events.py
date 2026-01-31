@@ -25,7 +25,6 @@ class Architecture(Enum):
     # Single-locus events:
     REFERENCE_TN = "reference-tn", (None, None), None
     TRANSPOSITION = "transposition", (None, None), None
-    TRANSPOSITION_SINGLETON = "transposition-singleton", (None, None), None
 
     # Locus-joining (multi-copy):
     UNFLANKED = "unflanked", (False, False), False

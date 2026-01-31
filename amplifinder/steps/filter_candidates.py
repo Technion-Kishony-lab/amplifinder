@@ -72,6 +72,6 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
         before_counts = _count_raw_events(self.linked_tnjc2s.to_records())
         after_counts = _count_raw_events(output.to_records())
         
-        lines = [f"{event.description:22s}: {before_counts[event]:4d} -> {after_counts[event]:4d}" 
+        lines = [f"{event.description:30s}: {before_counts[event]:4d} -> {after_counts[event]:4d}" 
                  for event in Architecture]
         return "\n" + "\n".join(lines)

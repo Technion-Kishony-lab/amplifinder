@@ -83,7 +83,7 @@ def is_covered(cov: JunctionReadCounts, jc_call_params: JcCallParams,
 
 def print_jc_read_counts_and_calls(
     jc_covs: dict[JunctionType, JunctionReadCounts],
-    jc_calls: dict[JunctionType, Optional[bool]]
+    jc_calls: dict[JunctionType, JcCall]
 ) -> None:
     """Print junction coverage and calls."""
     # Print header (two rows)
@@ -98,7 +98,7 @@ def print_jc_read_counts_and_calls(
     # Print rows
     for jt in JunctionType:
         cov = jc_covs[jt]
-        call_str = str(jc_calls[jt]) if jc_calls[jt] is not None else "None"
+        call_str = jc_calls[jt].name
         logger.info(f"{jt.name:<23} {cov.left_far:>6} {cov.left:>6} {cov.left_marginal:>6} "
               f"{cov.spanning:>6} {cov.paired:>6} {cov.right_marginal:>6} {cov.right:>6} "
               f"{cov.right_far:>6} {call_str:>6}", timestamp=False)

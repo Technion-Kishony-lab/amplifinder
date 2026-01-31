@@ -106,7 +106,7 @@ def classify_architecture(jc_calls: Dict[JunctionType, JcCall]) -> Architecture:
         (1, 0, 0, 0, 0, 1): Architecture.AMPLICON_ONLY,
 
         #        ~~~ |---> ~~~
-        (0, 1, 0, 0, 1, 0): Architecture.TRANSPOSITION_SINGLETON,
+        (0, 1, 0, 0, 1, 0): Architecture.TRANSPOSITION,
     }
 
     pattern = tuple(jc_calls[jc] for jc in JunctionType if jc != JunctionType.AMP_AMP)
