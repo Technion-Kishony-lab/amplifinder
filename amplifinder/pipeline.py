@@ -116,7 +116,7 @@ class Pipeline:
         tnjcs = self._create_tnjcs(breseq_jcs, ref_tnjcs, genome, iso_output)
         raw_tnjc2s = self._create_tnjc2s(tnjcs, genome, iso_output)
         linked_tnjc2s = self._link_side_of_tnjc2s_to_single_locus_pairs(raw_tnjc2s, genome, ref_tns, iso_output)
-        covered_tnjc2s = self._calc_amplicon_coverage(linked_tnjc2s, genome, iso_output)
+        covered_tnjc2s = self._calc_amplicon_coverage(linked_tnjc2s, iso_output)
         filtered_tnjc2s = self._filter_candidates(covered_tnjc2s, iso_output)
         read_lengths = self._calc_read_lengths()
         synjct_tnjc2s = self._create_synthetic_junctions(
@@ -312,7 +312,6 @@ class Pipeline:
     def _calc_amplicon_coverage(
         self,
         linked_tnjc2s: RecordTypedDf[SingleLocusLinkedTnJc2],
-        genome: Genome,
         iso_output: Path,
     ) -> RecordTypedDf[CoveredTnJc2]:
         """Step 8: Calculate amplicon coverage."""
@@ -334,14 +333,13 @@ class Pipeline:
         covered_tnjc2s: RecordTypedDf[CoveredTnJc2],
         iso_output: Path,
     ) -> RecordTypedDf[CoveredTnJc2]:
-        """Step 9: Filter candidates by amplicon length and copy number."""
+        """Step 9: Filter candidates by copy number."""
+        cfg = self.config
         return FilterTnJc2CandidatesStep(
             linked_tnjc2s=covered_tnjc2s,
             output_dir=iso_output,
-            min_amplicon_length=self.config.min_amplicon_length,
-            max_amplicon_length=self.config.max_amplicon_length,
-            replication_copy_number_threshold=self.config.replication_copy_number_threshold,
-            deletion_copy_number_threshold=self.config.deletion_copy_number_threshold,
+            replication_copy_number_threshold=cfg.replication_copy_number_threshold,
+            deletion_copy_number_threshold=cfg.deletion_copy_number_threshold,
         ).run()
 
     def _create_synthetic_junctions(
