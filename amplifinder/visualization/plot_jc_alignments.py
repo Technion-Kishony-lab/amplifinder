@@ -36,10 +36,10 @@ READ_TYPES_TO_COLORS = {
 }
 
 
-JC_CALLS_TO_COLORS_AND_LABELS: dict[Optional[bool], tuple[str, str]] = {
-    True: ('green', 'Positive'),
-    False: ('red', 'Negative'),
-    None: ('grey', 'Undetermined')
+JC_CALLS_TO_COLORS_AND_LABELS: dict[JcCall, tuple[str, str]] = {
+    JcCall.POS: ('green', 'Positive'),
+    JcCall.NEG: ('red', 'Negative'),
+    JcCall.AMBIGIOUS: ('grey', 'Undetermined')
 }
 
 
@@ -191,7 +191,7 @@ def _down_sample_alignments(
     return downsampled, scales
 
 
-def _draw_jc_call(ax: Axes, y: float, jc_call: Optional[JcCall] = None) -> None:
+def _draw_jc_call(ax: Axes, y: float, jc_call: JcCall = None) -> None:
     jc_call_color, _ = JC_CALLS_TO_COLORS_AND_LABELS[jc_call]
     ax.plot(0, y, color=jc_call_color, marker='d', markersize=30)
 
@@ -347,7 +347,7 @@ def plot_jc_alignments(
         ax.grid(True, alpha=0.3, axis='x')
 
         # Draw genetic elements in the narrow axes above
-        left_elem_type, right_elem_type = jt.elements
+        left_elem_type, right_elem_type = jt.element_pair
 
         # Set up genetic element axes
         ax_gene.set_xlim(-max_dist, max_dist)

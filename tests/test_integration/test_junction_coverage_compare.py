@@ -20,13 +20,13 @@ pytestmark = pytest.mark.integration
 REQUIRE_MATLAB_FILES = True
 
 MATLAB_JUNCTION_MAPPING = {
-    "1": JunctionType.CHR_TO_AMP_LEFT,
-    "2": JunctionType.CHR_TO_TN_LEFT,
-    "3": JunctionType.AMP_RIGHT_TO_TN_LEFT,
-    "4": JunctionType.AMP_RIGHT_TO_AMP_LEFT,
-    "5": JunctionType.TN_RIGHT_TO_AMP_LEFT,
-    "6": JunctionType.TN_RIGHT_TO_CHR,
-    "7": JunctionType.AMP_RIGHT_TO_CHR,
+    "1": JunctionType.CHR_AMP,
+    "2": JunctionType.CHR_TN,
+    "3": JunctionType.AMP_TN,
+    "4": JunctionType.AMP_AMP,
+    "5": JunctionType.TN_AMP,
+    "6": JunctionType.TN_CHR,
+    "7": JunctionType.AMP_CHR,
 }
 
 
