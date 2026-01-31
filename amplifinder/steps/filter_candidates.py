@@ -60,8 +60,8 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
                 continue
 
             # Filter by copy number: keep amplifications and deletions
-            if not (tnjc2.copy_number >= self.replication_copy_number_threshold or 
-                    tnjc2.copy_number < self.deletion_copy_number_threshold):
+            if not (tnjc2.copy_number >= self.replication_copy_number_threshold
+                    or tnjc2.copy_number < self.deletion_copy_number_threshold):
                 continue
 
             filtered_tnjc2s.append(tnjc2)
@@ -71,7 +71,8 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
     def report_output_message(self, output: RecordTypedDf[SingleLocusLinkedTnJc2]) -> Optional[str]:
         before_counts = _count_raw_events(self.linked_tnjc2s.to_records())
         after_counts = _count_raw_events(output.to_records())
-        
-        lines = [f"{event.description:30s}: {before_counts[event]:4d} -> {after_counts[event]:4d}" 
+
+        lines = [(f"{event.description:30s}: {before_counts[event]:4d} -> "
+                  f"{after_counts[event]:4d}")
                  for event in Architecture]
         return "\n" + "\n".join(lines)

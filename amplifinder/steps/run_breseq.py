@@ -73,7 +73,7 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
 
         Returns:
             RecordTypedDf[BreseqJunction] with column renaming applied
-            
+
         Raises:
             PrematureTerminationError: If breseq output is too long (wrong reference)
         """
@@ -93,12 +93,12 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
                     "breseq_path": str(self.breseq_path),
                 }
             )
-        
+
         # Log what we found
         record_counts = ", ".join(f"{name}: {len(df)}" for name, df in outputs.items() if len(df) > 0)
         if record_counts:
             logger.info(f"Found breseq records: {record_counts}")
-        
+
         jc_df = outputs.get("JC")
 
         if jc_df is None or jc_df.empty:

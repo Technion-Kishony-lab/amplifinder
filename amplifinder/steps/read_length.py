@@ -92,7 +92,7 @@ class ReadLenStep(OutputStep[ReadLengths]):
                     f"Low isolate sequencing depth: {total_bases_iso:,} bases "
                     f"(min recommended: {self.min_num_bases:,})"
                 )
-            
+
             if self.anc_fastq_path:
                 total_bases_anc = count_total_bases(self.anc_fastq_path, read_len_anc)
                 if total_bases_anc < self.min_num_bases:

@@ -110,11 +110,11 @@ class Step(ABC):
 
     def _terminate_run(self, reason: str, details: Optional[dict] = None) -> None:
         """Raise PrematureTerminationError with step name.
-        
+
         Args:
             reason: Human-readable explanation of why termination occurred
             details: Optional dict with additional context (metrics, thresholds, etc.)
-        
+
         Raises:
             PrematureTerminationError: Always raises with step name prepended
         """
@@ -127,19 +127,19 @@ class Step(ABC):
     def _should_skip_artifacts(self) -> bool:
         """Check if we should skip artifact generation."""
         return not self.force and self.has_artifact_files()
-    
+
     def _get_status_message(self) -> str:
         """Determine what work will be done and return status message."""
         if self.artifact_files:
             return "skip artifacts" if self._should_skip_artifacts() else "create artifacts"
         else:
             return "no artifacts to generate"
-    
+
     def _do_work(self):
         """Execute the work. Returns None for base Step."""
         self._generate_artifacts_if_needed()
         return None
-    
+
     def _generate_artifacts_if_needed(self) -> None:
         """Generate artifacts if needed."""
         self._artifacts_generated = False
@@ -182,11 +182,11 @@ class Step(ABC):
         # Determine and log what we're about to do
         status_msg = self._get_status_message()
         self._log_run_status(status_msg)
-        
+
         # Do the work (timed)
         with timer(log=False) as t:
             output = self._do_work()
-        
+
         logger.info("-" * 107 + f" [cyan]{t.elapsed:.1f} sec[/cyan] --------\n")
         return output
 
@@ -344,12 +344,12 @@ class OutputStep(Step, Generic[T]):
         """Determine what work will be done and return status message."""
         artifact_status = super()._get_status_message()
         return f"{artifact_status}, calc output"
-    
+
     def _do_work(self) -> T:
         """Execute the work and return output."""
         # Generate artifacts
         super()._generate_artifacts_if_needed()
-        
+
         # Calculate output
         if self.should_profile:
             lp = self._create_profiler()

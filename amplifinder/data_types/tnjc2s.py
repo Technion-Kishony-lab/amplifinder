@@ -7,7 +7,7 @@ from typing import ClassVar, Dict, List, NamedTuple, Optional
 from pydantic import field_validator
 
 from amplifinder.records.base_records import Record
-from amplifinder.data_types.basic_enums import Side, Terminal, Orientation
+from amplifinder.data_types.basic_enums import Side, Orientation
 from amplifinder.data_types.events import BaseEvent, Architecture, EventDescriptor
 from amplifinder.data_types.jc_types import JcCall, JunctionType
 from amplifinder.data_types.read_types import JunctionReadCounts
@@ -261,7 +261,8 @@ class SingleLocusLinkedTnJc2(CoveredTnJc2):
 
         # TODO: Is the logic below correct?
 
-        # For each junction, get the reference TN side ID if it it is a reference TN junction (None for breseq junctions)
+        # For each junction, get the reference TN side ID if it it is a reference
+        # TN junction (None for breseq junctions)
         ref_tn_id_left = self.tnjc_left.ref_tn_side.tn_id if self.tnjc_left.is_ref_tn_junction() else None
         ref_tn_id_right = self.tnjc_right.ref_tn_side.tn_id if self.tnjc_right.is_ref_tn_junction() else None
 
@@ -378,7 +379,7 @@ class ClassifiedTnJc2(AnalyzedTnJc2):
     # Architecture classification
     iso_architecture: Architecture
     anc_architecture: Optional[Architecture] = None  # only when anc_fastq_path is set
-    
+
     # Event descriptors
     event_descriptors: List[EventDescriptor]
 
@@ -391,5 +392,3 @@ class ClassifiedTnJc2(AnalyzedTnJc2):
             return f"{iso_architecture_str} ({descriptors_str})"
         else:
             return iso_architecture_str
-
-

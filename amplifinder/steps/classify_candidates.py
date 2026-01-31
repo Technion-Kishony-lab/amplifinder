@@ -28,25 +28,25 @@ def classify_iso_vs_anc(iso_arch: Architecture, anc_arch: Architecture) -> List[
     # Use the is_flanking property to determine de novo and lost junctions
     iso_left, iso_right = iso_arch.is_flanking
     anc_left, anc_right = anc_arch.is_flanking
-    
+
     # Check left side (each side separately)
     if iso_left is not None and anc_left is not None:
         if iso_left and not anc_left:
             descriptors.append(EventDescriptor.DENOVO_LEFT)
         elif not iso_left and anc_left:
             descriptors.append(EventDescriptor.LOST_LEFT)
-    
+
     # Check right side
     if iso_right is not None and anc_right is not None:
         if iso_right and not anc_right:
             descriptors.append(EventDescriptor.DENOVO_RIGHT)
         elif not iso_right and anc_right:
             descriptors.append(EventDescriptor.LOST_RIGHT)
-    
+
     # Check singleton status change
     iso_singleton = iso_arch.is_singleton
     anc_singleton = anc_arch.is_singleton
-    
+
     if iso_singleton is not None and anc_singleton is not None:
         if iso_singleton and not anc_singleton:
             descriptors.append(EventDescriptor.TO_SINGLETON)
@@ -112,7 +112,7 @@ def classify_architecture(jc_calls: Dict[JunctionType, JcCall]) -> Architecture:
     pattern = tuple(jc_calls[jc] for jc in JunctionType if jc != JunctionType.AMP_AMP)
     if JcCall.AMBIGIOUS in pattern:
         return Architecture.UNRESOLVED
-    
+
     pattern_ints = tuple(int(bool(jc_call)) for jc_call in pattern)
     return patterns_to_architecture.get(pattern_ints, Architecture.UNRESOLVED)
 

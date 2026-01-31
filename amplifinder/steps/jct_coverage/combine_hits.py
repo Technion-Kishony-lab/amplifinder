@@ -102,10 +102,10 @@ def combine_same_id_different_orientation_hits(
     total_singletons = total_reads - total_pairs
     total_hits = total_singletons + total_pairs * 2
     logger.info(f"Total hits: {total_hits:6} = ({total_singletons:6} Singletons) + 2 * ({total_pairs:6} Pairs)\n"
-          f"\tNormal  pairs: {total_normal_pairs:6}, Avg overlap (bp): {avg_distance_normal:6.1f}\n"
-          f"\tSwapped pairs: {total_swapped_pairs:6}, Avg overlap (bp): {avg_distance_swapped:6.1f}",
-          timestamp=False,
-    )
+                f"\tNormal  pairs: {total_normal_pairs:6}, Avg overlap (bp): {avg_distance_normal:6.1f}\n"
+                f"\tSwapped pairs: {total_swapped_pairs:6}, Avg overlap (bp): {avg_distance_swapped:6.1f}",
+                timestamp=False,
+                )
 
 
 def flatten_combined_alignments(

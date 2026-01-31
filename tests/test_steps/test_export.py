@@ -28,7 +28,7 @@ def sample_analyzed(analyzed_tnjc2_record):
 def test_export_creates_files(sample_analyzed, tmp_path, tiny_genome, ref_tns_indexed):
     """Should create amplifications.yaml file."""
     from amplifinder.steps.read_length import ReadLengths
-    
+
     step = ExportTnJc2Step(
         classified_tnjc2s=sample_analyzed,
         output_dir=tmp_path,
@@ -43,7 +43,7 @@ def test_export_creates_files(sample_analyzed, tmp_path, tiny_genome, ref_tns_in
     # Check that YAML file was created
     yaml_file = tmp_path / "amplifications.yaml"
     assert yaml_file.exists()
-    
+
     # Check export result
     assert 'sample' in result
     assert 'amplicons' in result

@@ -10,23 +10,22 @@ from typing import Optional
 
 from amplifinder.env import DEBUG
 from rich.console import Console
-from rich.text import Text
 
 
 # ANSI color codes (fallback)
 class Colors:
     """ANSI color codes for terminal output."""
     RESET = "\033[0m"
-    
+
     # Level colors
     DEBUG = "\033[36m"      # Cyan
     INFO = "\033[32m"       # Green
     WARNING = "\033[33m"    # Yellow
     ERROR = "\033[31m"      # Red
-    
+
     # Component colors
     TIMESTAMP = "\033[90m"  # Gray
-    
+
     # Highlight colors
     BLUE = "\033[34m"
     MAGENTA = "\033[35m"
@@ -37,7 +36,7 @@ class Colors:
 
 class SimpleLogger:
     """Simple logger that writes to screen and/or file."""
-    
+
     LEVEL_COLORS = {
         "DEBUG": "cyan",
         "INFO": "green",
@@ -46,10 +45,10 @@ class SimpleLogger:
     }
 
     CATEGORIES_TO_COUNTS: dict[str, int] = defaultdict(int)
-    
+
     def __init__(self, log_file: Optional[Path] = None, use_colors: bool = True, verbose: bool = False):
         """Initialize logger.
-        
+
         Args:
             log_file: Path to log file (None for screen only)
             use_colors: Use rich colors and auto-highlighting for screen output
@@ -59,7 +58,7 @@ class SimpleLogger:
         self.use_colors = use_colors
         self.verbose = verbose
         self.console = Console(file=sys.stdout, highlight=True) if use_colors else None
-    
+
     def log(
         self,
         msg: str,
@@ -73,7 +72,7 @@ class SimpleLogger:
         force_screen: bool = False,
     ) -> None:
         """Log message to screen and/or file.
-        
+
         Args:
             msg: Message to log. Can contain:
                  - Plain text (auto-highlighted by rich if use_colors=True)
@@ -87,27 +86,27 @@ class SimpleLogger:
             to_file: Write to log file
             end: Line ending
             force_screen: If True, always show on screen regardless of verbose mode
-        
+
         Examples:
             # Auto-highlighting (default)
             logger.info("Found 10 records")  # '10' auto-highlighted
-            
+
             # Inline colors with colorize()
             logger.info(f"Status: {colorize('OK', 'green')}")
-            
+
             # Inline colors with rich markup
             logger.info("Status: [green]OK[/green]")
-            
+
             # Override entire message color
             logger.info("Important message", color="bold magenta")
         """
         level = level.upper()
-        
+
         # Filter INFO/DEBUG messages if not verbose (always show WARNING/ERROR)
         # unless force_screen is True
         if not force_screen and not self.verbose and level in ("INFO", "DEBUG"):
             to_screen = False
-        
+
         # Format for screen (with rich colors and auto-highlighting)
         if to_screen:
             if self.console:
@@ -116,35 +115,35 @@ class SimpleLogger:
             else:
                 screen_msg = self._format_message(msg, level, timestamp, use_colors=False)
                 print(screen_msg, end=end, flush=True)
-        
+
         # Format for file (no colors)
         if to_file and self.log_file:
             file_msg = self._format_message(msg, level, timestamp, use_colors=False)
             with open(self.log_file, 'a') as f:
                 f.write(file_msg + end)
-    
+
     def _format_rich_message(self, msg: str, level: str, timestamp: bool, color: Optional[str]) -> str:
         """Format message with rich colors and auto-highlighting.
-        
+
         Args:
             msg: Message text (may contain rich markup like [cyan]text[/cyan])
             level: Log level
             timestamp: Include timestamp
             color: Override message color (None = use default behavior)
-        
+
         Returns:
             String with rich markup (console.print will apply auto-highlighting)
         """
         parts = []
-        
+
         if timestamp:
             time_str = datetime.now().strftime("%H:%M:%S")
             parts.append(f"[dim]{time_str}[/dim]")
-            
+
             # Add level with color
             level_color = self.LEVEL_COLORS.get(level, "white")
             parts.append(f"[{level_color}]{level}[/{level_color}]:")
-        
+
         # Priority: explicit color > level-based color > auto-highlighting
         if color:
             # User specified explicit color - wrap entire message
@@ -161,76 +160,79 @@ class SimpleLogger:
         else:
             # Info/debug: pass message as-is for auto-highlighting + markup parsing
             parts.append(msg)
-        
+
         return " ".join(parts)
-    
+
     def _format_message(self, msg: str, level: str, timestamp: bool, use_colors: bool) -> str:
         """Format message with optional timestamp and colors (fallback)."""
-        
+
         # Strip rich markup tags for plain text output
         msg = re.sub(r'\[/?[a-z\s]+\]', '', msg)
-        
+
         parts = []
-        
+
         if timestamp:
             time_str = datetime.now().strftime("%H:%M:%S")
             if use_colors and self.use_colors:
                 parts.append(f"{Colors.TIMESTAMP}{time_str}{Colors.RESET}")
             else:
                 parts.append(time_str)
-            
+
             # Add level
             if use_colors and self.use_colors:
                 level_color = self.LEVEL_COLORS.get(level, "")
                 parts.append(f"{level_color}{level}{Colors.RESET}")
             else:
                 parts.append(level)
-            
+
             parts.append(msg)
             return " ".join(parts) + ":"
         else:
             return msg
-    
+
     def debug(self, msg: str, **kwargs) -> None:
         """Log debug message."""
         self.log(msg, level="DEBUG", **kwargs)
-    
+
     def info(self, msg: str, **kwargs) -> None:
         """Log info message."""
         self.log(msg, level="INFO", **kwargs)
-    
+
     def warning(self, msg: str, **kwargs) -> None:
         """Log warning message."""
         self.log(msg, level="WARNING", **kwargs)
-    
+
     def error(self, msg: str, **kwargs) -> None:
         """Log error message."""
         self.log(msg, level="ERROR", **kwargs)
-    
+
     def set_verbose(self, verbose: bool) -> None:
         """Set verbose mode (True = show INFO/DEBUG, False = only WARNING/ERROR)."""
         self.verbose = verbose
-    
+
     def reconfigure(self, log_file: Optional[Path] = None, use_colors: bool = True, verbose: bool = False) -> None:
         """Reconfigure this logger instance (updates in place)."""
         if log_file:
             from amplifinder.utils.file_utils import ensure_parent_dir
             log_file = ensure_parent_dir(log_file)
-        
+
         self.log_file = Path(log_file) if log_file else None
         self.use_colors = use_colors
         self.verbose = verbose
         self.console = Console(file=sys.stdout, highlight=True) if use_colors else None
-    
+
     def log_always(self, msg: str, **kwargs) -> None:
         """Log message that always shows (ignores verbose mode)."""
         self.log(msg, force_screen=True, **kwargs)
-    
+
     def print_progress(self, msg: str, end: str = "\n") -> None:
         """Print without timestamp (always shows, ignores verbose mode)."""
         self.log(msg, timestamp=False, to_file=False, force_screen=True, end=end)
 
-    def debug_message(self, message, category: Optional[str] = None, folder: Optional[Path] = None, max_prints: Optional[bool] = 1):
+    def debug_message(self, message,
+                      category: Optional[str] = None,
+                      folder: Optional[Path] = None,
+                      max_prints: Optional[bool] = 1):
         if not DEBUG:
             return
         if category is None:
@@ -244,7 +246,7 @@ class SimpleLogger:
             if category:
                 print(f'DEBUG[{category}]')
             print(message)
-        
+
         if folder and category:
             # print to file
             filepath = folder / (category + ".txt")
@@ -258,12 +260,12 @@ _logger: Optional[SimpleLogger] = None
 
 def setup_logger(log_path: Optional[Path] = None, use_colors: bool = True, verbose: bool = False) -> SimpleLogger:
     """Set up global logger (reconfigures existing instance).
-    
+
     Args:
         log_path: Path to log file (None for screen only)
         use_colors: Use ANSI colors for screen output
         verbose: If True, show INFO/DEBUG messages; if False, only WARNING/ERROR
-    
+
     Returns:
         Configured logger instance
     """
@@ -274,7 +276,7 @@ def setup_logger(log_path: Optional[Path] = None, use_colors: bool = True, verbo
 
 def get_logger() -> SimpleLogger:
     """Get the global logger, creating default if needed.
-    
+
     Returns:
         Logger instance
     """
@@ -290,24 +292,24 @@ def get_logger() -> SimpleLogger:
 
 def colorize(text: str, color: str) -> str:
     """Wrap text in rich markup for inline colored output.
-    
+
     Use this for coloring specific parts of a message while keeping auto-highlighting
     for the rest. For coloring the entire message, use the `color` parameter instead.
-    
+
     Args:
         text: Text to colorize
-        color: Rich color/style name (cyan, magenta, yellow, red, green, blue, 
+        color: Rich color/style name (cyan, magenta, yellow, red, green, blue,
                bold, dim, italic, or combinations like "bold cyan")
-    
+
     Returns:
         Rich markup string (e.g., "[cyan]text[/cyan]")
-    
+
     Examples:
         # Inline colors (specific text)
         logger.info(f"Found {colorize('10', 'cyan')} records")
         logger.info(f"Status: {colorize('OK', 'green')}")
         logger.info(f"File: {colorize('data.csv', 'bold magenta')}")
-        
+
         # Entire message color (use color parameter instead)
         logger.info("Important message", color="bold cyan")
     """
@@ -316,14 +318,14 @@ def colorize(text: str, color: str) -> str:
 
 def c(text: str, color: str) -> str:
     """Shorthand for colorize() - wrap text in rich markup.
-    
+
     Args:
         text: Text to colorize
         color: Rich color/style name
-    
+
     Returns:
         Rich markup string
-    
+
     Examples:
         logger.info(f"Found {c('10', 'cyan')} records in {c('data.csv', 'magenta')}")
     """

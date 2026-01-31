@@ -143,20 +143,20 @@ def main(
             if not config_file.exists():
                 raise click.ClickException(f"Config file not found: {config_file}")
             file_config = load_config(config_file)
-        
+
         # Check required parameters (skip if only creating config)
         if create_config_path is None:
             # Validate required parameters
             if iso_fastq_path is None and (file_config is None or file_config.get("iso_fastq_path") is None):
                 raise click.ClickException("--iso-path is required (via CLI or --config file)")
-            
+
             if ref_name is None and (file_config is None or file_config.get("ref_name") is None):
                 raise click.ClickException("--ref-name is required (via CLI or --config file)")
-            
+
             # Validate paths exist for actual run
             if iso_fastq_path is not None and not iso_fastq_path.exists():
                 raise click.ClickException(f"Isolate path does not exist: {iso_fastq_path}")
-            
+
             if anc_fastq_path is not None and not anc_fastq_path.exists():
                 raise click.ClickException(f"Ancestor path does not exist: {anc_fastq_path}")
 
@@ -179,15 +179,15 @@ def main(
         # Merge configurations
         merged = merge_config(cli_args, file_config)
         config = Config(**merged)
-        
+
         # If --create-config, save and exit
         if create_config_path is not None:
             config.save_to_file(create_config_path, log=False)
-            
+
             click.echo(f"Config file created: {create_config_path}")
             click.echo("\nRun with: amplifinder --config " + str(create_config_path))
             return
-        
+
         # CLI startup message
         click.echo(f"AmpliFinder v{__version__}")
 
