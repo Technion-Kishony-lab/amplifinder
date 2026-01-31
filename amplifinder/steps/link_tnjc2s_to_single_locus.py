@@ -12,7 +12,7 @@ from amplifinder.data_types.tnjc2s import TnJc2AndSide
 from .base import RecordTypedDfStep
 
 
-def _issue_debug_message_if_multi_single_locus_matchesd(tnjc2, matches)
+def _issue_debug_message_if_multi_single_locus_match(tnjc2, matches):
     if len(matches) > 1:
         logger.debug_message(f"tnjc: {tnjc2}\nmacthes: {matches}", "tnjc2_matches_multiple_single_locus", 1)
 
@@ -66,8 +66,8 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
                 linked_i.tnjc_left, linked_tnjc2s, base_events, exclude_idx=i)
             right_matches = self._find_all_single_locus_matching_tnjc2s(
                 linked_i.tnjc_right, linked_tnjc2s, base_events, exclude_idx=i)
-            _issue_debug_message_if_multi_single_locus_matchesd(linked_i, left_matches)
-            _issue_debug_message_if_multi_single_locus_matchesd(linked_i, right_matches)
+            _issue_debug_message_if_multi_single_locus_match(linked_i, left_matches)
+            _issue_debug_message_if_multi_single_locus_match(linked_i, right_matches)
             linked_i.single_locus_tnjc2_left_matchings = left_matches
             linked_i.single_locus_tnjc2_right_matchings = right_matches
 

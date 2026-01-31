@@ -7,7 +7,7 @@ from amplifinder.data_types import (
     RecordTypedDf,
     RefTnSide, OffsetRefTnSide, RefTn,
     Junction, RefTnJunction, TnJunction,
-    RawTnJc2, CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ClassifiedTnJc2, ExportedTnJc2,
+    RawTnJc2, CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ClassifiedTnJc2,
     Terminal, Orientation, Architecture, EventDescriptor, SeqScaffold,
 )
 from amplifinder.tools.blast import BlastHit
@@ -208,23 +208,6 @@ def make_classified_tnjc2_full() -> ClassifiedTnJc2:
     )
 
 
-def make_exported_tnjc2() -> ExportedTnJc2:
-    """Create sample ExportedTnJc2."""
-    return ExportedTnJc2(
-        isolate="sample1",
-        Reference="U00096",
-        Positions_in_chromosome="200-400",
-        Direction_in_chromosome="forward",
-        amplicon_length=201,
-        IS_element="IS1",
-        median_copy_number=2.0,
-        mode_copy_number=2.0,
-        Ancestor="ancestor1",
-        event="flanked",
-        isolate_architecture="flanked",
-    )
-
-
 @pytest.mark.parametrize("record_type,make_func", [
     ("RefTnSide", lambda: [make_ref_tn_side(), make_ref_tn_side(2, Terminal.END)]),
     ("OffsetRefTnSide", lambda: [make_offset_ref_tn_side(), make_offset_ref_tn_side(2, Terminal.END, 5),
@@ -241,7 +224,6 @@ def make_exported_tnjc2() -> ExportedTnJc2:
     # ("SingleLocusLinkedTnJc2", lambda: [make_classified_tnjc2()]),
     # ("SynJctsTnJc2", lambda: [make_syn_jcts_tnjc2()]),
     # ("AnalyzedTnJc2", lambda: [make_analyzed_tnjc2()]),
-    ("ExportedTnJc2", lambda: [make_exported_tnjc2()]),
 ])
 def test_record_csv_save_load(record_type, make_func):
     """Test CSV save/load round-trip for each Record class."""
@@ -259,7 +241,6 @@ def test_record_csv_save_load(record_type, make_func):
         "SingleLocusLinkedTnJc2": SingleLocusLinkedTnJc2,
         "SynJctsTnJc2": SynJctsTnJc2,
         "AnalyzedTnJc2": AnalyzedTnJc2,
-        "ExportedTnJc2": ExportedTnJc2,
     }
 
     record_cls = record_classes[record_type]

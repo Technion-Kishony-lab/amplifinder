@@ -449,3 +449,11 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "slow: mark test as slow (e.g., runs breseq)"
     )
+
+
+@pytest.fixture(autouse=True)
+def disable_rich_console_for_tests(monkeypatch):
+    """Disable rich console colors for testing so caplog/capsys work properly."""
+    from amplifinder.logger import logger
+    monkeypatch.setattr(logger, 'use_colors', False)
+    monkeypatch.setattr(logger, 'console', None)

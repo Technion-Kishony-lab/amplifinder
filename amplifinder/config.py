@@ -85,7 +85,7 @@ def _normalize_alignment_params(cfg: dict[str, Any]) -> None:
         cfg[param_name] = vals or cfg.get(param_name) or {}
 
 
-@dataclass
+@dataclass(kw_only=True)
 class Config:
     """AmpliFinder configuration."""
 

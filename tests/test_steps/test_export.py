@@ -25,14 +25,16 @@ def sample_analyzed(analyzed_tnjc2_record):
     return RecordTypedDf.from_records([first, second], ClassifiedTnJc2)
 
 
-def test_export_creates_files(sample_analyzed, tmp_path, tiny_genome, read_lengths_fixture):
+def test_export_creates_files(sample_analyzed, tmp_path, tiny_genome):
     """Should create amplifications.yaml file."""
+    from amplifinder.steps.read_length import ReadLengths
+    
     step = ExportTnJc2Step(
         classified_tnjc2s=sample_analyzed,
         output_dir=tmp_path,
         ref_name="U00096",
         iso_name="sample1",
-        read_lengths=read_lengths_fixture,
+        read_lengths=ReadLengths(read_len_iso=150, read_len_anc=None, jc_arm_len_iso=300, jc_arm_len_anc=None),
     )
 
     result = step.run()

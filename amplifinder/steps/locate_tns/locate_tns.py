@@ -14,6 +14,7 @@ from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.data_types import Orientation, RecordTypedDf, RefTn, Genome
 from amplifinder.steps.base import OutputStep
+from amplifinder.logger import logger
 
 
 # Base class for TN location steps
@@ -196,7 +197,7 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
         # Create BLAST DB if needed (with lock to prevent parallel creation)
         with locked_resource(self.isdb_path, "blast_db", timeout=300):
             if not self.isdb_path.with_suffix(".nhr").exists():
-                self.log("Creating ISfinder BLAST database...")
+                logger.info("Creating ISfinder BLAST database...")
                 make_blast_db(self.isdb_path, self.isdb_path)
 
         # Run BLAST
