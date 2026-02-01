@@ -4,10 +4,21 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.logger import logger
-from amplifinder.data_types import RecordTypedDf, RawTnJc2, RefTn, Side, SingleLocusLinkedTnJc2, TnJunction
+from amplifinder.data_types import (
+    RecordTypedDf, RawTnJc2, RefTn, Side, SingleLocusLinkedTnJc2, TnJunction, Architecture,
+)
 from amplifinder.data_types.tnjc2s import TnJc2AndSide
 
-from .base import RecordTypedDfStep
+from .base import RecordTypedDfStep, count_classifications, format_classification_counts
+
+REPORT_CATEGORIES = (
+    Architecture.REFERENCE_TN,
+    Architecture.TRANSPOSITION,
+    Architecture.FLANKED,
+    Architecture.HEMI_FLANKED_LEFT,
+    Architecture.HEMI_FLANKED_RIGHT,
+    Architecture.UNFLANKED,
+)
 
 
 def _issue_debug_message_if_multi_single_locus_match(tnjc2, matches):
@@ -73,6 +84,17 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
             final_linked_tnjc2s.append(final_linked)
 
         return RecordTypedDf.from_records(final_linked_tnjc2s, SingleLocusLinkedTnJc2)
+
+    def report_output_message(self, output: RecordTypedDf[SingleLocusLinkedTnJc2]) -> Optional[str]:
+        counts = count_classifications(
+            [record.raw_event for record in output],
+            REPORT_CATEGORIES,
+        )
+        return format_classification_counts(
+            REPORT_CATEGORIES,
+            counts,
+            label_fn=lambda event: event.description,
+        )
 
     def _find_all_single_locus_matching_tnjc2s(
         self, tnjc_i: TnJunction, tnjc2s: list[SingleLocusLinkedTnJc2], exclude_idx: int

@@ -1,7 +1,7 @@
 """Pipeline step base class with caching logic."""
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Generic, List, Optional, TypeVar, get_args, get_origin, Type
+from typing import Callable, Generic, List, Optional, Sequence, TypeVar, get_args, get_origin, Type
 
 from line_profiler import LineProfiler
 
@@ -16,6 +16,44 @@ from amplifinder.exceptions import PrematureTerminationError
 
 
 T = TypeVar("T")
+K = TypeVar("K")
+
+
+def count_classifications(
+    values: Sequence[K],
+    categories: Sequence[K],
+) -> dict[K, int]:
+    """Count occurrences of each category for a list of values."""
+    counts: dict[K, int] = {category: 0 for category in categories}
+    for value in values:
+        if value not in counts:
+            raise ValueError(f"Unexpected category: {value}")
+        counts[value] += 1
+    return counts
+
+
+def format_classification_counts(
+    categories: tuple[K],
+    counts_before: dict[K, int],
+    counts_after: Optional[dict[K, int]] = None,
+    *,
+    label_fn: Callable[[K], str] = str,
+    label_width: int = 30,
+) -> str:
+    """Format classification counts for logging."""
+    lines = []
+    categories = categories + ("total",)
+    counts_before["total"] = sum(counts_before.values())
+    if counts_after is not None:
+        counts_after["total"] = sum(counts_after.values())
+
+    for category in categories:
+        label = "total" if category == "total" else label_fn(category)
+        line = f"{label:{label_width}s}: {counts_before[category]:4d}"
+        if counts_after is not None:
+            line += f" -> {counts_after[category]:4d}"
+        lines.append(line)
+    return "\n" + "\n".join(lines)
 
 
 class Step(ABC):
@@ -85,7 +123,9 @@ class Step(ABC):
 
     def _artifact_labels(self) -> list[str]:
         """Human-readable labels for artifacts (override for custom logging)."""
-        return [str(p.name) for p in self.artifact_files] if self.artifact_files else []
+        if not self.artifact_files:
+            return []
+        return [str(p.resolve(strict=False)) for p in self.artifact_files]
 
     def _generate_artifacts(self) -> None:
         """Create artifact files (external tools). Subclasses should override."""
@@ -197,7 +237,7 @@ class Step(ABC):
         log_msg_color = f"[cyan]{log_msg}[/cyan]"
 
         labels = self._artifact_labels()
-        output_str = ", ".join(labels) if labels else "none"
+        output_str = ("\n" + "\n".join(labels)) if labels else "none"
 
         remaining = 100 - len(step_name) - len(log_msg) - 2
         formatted = f"{step_name_color} " + "=" * remaining + f" {log_msg_color} ========"

@@ -6,15 +6,15 @@ from typing import Optional
 from amplifinder.data_types import (
     RecordTypedDf, CoveredTnJc2, Architecture,
 )
-from amplifinder.steps.base import RecordTypedDfStep
+from amplifinder.steps.base import RecordTypedDfStep, count_classifications, format_classification_counts
 
 
-def _count_raw_events(records: list[CoveredTnJc2]) -> dict[Architecture, int]:
-    """Count occurrences of each RawEvent type in a list of records."""
-    counts: dict[Architecture, int] = {name: 0 for name in Architecture}
-    for record in records:
-        counts[record.raw_event] += 1
-    return counts
+REPORT_CATEGORIES = (
+    Architecture.FLANKED,
+    Architecture.HEMI_FLANKED_LEFT,
+    Architecture.HEMI_FLANKED_RIGHT,
+    Architecture.UNFLANKED,
+)
 
 
 class FilterTnJc2CandidatesStep(RecordTypedDfStep[CoveredTnJc2]):
@@ -59,10 +59,17 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[CoveredTnJc2]):
         return RecordTypedDf.from_records(filtered_tnjc2s, CoveredTnJc2)
 
     def report_output_message(self, output: RecordTypedDf[CoveredTnJc2]) -> Optional[str]:
-        before_counts = _count_raw_events(self.linked_tnjc2s.to_records())
-        after_counts = _count_raw_events(output.to_records())
-
-        lines = [(f"{event.description:30s}: {before_counts[event]:4d} -> "
-                  f"{after_counts[event]:4d}")
-                 for event in Architecture]
-        return "\n" + "\n".join(lines)
+        before_counts = count_classifications(
+            [record.raw_event for record in self.linked_tnjc2s],
+            REPORT_CATEGORIES,
+        )
+        after_counts = count_classifications(
+            [record.raw_event for record in output],
+            REPORT_CATEGORIES,
+        )
+        return format_classification_counts(
+            REPORT_CATEGORIES,
+            before_counts,
+            after_counts,
+            label_fn=lambda event: event.description,
+        )

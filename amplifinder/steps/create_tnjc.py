@@ -3,9 +3,11 @@
 from pathlib import Path
 from typing import Optional, List, Union
 
-from amplifinder.steps.base import RecordTypedDfStep
+from amplifinder.steps.base import RecordTypedDfStep, count_classifications, format_classification_counts
 from amplifinder.data_types import RecordTypedDf, Junction, OffsetRefTnSide, TnJunction, RefTnJunction, BreseqJunction
 from amplifinder.data_types.genome import Genome
+
+REPORT_CATEGORIES = ("reference", "breseq")
 
 
 class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
@@ -98,6 +100,13 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
         tnjcs = tnjcs.pipe(lambda df: df.sort_values(["scaf2", "pos2"]).reset_index(drop=True))
 
         return tnjcs
+
+    def report_output_message(self, output: RecordTypedDf[TnJunction]) -> Optional[str]:
+        counts = count_classifications(
+            ["reference" if record.is_ref_tn_junction() else "breseq" for record in output],
+            REPORT_CATEGORIES,
+        )
+        return format_classification_counts(REPORT_CATEGORIES, counts)
 
     def _precompute_ref_tnjcs_sequences(self) -> None:
         """Pre-compute sequences for all reference TN junctions (cache to avoid recomputing)."""

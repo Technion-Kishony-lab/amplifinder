@@ -3,9 +3,15 @@
 from pathlib import Path
 from typing import Optional, List
 
-from amplifinder.steps.base import RecordTypedDfStep
+from amplifinder.steps.base import RecordTypedDfStep, count_classifications, format_classification_counts
 from amplifinder.data_types.genome import Genome
 from amplifinder.data_types import RecordTypedDf, TnJunction, RawTnJc2, Orientation, BaseEvent
+
+REPORT_CATEGORIES = (
+    BaseEvent.REFERENCE_TN,
+    BaseEvent.TRANSPOSITION,
+    BaseEvent.LOCUS_JOINING,
+)
 
 
 class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
@@ -50,6 +56,17 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
         raw_tnjc2s = RecordTypedDf.from_records(pairs, RawTnJc2)
 
         return raw_tnjc2s
+
+    def report_output_message(self, output: RecordTypedDf[RawTnJc2]) -> Optional[str]:
+        counts = count_classifications(
+            [record.base_event for record in output],
+            REPORT_CATEGORIES,
+        )
+        return format_classification_counts(
+            REPORT_CATEGORIES,
+            counts,
+            label_fn=lambda event: event.value,
+        )
 
     def _pair_junctions(self, junctions: List[TnJunction]) -> List[RawTnJc2]:
         """Find all valid junction pairs.

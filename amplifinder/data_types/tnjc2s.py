@@ -154,7 +154,7 @@ class TnJc2AndSide(NamedTuple):
 
 class SingleLocusLinkedTnJc2(RawTnJc2):
     """RawTnJc2 with structural classification (Step 8 output)."""
-    NAME: ClassVar[str] = "Classified Amplicons"
+    NAME: ClassVar[str] = "Classified Junction Pairs"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = RawTnJc2.CSV_EXPORT_FIELDS + [
         'single_locus_left_pair_id', 'single_locus_right_pair_id', 'raw_event', 'chosen_tn_id'
     ]
@@ -314,7 +314,7 @@ class CoveredTnJc2(SingleLocusLinkedTnJc2):
 
 class SynJctsTnJc2(CoveredTnJc2):
     """Candidate with synthetic junction folder names."""
-    NAME: ClassVar[str] = "Synthetic Junction Amplicons"
+    NAME: ClassVar[str] = "Junction Pairs with Synthetic Junctions"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
         'analysis_dir', 'analysis_dir_anc'
     ]
@@ -345,7 +345,7 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     - anc_fastq_path=None: jc_cov only, jc_cov_anc is None
     - anc_fastq_path=set: both jc_cov and jc_cov_anc present
     """
-    NAME: ClassVar[str] = "Analyzed Amplicons"
+    NAME: ClassVar[str] = "Junction Pairs with Synthetic Junctions Coverage Analysis"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
         'jc_cov_vector', 'jc_cov_anc_vector'
     ]
@@ -374,7 +374,7 @@ class AnalyzedTnJc2(SynJctsTnJc2):
 
 class ClassifiedTnJc2(AnalyzedTnJc2):
     """AnalyzedTnJc2 with architecture/event classification (Step 13 output)."""
-    NAME: ClassVar[str] = "Classified Amplicons"
+    NAME: ClassVar[str] = "Classified Architectures"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = AnalyzedTnJc2.CSV_EXPORT_FIELDS + [
         'event_str', 'iso_architecture', 'anc_architecture', 'event_descriptors'
     ]

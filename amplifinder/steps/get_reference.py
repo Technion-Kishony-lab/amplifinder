@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 
 from amplifinder.steps.base import OutputStep
+from amplifinder.logger import logger
 from amplifinder.data_types.genome import Genome, get_genome, exists_genome
 
 
@@ -44,4 +45,9 @@ class GetRefGenomeStep(OutputStep[Genome]):
 
     def _calculate_output(self) -> Genome:
         """Load genome from cached files."""
-        return get_genome(self.ref_name, self.ref_path, ncbi=False)
+        genome = get_genome(self.ref_name, self.ref_path, ncbi=False)
+        if genome.genbank_path:
+            logger.info(f"GenBank: {genome.genbank_path.resolve(strict=False)}")
+        if genome.fasta_path:
+            logger.info(f"FASTA  : {genome.fasta_path.resolve(strict=False)}")
+        return genome
