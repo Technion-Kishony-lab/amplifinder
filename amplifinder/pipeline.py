@@ -63,14 +63,14 @@ class Pipeline:
     def _log_run_info(self, include_no_ancestor_warning: bool = True) -> None:
         """Log run information: reference, isolate, and ancestor."""
         if self.config.anc_fastq_path:
-            anc_msg = f"Ancestor: {self.config.anc_fastq_path}"
+            anc_msg = f"Ancestor : {self.config.anc_fastq_path}"
         elif include_no_ancestor_warning:
             anc_msg = "No ancestor assigned; using raw (non-normalized) coverage analysis"
         else:
             anc_msg = "No ancestor"
         logger.info(
             f"\nReference: {c(self.config.ref_name, 'cyan')}\n"
-            f"Isolate: {c(str(self.config.iso_fastq_path), 'magenta')}\n{anc_msg}")
+            f"Isolate  : {c(str(self.config.iso_fastq_path), 'magenta')}\n{anc_msg}")
 
     def run(self) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
         """Run full pipeline with exception handling and status tracking."""

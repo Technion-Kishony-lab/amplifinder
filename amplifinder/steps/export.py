@@ -103,5 +103,4 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
 
     def report_output_message(self, output: Dict[str, Any]) -> Optional[str]:
         return (f"Exported {len(output['amplicons'])} amplicons, "
-                f"{len(output['transpositions'])} transpositions to "
-                f"{self.yaml_file} and {self.json_file}")
+                f"{len(output['transpositions'])} transpositions")

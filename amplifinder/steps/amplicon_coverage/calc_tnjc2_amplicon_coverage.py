@@ -41,7 +41,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         self.average_method = average_method
         self.min_amplicon_length = min_amplicon_length
         self.max_amplicon_length = max_amplicon_length
-        self._non_locus_joining_amplicons = 0
+        self._locus_joining_amplicons = 0
         self._too_long_amplicons = 0
         self._too_short_amplicons = 0
 
@@ -132,8 +132,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
                 covered_records.append(covered)
                 logger.print_progress(".", end="\n" if (i + 1) % 60 == 0 else "")
 
-        logger.print_progress(f"\nTotal amplicons: {len(self.raw_tnjc2s)}, "
-                              f"non-locus-joining: {self._non_locus_joining_amplicons}, "
+        logger.print_progress(f"\nTotal locus-joining junction pairs: {self._locus_joining_amplicons}, "
                               f"too long: {self._too_long_amplicons}, "
                               f"too short: {self._too_short_amplicons}")
 
@@ -150,8 +149,8 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
         Updates counters and returns True if amplicon should be skipped.
         """
         if raw_tnjc2.base_event != BaseEvent.LOCUS_JOINING:
-            self._non_locus_joining_amplicons += 1
             return True
+        self._locus_joining_amplicons += 1
         if raw_tnjc2.amplicon_length > self.max_amplicon_length:
             self._too_long_amplicons += 1
             return True
