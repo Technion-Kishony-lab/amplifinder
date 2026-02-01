@@ -19,6 +19,7 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
 
     Based on assign_potential_ISs.m
     """
+    NAME = "Create TN junctions"
 
     def __init__(
         self,

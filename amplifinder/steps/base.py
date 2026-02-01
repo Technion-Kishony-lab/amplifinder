@@ -1,5 +1,6 @@
 """Pipeline step base class with caching logic."""
 from abc import ABC, abstractmethod
+from datetime import datetime
 from pathlib import Path
 from typing import Callable, Generic, List, Optional, Sequence, TypeVar, get_args, get_origin, Type
 
@@ -76,6 +77,9 @@ class Step(ABC):
     # Global profile flag (applies to all steps)
     should_profile: bool = False
 
+    # Short human-readable name (override in subclasses)
+    NAME: Optional[str] = None
+
     def __init__(
         self, *,
         input_files: Optional[List[Path]] = None,
@@ -106,6 +110,11 @@ class Step(ABC):
     def name(self) -> str:
         """Step name (class name by default)."""
         return self.__class__.__name__
+
+    @property
+    def nice_name(self) -> str:
+        """Nice human-readable name (override in subclasses)."""
+        return self.NAME or self.name
 
     """ Artifact files """
 
@@ -227,21 +236,23 @@ class Step(ABC):
         with timer(log=False) as t:
             output = self._do_work()
 
-        logger.info("-" * 107 + f" [cyan]{t.elapsed:.1f} sec[/cyan] --------\n")
+        logger.info("--- [blue]END[/blue] " + "-" * 104 + f" [blue]{t.elapsed:.1f} sec[/blue] ---\n")
         return output
 
     def _log_run_status(self, log_msg: str) -> None:
         """Standardized run status logging."""
-        step_name = self.name
-        step_name_color = f"[cyan]{step_name}[/cyan]"
-        log_msg_color = f"[cyan]{log_msg}[/cyan]"
+        timestamp = datetime.now().strftime('%H:%M:%S')
+        step_nice_name = f"START ({timestamp}): {self.nice_name}"
+        step_nice_name_color = f"[blue]{step_nice_name}[/blue]"
 
         labels = self._artifact_labels()
         output_str = ("\n" + "\n".join(labels)) if labels else "none"
 
-        remaining = 100 - len(step_name) - len(log_msg) - 2
-        formatted = f"{step_name_color} " + "=" * remaining + f" {log_msg_color} ========"
-        logger.info(formatted, timestamp=True)
+        remaining = 121 - len(step_nice_name) - 2
+        formatted = f"\n=== {step_nice_name_color} " + "=" * remaining
+        logger.info(formatted, timestamp=False)
+        logger.info(f"Step: {self.name}")
+        logger.info(f"Actions: {log_msg}", timestamp=False)
         logger.info(f"Output: {output_str}")
 
     def _get_lock_target(self) -> Optional[Path]:

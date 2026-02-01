@@ -23,6 +23,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
     - anc_breseq_path=None: raw coverage only
     - anc_breseq_path=set: normalized coverage (iso/anc ratio)
     """
+    NAME = "Calculate amplicon coverage"
 
     def __init__(
         self,

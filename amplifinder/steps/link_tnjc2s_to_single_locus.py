@@ -37,6 +37,7 @@ class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2])
     - hemi-flanked: one side shares IS
     - unflanked: neither side shares IS
     """
+    NAME = "Link locus-joining to single locus"
 
     def __init__(
         self,

@@ -26,6 +26,7 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[CoveredTnJc2]):
 
     Also assigns analysis directory names to each candidate.
     """
+    NAME = "Filter by copy number"
 
     def __init__(
         self,

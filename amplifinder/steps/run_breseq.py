@@ -15,6 +15,7 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
     Output is breseq run directory (output.gd), not a saved CSV.
     Returns RecordTypedDf[BreseqJunction] from parsed breseq output.
     """
+    NAME = "Run breseq"
 
     STEP_LOCK_TIMEOUT = 7200  # breseq can run for hours
 
@@ -128,6 +129,7 @@ class BreseqStep(OutputStep[RecordTypedDf[BreseqJunction]]):
 
 class AncBreseqStep(BreseqStep):
     """Run breseq alignment pipeline for ancestor."""
+    NAME = "run breseq (ancestor)"
 
     def _get_lock_target(self) -> Optional[Path]:
         """Lock ancestor breseq output directory."""

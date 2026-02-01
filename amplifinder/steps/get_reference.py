@@ -14,6 +14,7 @@ class GetRefGenomeStep(OutputStep[Genome]):
     Uses file locking to prevent race conditions when multiple
     parallel runs try to download the same reference genome.
     """
+    NAME = "Load reference genome"
 
     def __init__(
         self,
