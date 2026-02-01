@@ -1,4 +1,5 @@
 """Pipeline step base class with caching logic."""
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path

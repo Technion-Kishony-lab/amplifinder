@@ -131,6 +131,10 @@ def _validate_spec(spec: RunSpec, validate_paths: bool) -> List[str]:
             ("anc_breseq_path", spec.anc_breseq_path),
             ("config_path", spec.config_path),
         ):
+            if label == "ref_path" and value:
+                ref_dir = Path(value)
+                if not ref_dir.exists():
+                    ref_dir.mkdir(parents=True, exist_ok=True)
             if value and not Path(value).exists():
                 errors.append(f"{label} does not exist: {value}")
     return errors

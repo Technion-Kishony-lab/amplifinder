@@ -3,10 +3,10 @@
 import os
 import shutil
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 
-def fmt_count(num: int, total: int | None = None) -> str:
+def fmt_count(num: int, total: Optional[int] = None) -> str:
     """Format count with optional percentage.
 
     Args:
