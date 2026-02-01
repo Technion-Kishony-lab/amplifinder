@@ -197,6 +197,7 @@ async def _run_one(
             log_handle.write(f"Run ID: {spec.run_id}\n")
             log_handle.write(f"Start: {start_time}\n")
             log_handle.write(f"Command: {' '.join(command)}\n\n")
+            log_handle.flush()
             process = await asyncio.create_subprocess_exec(
                 *command,
                 cwd=str(amplifinder_cwd),
@@ -293,8 +294,8 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--amplifinder-cwd",
         type=Path,
-        default=Path(__file__).resolve().parents[1] / "amplifinder",
-        help="Working directory for running amplifinder (default: repo/amplifinder).",
+        default=Path(__file__).resolve().parents[1],
+        help="Working directory for running amplifinder (default: repo root).",
     )
     parser.add_argument(
         "--python",
