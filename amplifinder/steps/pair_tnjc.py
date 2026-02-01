@@ -158,9 +158,8 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
             return BaseEvent.REFERENCE_TN
 
         # Check for transposition
-        left_pos = tnjc_left.pos2
-        right_pos = tnjc_right.pos2
-        if abs(left_pos - right_pos) < self.transposition_threshold:
+        if abs(tnjc_left.pos2 - tnjc_right.pos2) < self.transposition_threshold \
+                and not tnjc_left.is_ref_tn_junction() and not tnjc_right.is_ref_tn_junction():
             return BaseEvent.TRANSPOSITION
 
         return BaseEvent.LOCUS_JOINING
