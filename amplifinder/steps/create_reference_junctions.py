@@ -17,6 +17,7 @@ class CreateRefTnJcStep(RecordTypedDfStep[RefTnJunction]):
 
     Based on create_JC_of_reference_IS.m
     """
+    NAME = "Create reference-TN junctions"
 
     def __init__(
         self,

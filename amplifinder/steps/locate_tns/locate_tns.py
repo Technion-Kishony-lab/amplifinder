@@ -21,6 +21,7 @@ from amplifinder.logger import logger
 
 class LocateTNsStep(OutputStep[Optional[RecordTypedDf[RefTn]]]):
     """Base class for steps that locate TN elements."""
+    NAME = "Locate TNs"
 
     def __init__(
         self,
@@ -84,6 +85,7 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
     Parses GenBank file for 'insertion sequence' features (based on findISinRef.m).
     Returns None if no GenBank file is provided.
     """
+    NAME = "locate TNs (genbank)"
 
     def __init__(
         self,
@@ -165,6 +167,7 @@ class LocateTNsUsingGenbankStep(LocateTNsStep):
 
 class LocateTNsUsingISfinderStep(LocateTNsStep):
     """BLAST reference genome against ISfinder database to find TN elements."""
+    NAME = "locate TNs (isfinder)"
 
     def __init__(
         self,

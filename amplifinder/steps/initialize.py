@@ -14,6 +14,7 @@ class InitializingStep(OutputStep[Tuple[Path, Optional[Path]]]):
     Folder structure: {output_dir}/{ref_name}/{anc_name}/{iso_name}/
     When iso_name == anc_name, creates {output_dir}/{ref_name}/{name}/{name}/
     """
+    NAME = "Initialize output directories"
 
     def __init__(
         self,

@@ -13,6 +13,7 @@ from amplifinder.utils.file_lock import locked_resource
 
 class AlignReadsToJunctionsStep(Step):
     """Align reads to synthetic junction sequences."""
+    NAME = "Align reads to synthetic junctions"
     is_ancestor: bool = False
 
     def __init__(
@@ -87,4 +88,5 @@ class AlignReadsToJunctionsStep(Step):
 
 class AncAlignReadsToJunctionsStep(AlignReadsToJunctionsStep):
     """Align ancestor reads to synthetic junctions."""
+    NAME = "Align reads to synthetic junctions (ancestor)"
     is_ancestor: bool = True

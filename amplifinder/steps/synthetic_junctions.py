@@ -169,6 +169,7 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
     """
     Creates 7 junction sequences per candidate for read alignment analysis.
     """
+    NAME = "Create synthetic junctions"
     dir_field: str = 'analysis_dir'
     is_ancestor: bool = False
 
@@ -236,5 +237,6 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
 
 class AncCreateSyntheticJunctionsStep(CreateSyntheticJunctionsStep):
     """Creates synthetic junctions for ancestor with its own junction length."""
+    NAME = "Create synthetic junctions (ancestor)"
     dir_field: str = 'analysis_dir_anc'
     is_ancestor: bool = True

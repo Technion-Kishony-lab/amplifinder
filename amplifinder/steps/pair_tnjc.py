@@ -23,6 +23,7 @@ class PairTnJcToRawTnJc2Step(RecordTypedDfStep[RawTnJc2]):
 
     Based on MATLAB combine_ISJC_pairs.m and calculate_amplicon_length.m
     """
+    NAME = "Pair TN junctions"
 
     def __init__(
         self,

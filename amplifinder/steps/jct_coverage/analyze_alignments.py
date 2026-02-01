@@ -115,6 +115,7 @@ def warn_if_paired_and_not_spanning(jc_covs: dict[JunctionType, JunctionReadCoun
 
 class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
     """Analyze isolate read alignments to get junction coverage."""
+    NAME = "Analyze junction coverage"
 
     IS_ANCESTOR = False
     COV_FIELD = "jc_covs"
@@ -208,6 +209,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
 
 class AncAnalyzeTnJc2AlignmentsStep(AnalyzeTnJc2AlignmentsStep):
     """Analyze ancestor read alignments."""
+    NAME = "Analyze junction coverage (ancestor)"
 
     IS_ANCESTOR = True
     COV_FIELD = "jc_covs_anc"

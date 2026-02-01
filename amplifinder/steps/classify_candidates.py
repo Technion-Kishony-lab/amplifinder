@@ -127,6 +127,7 @@ class ClassifyTnJc2CandidatesStep(RecordTypedDfStep[ClassifiedTnJc2]):
     - has_ancestor=False: limited classification (no de novo detection)
     - has_ancestor=True: full iso vs anc pattern comparison
     """
+    NAME = "Determine architecture and event descriptors"
 
     def __init__(
         self,

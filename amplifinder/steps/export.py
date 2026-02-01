@@ -14,6 +14,7 @@ from amplifinder.utils.json_utils import compact_short_lists
 
 class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
     """Export classified amplicons to YAML."""
+    NAME = "Export results"
 
     def __init__(
         self,

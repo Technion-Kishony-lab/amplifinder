@@ -16,6 +16,7 @@ from amplifinder.visualization.plot_amp_coverage import plot_amplicon_coverage
 
 class PlotTnJc2CoverageStep(Step):
     """Generate junction and amplicon coverage plots (post-classification)."""
+    NAME = "Plot amplicon and junction coverage"
 
     def __init__(
         self,
@@ -131,8 +132,3 @@ class PlotTnJc2CoverageStep(Step):
             logger.print_progress('.', end='')
 
         logger.print_progress('')  # Newline
-
-    def _artifact_labels(self) -> list[str]:
-        """Summarize outputs as count."""
-        n = len(self.classified_tnjc2s)
-        return [f"{n} amplicon_coverage.png and {n} jct_coverages.png"]

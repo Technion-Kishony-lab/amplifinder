@@ -24,6 +24,7 @@ class ReadLengths:
 
 class ReadLenStep(OutputStep[ReadLengths]):
     """Determine read lengths from FASTQ and calculate junction lengths."""
+    NAME = "Determine read lengths"
 
     def __init__(
         self, *,
