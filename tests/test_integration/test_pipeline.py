@@ -6,8 +6,6 @@ import pytest
 import pysam
 
 from pathlib import Path
-from Bio import SeqIO
-
 from amplifinder.utils.file_utils import remove_file_or_dir
 from amplifinder.data_types import JunctionType
 from amplifinder.config import Config
@@ -21,6 +19,7 @@ from tests.test_integration.matlab_compare import (
     compare_amplifications,
 )
 from tests.test_integration.test_utils import print_color, force_step
+from tests.test_integration.junction_fasta_compare import compare_junction_fastas
 from tests.test_integration.jc_cover_compare import (
     load_matlab_read_buckets,
     load_python_read_buckets,
@@ -125,15 +124,7 @@ class TestPipeline(Pipeline):
         target = _select_target_candidate(syn_tnjc2s)
         python_fasta = target.fasta_path(iso_output, is_ancestor=False)
 
-        matlab_seqs = {JUNCTION_ID_MAP[rec.id]: str(rec.seq) for rec in SeqIO.parse(matlab_fasta, "fasta")}
-        python_seqs = {rec.id: str(rec.seq) for rec in SeqIO.parse(python_fasta, "fasta")}
-
-        diffs = [k for k in matlab_seqs if python_seqs[k] != matlab_seqs[k]]
-        if diffs:
-            pytest.fail(f"Junction FASTA mismatch for: {', '.join(diffs)}")
-
-        if list(matlab_seqs.keys()) != list(python_seqs.keys()):
-            pytest.fail(f"Junction FASTA key-order mismatch: {list(matlab_seqs.keys())} != {list(python_seqs.keys())}")
+        compare_junction_fastas(matlab_fasta, python_fasta, compare_order=True)
 
         print_color("✓ Junction FASTA perfectly matches MATLAB")
         return syn_tnjc2s

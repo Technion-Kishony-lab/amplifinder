@@ -12,7 +12,7 @@ from amplifinder.pipeline import Pipeline
 
 @click.command()
 @click.option(
-    "-i", "--iso-path", "--iso-fastq-path",
+    "-i", "--iso-path", "--iso-fastq-path", "iso_fastq_path",
     type=click.Path(path_type=Path),
     required=False,
     default=None,
@@ -26,7 +26,7 @@ from amplifinder.pipeline import Pipeline
     help="Reference genome name (e.g., U00096 for E. coli K-12).",
 )
 @click.option(
-    "-a", "--anc-path", "--anc-fastq-path",
+    "-a", "--anc-path", "--anc-fastq-path", "anc_fastq_path",
     type=click.Path(path_type=Path),
     default=None,
     help="Path to ancestor FASTQ file(s) or directory.",

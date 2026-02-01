@@ -1,6 +1,7 @@
 """Configuration management for AmpliFinder."""
 
-from dataclasses import dataclass, field, fields, MISSING
+import inspect
+from dataclasses import dataclass as _dataclass, field, fields, MISSING
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional, Tuple, ClassVar, Union
@@ -10,6 +11,13 @@ from pydantic import BaseModel, ConfigDict
 
 from amplifinder.data_types import AverageMethod
 from amplifinder.utils.file_utils import ensure_dir
+
+
+def dataclass(*args, **kwargs):
+    """Compatibility wrapper for Python < 3.10 (kw_only unsupported)."""
+    if "kw_only" in kwargs and "kw_only" not in inspect.signature(_dataclass).parameters:
+        kwargs.pop("kw_only", None)
+    return _dataclass(*args, **kwargs)
 
 
 class FrozenParams(BaseModel):
@@ -93,14 +101,16 @@ class Config:
 
     # Reference
     ref_name: str
-    ref_path: Path = field(default_factory=lambda: Path("genomesDB"))
-    ncbi: bool = True
 
     # Isolate
     iso_fastq_path: Path
     iso_name: Optional[str] = None          # None: derive from iso_fastq_path.stem
     iso_read_length: Optional[int] = None   # None: calculate from fastq
     iso_breseq_path: Optional[Path] = None  # None: default to iso_run_dir / "breseq"
+
+    # Reference (defaults)
+    ref_path: Path = field(default_factory=lambda: Path("genomesDB"))
+    ncbi: bool = True
 
     # Ancestor (optional)
     anc_fastq_path: Optional[Path] = None
