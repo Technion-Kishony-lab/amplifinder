@@ -1,5 +1,6 @@
 """Step 12: Analyze read alignments to synthetic junctions."""
 import numpy as np
+import pandas as pd
 
 from pathlib import Path
 from typing import Optional
@@ -105,6 +106,34 @@ def print_jc_read_counts_and_calls(
     logger.info("", timestamp=False)
 
 
+def export_jc_read_counts_csv(
+    jc_covs: dict[JunctionType, JunctionReadCounts],
+    jc_calls: dict[JunctionType, JcCall],
+    output_dir: Path,
+) -> Path:
+    """Export junction read counts table to CSV."""
+    rows = []
+    for jt in JunctionType:
+        cov = jc_covs[jt]
+        call_str = str(jc_calls[jt].value) if jt in jc_calls else None
+        rows.append({
+            "junction": jt.name,
+            "left_far": cov.left_far,
+            "left": cov.left,
+            "left_marg": cov.left_marginal,
+            "span": cov.spanning,
+            "pair": cov.paired,
+            "right_marg": cov.right_marginal,
+            "right": cov.right,
+            "right_far": cov.right_far,
+            "call": call_str,
+        })
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / "jc_read_counts.csv"
+    pd.DataFrame(rows).to_csv(output_path, index=False)
+    return output_path
+
+
 def warn_if_paired_and_not_spanning(jc_covs: dict[JunctionType, JunctionReadCounts]) -> None:
     """Warn if paired reads are present and no spanning reads are present."""
     for jt in JunctionType:
@@ -193,6 +222,11 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
             warn_if_paired_and_not_spanning(jc_covs)
 
             print_jc_read_counts_and_calls(jc_covs, jc_calls)
+            export_jc_read_counts_csv(
+                jc_covs=jc_covs,
+                jc_calls=jc_calls,
+                output_dir=tnjc2.analysis_dir_path(self._output_dir, is_ancestor=self.IS_ANCESTOR),
+            )
 
             analyzed_records.append(AnalyzedTnJc2.from_other(
                 tnjc2,
