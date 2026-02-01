@@ -10,7 +10,15 @@ from amplifinder.data_types import (
 @pytest.fixture
 def sample_covered_tnjc2(tiny_genome):
     """Create sample CoveredTnJc2 records - one of each major type."""
-    from amplifinder.data_types import RawTnJc2, SingleLocusLinkedTnJc2, TnJunction, Orientation, OffsetRefTnSide, Terminal, BaseEvent
+    from amplifinder.data_types import (
+        RawTnJc2,
+        SingleLocusLinkedTnJc2,
+        TnJunction,
+        Orientation,
+        OffsetRefTnSide,
+        Terminal,
+        BaseEvent,
+    )
 
     scaffold = tiny_genome.get_scaffold("tiny")
 
@@ -29,8 +37,17 @@ def sample_covered_tnjc2(tiny_genome):
     # FLANKED: both junctions match other single-locus pairs
     jc_flank_left = make_jc(1, 10, 200, Terminal.START)
     jc_flank_right = make_jc(2, 20, 300, Terminal.END)
-    flanked_raw = RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=jc_flank_right, scaffold=scaffold, base_event=BaseEvent.LOCUS_JOINING)
-    flanked_linked = SingleLocusLinkedTnJc2.from_other(flanked_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
+    flanked_raw = RawTnJc2(
+        tnjc_left=jc_flank_left,
+        tnjc_right=jc_flank_right,
+        scaffold=scaffold,
+        base_event=BaseEvent.LOCUS_JOINING,
+    )
+    flanked_linked = SingleLocusLinkedTnJc2.from_other(
+        flanked_raw,
+        single_locus_tnjc2_left_matchings=[],
+        single_locus_tnjc2_right_matchings=[],
+    )
     flanked = CoveredTnJc2.from_other(
         flanked_linked,
         iso_scaf_avg=1.0, iso_amplicon_avg=2.0,
@@ -39,15 +56,33 @@ def sample_covered_tnjc2(tiny_genome):
     # Single-locus pairs matching left/right junctions (for flanking classification)
     # These must be TRANSPOSITION events (amplicon_length < 30bp) to qualify as "single locus"
     # pos2 difference must be < 30 for transposition classification
-    single_locus_left_raw = RawTnJc2(tnjc_left=jc_flank_left, tnjc_right=make_jc(3, 30, 210, Terminal.END), scaffold=scaffold, base_event=BaseEvent.TRANSPOSITION)
-    single_locus_left_linked = SingleLocusLinkedTnJc2.from_other(single_locus_left_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
+    single_locus_left_raw = RawTnJc2(
+        tnjc_left=jc_flank_left,
+        tnjc_right=make_jc(3, 30, 210, Terminal.END),
+        scaffold=scaffold,
+        base_event=BaseEvent.TRANSPOSITION,
+    )
+    single_locus_left_linked = SingleLocusLinkedTnJc2.from_other(
+        single_locus_left_raw,
+        single_locus_tnjc2_left_matchings=[],
+        single_locus_tnjc2_right_matchings=[],
+    )
     single_locus_left = CoveredTnJc2.from_other(
         # 210-200=10 < 30
         single_locus_left_linked,
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
     )
-    single_locus_right_raw = RawTnJc2(tnjc_left=make_jc(4, 40, 290, Terminal.START), tnjc_right=jc_flank_right, scaffold=scaffold, base_event=BaseEvent.TRANSPOSITION)
-    single_locus_right_linked = SingleLocusLinkedTnJc2.from_other(single_locus_right_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
+    single_locus_right_raw = RawTnJc2(
+        tnjc_left=make_jc(4, 40, 290, Terminal.START),
+        tnjc_right=jc_flank_right,
+        scaffold=scaffold,
+        base_event=BaseEvent.TRANSPOSITION,
+    )
+    single_locus_right_linked = SingleLocusLinkedTnJc2.from_other(
+        single_locus_right_raw,
+        single_locus_tnjc2_left_matchings=[],
+        single_locus_tnjc2_right_matchings=[],
+    )
     single_locus_right = CoveredTnJc2.from_other(
         # 300-290=10 < 30
         single_locus_right_linked,
@@ -61,7 +96,11 @@ def sample_covered_tnjc2(tiny_genome):
         scaffold=scaffold,
         base_event=BaseEvent.TRANSPOSITION,
     )
-    transposition_linked = SingleLocusLinkedTnJc2.from_other(transposition_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
+    transposition_linked = SingleLocusLinkedTnJc2.from_other(
+        transposition_raw,
+        single_locus_tnjc2_left_matchings=[],
+        single_locus_tnjc2_right_matchings=[],
+    )
     transposition = CoveredTnJc2.from_other(
         transposition_linked,
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,
@@ -74,7 +113,11 @@ def sample_covered_tnjc2(tiny_genome):
         scaffold=scaffold,
         base_event=BaseEvent.LOCUS_JOINING,
     )
-    unflanked_linked = SingleLocusLinkedTnJc2.from_other(unflanked_raw, single_locus_tnjc2_left_matchings=[], single_locus_tnjc2_right_matchings=[])
+    unflanked_linked = SingleLocusLinkedTnJc2.from_other(
+        unflanked_raw,
+        single_locus_tnjc2_left_matchings=[],
+        single_locus_tnjc2_right_matchings=[],
+    )
     unflanked = CoveredTnJc2.from_other(
         unflanked_linked,
         iso_scaf_avg=1.0, iso_amplicon_avg=1.0,

@@ -145,7 +145,11 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
                     ref_tn_sides_matches.append(OffsetRefTnSide.from_other(ref_tnjc.ref_tn_side, offset=offset))
         return ref_tn_sides_matches
 
-    def _adjust_junction_and_matches_for_offset(self, jc: Junction, matches: List[OffsetRefTnSide]) -> tuple[Junction, List[OffsetRefTnSide]]:
+    def _adjust_junction_and_matches_for_offset(
+        self,
+        jc: Junction,
+        matches: List[OffsetRefTnSide],
+    ) -> tuple[Junction, List[OffsetRefTnSide]]:
         """Adjust the junction and matches such that offset is 0."""
         average_offset = sum(m.offset for m in matches) // len(matches)
         # average_offset>0 => the jc is too inward into the TN, so we need to shift it outward, against dir1

@@ -11,7 +11,15 @@ from amplifinder.utils.file_utils import ensure_dir
 @pytest.fixture
 def sample_tnjc2(tiny_genome):
     """Create sample SingleLocusLinkedTnJc2 records."""
-    from amplifinder.data_types import RawTnJc2, SingleLocusLinkedTnJc2, TnJunction, Orientation, OffsetRefTnSide, Terminal, BaseEvent
+    from amplifinder.data_types import (
+        RawTnJc2,
+        SingleLocusLinkedTnJc2,
+        TnJunction,
+        Orientation,
+        OffsetRefTnSide,
+        Terminal,
+        BaseEvent,
+    )
 
     tn_jc_S = TnJunction(
         num=1, scaf1="tiny", pos1=10, dir1=Orientation.FORWARD,
