@@ -16,7 +16,7 @@ def compact_short_lists(json_str: str) -> str:
             compact_items = ', '.join(f'"{item}"' for item in items)
             return f'{prefix}[{compact_items}]'
         return match.group(0)
-    
+
     # Match: "key": [\n    "item1",\n    "item2",\n  ]
     pattern = r'(\s+"[^"]+":\s*)\[\s*\n((?:\s+"[^"]+",?\s*\n)*)\s+\]'
     return re.sub(pattern, compact_list, json_str, flags=re.MULTILINE)
