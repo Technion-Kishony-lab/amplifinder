@@ -73,27 +73,31 @@ class CreateTnJcStep(RecordTypedDfStep[TnJunction]):
                     if m.offset == 0 and m.is_same_side(jc.ref_tn_side)]
                 assert len(ref_tn_side_matches) == 1, \
                     f"Reference TN junction {jc} should match itself with offset==0"
-
-            is_arm1_tn = len(tn_sides_matching_arm1) > 0
-            is_arm2_tn = len(tn_sides_matching_arm2) > 0
-
-            # Skip if neither arm matches a TN
-            if not is_arm1_tn and not is_arm2_tn:
-                continue
-
-            # Skip if both arms match a TN
-            if is_arm1_tn and is_arm2_tn:
-                continue
-
-            # Normalize: arm 1 should be the TN side
-            swapped = not is_arm1_tn and is_arm2_tn
-            if swapped:
-                matches = tn_sides_matching_arm2
-                jc = jc.swap_sides()
+                swapped_list = [False]
             else:
-                matches = tn_sides_matching_arm1
+                # If this is a breseq junction, we need to determine which arm is the TN side
+                is_arm1_tn = len(tn_sides_matching_arm1) > 0
+                is_arm2_tn = len(tn_sides_matching_arm2) > 0
 
-            tnjcs.append(TnJunction.from_other(jc, ref_tn_sides=matches, swapped=swapped))
+                # Skip if neither arm matches a TN
+                if not is_arm1_tn and not is_arm2_tn:
+                    continue
+
+                # Skip if both arms match a TN
+                if is_arm1_tn and is_arm2_tn:
+                    swapped_list = [False, True]
+
+                # Normalize: arm 1 should be the TN side
+                swapped_list = [not is_arm1_tn and is_arm2_tn]
+
+            for swapped in swapped_list:
+                if swapped:
+                    matches = tn_sides_matching_arm2
+                    jc = jc.swap_sides()
+                else:
+                    matches = tn_sides_matching_arm1
+
+                tnjcs.append(TnJunction.from_other(jc, ref_tn_sides=matches, swapped=swapped))
 
         tnjcs = RecordTypedDf.from_records(tnjcs, TnJunction)
         # Sort but drop the old positional index so CSV won't write an Unnamed column
