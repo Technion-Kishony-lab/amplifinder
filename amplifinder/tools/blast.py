@@ -43,7 +43,7 @@ def make_blast_db(
         "-dbtype", dbtype,
         "-out", str(db_path),
     ]
-    logger.info(f"Creating BLAST DB: {' '.join(str(c) for c in cmd)}")
+    logger.info(f"Creating BLAST DB. Running command:\n{' '.join(str(c) for c in cmd)}")
     run_command(cmd, check=True)
 
 
