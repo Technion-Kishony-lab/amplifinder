@@ -172,6 +172,18 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
         return self.single_locus_tnjc2_right_matchings[0] if self.single_locus_tnjc2_right_matchings else None
 
     @property
+    def single_locus_left_pair_id(self) -> Optional[int]:
+        """Pair ID of the single-locus TN junction matching the left junction."""
+        match = self.single_locus_tnjc2_and_side_matching_left
+        return match.tnjc2.pair_id if match is not None else None
+
+    @property
+    def single_locus_right_pair_id(self) -> Optional[int]:
+        """Pair ID of the single-locus TN junction matching the right junction."""
+        match = self.single_locus_tnjc2_and_side_matching_right
+        return match.tnjc2.pair_id if match is not None else None
+
+    @property
     def raw_event(self) -> Architecture:
         """Raw event classification."""
         if self.base_event == BaseEvent.REFERENCE_TN:
