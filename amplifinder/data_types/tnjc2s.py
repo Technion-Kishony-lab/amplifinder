@@ -171,6 +171,11 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
         """First single-locus TN junction matching the right junction."""
         return self.single_locus_tnjc2_right_matchings[0] if self.single_locus_tnjc2_right_matchings else None
 
+    def get_matching_single_locus_tnjc2_and_side(self, side: Side) -> Optional[TnJc2AndSide]:
+        """Get the single-locus TN junction matching the given side."""
+        return self.single_locus_tnjc2_and_side_matching_left if side == Side.LEFT \
+            else self.single_locus_tnjc2_and_side_matching_right
+
     @property
     def single_locus_left_pair_id(self) -> Optional[int]:
         """Pair ID of the single-locus TN junction matching the left junction."""

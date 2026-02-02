@@ -79,7 +79,7 @@ class RudimentaryJunctionValues(NamedTuple):
         else:
             tn_left_arm, tn_right_arm = tn_start_arm, tn_end_arm
 
-        return _build_7_junctions_from_6_arms(
+        return _build_7_junctions_from_8_arms(
             chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
 
     def get_name(self) -> str:
@@ -92,7 +92,8 @@ class RudimentaryJunctionValues(NamedTuple):
                 f"{side_str}_{self.flank}bp")
 
 
-def _build_7_junctions_from_6_arms(
+def _build_7_junctions_from_8_arms(
+    chr_left_for_tn: JcArm, chr_right_for_tn: JcArm,
     chr_left: JcArm, chr_right: JcArm,
     amp_left: JcArm, amp_right: JcArm,
     tn_left: JcArm, tn_right: JcArm,
@@ -100,13 +101,34 @@ def _build_7_junctions_from_6_arms(
     """Create Junction objects for each junction type."""
     return {
         JunctionType.CHR_AMP: Junction.from_jc_arms(chr_left, amp_left),
-        JunctionType.CHR_TN: Junction.from_jc_arms(chr_left, tn_left),
+        JunctionType.CHR_TN: Junction.from_jc_arms(chr_left_for_tn, tn_left),
         JunctionType.AMP_TN: Junction.from_jc_arms(amp_right, tn_left),
         JunctionType.AMP_AMP: Junction.from_jc_arms(amp_right, amp_left),
         JunctionType.TN_AMP: Junction.from_jc_arms(tn_right, amp_left),
-        JunctionType.TN_CHR: Junction.from_jc_arms(tn_right, chr_right),
+        JunctionType.TN_CHR: Junction.from_jc_arms(tn_right, chr_right_for_tn),
         JunctionType.AMP_CHR: Junction.from_jc_arms(amp_right, chr_right),
     }
+
+
+def _handle_flanked_side(
+    tnjc2: CoveredTnJc2, side: Side, jc_arm_len: int, chr_arm: JcArm
+) -> tuple[JcArm, JcArm, bool]:
+    """
+    Handle tnjc2 flanked by ancestral or transposed TN on one side.
+    Returns: (chr_arm_for_tn, chr_arm, is_ref_tn)
+    """
+    paired = tnjc2.get_matching_single_locus_tnjc2_and_side(side)
+    is_ref_tn = paired is not None
+    if is_ref_tn:
+        assert paired.side == side
+        arm_index = 1 if side == Side.LEFT else 0
+        chr_arm_for_tn = paired.tnjc2.get_inward_arms(flank=jc_arm_len)[arm_index]
+        if paired.tnjc2.base_event == BaseEvent.REFERENCE_TN:
+            chr_arm = chr_arm_for_tn
+    else:
+        # Not paired with a single-locus TN junction
+        chr_arm_for_tn = chr_arm
+    return chr_arm_for_tn, chr_arm, is_ref_tn
 
 
 def create_synthetic_junctions_and_name(
@@ -127,18 +149,13 @@ def create_synthetic_junctions_and_name(
     # Get chromosome arms (outward amplicon arms)
     chr_left_arm, chr_right_arm = tnjc2.get_outward_arms(flank=jc_arm_len)
 
-    # Handle tnjc2 flanked by ancestral TN
-    paired_left = tnjc2.single_locus_tnjc2_and_side_matching_left
-    is_left_ref_tn = paired_left is not None
-    if is_left_ref_tn:
-        assert paired_left.side == Side.LEFT
-        chr_left_arm = paired_left.tnjc2.get_inward_arms(flank=jc_arm_len)[1]
-
-    paired_right = tnjc2.single_locus_tnjc2_and_side_matching_right
-    is_right_ref_tn = paired_right is not None
-    if is_right_ref_tn:
-        assert paired_right.side == Side.RIGHT
-        chr_right_arm = paired_right.tnjc2.get_inward_arms(flank=jc_arm_len)[0]
+    # Handle tnjc2 flanked by ancestral or transposed TN
+    chr_left_arm_for_tn, chr_left_arm, is_left_ref_tn = _handle_flanked_side(
+        tnjc2, Side.LEFT, jc_arm_len, chr_left_arm
+    )
+    chr_right_arm_for_tn, chr_right_arm, is_right_ref_tn = _handle_flanked_side(
+        tnjc2, Side.RIGHT, jc_arm_len, chr_right_arm
+    )
 
     # Get inward arms for RefTn with offset adjustments via ref_tn_side
     # The right-side of the TN is one that connects to the left-side of the amplicon
@@ -146,8 +163,8 @@ def create_synthetic_junctions_and_name(
     tn_left_arm = ref_tn.get_inward_arm_by_ref_tn_side(tn_side_right_amp, jc_arm_len)
 
     # Create Junction objects for each junction type
-    direct_jc = _build_7_junctions_from_6_arms(
-        chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
+    direct_jc = _build_7_junctions_from_8_arms(
+        chr_left_arm_for_tn, chr_right_arm_for_tn, chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
 
     # Create rudimentary junction values for naming
     tn_side_left_amp_side = tn_side_left_amp.side
