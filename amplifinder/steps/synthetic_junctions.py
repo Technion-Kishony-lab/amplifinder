@@ -46,9 +46,15 @@ class RudimentaryJunctionValues(NamedTuple):
     tn_scaf: str
     tn_side_left_amp_side: Terminal
     flank: int
-    # Optional: chr positions in case of flanked TNJC2. Otherwise, we use the mirror of the amplicon arms
-    chr_left_pos: Optional[int] = None
-    chr_right_pos: Optional[int] = None
+    
+    # chromosome arm start positions are indicated as offsets from the amplicon
+    # 0 is precisly flanking the amplicon 
+    # ~~~~~~~~~~~~~~~~||===================...
+    #            <----0
+    chr_left_pos_offset: int
+    chr_right_pos_offset: int
+    chr_left_pos_for_tn_offset: int
+    chr_right_pos_for_tn_offset: int
 
     def create_syn_junctions(self) -> dict[JunctionType, Junction]:
         """Create 7 synthetic junctions from primitive coordinates and strands."""
@@ -57,17 +63,12 @@ class RudimentaryJunctionValues(NamedTuple):
         amp_right_arm = JcArm(scaf=self.amp_scaf, start=self.amp_right_pos, dir=Orientation.REVERSE, flank=self.flank)
 
         # Chromosome outward arms; mirror of amplicon if not flanked by ancestral TN
-        if self.chr_left_pos is None:
-            chr_left_arm = amp_left_arm.mirror()
-        else:
-            chr_left_arm = JcArm(scaf=self.amp_scaf, start=self.chr_left_pos, dir=Orientation.REVERSE, flank=self.flank)
+        chr_left_arm = amp_left_arm.mirror().shift_by_offset(self.chr_left_pos_offset)
+        chr_right_arm = amp_right_arm.mirror().shift_by_offset(self.chr_right_pos_offset)
 
-        if self.chr_right_pos is None:
-            chr_right_arm = amp_right_arm.mirror()
-        else:
-            chr_right_arm = JcArm(
-                scaf=self.amp_scaf, start=self.chr_right_pos, dir=Orientation.FORWARD, flank=self.flank
-            )
+        # Chromosome outward arms for TN
+        chr_left_arm_for_tn = amp_left_arm.mirror().shift_by_offset(self.chr_left_pos_for_tn_offset)
+        chr_right_arm_for_tn = amp_right_arm.mirror().shift_by_offset(self.chr_right_pos_for_tn_offset)
 
         # TN inward arms
         tn_orientation = Orientation.FORWARD if self.tn_start_pos < self.tn_end_pos else Orientation.REVERSE
@@ -80,15 +81,15 @@ class RudimentaryJunctionValues(NamedTuple):
             tn_left_arm, tn_right_arm = tn_start_arm, tn_end_arm
 
         return _build_7_junctions_from_8_arms(
-            chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
+            chr_left_arm_for_tn, chr_right_arm_for_tn, chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
 
     def get_name(self) -> str:
         side_str = "S" if self.tn_side_left_amp_side == Terminal.START else "E"
-        chr_left_pos_str = f"chrL={self.chr_left_pos}_" if self.chr_left_pos is not None else ""
-        chr_right_pos_str = f"chrR={self.chr_right_pos}_" if self.chr_right_pos is not None else ""
+        chr_left_pos_str = f"L{self.chr_left_pos_offset:+}L{self.chr_left_pos_for_tn_offset:+}"
+        chr_right_pos_str = f"R{self.chr_right_pos_offset:+}R{self.chr_right_pos_for_tn_offset:+}"
         return (f"jc_{self.amp_scaf}_{self.amp_left_pos}-{self.amp_right_pos}_"
                 f"{self.tn_scaf}_{self.tn_start_pos}-{self.tn_end_pos}_"
-                f"{chr_left_pos_str}{chr_right_pos_str}"
+                f"{chr_left_pos_str}_{chr_right_pos_str}"
                 f"{side_str}_{self.flank}bp")
 
 
@@ -112,23 +113,22 @@ def _build_7_junctions_from_8_arms(
 
 def _handle_flanked_side(
     tnjc2: CoveredTnJc2, side: Side, jc_arm_len: int, chr_arm: JcArm
-) -> tuple[JcArm, JcArm, bool]:
+) -> tuple[JcArm, JcArm]:
     """
     Handle tnjc2 flanked by ancestral or transposed TN on one side.
     Returns: (chr_arm_for_tn, chr_arm, is_ref_tn)
     """
     paired = tnjc2.get_matching_single_locus_tnjc2_and_side(side)
-    is_ref_tn = paired is not None
-    if is_ref_tn:
+    if paired is None:
+        # Not paired with a single-locus TN junction
+        chr_arm_for_tn = chr_arm
+    else:
         assert paired.side == side
         arm_index = 1 if side == Side.LEFT else 0
         chr_arm_for_tn = paired.tnjc2.get_inward_arms(flank=jc_arm_len)[arm_index]
         if paired.tnjc2.base_event == BaseEvent.REFERENCE_TN:
             chr_arm = chr_arm_for_tn
-    else:
-        # Not paired with a single-locus TN junction
-        chr_arm_for_tn = chr_arm
-    return chr_arm_for_tn, chr_arm, is_ref_tn
+    return chr_arm_for_tn, chr_arm
 
 
 def create_synthetic_junctions_and_name(
@@ -150,12 +150,8 @@ def create_synthetic_junctions_and_name(
     chr_left_arm, chr_right_arm = tnjc2.get_outward_arms(flank=jc_arm_len)
 
     # Handle tnjc2 flanked by ancestral or transposed TN
-    chr_left_arm_for_tn, chr_left_arm, is_left_ref_tn = _handle_flanked_side(
-        tnjc2, Side.LEFT, jc_arm_len, chr_left_arm
-    )
-    chr_right_arm_for_tn, chr_right_arm, is_right_ref_tn = _handle_flanked_side(
-        tnjc2, Side.RIGHT, jc_arm_len, chr_right_arm
-    )
+    chr_left_arm_for_tn, chr_left_arm = _handle_flanked_side(tnjc2, Side.LEFT, jc_arm_len, chr_left_arm)
+    chr_right_arm_for_tn, chr_right_arm = _handle_flanked_side(tnjc2, Side.RIGHT, jc_arm_len, chr_right_arm)
 
     # Get inward arms for RefTn with offset adjustments via ref_tn_side
     # The right-side of the TN is one that connects to the left-side of the amplicon
@@ -174,12 +170,14 @@ def create_synthetic_junctions_and_name(
         tn_end_pos=tn_right_arm.start if tn_side_left_amp_side == Terminal.END else tn_left_arm.start,
         tn_scaf=tn_left_arm.scaf,
         tn_side_left_amp_side=tn_side_left_amp_side,
-        chr_left_pos=chr_left_arm.start if is_left_ref_tn else None,
-        chr_right_pos=chr_right_arm.start if is_right_ref_tn else None,
+        chr_left_pos_offset=amp_left_arm.mirror().get_distance_to(chr_left_arm.start),
+        chr_right_pos_offset=amp_right_arm.mirror().get_distance_to(chr_right_arm.start),
+        chr_left_pos_for_tn_offset=amp_left_arm.mirror().get_distance_to(chr_left_arm_for_tn.start),
+        chr_right_pos_for_tn_offset=amp_right_arm.mirror().get_distance_to(chr_right_arm_for_tn.start),
         flank=jc_arm_len,
     )
 
-    # assert direct_jc == rudimentary.create_syn_junctions()
+    assert direct_jc == rudimentary.create_syn_junctions()
 
     return direct_jc, rudimentary.get_name()
 
