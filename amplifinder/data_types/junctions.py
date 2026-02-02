@@ -28,7 +28,7 @@ class JcArm(Record):
         """Compute end position based on start position, flank length, and direction."""
         return self.start + (self.flank - 1) * self.dir
 
-    def shift_by_offset(self, offset: int) -> 'JcArm':
+    def shift_by_offset(self, offset: int) -> JcArm:
         """Shift arm by offset in the direction of the arm.
 
         Args:
@@ -43,12 +43,28 @@ class JcArm(Record):
             dir=self.dir,
             flank=self.flank
         )
+    
+    def get_distance_to(self, pos: int) -> int:
+        """Get distance to a position.
+        ~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~
+                           |----arm----> 
+                           |        | 
+                         start     pos
+                           |--dist->|
+        return: 
+             0 if pos is the arm's start position
+            >0 if pos is further in the arm's direction
+            <0 if pos is further in the opposite direction
+        """
+        return pos - self.start if self.dir == Orientation.FORWARD else self.start - pos
 
-    def mirror(self) -> 'JcArm':
+    def mirror(self) -> JcArm:
         """Create a mirror arm at the adjacent position.
         ~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~
-                           |------>           self
-                    <------|                  mirror
+                           |------> 
+                            self
+                    <------|                  
+                     mirror
         """
         return JcArm(
             scaf=self.scaf,
