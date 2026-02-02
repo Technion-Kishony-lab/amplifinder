@@ -162,24 +162,14 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
     single_locus_tnjc2_right_matchings: List[TnJc2AndSide]
 
     @property
-    def single_locus_tnjc2_matching_left(self) -> Optional[SingleLocusLinkedTnJc2]:
+    def single_locus_tnjc2_and_side_matching_left(self) -> Optional[TnJc2AndSide]:
         """First single-locus TN junction matching the left junction."""
-        return self.single_locus_tnjc2_left_matchings[0].tnjc2 if self.single_locus_tnjc2_left_matchings else None
+        return self.single_locus_tnjc2_left_matchings[0] if self.single_locus_tnjc2_left_matchings else None
 
     @property
-    def single_locus_tnjc2_matching_right(self) -> Optional[SingleLocusLinkedTnJc2]:
+    def single_locus_tnjc2_and_side_matching_right(self) -> Optional[TnJc2AndSide]:
         """First single-locus TN junction matching the right junction."""
-        return self.single_locus_tnjc2_right_matchings[0].tnjc2 if self.single_locus_tnjc2_right_matchings else None
-
-    @property
-    def single_locus_left_pair_id(self) -> Optional[int]:
-        """Pair ID of the single-locus TN junction matching the left junction."""
-        return self.single_locus_tnjc2_matching_left.pair_id if self.single_locus_tnjc2_matching_left else None
-
-    @property
-    def single_locus_right_pair_id(self) -> Optional[int]:
-        """Pair ID of the single-locus TN junction matching the right junction."""
-        return self.single_locus_tnjc2_matching_right.pair_id if self.single_locus_tnjc2_matching_right else None
+        return self.single_locus_tnjc2_right_matchings[0] if self.single_locus_tnjc2_right_matchings else None
 
     @property
     def raw_event(self) -> Architecture:
@@ -189,8 +179,8 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
         elif self.base_event == BaseEvent.TRANSPOSITION:
             return Architecture.TRANSPOSITION
         assert self.base_event == BaseEvent.LOCUS_JOINING
-        has_match_left = self.single_locus_tnjc2_matching_left is not None
-        has_match_right = self.single_locus_tnjc2_matching_right is not None
+        has_match_left = self.single_locus_tnjc2_and_side_matching_left is not None
+        has_match_right = self.single_locus_tnjc2_and_side_matching_right is not None
         if has_match_left and has_match_right:
             return Architecture.FLANKED
         elif has_match_left:
@@ -229,12 +219,12 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
 
         # Intersect with matching left/right single-locus tnjc2 if exists
         tn_id_set = set(self.tn_ids)  # Start with TN IDs from this tnjc2
-        if self.single_locus_tnjc2_matching_left is not None:
+        if self.single_locus_tnjc2_and_side_matching_left is not None:
             # Intersect with matching left single-locus tnjc2
-            tn_id_set &= set(self.single_locus_tnjc2_matching_left.tn_ids)
-        if self.single_locus_tnjc2_matching_right is not None:
+            tn_id_set &= set(self.single_locus_tnjc2_and_side_matching_left.tnjc2.tn_ids)
+        if self.single_locus_tnjc2_and_side_matching_right is not None:
             # Intersect with matching right single-locus tnjc2
-            tn_id_set &= set(self.single_locus_tnjc2_matching_right.tn_ids)
+            tn_id_set &= set(self.single_locus_tnjc2_and_side_matching_right.tnjc2.tn_ids)
 
         # If we have matches, return one of them arbitrarily
         if tn_id_set:
