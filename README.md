@@ -106,6 +106,29 @@ amplifinder --visualize output/U00096/my_ancestor/my_isolate
 amplifinder --visualize output/U00096/my_ancestor/my_isolate --save-plots
 ```
 
+### Batch Mode
+
+Run multiple jobs from CSV with concurrent execution:
+
+```bash
+amplifinder --batch-input runs.csv --max-parallel 2
+```
+
+With base config:
+
+```bash
+amplifinder --batch-input runs.csv --config base_config.yaml
+```
+
+Outputs status to `run_status.csv` (use `--batch-output` to change). Uses thread pool (add `--use-processes` for real parallelism).
+
+**CSV format:** Each row = one run. Columns = any `Config` field:
+- Required: `iso_fastq_path`, `ref_name`
+- Optional: `run_id`, `anc_fastq_path`, `iso_name`, `anc_name`, `output_dir`, `iso_breseq_path`, `anc_breseq_path`
+- Booleans: `ncbi`, `use_isfinder`, `create_plots` (`true`/`false`, `1`/`0`, `yes`/`no`)
+
+Row values override `--config` base values.
+
 ## Output
 
 ### Directory Structure

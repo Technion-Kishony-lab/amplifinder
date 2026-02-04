@@ -426,33 +426,24 @@ def load_config(config_path: Path) -> dict[str, Any]:
             )
 
 
-def merge_config(
-    cli_args: dict[str, Any],
-    config_file: Optional[dict[str, Any]] = None,
-) -> dict[str, Any]:
-    """Merge configuration from defaults, config file, and CLI args.
+def merge_config(*configs: Optional[dict[str, Any]]) -> dict[str, Any]:
+    """Merge configuration dictionaries with later configs taking priority.
 
-    Priority: CLI args > config file > defaults
+    Priority: rightmost config > ... > leftmost config > defaults
 
     Args:
-        cli_args: Arguments from command line
-        config_file: Loaded config file (optional)
+        *configs: Configuration dictionaries to merge (None values are skipped)
 
     Returns:
         Merged configuration dictionary
     """
     merged = _get_config_defaults()
 
-    # Apply config file values
-    if config_file:
-        for key, value in config_file.items():
-            if value is not None:
-                merged[key] = value
-
-    # Apply CLI args (highest priority)
-    for key, value in cli_args.items():
-        if value is not None:
-            merged[key] = value
+    for config in configs:
+        if config:
+            for key, value in config.items():
+                if value is not None:
+                    merged[key] = value
 
     _normalize_alignment_params(merged)
     return merged
