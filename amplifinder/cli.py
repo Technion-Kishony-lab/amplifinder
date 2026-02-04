@@ -153,13 +153,6 @@ def main(
             if ref_name is None and (file_config is None or file_config.get("ref_name") is None):
                 raise click.ClickException("--ref-name is required (via CLI or --config file)")
 
-            # Validate paths exist for actual run
-            if iso_fastq_path is not None and not iso_fastq_path.exists():
-                raise click.ClickException(f"Isolate path does not exist: {iso_fastq_path}")
-
-            if anc_fastq_path is not None and not anc_fastq_path.exists():
-                raise click.ClickException(f"Ancestor path does not exist: {anc_fastq_path}")
-
         # Collect CLI arguments
         cli_args = {
             "iso_fastq_path": iso_fastq_path,
@@ -187,6 +180,12 @@ def main(
             click.echo(f"Config file created: {create_config_path}")
             click.echo("\nRun with: amplifinder --config " + str(create_config_path))
             return
+
+        # Validate input paths
+        path_errors = config.validate_paths()
+        if path_errors:
+            joined = "\n  - ".join(path_errors)
+            raise click.ClickException(f"Invalid paths:\n  - {joined}")
 
         # CLI startup message
         click.echo(f"AmpliFinder v{__version__}")
