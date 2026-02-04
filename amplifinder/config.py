@@ -212,6 +212,23 @@ class Config:
         """
         return self.get_iso_breseq_path(), self.get_anc_breseq_path()
 
+    def validate_paths(self) -> list[str]:
+        """Validate input paths for this config."""
+        errors: list[str] = []
+
+        def check(name: str, path: Optional[Path]) -> None:
+            if path is not None and not path.exists():
+                errors.append(f"{name} does not exist: {path}")
+
+        check("iso_fastq_path", self.iso_fastq_path)
+        check("anc_fastq_path", self.anc_fastq_path)
+        check("iso_breseq_path", self.iso_breseq_path)
+        check("anc_breseq_path", self.anc_breseq_path)
+        if not self.ncbi:
+            check("ref_path", self.ref_path)
+
+        return errors
+
     def to_yaml_dict(self) -> dict[str, Any]:
         """Convert config to YAML-serializable dict."""
         def convert_value(val):
