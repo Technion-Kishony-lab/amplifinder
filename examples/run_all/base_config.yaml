@@ -48,5 +48,4 @@ jc_call_params:
 breseq_output_size_threshold: 10000
 min_num_bases: 80000000
 remove_jc_breseq_reject: false
-log_path: amplifinder.log
 create_plots: true
