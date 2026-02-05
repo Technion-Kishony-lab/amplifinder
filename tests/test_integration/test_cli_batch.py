@@ -58,18 +58,15 @@ def test_cli_batch_processing(batch_csv_path, status_csv_path, cleared_output_di
     """Test CLI batch processing with two samples."""
     import subprocess
     import sys
-    
-    # Run CLI with batch CSV
+
     cmd = [
         sys.executable,
         "-m",
         "amplifinder",
-        "--batch-input",
-        str(batch_csv_path),
-        "--batch-output",
-        str(status_csv_path),
-        "--max-parallel",
-        "1",  # Run sequentially for clearer logs
+        "--batch-input", str(batch_csv_path),
+        "--batch-output", str(status_csv_path),
+        "--max-parallel", "1",  # Run sequentially for clearer logs
+        "--verbose",
     ]
     
     result = subprocess.run(cmd, capture_output=False, text=True)

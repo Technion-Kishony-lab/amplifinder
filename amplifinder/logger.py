@@ -226,8 +226,8 @@ class SimpleLogger:
         self.log(msg, force_screen=True, **kwargs)
 
     def print_progress(self, msg: str, end: str = "\n") -> None:
-        """Print without timestamp (always shows, ignores verbose mode)."""
-        self.log(msg, timestamp=False, to_file=False, force_screen=True, end=end)
+        """Print without timestamp (respects verbose mode, screen only)."""
+        self.log(msg, timestamp=False, to_file=False, force_screen=False, end=end)
 
     def debug_message(self, message,
                       category: Optional[str] = None,
