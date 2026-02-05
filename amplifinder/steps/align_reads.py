@@ -21,6 +21,7 @@ class AlignReadsToJunctionsStep(Step):
         synjcs_tnjc2s: RecordTypedDf[SynJctsTnJc2],
         output_dir: Path,
         fastq_path: Path,
+        read_length: int,
         threads: int = 4,
         bowtie_params: BowtieParams = None,
         force: Optional[bool] = None,
@@ -28,6 +29,7 @@ class AlignReadsToJunctionsStep(Step):
         self.synjcs_tnjc2s = synjcs_tnjc2s
         self.output_dir = Path(output_dir)
         self.fastq_path = Path(fastq_path)
+        self.read_length = read_length
         self.threads = threads
         self.bowtie_params = bowtie_params or BowtieParams()
 
@@ -72,6 +74,7 @@ class AlignReadsToJunctionsStep(Step):
                 if bam_path.exists():
                     logger.print_progress("file exists, skipping")
                     continue
+                min_qlen_int = int(self.bowtie_params.min_qlen * self.read_length) if self.bowtie_params.min_qlen else None
                 align_reads_to_fasta(
                     ref_fasta=junctions_fasta,
                     fastq_path=self.fastq_path,
@@ -81,7 +84,7 @@ class AlignReadsToJunctionsStep(Step):
                     mismatch_penalty=self.bowtie_params.mismatch_penalty,
                     num_alignments=self.bowtie_params.num_alignments,
                     local=self.bowtie_params.local,
-                    min_qlen=self.bowtie_params.min_qlen,
+                    min_qlen=min_qlen_int,
                 )
                 assert bam_path.exists()
 
