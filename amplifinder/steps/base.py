@@ -425,7 +425,7 @@ class OutputStep(Step, Generic[T]):
         # Report
         msg = self.report_output_message(output)
         if msg:
-            logger.log_always(msg)
+            logger.info(msg)
 
         return output
 
