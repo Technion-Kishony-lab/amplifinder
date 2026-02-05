@@ -155,7 +155,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         tnjc2s: RecordTypedDf[SynJctsTnJc2],
         output_dir: Path,
         arm_len: int,
-        read_length: int = 150,
+        read_length: int,
         alignment_classify_params: AlignmentClassifyParams = None,
         alignment_filter_params: AlignmentFilterParams = None,
         jc_call_params: JcCallParams = None,

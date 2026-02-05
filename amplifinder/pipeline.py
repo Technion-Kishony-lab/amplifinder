@@ -125,7 +125,7 @@ class Pipeline:
         read_lengths = self._calc_read_lengths()
         synjct_tnjc2s = self._create_synthetic_junctions(
             filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
-        self._align_reads(synjct_tnjc2s, iso_output, anc_output)
+        self._align_reads(synjct_tnjc2s, iso_output, anc_output, read_lengths)
         analyzed_tnjc2s, iso_alignment_cache, anc_alignment_cache = self._analyze_alignments(
             synjct_tnjc2s, iso_output, anc_output, read_lengths)
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
@@ -382,6 +382,7 @@ class Pipeline:
         syn_tnjc2s: RecordTypedDf[SynJctsTnJc2],
         iso_output: Path,
         anc_output: Optional[Path],
+        read_lengths: ReadLengths,
     ) -> None:
         """Step 11: Align reads to synthetic junctions."""
         cfg = self.config
@@ -391,6 +392,7 @@ class Pipeline:
             synjcs_tnjc2s=syn_tnjc2s,
             output_dir=iso_output,
             fastq_path=cfg.iso_fastq_path,
+            read_length=read_lengths.read_len_iso,
             threads=cfg.threads,
             bowtie_params=cfg.bowtie_params,
         ).run()
@@ -401,6 +403,7 @@ class Pipeline:
                 synjcs_tnjc2s=syn_tnjc2s,
                 output_dir=anc_output,
                 fastq_path=cfg.anc_fastq_path,
+                read_length=read_lengths.read_len_anc,
                 threads=cfg.threads,
                 bowtie_params=cfg.bowtie_params,
             ).run()
