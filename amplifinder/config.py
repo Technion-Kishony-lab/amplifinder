@@ -92,12 +92,12 @@ class Config:
     RUN_CONFIG_FILENAME: ClassVar[str] = "run_config.yaml"
 
     # Reference
-    ref_name: str
+    ref_name: Optional[str] = None
     ref_path: Path = field(default_factory=lambda: Path("genomesDB"))
     ncbi: bool = True
 
     # Isolate
-    iso_fastq_path: Path
+    iso_fastq_path: Optional[Path] = None
     iso_name: Optional[str] = None          # None: derive from iso_fastq_path.stem
     iso_read_length: Optional[int] = None   # None: calculate from fastq
     iso_breseq_path: Optional[Path] = None  # None: default to iso_run_dir / "breseq"
@@ -201,6 +201,17 @@ class Config:
         """Get isolate and ancestor breseq paths.
         """
         return self.get_iso_breseq_path(), self.get_anc_breseq_path()
+
+    def validate_args(self) -> list[str]:
+        """Validate required arguments for this config."""
+        errors: list[str] = []
+        
+        if self.ref_name is None:
+            errors.append("ref_name is required")
+        if self.iso_fastq_path is None:
+            errors.append("iso_fastq_path is required")
+        
+        return errors
 
     def validate_paths(self) -> list[str]:
         """Validate input paths for this config."""
@@ -307,7 +318,8 @@ class Config:
     def __post_init__(self):
         """Convert paths and set derived values."""
         # Convert string paths to absolute Path objects
-        self.iso_fastq_path = Path(self.iso_fastq_path).resolve()
+        if self.iso_fastq_path is not None:
+            self.iso_fastq_path = Path(self.iso_fastq_path).resolve()
         self.output_dir = Path(self.output_dir).resolve()
         self.ref_path = Path(self.ref_path).resolve()
 
@@ -319,7 +331,7 @@ class Config:
             self.anc_breseq_path = Path(self.anc_breseq_path).resolve()
 
         # Derive names from paths if not provided
-        if self.iso_name is None:
+        if self.iso_name is None and self.iso_fastq_path is not None:
             self.iso_name = self.iso_fastq_path.stem
         if self.anc_name is None and self.anc_fastq_path is not None:
             self.anc_name = self.anc_fastq_path.stem
@@ -366,7 +378,7 @@ def _get_config_defaults() -> dict[str, Any]:
     """
     defaults = {}
     for f in fields(Config):
-        # Skip required fields (iso_fastq_path, ref_name)
+        # Skip fields without defaults
         if f.default is MISSING and f.default_factory is MISSING:
             continue
 
