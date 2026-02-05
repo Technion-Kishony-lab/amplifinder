@@ -1,15 +1,15 @@
-ref_name: XXX
-ref_path: /zdata/user-data/rkishony/amplifinder/genomesDB
+ref_name: null
+ref_path: /zdata/user-data/rkishony/amplifinder/examples/run_all/genomesDB
 ncbi: true
-iso_fastq_path: /zdata/user-data/rkishony/amplifinder/YYY
-iso_name: YYY
+iso_fastq_path: null
+iso_name: null
 iso_read_length: null
 iso_breseq_path: null
 anc_fastq_path: null
 anc_name: null
 anc_read_length: null
 anc_breseq_path: null
-output_dir: /zdata/user-data/rkishony/amplifinder/output
+output_dir: /zdata/user-data/rkishony/amplifinder/examples/run_all/output
 use_isfinder: false
 isfinder_evalue: 0.0001
 isfinder_critical_coverage: 0.9
@@ -21,7 +21,7 @@ threads: 4
 average_method: median
 min_amplicon_length: 100
 max_amplicon_length: 1000000
-replication_copy_number_threshold: 1.5
+replication_copy_number_threshold: 1.45
 deletion_copy_number_threshold: 0.3
 alignment_filter_params:
   max_nm_score: 3

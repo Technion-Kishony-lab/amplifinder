@@ -17,3 +17,5 @@ tests/test_outputs/
 *.lock
 # IDE files
 .idea/
+# Example run outputs
+examples/run_all/
