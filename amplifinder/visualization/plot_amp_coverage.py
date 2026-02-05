@@ -1,5 +1,4 @@
 """Plotting utilities for coverage visualization."""
-from __future__ import annotations
 import numpy as np
 from amplifinder.optional_deps import plt
 from matplotlib.axes import Axes

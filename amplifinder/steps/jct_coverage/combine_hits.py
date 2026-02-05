@@ -1,5 +1,4 @@
 """Combine aligned segments."""
-from __future__ import annotations
 from collections import defaultdict
 
 from amplifinder.logger import logger

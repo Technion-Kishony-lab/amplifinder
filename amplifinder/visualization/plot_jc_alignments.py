@@ -1,5 +1,4 @@
 """Plot junction coverage figures combining genetic elements and alignments."""
-from __future__ import annotations
 
 from amplifinder.optional_deps import plt
 if plt is not None:

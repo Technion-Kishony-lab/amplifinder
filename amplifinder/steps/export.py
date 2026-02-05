@@ -1,5 +1,4 @@
 """Step 14: Export results to YAML."""
-from __future__ import annotations
 
 from pathlib import Path
 from typing import Optional, Dict, Any
