@@ -303,11 +303,17 @@ def _run_single(
     # Create config from merged base (dataclass validates required fields)
     config = Config(**config_kwargs)
 
-    # If --create-config, save and exit (skip path validation)
+    # If --create-config, save and exit (skip validation)
     if create_config_path is not None:
         config.save_to_file(create_config_path, log=False)
         click.echo(f"Config file created: {create_config_path}")
         return
+
+    # Validate required arguments before running
+    arg_errors = config.validate_args()
+    if arg_errors:
+        joined = "\n  - ".join(arg_errors)
+        raise ValueError(f"Missing required arguments:\n  - {joined}")
 
     # Validate input paths before running
     path_errors = config.validate_paths()
@@ -361,9 +367,11 @@ def _run_batch(
             merged = merge_config(base_config_kwargs, row_args)
             
             config = Config(**merged)
-            errors = config.validate_paths()
-            if errors:
-                all_errors.append(f"Row {idx}: {'; '.join(errors)}")
+            arg_errors = config.validate_args()
+            path_errors = config.validate_paths()
+            all_config_errors = arg_errors + path_errors
+            if all_config_errors:
+                all_errors.append(f"Row {idx}: {'; '.join(all_config_errors)}")
             else:
                 run_id = row.get("run_id") or config.iso_name or f"row_{idx}"
                 configs.append((idx, run_id, config))
