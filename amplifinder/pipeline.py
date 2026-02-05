@@ -1,4 +1,5 @@
 """Pipeline orchestration for AmpliFinder."""
+import traceback
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -100,7 +101,10 @@ class Pipeline:
 
         except Exception as e:
             # Actual errors
-            self._write_status_file(iso_output, 'failed', str(e))
+            traceback_str = traceback.format_exc()
+            logger.error(f"Pipeline failed with error:\n{traceback_str}")
+            error_msg = f"{type(e).__name__}: {repr(e)}" if str(e) else f"{type(e).__name__}"
+            self._write_status_file(iso_output, 'failed', reason=error_msg)
             raise
 
     def _run(self, iso_output: Path, anc_output: Optional[Path]) -> RecordTypedDf[ClassifiedTnJc2]:
@@ -164,6 +168,7 @@ class Pipeline:
             f.write(f"ancestor: {self.config.anc_name}\n")
             if reason:
                 f.write(f"reason: {reason}\n")
+            f.flush()
 
     def _clear_status_files(self, iso_output: Path) -> None:
         """Remove all status marker files from isolate run directory."""
