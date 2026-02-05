@@ -151,9 +151,6 @@ class Config:
     # Filtering options
     remove_jc_breseq_reject: bool = False
 
-    # Logging
-    log_path: str = "amplifinder.log"
-
     # Plotting
     create_plots: bool = True
 
