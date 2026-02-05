@@ -22,7 +22,7 @@ class AlignmentFilterParams(FrozenParams):
 
     max_nm_score: Optional[int] = 3  # 3,
     min_as_score: Optional[int] = -25  # -25
-    length_tolerance: float = 0.1
+    filter_len_tolerance: float = 0.1
 
 
 class AlignmentClassifyParams(FrozenParams):
@@ -52,7 +52,7 @@ class BowtieParams(FrozenParams):
     mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5)
     local: bool = False
     num_alignments: int = 100
-    min_qlen: Optional[float] = 0.9
+    bowtie_len_tolerance: Optional[float] = 0.1
 
 
 class JcCallParams(FrozenParams):
