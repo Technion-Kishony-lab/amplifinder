@@ -144,13 +144,13 @@ async def _run_one_batch(
 @click.option(
     "--ref-path",
     type=click.Path(path_type=Path),
-    default=Path("genomesDB"),
+    default=None,
     help="Path to reference genome files (default: genomesDB).",
 )
 @click.option(
     "-o", "--output-dir",
     type=click.Path(path_type=Path),
-    default=Path("output"),
+    default=None,
     help="Output directory (default: output).",
 )
 @click.option(
@@ -167,13 +167,13 @@ async def _run_one_batch(
 )
 @click.option(
     "--ncbi/--no-ncbi",
-    default=True,
+    default=None,
     help="Fetch reference from NCBI (default: True).",
 )
 @click.option(
     "--use-isfinder/--no-use-isfinder",
     "use_isfinder",
-    default=False,
+    default=None,
     help="Use ISfinder database for IS detection (default: False).",
 )
 @click.option(
@@ -193,7 +193,7 @@ async def _run_one_batch(
 @click.option(
     "--breseq-only",
     is_flag=True,
-    default=False,
+    default=None,
     help="Only run through breseq step, then exit.",
 )
 @click.option(
@@ -204,7 +204,7 @@ async def _run_one_batch(
 )
 @click.option(
     "--create-plots/--no-create-plots",
-    default=True,
+    default=None,
     help="Create junction and amplicon coverage plots (default: True).",
 )
 @click.version_option(version=__version__)
@@ -218,17 +218,17 @@ def main(
     anc_fastq_path: Optional[Path],
     iso_name: Optional[str],
     anc_name: Optional[str],
-    ref_path: Path,
-    output_dir: Path,
+    ref_path: Optional[Path],
+    output_dir: Optional[Path],
     iso_breseq_path: Optional[Path],
     anc_breseq_path: Optional[Path],
-    ncbi: bool,
-    use_isfinder: bool,
+    ncbi: Optional[bool],
+    use_isfinder: Optional[bool],
     config_file: Optional[Path],
     create_config_path: Optional[Path],
-    breseq_only: bool,
+    breseq_only: Optional[bool],
     verbose: bool,
-    create_plots: bool,
+    create_plots: Optional[bool],
 ) -> None:
     """AmpliFinder: Detect IS-mediated gene amplifications from WGS data."""
 
