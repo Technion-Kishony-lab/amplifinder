@@ -274,12 +274,12 @@ class CoveredTnJc2(SingleLocusLinkedTnJc2):
         'iso_scaf_avg', 'iso_amplicon_avg', 'anc_scaf_avg', 'anc_amplicon_avg', 'avg_norm_cov', 'copy_number'
     ]
     CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
-        'iso_scaf_avg': '.1f',
-        'iso_amplicon_avg': '.1f',
-        'anc_scaf_avg': '.1f',
-        'anc_amplicon_avg': '.1f',
-        'avg_norm_cov': '.1f',
-        'copy_number': '.1f',
+        'iso_scaf_avg': '.2f',
+        'iso_amplicon_avg': '.2f',
+        'anc_scaf_avg': '.2f',
+        'anc_amplicon_avg': '.2f',
+        'avg_norm_cov': '.2f',
+        'copy_number': '.2f',
     }
     iso_scaf_avg: float
     iso_amplicon_avg: float
