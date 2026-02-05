@@ -75,4 +75,8 @@ def remove_file_or_dir(path: Union[str, Path]) -> None:
 
 def is_writable_dir(path: Path) -> bool:
     """Check if a directory is writable by the current user."""
-    return path.exists() and os.access(path, os.W_OK)
+    # Check first existing parent (including path itself)
+    for parent in [path] + list(path.parents):
+        if parent.exists():
+            return os.access(parent, os.W_OK)
+    return False
