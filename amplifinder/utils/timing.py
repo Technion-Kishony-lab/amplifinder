@@ -31,7 +31,7 @@ def timer(msg: Optional[str] = None, log: bool = True, extra: Optional[dict[str,
 
 @contextmanager
 def print_timer(start_msg: str, end_msg: Optional[str] = None, time_format: str = "{:.1f} sec",
-                should_log: bool = True, seperate_prints: bool = True, use_log: bool = True, to_file: bool = False):
+                should_log: bool = True, seperate_prints: bool = True, use_log: bool = False, to_file: bool = False):
     """Context manager that prints start message, runs code, then prints time.
 
     Args:
