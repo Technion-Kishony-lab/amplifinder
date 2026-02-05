@@ -111,7 +111,7 @@ class Scaffold(Record):
             return -1  # invalid segment (span origin, but scaffold is not circular)
         diff = end - start if orientation == Orientation.FORWARD else start - end
         # diff is negative if we span the circular origin:
-        assert diff < 0 and span_origin or diff > 0 and not span_origin
+        assert diff < 0 and span_origin or diff >= 0 and not span_origin, f"diff: {diff}, span_origin: {span_origin}"
         if span_origin:
             return self.length + diff + 1
         return diff + 1
