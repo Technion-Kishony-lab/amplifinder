@@ -11,6 +11,8 @@ from amplifinder.data_types import ReadType
 class AlignmentData(ABC):
     """Base class for alignment data."""
 
+    read_type: ReadType | None = field(default=None, kw_only=True)
+
     @abstractmethod
     def get_bam_indices(self) -> tuple[int, ...]:
         """Return BAM indices as tuple."""
@@ -73,7 +75,6 @@ class SingleAlignment(BaseSingleAlignment):
     bam_index: int
     alignment_score: int
     read_id: str = ""
-    read_type: ReadType | None = None
 
     def get_bam_indices(self) -> tuple[int]:
         return (self.bam_index,)
@@ -89,7 +90,6 @@ class SingleAlignment(BaseSingleAlignment):
 class CombinedSingleAlignment(BaseSingleAlignment):
     """Single alignment combined from multiple hits with same read_id and orientation."""
     alignments: tuple[SingleAlignment, ...]
-    read_type: ReadType | None = None
 
     @classmethod
     def from_alignments(cls, alignments: list[SingleAlignment]) -> "CombinedSingleAlignment":
@@ -119,7 +119,6 @@ class PairedAlignment(AlignmentData):
     forward_alignment: BaseSingleAlignment
     reverse_alignment: BaseSingleAlignment
     is_swapped: bool = False
-    read_type: ReadType | None = None
 
     def get_bam_indices(self) -> tuple[int, ...]:
         return (*self.forward_alignment.get_bam_indices(), *self.reverse_alignment.get_bam_indices())
