@@ -244,8 +244,7 @@ class Config:
         # Convert Config to dict, handling Path objects and tuples
         config_dict = {}
         for key, value in self.__dict__.items():
-            if value is not None:
-                config_dict[key] = convert_value(value)
+            config_dict[key] = convert_value(value)
 
         return config_dict
 
