@@ -121,6 +121,7 @@ class SimpleLogger:
             file_msg = self._format_message(msg, level, timestamp, use_colors=False)
             with open(self.log_file, 'a') as f:
                 f.write(file_msg + end)
+                f.flush()
 
     def _format_rich_message(self, msg: str, level: str, timestamp: bool, color: Optional[str]) -> str:
         """Format message with rich colors and auto-highlighting.
