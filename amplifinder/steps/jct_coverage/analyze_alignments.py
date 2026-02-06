@@ -160,6 +160,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         alignment_filter_params: AlignmentFilterParams = None,
         jc_call_params: JcCallParams = None,
         force: Optional[bool] = None,
+        csv_output_dir: Optional[Path] = None,
     ):
         self.tnjc2s = tnjc2s
         self.arm_len = arm_len
@@ -178,7 +179,7 @@ class AnalyzeTnJc2AlignmentsStep(RecordTypedDfStep[AnalyzedTnJc2]):
         input_files = [tnjc2.bam_path(self._output_dir, is_ancestor=self.IS_ANCESTOR) for tnjc2 in tnjc2s]
 
         super().__init__(
-            output_dir=output_dir,
+            output_dir=csv_output_dir or output_dir,
             input_files=input_files,
             force=force,
         )
