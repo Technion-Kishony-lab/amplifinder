@@ -16,6 +16,7 @@ from amplifinder import __version__
 from amplifinder.config import Config, load_config, merge_config
 from amplifinder.pipeline import Pipeline
 from amplifinder.utils.dataclass_utils import convert_csv_row_types
+from amplifinder.utils.file_utils import fmt_separator
 
 
 MAX_PARALLEL_DEFAULT = 2
@@ -384,10 +385,10 @@ def _run_batch(
         raise ValueError(f"Invalid rows:\n  - {details}")
 
     # Print batch summary
-    click.echo("=" * 80)
-    click.echo(f"BATCH MODE: Starting {len(configs)} run(s)")
-    click.echo(f"Batch input: {batch_csv}")
-    click.echo(f"Max parallel: {max_parallel}")
+    click.echo(fmt_separator("BATCH MODE STARTING"))
+    click.echo(f"Number of runs: {len(configs)}")
+    click.echo(f"Input CSV: {batch_csv}")
+    click.echo(f"Max parallel runs: {max_parallel}")
     click.echo(f"Executor: {'ProcessPool' if use_processes else 'ThreadPool'}")
     click.echo(f"Verbose: {verbose}")
     if breseq_only:
@@ -455,7 +456,7 @@ def _run_batch(
         batch_end_time = datetime.now()
         total_elapsed = int((batch_end_time - batch_start_time).total_seconds())
         failures = [r for r in results if r.exit_code != 0]
-        click.echo("=" * 80)
+        click.echo(fmt_separator("BATCH MODE COMPLETED"))
         click.echo(f"Completed {len(results)} run(s). Failures: {len(failures)}")
         click.echo(f"Total batch time: {total_elapsed}s ({total_elapsed // 60}m {total_elapsed % 60}s)")
         click.echo("=" * 80)
