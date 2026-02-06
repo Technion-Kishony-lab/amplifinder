@@ -64,6 +64,7 @@ async def _run_one_batch(
     """Run one amplifinder job in batch mode."""
     async with semaphore:
         start_time = datetime.now()
+        click.echo(f"[{run_id}] Starting at {start_time.strftime('%H:%M:%S')}")
         
         # Run in executor (thread pool or process pool)
         loop = asyncio.get_event_loop()
@@ -382,15 +383,27 @@ def _run_batch(
         details = "\n  - ".join(all_errors)
         raise ValueError(f"Invalid rows:\n  - {details}")
 
+    # Print batch summary
+    click.echo("=" * 80)
+    click.echo(f"BATCH MODE: Starting {len(configs)} run(s)")
+    click.echo(f"Batch input: {batch_csv}")
+    click.echo(f"Max parallel: {max_parallel}")
+    click.echo(f"Executor: {'ProcessPool' if use_processes else 'ThreadPool'}")
+    click.echo(f"Verbose: {verbose}")
+    if breseq_only:
+        click.echo("Mode: breseq-only")
+    click.echo("=" * 80)
+
     # Create executor (process pool or thread pool)
     executor: Optional[Executor] = None
     if use_processes:
         executor = ProcessPoolExecutor(max_workers=max_parallel)
-        click.echo(f"Using ProcessPoolExecutor with {max_parallel} workers (real parallelism)")
     else:
-        click.echo(f"Using ThreadPoolExecutor with {max_parallel} workers")
+        pass  # ThreadPool not explicitly created, using None for default
 
     # Run all jobs concurrently
+    batch_start_time = datetime.now()
+    
     async def run_all():
         semaphore = asyncio.Semaphore(max_parallel)
         tasks = []
@@ -439,8 +452,13 @@ def _run_batch(
     
     try:
         results = asyncio.run(run_all())
+        batch_end_time = datetime.now()
+        total_elapsed = int((batch_end_time - batch_start_time).total_seconds())
         failures = [r for r in results if r.exit_code != 0]
+        click.echo("=" * 80)
         click.echo(f"Completed {len(results)} run(s). Failures: {len(failures)}")
+        click.echo(f"Total batch time: {total_elapsed}s ({total_elapsed // 60}m {total_elapsed % 60}s)")
+        click.echo("=" * 80)
         raise SystemExit(1 if failures else 0)
     finally:
         # Clean up executor
