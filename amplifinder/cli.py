@@ -16,10 +16,26 @@ from amplifinder import __version__
 from amplifinder.config import Config, load_config, merge_config
 from amplifinder.pipeline import Pipeline
 from amplifinder.utils.dataclass_utils import convert_csv_row_types
+from amplifinder.utils.file_lock import cleanup_lock_files
 from amplifinder.utils.file_utils import fmt_separator
 
 
 MAX_PARALLEL_DEFAULT = 2
+
+
+def _lock_dirs_from_config(config: Config) -> List[Path]:
+    """Collect all directories that may contain lock files for a given config."""
+    dirs = [
+        config.iso_run_dir,
+        config.anc_run_dir if config.has_ancestor else None,
+        config.ref_path,
+        config.iso_breseq_path,
+        config.anc_breseq_path,
+    ]
+    if config.use_isfinder:
+        from amplifinder.data import get_builtin_isfinder_db_path
+        dirs.append(get_builtin_isfinder_db_path().parent)
+    return [d for d in dirs if d is not None]
 
 
 @dataclass
@@ -328,6 +344,9 @@ def _run_single(
     if error is not None:
         raise RuntimeError(f"Pipeline failed:\n{error}")
 
+    # Clean up lock files after run
+    cleanup_lock_files(*_lock_dirs_from_config(config))
+
     click.echo("Done")
 
 
@@ -465,6 +484,11 @@ def _run_batch(
         # Clean up executor
         if executor is not None:
             executor.shutdown(wait=True)
+        # Clean up lock files after all workers are done
+        all_dirs: set[Path] = set()
+        for cfg_tuple in configs:
+            all_dirs.update(_lock_dirs_from_config(cfg_tuple[2]))
+        cleanup_lock_files(*all_dirs)
 
 
 if __name__ == "__main__":
