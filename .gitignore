@@ -12,7 +12,7 @@ __pycache__/
 *.ntf
 *.nto
 # Test output files (generated during test runs)
-tests/test_outputs/
+**/test_outputs/
 # Lock files
 *.lock
 # IDE files
