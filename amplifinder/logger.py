@@ -3,6 +3,7 @@
 from collections import defaultdict
 import sys
 import re
+import threading
 
 from datetime import datetime
 from pathlib import Path
@@ -36,7 +37,11 @@ class Colors:
 
 
 class SimpleLogger:
-    """Simple logger that writes to screen and/or file."""
+    """Simple logger that writes to screen and/or file.
+    
+    Uses thread-local storage for file paths so each thread in batch mode
+    writes to its own log file without cross-contamination.
+    """
 
     LEVEL_COLORS = {
         "DEBUG": "cyan",
@@ -60,12 +65,45 @@ class SimpleLogger:
             use_colors: Use rich colors and auto-highlighting for screen output
             verbose: If True, show INFO/DEBUG messages; if False, only WARNING/ERROR
         """
-        self.log_file = Path(log_file) if log_file else None
-        self.warnings_file = Path(warnings_file) if warnings_file else None
-        self.debug_file = Path(debug_file) if debug_file else None
+        # Thread-local storage for per-thread file paths
+        self._local = threading.local()
+        
+        if log_file:
+            log_file = ensure_parent_dir(log_file)
+        if warnings_file:
+            warnings_file = ensure_parent_dir(warnings_file)
+        if debug_file:
+            debug_file = ensure_parent_dir(debug_file)
+        
+        # Store as defaults (used when no thread-local override)
+        self._default_log_file = Path(log_file) if log_file else None
+        self._default_warnings_file = Path(warnings_file) if warnings_file else None
+        self._default_debug_file = Path(debug_file) if debug_file else None
         self.use_colors = use_colors
         self.verbose = verbose
         self.console = Console(file=sys.stdout, highlight=True) if use_colors else None
+
+    def _get_file(self, name: str) -> Optional[Path]:
+        return getattr(self._local, name, getattr(self, f'_default_{name}'))
+
+    def _set_file(self, name: str, value: Optional[Path]) -> None:
+        setattr(self._local, name, value)
+        setattr(self, f'_default_{name}', value)
+
+    @property
+    def log_file(self) -> Optional[Path]: return self._get_file('log_file')
+    @log_file.setter
+    def log_file(self, v: Optional[Path]) -> None: self._set_file('log_file', v)
+
+    @property
+    def warnings_file(self) -> Optional[Path]: return self._get_file('warnings_file')
+    @warnings_file.setter
+    def warnings_file(self, v: Optional[Path]) -> None: self._set_file('warnings_file', v)
+
+    @property
+    def debug_file(self) -> Optional[Path]: return self._get_file('debug_file')
+    @debug_file.setter
+    def debug_file(self, v: Optional[Path]) -> None: self._set_file('debug_file', v)
 
     def log(
         self,
@@ -251,7 +289,7 @@ class SimpleLogger:
         self.verbose = verbose
 
     def reconfigure(self, log_file: Optional[Path] = None, warnings_file: Optional[Path] = None, debug_file: Optional[Path] = None, use_colors: bool = True, verbose: bool = False) -> None:
-        """Reconfigure this logger instance (updates in place)."""
+        """Reconfigure logger for the current thread (thread-safe for batch mode)."""
         if log_file:
             log_file = ensure_parent_dir(log_file)
         
@@ -261,9 +299,10 @@ class SimpleLogger:
         if debug_file:
             debug_file = ensure_parent_dir(debug_file)
 
-        self.log_file = Path(log_file) if log_file else None
-        self.warnings_file = Path(warnings_file) if warnings_file else None
-        self.debug_file = Path(debug_file) if debug_file else None
+        # Set thread-local file paths (won't affect other threads)
+        self._local.log_file = Path(log_file) if log_file else None
+        self._local.warnings_file = Path(warnings_file) if warnings_file else None
+        self._local.debug_file = Path(debug_file) if debug_file else None
         self.use_colors = use_colors
         self.verbose = verbose
         self.console = Console(file=sys.stdout, highlight=True) if use_colors else None
