@@ -158,6 +158,9 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = RawTnJc2.CSV_EXPORT_FIELDS + [
         'single_locus_left_pair_id', 'single_locus_right_pair_id', 'raw_event', 'chosen_tn_id'
     ]
+    CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
+        'raw_event': lambda x: x.name if x is not None else ''
+    }
     single_locus_tnjc2_left_matchings: List[TnJc2AndSide]
     single_locus_tnjc2_right_matchings: List[TnJc2AndSide]
 
@@ -274,6 +277,7 @@ class CoveredTnJc2(SingleLocusLinkedTnJc2):
         'iso_scaf_avg', 'iso_amplicon_avg', 'anc_scaf_avg', 'anc_amplicon_avg', 'avg_norm_cov', 'copy_number'
     ]
     CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
+        **SingleLocusLinkedTnJc2.CSV_FIELD_FORMATS,
         'iso_scaf_avg': '.2f',
         'iso_amplicon_avg': '.2f',
         'anc_scaf_avg': '.2f',
@@ -366,13 +370,13 @@ class AnalyzedTnJc2(SynJctsTnJc2):
 
     @property
     def jc_cov_vector(self) -> List[tuple[int, int, int]]:
-        """Junction coverage vector."""
+        """Junction coverage vector. (for csv export only)"""
         return [(self.jc_covs[jt].left, self.jc_covs[jt].spanning, self.jc_covs[jt].right)
                 for jt in JunctionType]
 
     @property
     def jc_cov_anc_vector(self) -> Optional[List[tuple[int, int, int]]]:
-        """Ancestor junction coverage vector."""
+        """Ancestor junction coverage vector. (for csv export only)"""
         if self.jc_covs_anc is None:
             return None
         return [(self.jc_covs_anc[jt].left, self.jc_covs_anc[jt].spanning, self.jc_covs_anc[jt].right)
@@ -383,21 +387,16 @@ class ClassifiedTnJc2(AnalyzedTnJc2):
     """AnalyzedTnJc2 with architecture/event classification (Step 13 output)."""
     NAME: ClassVar[str] = "Classified Architectures"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = AnalyzedTnJc2.CSV_EXPORT_FIELDS + [
-        'event_str', 'iso_architecture', 'anc_architecture', 'event_descriptors'
+        'iso_architecture', 'anc_architecture', 'event_descriptors'
     ]
+    CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
+        'iso_architecture': lambda x: x.name if x is not None else '',
+        'anc_architecture': lambda x: x.name if x is not None else '',
+        'event_descriptors': lambda x: '+'.join(e.name for e in x) if x else ''
+    }
     # Architecture classification
     iso_architecture: Architecture
     anc_architecture: Optional[Architecture] = None  # only when anc_fastq_path is set
 
     # Event descriptors
     event_descriptors: List[EventDescriptor]
-
-    @property
-    def event_str(self) -> str:
-        """Full event description derived from architecture and descriptors."""
-        iso_architecture_str = self.iso_architecture.description
-        if self.event_descriptors:
-            descriptors_str = ', '.join(d.value for d in self.event_descriptors)
-            return f"{iso_architecture_str} ({descriptors_str})"
-        else:
-            return iso_architecture_str
