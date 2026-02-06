@@ -1,0 +1,72 @@
+# AmpliFinder run configuration template
+# Generated with: amplifinder --create-config base_config.yaml
+# All fields shown with their default values.
+# Override only the fields you need; the rest will use these defaults.
+
+# --- Reference ---
+ref_name: null  # NCBI accession for reference genome
+ref_path: /zdata/user-data/rkishony/amplifinder/genomesDB # path to reference genome folder (default: genomesDB)
+ncbi: true # fetch reference from NCBI if not found in ref_path
+
+# --- Isolate ---
+iso_fastq_path: null # path to isolate FASTQ file(s)
+iso_name: null # isolate name (default: derived from iso_fastq_path)
+iso_read_length: null # read length (if not provided, auto-detected from FASTQ)
+iso_breseq_path: null # path to create/load breseq (default: <iso_run_folder>/breseq)
+
+# --- Ancestor (optional) ---
+anc_fastq_path: null # path to ancestor FASTQ file(s)
+anc_name: null # ancestor name (default: derived from anc_fastq_path)
+anc_read_length: null # read length (if not provided, auto-detected from FASTQ)
+anc_breseq_path: null # path to create/load breseq (default: <anc_run_folder>/breseq)
+output_dir: /zdata/user-data/rkishony/amplifinder/output # output directory (default: output)
+
+# --- IS-finder ---
+use_isfinder: false # use ISfinder database for IS detection (default: False)
+isfinder_evalue: 0.0001
+isfinder_critical_coverage: 0.9
+
+# --- Detect IS-junctions ---
+reference_IS_in_span: null # null = use entire IS element
+reference_IS_out_span: 100
+max_dist_to_IS: 10
+trim_jc_flanking: 5
+
+# --- Coverage ---
+average_method: median  # mean, median, or mode
+
+# --- Filtering ---
+min_amplicon_length: 100
+max_amplicon_length: 1000000
+replication_copy_number_threshold: 1.5
+deletion_copy_number_threshold: 0.3
+
+# --- Synthetic junction alignment and detection ---
+alignment_filter_params:
+  max_nm_score: 3  # max edit distance (NM tag)
+  min_as_score: -25 # min alignment score (AS tag)
+  filter_len_tolerance: 0.1
+
+alignment_analysis_params:
+  min_overlap_len: 13  # min overlap with junction
+  max_dist_from_junction: -10 # >0: distance from junction, <0: distance from arm end
+
+bowtie_params:
+  score_min: [0, -0.2]  # bowtie2 --score-min (default: 0, -0.2)
+  mismatch_penalty: [5, 5] # bowtie2 --mp
+  local: false # true: local alignment mode, false: end-to-end alignment mode
+  num_alignments: 100 # bowtie2 -k (default: 100)
+  bowtie_len_tolerance: 0.1 # bowtie2 len filter relative to read length (default: 0.1)
+
+jc_call_params:
+  neg_threshold_abs: 5  # absolute threshold for negative call
+  neg_threshold_rel: 0.01 # fraction of expected spanning reads
+  pos_threshold_in_num_std_below_expected: 3 # std devs below expected for positive call
+  pos_threshold_rel: 0.4 # non-stochastic relative fluctuation margin
+
+# --- Misc ---
+threads: 4 # alignment threads
+breseq_output_size_threshold: 10000 # num lines above which breseq output is considered too large
+min_num_bases: 80000000 # warn if total fastq sequencing depth is below this threshold
+remove_jc_breseq_reject: false # whether to remove JC records labeled as breseq-rejected
+create_plots: true # whether to create coverage plots

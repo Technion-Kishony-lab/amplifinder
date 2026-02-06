@@ -334,7 +334,13 @@ def _run_single(
 
     # If --create-config, save and exit (skip validation)
     if create_config_path is not None:
-        config.save_to_file(create_config_path, log=False)
+        header = [
+            "AmpliFinder run configuration template",
+            f"Generated with: amplifinder --create-config {create_config_path.name}",
+            "All fields shown with their default values.",
+            "Override only the fields you need; the rest will use these defaults.",
+        ]
+        config.save_to_file(create_config_path, log=False, header=header)
         click.echo(f"Config file created: {create_config_path}")
         return
 
