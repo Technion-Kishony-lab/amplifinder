@@ -357,7 +357,7 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     - anc_fastq_path=set: both jc_cov and jc_cov_anc present
     """
     NAME: ClassVar[str] = "Junction Pairs with Synthetic Junctions Coverage Analysis"
-    CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = SynJctsTnJc2.CSV_EXPORT_FIELDS + [
         'jc_cov_vector', 'jc_cov_anc_vector'
     ]
     # Junction coverage: JunctionType -> JunctionReadCounts
@@ -390,6 +390,7 @@ class ClassifiedTnJc2(AnalyzedTnJc2):
         'iso_architecture', 'anc_architecture', 'event_descriptors'
     ]
     CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
+        **CoveredTnJc2.CSV_FIELD_FORMATS,
         'iso_architecture': lambda x: x.name if x is not None else '',
         'anc_architecture': lambda x: x.name if x is not None else '',
         'event_descriptors': lambda x: '+'.join(e.name for e in x) if x else ''
