@@ -11,8 +11,8 @@ def compact_short_lists(json_str: str) -> str:
         prefix = match.group(1)  # Indentation and key
         items_str = match.group(2)  # All items
         items = re.findall(r'"([^"]+)"', items_str)
-        # Only compact if <= 5 items and each item is short
-        if len(items) <= 5 and all(len(item) < 30 for item in items):
+        # Only compact if <= 15 items and each item is short
+        if len(items) <= 15 and all(len(item) < 30 for item in items):
             compact_items = ', '.join(f'"{item}"' for item in items)
             return f'{prefix}[{compact_items}]'
         return match.group(0)
