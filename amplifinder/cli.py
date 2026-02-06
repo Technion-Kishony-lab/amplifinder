@@ -221,6 +221,12 @@ async def _run_one_batch(
     help="Report which step is running and its output files.",
 )
 @click.option(
+    "--debug",
+    is_flag=True,
+    default=False,
+    help="Enable debug-level logging.",
+)
+@click.option(
     "--create-plots/--no-create-plots",
     default=None,
     help="Create junction and amplicon coverage plots (default: True).",
@@ -246,9 +252,14 @@ def main(
     create_config_path: Optional[Path],
     breseq_only: Optional[bool],
     verbose: bool,
+    debug: bool,
     create_plots: Optional[bool],
 ) -> None:
     """AmpliFinder: Detect IS-mediated gene amplifications from WGS data."""
+
+    if debug:
+        from amplifinder.env import DEBUG
+        DEBUG.set(True)
 
     click.echo(f"AmpliFinder v{__version__}")
     if breseq_only:
