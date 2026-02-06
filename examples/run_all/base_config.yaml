@@ -1,0 +1,51 @@
+ref_name: null
+ref_path: /zdata/user-data/rkishony/amplifinder/examples/run_all/genomesDB
+ncbi: true
+iso_fastq_path: null
+iso_name: null
+iso_read_length: null
+iso_breseq_path: null
+anc_fastq_path: null
+anc_name: null
+anc_read_length: null
+anc_breseq_path: null
+output_dir: /zdata/user-data/rkishony/amplifinder/examples/run_all/output
+use_isfinder: false
+isfinder_evalue: 0.0001
+isfinder_critical_coverage: 0.9
+reference_IS_in_span: null
+reference_IS_out_span: 100
+max_dist_to_IS: 10
+trim_jc_flanking: 5
+threads: 4
+average_method: median
+min_amplicon_length: 100
+max_amplicon_length: 1000000
+replication_copy_number_threshold: 1.45
+deletion_copy_number_threshold: 0.3
+alignment_filter_params:
+  max_nm_score: 3
+  min_as_score: -25
+  length_tolerance: 0.1
+alignment_analysis_params:
+  min_overlap_len: 13
+  max_dist_from_junction: -10
+bowtie_params:
+  score_min:
+  - 0
+  - -0.2
+  mismatch_penalty:
+  - 5
+  - 5
+  local: false
+  num_alignments: 100
+  min_qlen: 136
+jc_call_params:
+  neg_threshold_abs: 5
+  neg_threshold_rel: 0.01
+  pos_threshold_in_num_std_below_expected: 3
+  pos_threshold_rel: 0.4
+breseq_output_size_threshold: 10000
+min_num_bases: 80000000
+remove_jc_breseq_reject: false
+create_plots: true

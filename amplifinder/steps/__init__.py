@@ -1,7 +1,6 @@
 """Pipeline steps."""
 
 from amplifinder.steps.base import Step, OutputStep, RecordTypedDfStep
-from amplifinder.steps.initialize import InitializingStep
 from amplifinder.steps.get_reference import GetRefGenomeStep
 from amplifinder.steps.locate_tns import LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep
 from amplifinder.steps.run_breseq import BreseqStep, AncBreseqStep
@@ -23,7 +22,6 @@ __all__ = [
     "Step",
     "OutputStep",
     "RecordTypedDfStep",
-    "InitializingStep",
     "GetRefGenomeStep",
     "LocateTNsUsingGenbankStep",
     "LocateTNsUsingISfinderStep",

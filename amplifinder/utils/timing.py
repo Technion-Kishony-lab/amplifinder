@@ -31,27 +31,24 @@ def timer(msg: Optional[str] = None, log: bool = True, extra: Optional[dict[str,
 
 @contextmanager
 def print_timer(start_msg: str, end_msg: Optional[str] = None, time_format: str = "{:.1f} sec",
-                should_log: bool = True, seperate_prints: bool = False, use_log: bool = False):
+                should_log: bool = True, seperate_prints: bool = True, to_file: bool = False):
     """Context manager that prints start message, runs code, then prints time.
 
     Args:
-        start_msg: Message to print before running code (printed with end="", flush=True)
+        start_msg: Message to print before running code
         end_msg: Message to print after (default: time only)
         time_format: Format string for time (default: "{:.1f} sec")
         should_log: If False, don't print anything (default: True)
-        seperated_prints: If True, print start message and end message separately
-        use_log: If True, use logger.info instead of print
+        seperated_prints: If True, print start message and end message separately (default: True)
+        to_file: If False, don't write to log file (default: False)
     Example:
-        with print_timer("Building index ... ", end_msg=", "):
+        with print_timer("Building index ... ", end_msg="\n"):
             build_index()
-        # Output: "Building index ... (12.3 sec), "
+        # Output: "Building index ... \n12.3 sec\n"
     """
     end_msg = end_msg or ""
     if should_log and seperate_prints:
-        if use_log:
-            logger.info(start_msg)
-        else:
-            print(start_msg, end="", flush=True)
+        logger.info(start_msg, to_file=to_file)
     result = TimerResult()
     start = perf_counter()
     try:
@@ -63,7 +60,4 @@ def print_timer(start_msg: str, end_msg: Optional[str] = None, time_format: str 
             prefix = "" if seperate_prints else start_msg
             time_str = time_format.format(elapsed)
             msg = f"{prefix}{time_str}{end_msg}"
-            if use_log:
-                logger.info(msg)
-            else:
-                print(msg, flush=True, end="")
+            logger.info(msg, to_file=to_file)

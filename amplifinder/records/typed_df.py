@@ -87,16 +87,21 @@ class TypedDF:
                         # Convert to Int64 (nullable integer) to preserve integer format
                         df[col] = df[col].astype("Int64")
 
-        # Serialize object columns (enums, Records, etc.)
+        # Format columns: custom formatters, object serialization, float formatting
         for col in df.columns:
-            if df[col].dtype == object:
+            if col in self._csv_field_formats:
+                # Custom formatter (callable or format spec)
+                fmt = self._csv_field_formats[col]
+                if callable(fmt):
+                    df[col] = df[col].apply(fmt)
+                elif df[col].dtype in [float, 'float64', 'float32']:
+                    df[col] = df[col].apply(lambda x: f"{x:{fmt}}" if pd.notna(x) else x)
+            elif df[col].dtype == object:
+                # Serialize enums, Records, etc.
                 df[col] = df[col].apply(_serialize_for_csv)
-
-        # Format float columns: field-specific formats first, then default to 1 decimal
-        for col in df.columns:
-            if df[col].dtype in [float, 'float64', 'float32']:
-                fmt = self._csv_field_formats.get(col, '.1f')  # Default: 1 decimal place
-                df[col] = df[col].apply(lambda x: f"{x:{fmt}}" if pd.notna(x) else x)
+            elif df[col].dtype in [float, 'float64', 'float32']:
+                # Default float formatting
+                df[col] = df[col].apply(lambda x: f"{x:.1f}" if pd.notna(x) else x)
 
         # Auto-detect if index should be saved
 

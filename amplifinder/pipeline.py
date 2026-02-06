@@ -1,4 +1,5 @@
 """Pipeline orchestration for AmpliFinder."""
+import traceback
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -12,10 +13,10 @@ from amplifinder.data_types import (
     CoveredTnJc2, SingleLocusLinkedTnJc2, SynJctsTnJc2, AnalyzedTnJc2, ClassifiedTnJc2,
 )
 from amplifinder.logger import logger, c, setup_logger
-from amplifinder.utils.file_utils import ensure_dir
+from amplifinder.utils.file_utils import ensure_dir, remove_file_or_dir
+from amplifinder.steps.io_naming import default_path
 
 from amplifinder.steps import (
-    InitializingStep,
     GetRefGenomeStep,
     LocateTNsUsingISfinderStep,
     LocateTNsUsingGenbankStep,
@@ -48,7 +49,12 @@ class Pipeline:
         """Set up logger with file in run directory."""
         ensure_dir(self.config.iso_run_dir)
         log_file = self.config.iso_run_dir / "run_log.txt"
-        setup_logger(log_path=log_file, use_colors=True, verbose=self.verbose)
+        warnings_file = self.config.iso_run_dir / "warnings.txt"
+        debug_file = self.config.iso_run_dir / "debug.txt"
+        setup_logger(
+            log_path=log_file, warnings_path=warnings_file, debug_path=debug_file,
+            use_colors=True, verbose=self.verbose,
+        )
 
     def _calc_read_lengths(self) -> ReadLengths:
         """Calculate read lengths and junction lengths."""
@@ -74,15 +80,12 @@ class Pipeline:
 
     def run(self) -> Optional[RecordTypedDf[ClassifiedTnJc2]]:
         """Run full pipeline with exception handling and status tracking."""
+        # Initialize first (cleans stale outputs), then set up logger on clean dir
+        iso_output, anc_output = self._initialize()
         self._setup_logger()
         self._log_run_info()
 
-        # Initialize output directories
-        iso_output, anc_output = self._initialize()
-
         try:
-            # Clear old status files and mark start
-            self._clear_status_files(iso_output)
             self._write_status_file(iso_output, 'started')
 
             # Run the pipeline
@@ -100,7 +103,10 @@ class Pipeline:
 
         except Exception as e:
             # Actual errors
-            self._write_status_file(iso_output, 'failed', str(e))
+            traceback_str = traceback.format_exc()
+            logger.error(f"Pipeline failed with error:\n{traceback_str}")
+            error_msg = f"{type(e).__name__}: {repr(e)}" if str(e) else f"{type(e).__name__}"
+            self._write_status_file(iso_output, 'failed', reason=error_msg)
             raise
 
     def _run(self, iso_output: Path, anc_output: Optional[Path]) -> RecordTypedDf[ClassifiedTnJc2]:
@@ -121,7 +127,7 @@ class Pipeline:
         read_lengths = self._calc_read_lengths()
         synjct_tnjc2s = self._create_synthetic_junctions(
             filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
-        self._align_reads(synjct_tnjc2s, iso_output, anc_output)
+        self._align_reads(synjct_tnjc2s, iso_output, anc_output, read_lengths)
         analyzed_tnjc2s, iso_alignment_cache, anc_alignment_cache = self._analyze_alignments(
             synjct_tnjc2s, iso_output, anc_output, read_lengths)
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
@@ -133,11 +139,9 @@ class Pipeline:
 
     def run_breseq_only(self) -> None:
         """Run only breseq steps (ancestor and isolate), then exit."""
+        iso_output, anc_output = self._initialize()
         self._setup_logger()
         self._log_run_info(include_no_ancestor_warning=False)
-
-        # Initialize output directories
-        iso_output, anc_output = self._initialize()
 
         genome = self._load_reference()
         self._run_breseq(genome)
@@ -164,17 +168,36 @@ class Pipeline:
             f.write(f"ancestor: {self.config.anc_name}\n")
             if reason:
                 f.write(f"reason: {reason}\n")
+            f.flush()
 
-    def _clear_status_files(self, iso_output: Path) -> None:
-        """Remove all status marker files from isolate run directory."""
-        for status in ['started', 'completed', 'terminated', 'failed']:
-            status_file = iso_output / f"run.{status}"
-            if status_file.exists():
-                status_file.unlink()
+    # -- Subdirectories preserved across runs (expensive to regenerate) --
+    _KEEP_DIRS = {'junctions', 'breseq'}
+
+    @classmethod
+    def _clean_run_dir(cls, run_dir: Path) -> None:
+        """Remove stale files from a run directory, keeping junctions/ and breseq/."""
+        if not run_dir.exists():
+            return
+        for item in run_dir.iterdir():
+            if item.is_dir() and item.name in cls._KEEP_DIRS:
+                continue
+            remove_file_or_dir(item)
 
     def _initialize(self) -> Tuple[Path, Optional[Path]]:
-        """Step 0: Initialize output directories."""
-        return InitializingStep(config=self.config).run()
+        """Clean stale outputs, create run directories, save config."""
+        cfg = self.config
+        iso = cfg.iso_run_dir
+        anc = cfg.anc_run_dir if cfg.has_ancestor else None
+
+        # Clean previous isolate run outputs (ancestor dir only has junctions/breseq)
+        self._clean_run_dir(iso)
+
+        ensure_dir(iso)
+        if anc:
+            ensure_dir(anc)
+        cfg.save(iso)
+
+        return iso, anc
 
     def _load_reference(self) -> Genome:
         """Step 1: Get reference genome."""
@@ -362,12 +385,15 @@ class Pipeline:
 
         # Create junctions for ancestor if needed
         if anc_output:
+            # Delete iso CSV so anc step recreates it with enriched (iso+anc) fields
+            default_path(iso_output, SynJctsTnJc2).unlink(missing_ok=True)
             syn_tnjc2s = AncCreateSyntheticJunctionsStep(
                 filtered_tnjc2s=syn_tnjc2s,
                 genome=genome,
                 ref_tns=ref_tns,
                 output_dir=anc_output,
                 jc_arm_len=read_lengths.jc_arm_len_anc,
+                csv_output_dir=iso_output,
             ).run()
 
         return syn_tnjc2s
@@ -377,6 +403,7 @@ class Pipeline:
         syn_tnjc2s: RecordTypedDf[SynJctsTnJc2],
         iso_output: Path,
         anc_output: Optional[Path],
+        read_lengths: ReadLengths,
     ) -> None:
         """Step 11: Align reads to synthetic junctions."""
         cfg = self.config
@@ -386,6 +413,7 @@ class Pipeline:
             synjcs_tnjc2s=syn_tnjc2s,
             output_dir=iso_output,
             fastq_path=cfg.iso_fastq_path,
+            read_length=read_lengths.read_len_iso,
             threads=cfg.threads,
             bowtie_params=cfg.bowtie_params,
         ).run()
@@ -396,6 +424,7 @@ class Pipeline:
                 synjcs_tnjc2s=syn_tnjc2s,
                 output_dir=anc_output,
                 fastq_path=cfg.anc_fastq_path,
+                read_length=read_lengths.read_len_anc,
                 threads=cfg.threads,
                 bowtie_params=cfg.bowtie_params,
             ).run()
@@ -428,6 +457,8 @@ class Pipeline:
         # Analyze ancestor alignments if present
         anc_alignment_cache = {}
         if anc_output:
+            # Delete iso CSV so anc step recreates it with enriched (iso+anc) fields
+            default_path(iso_output, AnalyzedTnJc2).unlink(missing_ok=True)
             analyzed_tnjc2s, anc_alignment_cache = AncAnalyzeTnJc2AlignmentsStep(
                 tnjc2s=analyzed_tnjc2s,
                 output_dir=anc_output,
@@ -436,6 +467,7 @@ class Pipeline:
                 alignment_classify_params=cfg.alignment_analysis_params,
                 alignment_filter_params=cfg.alignment_filter_params,
                 jc_call_params=cfg.jc_call_params,
+                csv_output_dir=iso_output,
             ).run_with_cache()
 
         return analyzed_tnjc2s, iso_alignment_cache, anc_alignment_cache

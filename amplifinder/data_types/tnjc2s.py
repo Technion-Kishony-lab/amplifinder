@@ -158,28 +158,38 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = RawTnJc2.CSV_EXPORT_FIELDS + [
         'single_locus_left_pair_id', 'single_locus_right_pair_id', 'raw_event', 'chosen_tn_id'
     ]
+    CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
+        'raw_event': lambda x: x.name if x is not None else ''
+    }
     single_locus_tnjc2_left_matchings: List[TnJc2AndSide]
     single_locus_tnjc2_right_matchings: List[TnJc2AndSide]
 
     @property
-    def single_locus_tnjc2_matching_left(self) -> Optional[SingleLocusLinkedTnJc2]:
+    def single_locus_tnjc2_and_side_matching_left(self) -> Optional[TnJc2AndSide]:
         """First single-locus TN junction matching the left junction."""
-        return self.single_locus_tnjc2_left_matchings[0].tnjc2 if self.single_locus_tnjc2_left_matchings else None
+        return self.single_locus_tnjc2_left_matchings[0] if self.single_locus_tnjc2_left_matchings else None
 
     @property
-    def single_locus_tnjc2_matching_right(self) -> Optional[SingleLocusLinkedTnJc2]:
+    def single_locus_tnjc2_and_side_matching_right(self) -> Optional[TnJc2AndSide]:
         """First single-locus TN junction matching the right junction."""
-        return self.single_locus_tnjc2_right_matchings[0].tnjc2 if self.single_locus_tnjc2_right_matchings else None
+        return self.single_locus_tnjc2_right_matchings[0] if self.single_locus_tnjc2_right_matchings else None
+
+    def get_matching_single_locus_tnjc2_and_side(self, side: Side) -> Optional[TnJc2AndSide]:
+        """Get the single-locus TN junction matching the given side."""
+        return self.single_locus_tnjc2_and_side_matching_left if side == Side.LEFT \
+            else self.single_locus_tnjc2_and_side_matching_right
 
     @property
     def single_locus_left_pair_id(self) -> Optional[int]:
         """Pair ID of the single-locus TN junction matching the left junction."""
-        return self.single_locus_tnjc2_matching_left.pair_id if self.single_locus_tnjc2_matching_left else None
+        match = self.single_locus_tnjc2_and_side_matching_left
+        return match.tnjc2.pair_id if match is not None else None
 
     @property
     def single_locus_right_pair_id(self) -> Optional[int]:
         """Pair ID of the single-locus TN junction matching the right junction."""
-        return self.single_locus_tnjc2_matching_right.pair_id if self.single_locus_tnjc2_matching_right else None
+        match = self.single_locus_tnjc2_and_side_matching_right
+        return match.tnjc2.pair_id if match is not None else None
 
     @property
     def raw_event(self) -> Architecture:
@@ -189,8 +199,8 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
         elif self.base_event == BaseEvent.TRANSPOSITION:
             return Architecture.TRANSPOSITION
         assert self.base_event == BaseEvent.LOCUS_JOINING
-        has_match_left = self.single_locus_tnjc2_matching_left is not None
-        has_match_right = self.single_locus_tnjc2_matching_right is not None
+        has_match_left = self.single_locus_tnjc2_and_side_matching_left is not None
+        has_match_right = self.single_locus_tnjc2_and_side_matching_right is not None
         if has_match_left and has_match_right:
             return Architecture.FLANKED
         elif has_match_left:
@@ -229,12 +239,12 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
 
         # Intersect with matching left/right single-locus tnjc2 if exists
         tn_id_set = set(self.tn_ids)  # Start with TN IDs from this tnjc2
-        if self.single_locus_tnjc2_matching_left is not None:
+        if self.single_locus_tnjc2_and_side_matching_left is not None:
             # Intersect with matching left single-locus tnjc2
-            tn_id_set &= set(self.single_locus_tnjc2_matching_left.tn_ids)
-        if self.single_locus_tnjc2_matching_right is not None:
+            tn_id_set &= set(self.single_locus_tnjc2_and_side_matching_left.tnjc2.tn_ids)
+        if self.single_locus_tnjc2_and_side_matching_right is not None:
             # Intersect with matching right single-locus tnjc2
-            tn_id_set &= set(self.single_locus_tnjc2_matching_right.tn_ids)
+            tn_id_set &= set(self.single_locus_tnjc2_and_side_matching_right.tnjc2.tn_ids)
 
         # If we have matches, return one of them arbitrarily
         if tn_id_set:
@@ -267,12 +277,13 @@ class CoveredTnJc2(SingleLocusLinkedTnJc2):
         'iso_scaf_avg', 'iso_amplicon_avg', 'anc_scaf_avg', 'anc_amplicon_avg', 'avg_norm_cov', 'copy_number'
     ]
     CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
-        'iso_scaf_avg': '.1f',
-        'iso_amplicon_avg': '.1f',
-        'anc_scaf_avg': '.1f',
-        'anc_amplicon_avg': '.1f',
-        'avg_norm_cov': '.1f',
-        'copy_number': '.1f',
+        **SingleLocusLinkedTnJc2.CSV_FIELD_FORMATS,
+        'iso_scaf_avg': '.2f',
+        'iso_amplicon_avg': '.2f',
+        'anc_scaf_avg': '.2f',
+        'anc_amplicon_avg': '.2f',
+        'avg_norm_cov': '.2f',
+        'copy_number': '.2f',
     }
     iso_scaf_avg: float
     iso_amplicon_avg: float
@@ -346,7 +357,7 @@ class AnalyzedTnJc2(SynJctsTnJc2):
     - anc_fastq_path=set: both jc_cov and jc_cov_anc present
     """
     NAME: ClassVar[str] = "Junction Pairs with Synthetic Junctions Coverage Analysis"
-    CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
+    CSV_EXPORT_FIELDS: ClassVar[List[str]] = SynJctsTnJc2.CSV_EXPORT_FIELDS + [
         'jc_cov_vector', 'jc_cov_anc_vector'
     ]
     # Junction coverage: JunctionType -> JunctionReadCounts
@@ -359,13 +370,13 @@ class AnalyzedTnJc2(SynJctsTnJc2):
 
     @property
     def jc_cov_vector(self) -> List[tuple[int, int, int]]:
-        """Junction coverage vector."""
+        """Junction coverage vector. (for csv export only)"""
         return [(self.jc_covs[jt].left, self.jc_covs[jt].spanning, self.jc_covs[jt].right)
                 for jt in JunctionType]
 
     @property
     def jc_cov_anc_vector(self) -> Optional[List[tuple[int, int, int]]]:
-        """Ancestor junction coverage vector."""
+        """Ancestor junction coverage vector. (for csv export only)"""
         if self.jc_covs_anc is None:
             return None
         return [(self.jc_covs_anc[jt].left, self.jc_covs_anc[jt].spanning, self.jc_covs_anc[jt].right)
@@ -376,21 +387,17 @@ class ClassifiedTnJc2(AnalyzedTnJc2):
     """AnalyzedTnJc2 with architecture/event classification (Step 13 output)."""
     NAME: ClassVar[str] = "Classified Architectures"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = AnalyzedTnJc2.CSV_EXPORT_FIELDS + [
-        'event_str', 'iso_architecture', 'anc_architecture', 'event_descriptors'
+        'iso_architecture', 'anc_architecture', 'event_descriptors'
     ]
+    CSV_FIELD_FORMATS: ClassVar[Dict[str, str]] = {
+        **CoveredTnJc2.CSV_FIELD_FORMATS,
+        'iso_architecture': lambda x: x.name if x is not None else '',
+        'anc_architecture': lambda x: x.name if x is not None else '',
+        'event_descriptors': lambda x: '+'.join(e.name for e in x) if x else ''
+    }
     # Architecture classification
     iso_architecture: Architecture
     anc_architecture: Optional[Architecture] = None  # only when anc_fastq_path is set
 
     # Event descriptors
     event_descriptors: List[EventDescriptor]
-
-    @property
-    def event_str(self) -> str:
-        """Full event description derived from architecture and descriptors."""
-        iso_architecture_str = self.iso_architecture.description
-        if self.event_descriptors:
-            descriptors_str = ', '.join(d.value for d in self.event_descriptors)
-            return f"{iso_architecture_str} ({descriptors_str})"
-        else:
-            return iso_architecture_str

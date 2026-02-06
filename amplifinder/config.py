@@ -22,7 +22,7 @@ class AlignmentFilterParams(FrozenParams):
 
     max_nm_score: Optional[int] = 3  # 3,
     min_as_score: Optional[int] = -25  # -25
-    length_tolerance: float = 0.1
+    filter_len_tolerance: float = 0.1
 
 
 class AlignmentClassifyParams(FrozenParams):
@@ -52,7 +52,7 @@ class BowtieParams(FrozenParams):
     mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5)
     local: bool = False
     num_alignments: int = 100
-    min_qlen: Optional[int] = 136
+    bowtie_len_tolerance: Optional[float] = 0.1
 
 
 class JcCallParams(FrozenParams):
@@ -92,12 +92,12 @@ class Config:
     RUN_CONFIG_FILENAME: ClassVar[str] = "run_config.yaml"
 
     # Reference
-    ref_name: str
+    ref_name: Optional[str] = None
     ref_path: Path = field(default_factory=lambda: Path("genomesDB"))
     ncbi: bool = True
 
     # Isolate
-    iso_fastq_path: Path
+    iso_fastq_path: Optional[Path] = None
     iso_name: Optional[str] = None          # None: derive from iso_fastq_path.stem
     iso_read_length: Optional[int] = None   # None: calculate from fastq
     iso_breseq_path: Optional[Path] = None  # None: default to iso_run_dir / "breseq"
@@ -151,9 +151,6 @@ class Config:
     # Filtering options
     remove_jc_breseq_reject: bool = False
 
-    # Logging
-    log_path: str = "amplifinder.log"
-
     # Plotting
     create_plots: bool = True
 
@@ -202,6 +199,34 @@ class Config:
         """
         return self.get_iso_breseq_path(), self.get_anc_breseq_path()
 
+    def validate_args(self) -> list[str]:
+        """Validate required arguments for this config."""
+        errors: list[str] = []
+
+        if self.ref_name is None:
+            errors.append("ref_name is required")
+        if self.iso_fastq_path is None:
+            errors.append("iso_fastq_path is required")
+
+        return errors
+
+    def validate_paths(self) -> list[str]:
+        """Validate input paths for this config."""
+        errors: list[str] = []
+
+        def check(name: str, path: Optional[Path]) -> None:
+            if path is not None and not path.exists():
+                errors.append(f"{name} does not exist: {path}")
+
+        check("iso_fastq_path", self.iso_fastq_path)
+        check("anc_fastq_path", self.anc_fastq_path)
+        check("iso_breseq_path", self.iso_breseq_path)
+        check("anc_breseq_path", self.anc_breseq_path)
+        if not self.ncbi:
+            check("ref_path", self.ref_path)
+
+        return errors
+
     def to_yaml_dict(self) -> dict[str, Any]:
         """Convert config to YAML-serializable dict."""
         def convert_value(val):
@@ -227,8 +252,7 @@ class Config:
         # Convert Config to dict, handling Path objects and tuples
         config_dict = {}
         for key, value in self.__dict__.items():
-            if value is not None:
-                config_dict[key] = convert_value(value)
+            config_dict[key] = convert_value(value)
 
         return config_dict
 
@@ -291,7 +315,8 @@ class Config:
     def __post_init__(self):
         """Convert paths and set derived values."""
         # Convert string paths to absolute Path objects
-        self.iso_fastq_path = Path(self.iso_fastq_path).resolve()
+        if self.iso_fastq_path is not None:
+            self.iso_fastq_path = Path(self.iso_fastq_path).resolve()
         self.output_dir = Path(self.output_dir).resolve()
         self.ref_path = Path(self.ref_path).resolve()
 
@@ -303,7 +328,7 @@ class Config:
             self.anc_breseq_path = Path(self.anc_breseq_path).resolve()
 
         # Derive names from paths if not provided
-        if self.iso_name is None:
+        if self.iso_name is None and self.iso_fastq_path is not None:
             self.iso_name = self.iso_fastq_path.stem
         if self.anc_name is None and self.anc_fastq_path is not None:
             self.anc_name = self.anc_fastq_path.stem
@@ -350,7 +375,7 @@ def _get_config_defaults() -> dict[str, Any]:
     """
     defaults = {}
     for f in fields(Config):
-        # Skip required fields (iso_fastq_path, ref_name)
+        # Skip fields without defaults
         if f.default is MISSING and f.default_factory is MISSING:
             continue
 
@@ -399,33 +424,24 @@ def load_config(config_path: Path) -> dict[str, Any]:
             )
 
 
-def merge_config(
-    cli_args: dict[str, Any],
-    config_file: Optional[dict[str, Any]] = None,
-) -> dict[str, Any]:
-    """Merge configuration from defaults, config file, and CLI args.
+def merge_config(*configs: Optional[dict[str, Any]]) -> dict[str, Any]:
+    """Merge configuration dictionaries with later configs taking priority.
 
-    Priority: CLI args > config file > defaults
+    Priority: rightmost config > ... > leftmost config > defaults
 
     Args:
-        cli_args: Arguments from command line
-        config_file: Loaded config file (optional)
+        *configs: Configuration dictionaries to merge (None values are skipped)
 
     Returns:
         Merged configuration dictionary
     """
     merged = _get_config_defaults()
 
-    # Apply config file values
-    if config_file:
-        for key, value in config_file.items():
-            if value is not None:
-                merged[key] = value
-
-    # Apply CLI args (highest priority)
-    for key, value in cli_args.items():
-        if value is not None:
-            merged[key] = value
+    for config in configs:
+        if config:
+            for key, value in config.items():
+                if value is not None:
+                    merged[key] = value
 
     _normalize_alignment_params(merged)
     return merged
