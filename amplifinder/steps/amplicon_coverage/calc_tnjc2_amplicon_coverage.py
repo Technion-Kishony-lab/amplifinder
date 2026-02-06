@@ -75,10 +75,9 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
     ) -> tuple[dict[str, np.ndarray], dict[str, np.ndarray], dict[str, float]]:
         """Load coverage and calculate scaffold statistics."""
         logger.print_progress(f"\n{label} breseq: {breseq_path}")
-        with print_timer("Loading coverage ... ", end_msg="\n", seperate_prints=True, should_log=True):
+        with print_timer("Loading coverage ... ", end_msg="\n"):
             scafs_to_covs = load_breseq_coverage(breseq_path)
-        with print_timer(f"Calculating scaffold stats ({len(unique_scaffolds)} scaffolds) ... ",
-                         end_msg="\n", seperate_prints=True, should_log=True):
+        with print_timer(f"Calculating scaffold stats ({len(unique_scaffolds)} scaffolds) ... ", end_msg="\n"):
             scaf_covs, scaf_avgs = calc_scaffold_coverages_and_averages(
                 scafs_to_covs, unique_scaffolds, self.average_method)
         return scafs_to_covs, scaf_covs, scaf_avgs
@@ -104,8 +103,7 @@ class CalcTnJc2AmpliconCoverageStep(RecordTypedDfStep[CoveredTnJc2]):
             anc_scaf_avgs = {}
 
         # Process each raw_tnjc2s
-        with print_timer("\nCalculating coverage for each raw_tnjc2:\n",
-                         end_msg="\n", seperate_prints=True, should_log=True):
+        with print_timer("\nCalculating coverage for each raw_tnjc2:\n", end_msg="\n"):
             covered_records = []
             for i, raw_tnjc2 in enumerate(self.raw_tnjc2s):
                 if self._should_skip_amplicon(raw_tnjc2):

@@ -7,10 +7,12 @@ shared resources. Uses filelock for cross-platform file locks.
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
+import hashlib
 
 from filelock import FileLock, Timeout
 
 from amplifinder.logger import logger
+from amplifinder.utils.file_utils import is_writable_dir
 
 
 DEFAULT_LOCK_TIMEOUT = 3600  # 1 hour
@@ -71,11 +73,58 @@ def locked_resource(
         # No lock needed - just yield
         yield
         return
-
     resource_path = Path(resource_path)
     if resource_path.is_dir():
         lock_filepath = resource_path / f".{resource_type}.lock"
     else:
         lock_filepath = resource_path.parent / f".{resource_path.stem}.{resource_type}.lock"
+
+    if not is_writable_dir(lock_filepath.parent):
+        lock_filepath = _get_fallback_lock_path(resource_path, resource_type)
+        # Console deduplication for batch mode (always writes to warnings.txt)
+        logger.warning(
+            "Lock path is not writable; using fallback lock file: "
+            f"{lock_filepath}",
+            console_once=str(lock_filepath)
+        )
     with _locked_operation(lock_filepath, timeout, f"{resource_type} at {resource_path}"):
         yield
+
+
+def _get_fallback_lock_path(resource_path: Path, resource_type: str) -> Path:
+    """Fallback lock path in user space for read-only resources."""
+    lock_root = Path.home() / ".amplifinder" / "locks"
+    lock_root.mkdir(parents=True, exist_ok=True)
+    resource_id = hashlib.sha256(str(resource_path).encode()).hexdigest()[:12]
+    name = f"{resource_path.name}.{resource_type}.{resource_id}.lock"
+    return lock_root / name
+
+
+def cleanup_lock_files(*root_dirs: Path) -> int:
+    """Remove stale .lock files under the given directories and ~/.amplifinder/locks.
+
+    Call after all workers are done (end of single run or batch run).
+    Pass every directory that may contain lock files (output dirs, ref_path, etc.).
+    Returns the number of lock files removed.
+    """
+    # Always include fallback locks dir
+    all_dirs = list(root_dirs) + [Path.home() / ".amplifinder" / "locks"]
+    count = 0
+    seen: set[Path] = set()
+    for root in all_dirs:
+        root = Path(root).resolve()
+        if root in seen or not root.exists():
+            continue
+        seen.add(root)
+        for lock_file in root.rglob("*.lock"):
+            try:
+                lock_file.unlink()
+                count += 1
+            except OSError:
+                pass
+    logger.debug_message(
+        f"Cleaned up {count} lock file(s)",
+        category="file_lock",
+        max_prints=None,
+    )
+    return count

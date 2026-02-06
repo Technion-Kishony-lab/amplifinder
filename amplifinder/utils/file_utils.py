@@ -1,8 +1,29 @@
 """File and directory utilities."""
 
+import os
 import shutil
 from pathlib import Path
 from typing import Union
+
+
+def fmt_separator(text: str, width: int = 80, pad: int = 5, align_right: bool = False) -> str:
+    """Format text with separator characters to fill a line.
+
+    Args:
+        text: Text to display
+        width: Total line width (default: 80)
+        pad: Number of '=' before and after text (default: 5)
+        align_right: If True, align text to right (default: False)
+
+    Returns:
+        Formatted string: '===== TEXT ===============' with correct padding
+    """
+    middle = f" {text} "
+    before = "=" * pad
+    after = "=" * max(0, width - pad - len(middle))
+    if align_right:
+        return after + middle + before
+    return before + middle + after
 
 
 def fmt_count(num: int, total: int | None = None) -> str:
@@ -70,3 +91,12 @@ def remove_file_or_dir(path: Union[str, Path]) -> None:
             shutil.rmtree(path)
         else:
             path.unlink()
+
+
+def is_writable_dir(path: Path) -> bool:
+    """Check if a directory is writable by the current user."""
+    # Check first existing parent (including path itself)
+    for parent in [path] + list(path.parents):
+        if parent.exists():
+            return os.access(parent, os.W_OK)
+    return False

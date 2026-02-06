@@ -2,6 +2,7 @@
 
 try:
     import matplotlib
+    matplotlib.use('Agg')  # Use non-GUI backend
     import matplotlib.pyplot as plt
 except ImportError:
     matplotlib = None

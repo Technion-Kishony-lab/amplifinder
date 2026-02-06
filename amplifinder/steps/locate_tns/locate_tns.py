@@ -8,13 +8,13 @@ import re
 from Bio.SeqFeature import SeqFeature
 
 from amplifinder.data_types import TnId
+from amplifinder.logger import logger
 from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
 from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.data_types import Orientation, RecordTypedDf, RefTn, Genome
 from amplifinder.steps.base import OutputStep
-from amplifinder.logger import logger
 
 
 # Base class for TN location steps

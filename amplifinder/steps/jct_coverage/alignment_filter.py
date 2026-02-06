@@ -31,7 +31,7 @@ def bam_hit_passes_filters(
         return False
 
     # Check alignment length
-    read_length_factor = 1 + alignment_filter_params.length_tolerance
+    read_length_factor = 1 + alignment_filter_params.filter_len_tolerance
     min_alignment_length = avg_read_length / read_length_factor
     max_alignment_length = avg_read_length * read_length_factor
     alignment_length = hit.reference_end - hit.reference_start

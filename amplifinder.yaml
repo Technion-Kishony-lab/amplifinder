@@ -12,3 +12,4 @@ breseq_docker: true
 
 # ISfinder database (null = use bundled)
 isdb_path: null
+isfinder_cache: null  # Cache location for bundled DB (null = ~/.amplifinder/ISfinderDB)

@@ -22,6 +22,7 @@ def test_step_initialization(filtered_tnjc2_record, tmp_path):
         synjcs_tnjc2s=filtered_tnjc2s,
         output_dir=tmp_path,
         fastq_path=fastq_file,
+        read_length=100,
     )
 
     assert step.synjcs_tnjc2s == filtered_tnjc2s
