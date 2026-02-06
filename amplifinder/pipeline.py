@@ -14,6 +14,7 @@ from amplifinder.data_types import (
 )
 from amplifinder.logger import logger, c, setup_logger
 from amplifinder.utils.file_utils import ensure_dir, remove_file_or_dir
+from amplifinder.steps.io_naming import default_path
 
 from amplifinder.steps import (
     GetRefGenomeStep,
@@ -381,12 +382,15 @@ class Pipeline:
 
         # Create junctions for ancestor if needed
         if anc_output:
+            # Delete iso CSV so anc step recreates it with enriched (iso+anc) fields
+            default_path(iso_output, SynJctsTnJc2).unlink(missing_ok=True)
             syn_tnjc2s = AncCreateSyntheticJunctionsStep(
                 filtered_tnjc2s=syn_tnjc2s,
                 genome=genome,
                 ref_tns=ref_tns,
                 output_dir=anc_output,
                 jc_arm_len=read_lengths.jc_arm_len_anc,
+                csv_output_dir=iso_output,
             ).run()
 
         return syn_tnjc2s
@@ -450,6 +454,8 @@ class Pipeline:
         # Analyze ancestor alignments if present
         anc_alignment_cache = {}
         if anc_output:
+            # Delete iso CSV so anc step recreates it with enriched (iso+anc) fields
+            default_path(iso_output, AnalyzedTnJc2).unlink(missing_ok=True)
             analyzed_tnjc2s, anc_alignment_cache = AncAnalyzeTnJc2AlignmentsStep(
                 tnjc2s=analyzed_tnjc2s,
                 output_dir=anc_output,
@@ -458,6 +464,7 @@ class Pipeline:
                 alignment_classify_params=cfg.alignment_analysis_params,
                 alignment_filter_params=cfg.alignment_filter_params,
                 jc_call_params=cfg.jc_call_params,
+                csv_output_dir=iso_output,
             ).run_with_cache()
 
         return analyzed_tnjc2s, iso_alignment_cache, anc_alignment_cache

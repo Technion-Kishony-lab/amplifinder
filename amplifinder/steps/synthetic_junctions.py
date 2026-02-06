@@ -198,10 +198,12 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
         output_dir: Path,
         jc_arm_len: int = 150,
         force: Optional[bool] = None,
+        csv_output_dir: Optional[Path] = None,
     ):
         self.genome = genome
         self.ref_tns = ref_tns
         self.jc_arm_len = jc_arm_len
+        self._artifact_dir = Path(output_dir)
         self._tnjc2s_and_junctions: list[tuple[SynJctsTnJc2, dict[JunctionType, Junction]]] = []
         for tnjc2 in filtered_tnjc2s:
             junctions, analysis_dir_name = create_synthetic_junctions_and_name(
@@ -216,14 +218,14 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
         super().__init__(
             input_files=[genome.fasta_path],
             artifact_files=artifact_files,
-            output_dir=output_dir,
+            output_dir=csv_output_dir or output_dir,
             force=force,
         )
 
     def _generate_artifacts(self) -> None:
         """Create junction FASTA files for each candidate."""
         for tnjc2, junctions in self._tnjc2s_and_junctions:
-            fasta_path = tnjc2.fasta_path(self.output_dir, is_ancestor=self.is_ancestor)
+            fasta_path = tnjc2.fasta_path(self._artifact_dir, is_ancestor=self.is_ancestor)
 
             # Lock per-junction for ancestor (None for isolate = no lock)
             lock_path = fasta_path.parent if self.is_ancestor else None
