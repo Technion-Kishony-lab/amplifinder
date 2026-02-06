@@ -6,6 +6,26 @@ from pathlib import Path
 from typing import Union
 
 
+def fmt_separator(text: str, width: int = 80, pad: int = 5, align_right: bool = False) -> str:
+    """Format text with separator characters to fill a line.
+
+    Args:
+        text: Text to display
+        width: Total line width (default: 80)
+        pad: Number of '=' before and after text (default: 5)
+        align_right: If True, align text to right (default: False)
+
+    Returns:
+        Formatted string: '===== TEXT ===============' with correct padding
+    """
+    middle = f" {text} "
+    before = "=" * pad
+    after = "=" * max(0, width - pad - len(middle))
+    if align_right:
+        return after + middle + before
+    return before + middle + after
+
+
 def fmt_count(num: int, total: int | None = None) -> str:
     """Format count with optional percentage.
 
