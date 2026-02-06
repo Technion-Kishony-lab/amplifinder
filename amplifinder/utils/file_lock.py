@@ -81,9 +81,11 @@ def locked_resource(
 
     if not is_writable_dir(lock_filepath.parent):
         lock_filepath = _get_fallback_lock_path(resource_path, resource_type)
+        # Console deduplication for batch mode (always writes to warnings.txt)
         logger.warning(
             "Lock path is not writable; using fallback lock file: "
-            f"{lock_filepath}"
+            f"{lock_filepath}",
+            console_once=str(lock_filepath)
         )
     with _locked_operation(lock_filepath, timeout, f"{resource_type} at {resource_path}"):
         yield
