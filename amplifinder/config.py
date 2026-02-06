@@ -1,40 +1,32 @@
 """Configuration management for AmpliFinder."""
 
-from dataclasses import dataclass, field, fields, MISSING
+from dataclasses import dataclass, field, fields, is_dataclass, MISSING
 from enum import Enum
 from pathlib import Path
 from typing import Any, Optional, Tuple, ClassVar, Union
-import json
-import yaml
-from pydantic import BaseModel, ConfigDict
 
 from amplifinder.data_types import AverageMethod
 from amplifinder.utils.file_utils import ensure_dir
+from amplifinder.utils.yaml_utils import load_config, save_annotated_yaml
 
 
-class FrozenParams(BaseModel):
-    """Base class for frozen parameter models."""
-    model_config = ConfigDict(frozen=True)
-
-
-class AlignmentFilterParams(FrozenParams):
+@dataclass(frozen=True)
+class AlignmentFilterParams:
     """Parameters for read filtering."""
-
-    max_nm_score: Optional[int] = 3  # 3,
-    min_as_score: Optional[int] = -25  # -25
+    max_nm_score: Optional[int] = field(default=3, metadata={
+        "comment": "max edit distance (NM tag)"})
+    min_as_score: Optional[int] = field(default=-25, metadata={
+        "comment": "min alignment score (AS tag)"})
     filter_len_tolerance: float = 0.1
 
 
-class AlignmentClassifyParams(FrozenParams):
+@dataclass(frozen=True)
+class AlignmentClassifyParams:
     """Parameters for junction alignment analysis."""
-
-    min_overlap_len: int = 13
-
-    # Max distance of the far end of the hit from the junction
-    # None to allow any distance
-    # Positive value to allow reads within the specified distance from the junction
-    # Negative value to specify as distance from the jc arm end
-    max_dist_from_junction: Optional[int] = -10
+    min_overlap_len: int = field(default=13, metadata={
+        "comment": "min overlap with junction"})
+    max_dist_from_junction: Optional[int] = field(default=-10, metadata={
+        "comment": ">0: distance from junction, <0: distance from arm end"})
 
     def get_max_dist_from_junction(self, arm_len: int) -> int:
         max_dist = self.max_dist_from_junction
@@ -45,28 +37,37 @@ class AlignmentClassifyParams(FrozenParams):
         return max_dist
 
 
-class BowtieParams(FrozenParams):
+@dataclass(frozen=True)
+class BowtieParams:
     """Parameters for bowtie2 alignment."""
+    score_min: Union[str, Tuple[float, float]] = field(default=(0, -0.2), metadata={
+        "comment": "bowtie2 --score-min (default: 0, -0.2)"})
+    mismatch_penalty: Union[str, Tuple[int, int]] = field(
+        default=(5, 5), metadata={"comment": "bowtie2 --mp"})
+    local: bool = field(default=False, metadata={
+        "comment": "true: local alignment mode, false: end-to-end alignment mode"})
+    num_alignments: int = field(default=100, metadata={
+        "comment": "bowtie2 -k (default: 100)"})
+    bowtie_len_tolerance: Optional[float] = field(default=0.1, metadata={
+        "comment": "bowtie2 len filter relative to read length (default: 0.1)"})
 
-    score_min: Union[str, Tuple[float, float]] = (0, -0.2)
-    mismatch_penalty: Union[str, Tuple[int, int]] = (5, 5)
-    local: bool = False
-    num_alignments: int = 100
-    bowtie_len_tolerance: Optional[float] = 0.1
 
-
-class JcCallParams(FrozenParams):
+@dataclass(frozen=True)
+class JcCallParams:
     """Parameters for junction coverage calling (exists, not exists, ambiguous)."""
 
     # for a jct to be negative, the number of spanning reads should be less than:
-    neg_threshold_abs: int = 5  # absolute number of spanning reads, or
-    neg_threshold_rel: float = 0.01  # fraction of the expected number of spanning reads
+    neg_threshold_abs: int = field(default=5, metadata={
+        "comment": "absolute threshold for negative call"})
+    neg_threshold_rel: float = field(default=0.01, metadata={
+        "comment": "fraction of expected spanning reads"})
 
     # for a jct to be positive, the number of spanning reads should be
     # greater than the expected number minus x standard deviations
-    pos_threshold_in_num_std_below_expected: int = 3
-    pos_threshold_rel: float = 0.4  # non-stochastic copy number fluctuations
-
+    pos_threshold_in_num_std_below_expected: int = field(default=3, metadata={
+        "comment": "std devs below expected for positive call"})
+    pos_threshold_rel: float = field(default=0.4, metadata={
+        "comment": "non-stochastic relative fluctuation margin"})
 
 def _normalize_alignment_params(cfg: dict[str, Any]) -> None:
     """Move legacy scalar alignment params into param objects."""
@@ -91,68 +92,86 @@ class Config:
 
     RUN_CONFIG_FILENAME: ClassVar[str] = "run_config.yaml"
 
-    # Reference
-    ref_name: Optional[str] = None
-    ref_path: Path = field(default_factory=lambda: Path("genomesDB"))
-    ncbi: bool = True
+    # --- Reference ---
+    ref_name: Optional[str] = field(default=None, metadata={
+        "section": "Reference",
+        "comment": "NCBI accession for reference genome"})
+    ref_path: Path = field(default_factory=lambda: Path("genomesDB"), metadata={
+        "comment": "path to reference genome folder (default: genomesDB)"})
+    ncbi: bool = field(default=True, metadata={
+        "comment": "fetch reference from NCBI if not found in ref_path"})
 
-    # Isolate
-    iso_fastq_path: Optional[Path] = None
-    iso_name: Optional[str] = None          # None: derive from iso_fastq_path.stem
-    iso_read_length: Optional[int] = None   # None: calculate from fastq
-    iso_breseq_path: Optional[Path] = None  # None: default to iso_run_dir / "breseq"
+    # --- Isolate ---
+    iso_fastq_path: Optional[Path] = field(default=None, metadata={
+        "section": "Isolate",
+        "comment": "path to isolate FASTQ file(s)"})
+    iso_name: Optional[str] = field(default=None, metadata={
+        "comment": "isolate name (default: derived from iso_fastq_path)"})
+    iso_read_length: Optional[int] = field(default=None, metadata={
+        "comment": "read length (if not provided, auto-detected from FASTQ)"})
+    iso_breseq_path: Optional[Path] = field(default=None, metadata={
+        "comment": "path to create/load breseq (default: <iso_run_folder>/breseq)"})
 
-    # Ancestor (optional)
-    anc_fastq_path: Optional[Path] = None
-    anc_name: Optional[str] = None          # None: derive from anc_fastq_path.stem
-    anc_read_length: Optional[int] = None   # None: calculate from fastq
-    anc_breseq_path: Optional[Path] = None  # None: default to anc_run_dir / "breseq"
+    # --- Ancestor (optional) ---
+    anc_fastq_path: Optional[Path] = field(default=None, metadata={
+        "section": "Ancestor (optional)",
+        "comment": "path to ancestor FASTQ file(s)"})
+    anc_name: Optional[str] = field(default=None, metadata={
+        "comment": "ancestor name (default: derived from anc_fastq_path)"})
+    anc_read_length: Optional[int] = field(default=None, metadata={
+        "comment": "read length (if not provided, auto-detected from FASTQ)"})
+    anc_breseq_path: Optional[Path] = field(default=None, metadata={
+        "comment": "path to create/load breseq (default: <anc_run_folder>/breseq)"})
 
-    # Output
-    output_dir: Path = field(default_factory=lambda: Path("output"))
+    # --- Output ---
+    output_dir: Path = field(default_factory=lambda: Path("output"), metadata={
+        "comment": "output directory (default: output)"})
 
-    # IS-finder options
-    use_isfinder: bool = False
+    # --- IS-finder ---
+    use_isfinder: bool = field(default=False, metadata={
+        "section": "IS-finder",
+        "comment": "use ISfinder database for IS detection (default: False)"})
     isfinder_evalue: float = 1e-4
     isfinder_critical_coverage: float = 0.9
 
-    # Create ref TN junctions from reference IS elements
-    reference_IS_in_span: Optional[int] = None  # None = use the entire IS element
+    # --- Detection parameters ---
+    reference_IS_in_span: Optional[int] = field(default=None, metadata={
+        "section": "Detect IS-junctions",
+        "comment": "null = use entire IS element"})
     reference_IS_out_span: int = 100
-
-    # Detection parameters for Junctions which have an arm that match TN sides
     max_dist_to_IS: int = 10
-    trim_jc_flanking: int = 5  # len to trim from the flanks of a junction (None = no trimming)
+    trim_jc_flanking: int = 5
 
-    # Alignment threads (breseq, bowtie2)
-    threads: int = 4
+    # --- Coverage ---
+    average_method: AverageMethod = field(
+        default=AverageMethod.MEDIAN, metadata={"section": "Coverage", "comment": "mean, median, or mode"})
 
-    # Coverage parameters
-    average_method: AverageMethod = AverageMethod.MEDIAN
-
-    # Amplicon length filtering
-    min_amplicon_length: int = 100
+    # --- Filtering ---
+    min_amplicon_length: int = field(default=100, metadata={
+        "section": "Filtering"})
     max_amplicon_length: int = 1_000_000
-
-    # Amplicon copy number filtering
     replication_copy_number_threshold: float = 1.5
     deletion_copy_number_threshold: float = 0.3
 
-    # Alignment of reads to synthetic junctions
-    alignment_filter_params: Optional[AlignmentFilterParams] = None
+    # --- Synthetic junction alignment and detection ---
+    alignment_filter_params: Optional[AlignmentFilterParams] = field(default=None, metadata={
+        "section": "Synthetic junction alignment and detection"})
     alignment_analysis_params: Optional[AlignmentClassifyParams] = None
     bowtie_params: Optional[BowtieParams] = None
     jc_call_params: Optional[JcCallParams] = None
 
-    # File size thresholds
-    breseq_output_size_threshold: int = 10_000  # Terminates if breseq output.gd exceeds this line count
-    min_num_bases: int = 80_000_000  # Warn if total sequencing depth below this
-
-    # Filtering options
-    remove_jc_breseq_reject: bool = False
-
-    # Plotting
-    create_plots: bool = True
+    # --- Misc ---
+    threads: int = field(default=4, metadata={
+        "section": "Misc",
+        "comment": "alignment threads"})
+    breseq_output_size_threshold: int = field(default=10_000, metadata={
+        "comment": "num lines above which breseq output is considered too large"})
+    min_num_bases: int = field(default=80_000_000, metadata={
+        "comment": "warn if total fastq sequencing depth is below this threshold"})
+    remove_jc_breseq_reject: bool = field(default=False, metadata={
+        "comment": "whether to remove JC records labeled as breseq-rejected"})
+    create_plots: bool = field(default=True, metadata={
+        "comment": "whether to create coverage plots"})
 
     @property
     def has_ancestor(self) -> bool:
@@ -241,11 +260,8 @@ class Config:
                 return {k: convert_value(v) for k, v in val.items()}
             elif isinstance(val, list):
                 return [convert_value(v) for v in val]
-            elif isinstance(val, BaseModel):
-                # pydantic v1/v2 compatibility
-                dump_fn = getattr(val, "model_dump", None)
-                dumped = dump_fn() if dump_fn else val.dict()
-                return convert_value(dumped)
+            elif is_dataclass(val) and not isinstance(val, type):
+                return convert_value({f.name: getattr(val, f.name) for f in fields(val)})
             else:
                 return val
 
@@ -256,20 +272,17 @@ class Config:
 
         return config_dict
 
-    def save_to_file(self, config_path: Path, log: bool = True) -> None:
-        """Save config to specified path.
+    def save_to_file(self, config_path: Path, log: bool = True,
+                     header: Optional[list[str]] = None) -> None:
+        """Save config to specified path with annotated YAML.
 
         Args:
             config_path: Path to save config file
             log: Whether to log the save location (default: True)
+            header: Optional header comment lines for the YAML file
         """
         config_path = Path(config_path)
-        config_path.parent.mkdir(parents=True, exist_ok=True)
-
-        config_dict = self.to_yaml_dict()
-
-        with open(config_path, 'w') as f:
-            yaml.dump(config_dict, f, default_flow_style=False, sort_keys=False)
+        save_annotated_yaml(self.to_yaml_dict(), fields(self), config_path, header)
 
         if log:
             from amplifinder.logger import logger
@@ -334,13 +347,16 @@ class Config:
             self.anc_name = self.anc_fastq_path.stem
 
         # Normalize params
-        def validate(cls, obj):
-            return (cls.model_validate(obj or {}) if hasattr(cls, "model_validate")
-                    else cls.parse_obj(obj or {}))
-        self.alignment_filter_params = validate(AlignmentFilterParams, self.alignment_filter_params)
-        self.alignment_analysis_params = validate(AlignmentClassifyParams, self.alignment_analysis_params)
-        self.bowtie_params = validate(BowtieParams, self.bowtie_params)
-        self.jc_call_params = validate(JcCallParams, self.jc_call_params)
+        def init_params(cls, obj):
+            if obj is None:
+                return cls()
+            if isinstance(obj, cls):
+                return obj
+            return cls(**obj)
+        self.alignment_filter_params = init_params(AlignmentFilterParams, self.alignment_filter_params)
+        self.alignment_analysis_params = init_params(AlignmentClassifyParams, self.alignment_analysis_params)
+        self.bowtie_params = init_params(BowtieParams, self.bowtie_params)
+        self.jc_call_params = init_params(JcCallParams, self.jc_call_params)
 
         # Validate: ISfinder required for non-NCBI genomes
         if not self.ncbi and not self.use_isfinder:
@@ -394,34 +410,6 @@ def _get_config_defaults() -> dict[str, Any]:
         defaults[f.name] = value
 
     return defaults
-
-
-def load_config(config_path: Path) -> dict[str, Any]:
-    """Load configuration from YAML or JSON file.
-
-    Args:
-        config_path: Path to config file (.yaml, .yml, or .json)
-
-    Returns:
-        Dictionary of configuration values
-    """
-    config_path = Path(config_path)
-
-    if not config_path.exists():
-        raise FileNotFoundError(f"Config file not found: {config_path}")
-
-    suffix = config_path.suffix.lower()
-
-    with open(config_path) as f:
-        if suffix in (".yaml", ".yml"):
-            return yaml.safe_load(f) or {}
-        elif suffix == ".json":
-            return json.load(f)
-        else:
-            raise ValueError(
-                f"Unsupported config format: {suffix}. "
-                "Use .yaml, .yml, or .json"
-            )
 
 
 def merge_config(*configs: Optional[dict[str, Any]]) -> dict[str, Any]:

@@ -12,9 +12,9 @@ from amplifinder.utils.flag_utils import MutableFlag
 
 # Search paths for amplifinder.yaml
 CONFIG_SEARCH_PATHS = [
-    Path(__file__).parent.parent / "amplifinder.yaml",  # Project root
-    Path.home() / ".amplifinder" / "amplifinder.yaml",  # User home
+    Path.home() / ".amplifinder" / "amplifinder.yaml",  # User home (highest priority)
     Path("/etc/amplifinder/amplifinder.yaml"),          # System-wide
+    Path(__file__).parent.parent / "amplifinder.yaml",  # Project root (bundled defaults)
 ]
 
 

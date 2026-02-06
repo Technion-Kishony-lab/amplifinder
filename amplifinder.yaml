@@ -1,15 +1,14 @@
-# AmpliFinder Global Configuration (amplifinder.yaml)
-# Server-specific tool paths and environment settings
-# This file is auto-loaded at import time from project root
+# AmpliFinder Default Configuration (amplifinder.yaml)
+# Bundled defaults — override by copying to ~/.amplifinder/amplifinder.yaml
 
 # External tool paths (null = use system PATH)
-blast_path: /opt/anaconda3/envs/shared_env/bin
-samtools_path: /zdata/user-data/Apps/samtools-1.14
-bowtie2_path: null  # Expected in PATH
+blast_path: null
+samtools_path: null
+bowtie2_path: null
 
-# breseq settings  
+# breseq settings
 breseq_docker: true
 
 # ISfinder database (null = use bundled)
 isdb_path: null
-isfinder_cache: null  # Cache location for bundled DB (null = ~/.amplifinder/ISfinderDB)
+isfinder_cache: null
