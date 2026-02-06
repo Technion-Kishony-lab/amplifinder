@@ -15,7 +15,6 @@ from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.data_types import Orientation, RecordTypedDf, RefTn, Genome
 from amplifinder.steps.base import OutputStep
-from amplifinder.logger import logger
 
 
 # Base class for TN location steps

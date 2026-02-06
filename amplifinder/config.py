@@ -202,12 +202,12 @@ class Config:
     def validate_args(self) -> list[str]:
         """Validate required arguments for this config."""
         errors: list[str] = []
-        
+
         if self.ref_name is None:
             errors.append("ref_name is required")
         if self.iso_fastq_path is None:
             errors.append("iso_fastq_path is required")
-        
+
         return errors
 
     def validate_paths(self) -> list[str]:

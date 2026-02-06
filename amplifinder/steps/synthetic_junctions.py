@@ -46,9 +46,9 @@ class RudimentaryJunctionValues(NamedTuple):
     tn_scaf: str
     tn_side_left_amp_side: Terminal
     flank: int
-    
+
     # chromosome arm start positions are indicated as offsets from the amplicon
-    # 0 is precisly flanking the amplicon 
+    # 0 is precisly flanking the amplicon
     # ~~~~~~~~~~~~~~~~||===================...
     #            <----0
     chr_left_pos_offset: int
@@ -81,7 +81,8 @@ class RudimentaryJunctionValues(NamedTuple):
             tn_left_arm, tn_right_arm = tn_start_arm, tn_end_arm
 
         return _build_7_junctions_from_8_arms(
-            chr_left_arm_for_tn, chr_right_arm_for_tn, chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
+            chr_left_arm_for_tn, chr_right_arm_for_tn, chr_left_arm, chr_right_arm,
+            amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
 
     def get_name(self) -> str:
         side_str = "S" if self.tn_side_left_amp_side == Terminal.START else "E"
@@ -160,7 +161,8 @@ def create_synthetic_junctions_and_name(
 
     # Create Junction objects for each junction type
     direct_jc = _build_7_junctions_from_8_arms(
-        chr_left_arm_for_tn, chr_right_arm_for_tn, chr_left_arm, chr_right_arm, amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
+        chr_left_arm_for_tn, chr_right_arm_for_tn, chr_left_arm, chr_right_arm,
+        amp_left_arm, amp_right_arm, tn_left_arm, tn_right_arm)
 
     # Create rudimentary junction values for naming
     tn_side_left_amp_side = tn_side_left_amp.side

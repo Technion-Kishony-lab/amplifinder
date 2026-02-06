@@ -46,11 +46,11 @@ class RunResult:
     start_time: datetime
     end_time: datetime
     error: Optional[str] = None
-    
+
     @property
     def exit_code(self) -> int:
         return 0 if self.error is None else 1
-    
+
     def duration_seconds(self) -> int:
         """Calculate duration in seconds."""
         return int((self.end_time - self.start_time).total_seconds())
@@ -82,15 +82,15 @@ async def _run_one_batch(
     async with semaphore:
         start_time = datetime.now()
         click.echo(f"[{run_id}] Starting at {start_time.strftime('%H:%M:%S')}")
-        
+
         # Run in executor (thread pool or process pool)
         loop = asyncio.get_event_loop()
         error = await loop.run_in_executor(
             executor, _execute_pipeline, config, breseq_only, verbose
         )
-        
+
         end_time = datetime.now()
-        
+
         return RunResult(
             row_idx=run_idx,
             run_id=run_id,
@@ -261,7 +261,7 @@ def main(
             if not config_file.exists():
                 raise FileNotFoundError(f"Config file not found: {config_file}")
             file_config_kwargs = load_config(config_file)
-        
+
         # Collect CLI arguments
         cli_config_kwargs = {
             "iso_fastq_path": iso_fastq_path,
@@ -277,10 +277,10 @@ def main(
             "use_isfinder": use_isfinder,
             "create_plots": create_plots,
         }
-        
+
         # Merge CLI args and config file once (priority: cli_args > file_config > defaults)
         config_kwargs = merge_config(file_config_kwargs, cli_config_kwargs)
-            
+
         if batch_csv is None:
             # single mode
             if use_processes:
@@ -362,31 +362,31 @@ def _run_batch(
     """Run AmpliFinder for multiple inputs from CSV."""
     if not batch_csv.exists():
         raise FileNotFoundError(f"CSV file not found: {batch_csv}")
-    
+
     # Set default max_parallel
     max_parallel = max_parallel or MAX_PARALLEL_DEFAULT
-    
+
     # Read CSV rows
     with batch_csv.open(newline="") as f:
         reader = csv.DictReader(f)
         rows = list(reader)
-    
+
     if not rows:
         raise ValueError("No runs found in CSV.")
 
     # Build configs for each row
     configs: List[Tuple[int, str, Config]] = []
     all_errors: List[str] = []
-    
+
     for idx, row in enumerate(rows, start=1):
         try:
             # Extract and convert row values (Config.__post_init__ handles Path conversions)
             row_args = {k: v for k, v in row.items() if v and v.strip()}
             convert_csv_row_types(row_args, Config)
-            
+
             # Merge: row_args > base_config (which is already cli_args > file_config > defaults)
             merged = merge_config(base_config_kwargs, row_args)
-            
+
             config = Config(**merged)
             arg_errors = config.validate_args()
             path_errors = config.validate_paths()
@@ -423,7 +423,7 @@ def _run_batch(
 
     # Run all jobs concurrently
     batch_start_time = datetime.now()
-    
+
     async def run_all():
         semaphore = asyncio.Semaphore(max_parallel)
         tasks = []
@@ -433,11 +433,11 @@ def _run_batch(
                     _run_one_batch(run_idx, run_id, config, breseq_only, verbose, semaphore, executor)
                 )
             )
-        
+
         output_path = batch_output or Path("run_status.csv")
         output_path.parent.mkdir(parents=True, exist_ok=True)
         results: List[RunResult] = []
-        
+
         with output_path.open("w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(
                 f,
@@ -447,11 +447,11 @@ def _run_batch(
                 ],
             )
             writer.writeheader()
-            
+
             for task in asyncio.as_completed(tasks):
                 result: RunResult = await task
                 results.append(result)
-                
+
                 writer.writerow({
                     "run_id": result.run_id,
                     "row_index": result.row_idx,
@@ -467,9 +467,9 @@ def _run_batch(
                 })
                 f.flush()
                 click.echo(f"[{result.run_id}] exit {result.exit_code} ({result.duration_seconds()}s)")
-        
+
         return results
-    
+
     try:
         results = asyncio.run(run_all())
         batch_end_time = datetime.now()

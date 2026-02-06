@@ -74,7 +74,10 @@ class AlignReadsToJunctionsStep(Step):
                 if bam_path.exists():
                     logger.print_progress("file exists, skipping")
                     continue
-                min_qlen_int = int(self.read_length / (1 + self.bowtie_params.bowtie_len_tolerance)) if self.bowtie_params.bowtie_len_tolerance is not None else None
+                if self.bowtie_params.bowtie_len_tolerance is not None:
+                    min_qlen_int = int(self.read_length / (1 + self.bowtie_params.bowtie_len_tolerance))
+                else:
+                    min_qlen_int = None
                 align_reads_to_fasta(
                     ref_fasta=junctions_fasta,
                     fastq_path=self.fastq_path,

@@ -14,6 +14,7 @@ REPORT_CATEGORIES = (
     Architecture.HEMI_FLANKED_LEFT,
     Architecture.HEMI_FLANKED_RIGHT,
     Architecture.UNFLANKED,
+    Architecture.TRANSPOSITION,
 )
 
 

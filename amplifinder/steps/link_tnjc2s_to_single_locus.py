@@ -21,7 +21,9 @@ REPORT_CATEGORIES = (
 )
 
 
-def _issue_debug_message_if_multi_single_locus_match(tnjc2: SingleLocusLinkedTnJc2, matches: list[TnJc2AndSide]) -> None:
+def _issue_debug_message_if_multi_single_locus_match(
+    tnjc2: SingleLocusLinkedTnJc2, matches: list[TnJc2AndSide],
+) -> None:
     if len(matches) > 1:
         match_details = "\n  ".join(f"{m.tnjc2} ({m.side.name})" for m in matches)
         logger.warning(
