@@ -21,9 +21,14 @@ REPORT_CATEGORIES = (
 )
 
 
-def _issue_debug_message_if_multi_single_locus_match(tnjc2, matches):
+def _issue_debug_message_if_multi_single_locus_match(tnjc2: SingleLocusLinkedTnJc2, matches: list[TnJc2AndSide]) -> None:
     if len(matches) > 1:
-        logger.debug_message(f"tnjc: {tnjc2}\nmacthes: {matches}", "tnjc2_matches_multiple_single_locus", 1)
+        match_details = "\n  ".join(f"{m.tnjc2} ({m.side.name})" for m in matches)
+        logger.warning(
+            f"TnJc2 matches {len(matches)} single-locus pairs (expected at most 1):\n"
+            f"  tnjc2: {tnjc2}\n"
+            f"  matches:\n  {match_details}"
+        )
 
 
 class LinkTnJc2ToSingleLocusPairsStep(RecordTypedDfStep[SingleLocusLinkedTnJc2]):
