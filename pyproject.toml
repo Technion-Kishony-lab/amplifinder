@@ -7,7 +7,7 @@ name = "amplifinder"
 version = "1.0.0"
 description = "Detect IS-mediated gene amplifications from WGS data"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [{name = "Kishony Lab"}]
 keywords = ["bioinformatics", "genomics", "amplification", "IS-elements"]
@@ -16,9 +16,8 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
     "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
 ]
 
 dependencies = [
