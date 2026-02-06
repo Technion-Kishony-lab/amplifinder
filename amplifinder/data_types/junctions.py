@@ -43,15 +43,15 @@ class JcArm(Record):
             dir=self.dir,
             flank=self.flank
         )
-    
+
     def get_distance_to(self, pos: int) -> int:
         """Get distance to a position.
         ~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~
-                           |----arm----> 
-                           |        | 
+                           |----arm---->
+                           |        |
                          start     pos
                            |--dist->|
-        return: 
+        return:
              0 if pos is the arm's start position
             >0 if pos is further in the arm's direction
             <0 if pos is further in the opposite direction
@@ -61,9 +61,9 @@ class JcArm(Record):
     def mirror(self) -> JcArm:
         """Create a mirror arm at the adjacent position.
         ~~~~~~~~~~~~~~~~~~~|~~~~~~~~~~~~~
-                           |------> 
+                           |------>
                             self
-                    <------|                  
+                    <------|
                      mirror
         """
         return JcArm(

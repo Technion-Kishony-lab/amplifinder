@@ -51,7 +51,10 @@ class Pipeline:
         log_file = self.config.iso_run_dir / "run_log.txt"
         warnings_file = self.config.iso_run_dir / "warnings.txt"
         debug_file = self.config.iso_run_dir / "debug.txt"
-        setup_logger(log_path=log_file, warnings_path=warnings_file, debug_path=debug_file, use_colors=True, verbose=self.verbose)
+        setup_logger(
+            log_path=log_file, warnings_path=warnings_file, debug_path=debug_file,
+            use_colors=True, verbose=self.verbose,
+        )
 
     def _calc_read_lengths(self) -> ReadLengths:
         """Calculate read lengths and junction lengths."""

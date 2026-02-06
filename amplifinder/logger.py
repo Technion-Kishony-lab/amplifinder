@@ -38,7 +38,7 @@ class Colors:
 
 class SimpleLogger:
     """Simple logger that writes to screen and/or file.
-    
+
     Uses thread-local storage for file paths so each thread in batch mode
     writes to its own log file without cross-contamination.
     """
@@ -51,11 +51,12 @@ class SimpleLogger:
     }
 
     CATEGORIES_TO_COUNTS: dict[str, int] = defaultdict(int)
-    
+
     # Track console-printed messages for deduplication (batch mode)
     _console_printed: set[str] = set()
 
-    def __init__(self, log_file: Optional[Path] = None, warnings_file: Optional[Path] = None, debug_file: Optional[Path] = None, use_colors: bool = True, verbose: bool = False):
+    def __init__(self, log_file: Optional[Path] = None, warnings_file: Optional[Path] = None,
+                 debug_file: Optional[Path] = None, use_colors: bool = True, verbose: bool = False):
         """Initialize logger.
 
         Args:
@@ -67,14 +68,14 @@ class SimpleLogger:
         """
         # Thread-local storage for per-thread file paths
         self._local = threading.local()
-        
+
         if log_file:
             log_file = ensure_parent_dir(log_file)
         if warnings_file:
             warnings_file = ensure_parent_dir(warnings_file)
         if debug_file:
             debug_file = ensure_parent_dir(debug_file)
-        
+
         # Store as defaults (used when no thread-local override)
         self._default_log_file = Path(log_file) if log_file else None
         self._default_warnings_file = Path(warnings_file) if warnings_file else None
@@ -149,7 +150,7 @@ class SimpleLogger:
 
             # Override entire message color
             logger.info("Important message", color="bold magenta")
-            
+
             # Deduplicated console output (batch mode)
             logger.warning("Genome issue", console_once="genome_U00096")
         """
@@ -159,7 +160,7 @@ class SimpleLogger:
         # unless force_screen is True
         if not force_screen and not self.verbose and level in ("INFO", "DEBUG"):
             to_screen = False
-        
+
         # Console deduplication: skip console if already printed
         if console_once and to_screen:
             if console_once in self._console_printed:
@@ -181,19 +182,19 @@ class SimpleLogger:
         is_debug = level == "DEBUG" and self.debug_file
         if to_file and (self.log_file or is_warning or is_debug):
             file_msg = self._format_message(msg, level, timestamp, use_colors=False) + end
-            
+
             # Write to main log file
             if self.log_file:
                 with open(self.log_file, 'a') as f:
                     f.write(file_msg)
                     f.flush()
-            
+
             # Write warnings/errors to separate warnings file
             if is_warning:
                 with open(self.warnings_file, 'a') as f:
                     f.write(file_msg)
                     f.flush()
-            
+
             # Write debug messages to separate debug file
             if is_debug:
                 with open(self.debug_file, 'a') as f:
@@ -288,14 +289,16 @@ class SimpleLogger:
         """Set verbose mode (True = show INFO/DEBUG, False = only WARNING/ERROR)."""
         self.verbose = verbose
 
-    def reconfigure(self, log_file: Optional[Path] = None, warnings_file: Optional[Path] = None, debug_file: Optional[Path] = None, use_colors: bool = True, verbose: bool = False) -> None:
+    def reconfigure(self, log_file: Optional[Path] = None, warnings_file: Optional[Path] = None,
+                    debug_file: Optional[Path] = None, use_colors: bool = True,
+                    verbose: bool = False) -> None:
         """Reconfigure logger for the current thread (thread-safe for batch mode)."""
         if log_file:
             log_file = ensure_parent_dir(log_file)
-        
+
         if warnings_file:
             warnings_file = ensure_parent_dir(warnings_file)
-        
+
         if debug_file:
             debug_file = ensure_parent_dir(debug_file)
 
@@ -320,33 +323,33 @@ class SimpleLogger:
                       folder: Optional[Path] = None,
                       max_prints: Optional[int] = 1):
         """Debug message with category-based console deduplication.
-        
+
         Args:
             message: Debug message to log
             category: Category for grouping/deduplication
             folder: Deprecated - category files now written to debug.txt
-            max_prints: Max console prints per category (None = unlimited). 
+            max_prints: Max console prints per category (None = unlimited).
                        Always writes to debug.txt regardless of limit.
         """
         if not DEBUG:
             return
-        
+
         # Track counts per category for console limiting
         if category is None:
             count = 0
         else:
             count = self.CATEGORIES_TO_COUNTS[category]
             self.CATEGORIES_TO_COUNTS[category] += 1
-        
+
         # Determine if should print to console based on max_prints
         should_print_console = (max_prints is None or count < max_prints)
-        
+
         # Format message with category header
         full_msg = f"DEBUG[{category}]\n{message}" if category else message
-        
+
         # Use standard debug() - always writes to debug.txt, conditional console
         self.debug(full_msg, to_screen=should_print_console)
-        
+
         # Legacy folder support (deprecated, debug.txt is preferred)
         if folder and category:
             filepath = folder / (category + ".txt")
@@ -358,7 +361,9 @@ class SimpleLogger:
 _logger: Optional[SimpleLogger] = None
 
 
-def setup_logger(log_path: Optional[Path] = None, warnings_path: Optional[Path] = None, debug_path: Optional[Path] = None, use_colors: bool = True, verbose: bool = False) -> SimpleLogger:
+def setup_logger(log_path: Optional[Path] = None, warnings_path: Optional[Path] = None,
+                 debug_path: Optional[Path] = None, use_colors: bool = True,
+                 verbose: bool = False) -> SimpleLogger:
     """Set up global logger (reconfigures existing instance).
 
     Args:
@@ -372,7 +377,10 @@ def setup_logger(log_path: Optional[Path] = None, warnings_path: Optional[Path] 
         Configured logger instance
     """
     logger = get_logger()
-    logger.reconfigure(log_file=log_path, warnings_file=warnings_path, debug_file=debug_path, use_colors=use_colors, verbose=verbose)
+    logger.reconfigure(
+        log_file=log_path, warnings_file=warnings_path, debug_file=debug_path,
+        use_colors=use_colors, verbose=verbose,
+    )
     return logger
 
 

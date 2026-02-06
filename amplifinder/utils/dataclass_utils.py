@@ -13,14 +13,14 @@ NONE_VALUES = ("", "na", "none", "null")
 
 def str_to_bool(value: str) -> Optional[bool]:
     """Convert string to boolean.
-    
+
     Args:
         value: String value to convert
-        
+
     Returns:
-        True if value is in TRUE_VALUES, False if value is in FALSE_VALUES, 
+        True if value is in TRUE_VALUES, False if value is in FALSE_VALUES,
         None if value is in NONE_VALUES
-        
+
     Raises:
         ValueError: If value is not a recognized boolean string
     """
@@ -36,10 +36,10 @@ def str_to_bool(value: str) -> Optional[bool]:
 
 def get_base_type(field_type: Type) -> Optional[Type]:
     """Extract the base type from a type annotation, unwrapping Optional.
-    
+
     Args:
         field_type: Type annotation (e.g., int, Optional[int], str)
-        
+
     Returns:
         Base type (e.g., int, str, bool) or None if cannot determine
     """
@@ -50,21 +50,21 @@ def get_base_type(field_type: Type) -> Optional[Type]:
         # For Optional[T], args is (T, type(None))
         if len(args) == 2 and type(None) in args:
             return next(arg for arg in args if arg is not type(None))
-    
+
     # Direct type like int, str, bool
     return field_type if field_type in (int, float, bool, str) else None
 
 
 def convert_value(value: str, target_type: Type) -> Any:
     """Convert a string value to the target type.
-    
+
     Args:
         value: String value to convert
         target_type: Target type (int, float, bool, str, etc.)
-        
+
     Returns:
         Converted value
-        
+
     Raises:
         ValueError: If conversion fails
     """
@@ -77,10 +77,10 @@ def convert_value(value: str, target_type: Type) -> Any:
 
 def get_field_types(cls: Type[T]) -> Dict[str, Type]:
     """Get a mapping of field names to their base types for a dataclass.
-    
+
     Args:
         cls: Dataclass type to inspect
-        
+
     Returns:
         Dictionary mapping field names to base types (unwrapped from Optional)
     """
@@ -94,16 +94,16 @@ def get_field_types(cls: Type[T]) -> Dict[str, Type]:
 
 def convert_csv_row_types(row_args: Dict[str, Any], cls: Type[T]) -> None:
     """Convert CSV string values to appropriate types for a dataclass.
-    
+
     Automatically converts string values to int, float, bool, etc. based on
     the dataclass field types. Modifies row_args in place.
-    
+
     Args:
         row_args: Dictionary of field names to values (from CSV row)
         cls: Dataclass type to use for type information
     """
     field_types = get_field_types(cls)
-    
+
     # Convert string values to appropriate types
     for key, value in list(row_args.items()):
         if key in field_types and isinstance(value, str):
