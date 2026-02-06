@@ -85,7 +85,11 @@ def compare_tn_locations(
             with open(output_file, 'w') as f:
                 for diff in diffs:
                     f.write(diff + '\n')
-            logger.warning(f"TN location differences found between {name1} and {name2}. See:\n{output_file}\n")
+            # Console deduplication for batch mode (always writes to warnings.txt)
+            logger.warning(
+                f"TN location differences found between {name1} and {name2}. See:\n{output_file}\n",
+                console_once=str(output_file)
+            )
         else:
             # Log each diff as a separate warning for better visibility in tests/logs
             for diff in diffs:
