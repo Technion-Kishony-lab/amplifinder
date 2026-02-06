@@ -69,6 +69,7 @@ class JcCallParams:
     pos_threshold_rel: float = field(default=0.4, metadata={
         "comment": "non-stochastic relative fluctuation margin"})
 
+
 def _normalize_alignment_params(cfg: dict[str, Any]) -> None:
     """Move legacy scalar alignment params into param objects."""
     def _collect(keys: tuple[str, ...]) -> dict[str, Any]:

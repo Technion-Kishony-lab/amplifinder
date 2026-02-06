@@ -46,9 +46,9 @@ def print_timer(start_msg: str, end_msg: Optional[str] = None, time_format: str 
             build_index()
         # Output: "Building index ... \n12.3 sec\n"
     """
-    end_msg = end_msg or ""
+    end_msg = end_msg or "\n"
     if should_log and seperate_prints:
-        logger.info(start_msg, to_file=to_file)
+        logger.info(start_msg, to_file=to_file, end="")
     result = TimerResult()
     start = perf_counter()
     try:
@@ -59,5 +59,5 @@ def print_timer(start_msg: str, end_msg: Optional[str] = None, time_format: str 
         if should_log:
             prefix = "" if seperate_prints else start_msg
             time_str = time_format.format(elapsed)
-            msg = f"{prefix}{time_str}{end_msg}"
-            logger.info(msg, to_file=to_file)
+            msg = f"{prefix}{time_str}"
+            logger.info(msg, to_file=to_file, end=end_msg)
