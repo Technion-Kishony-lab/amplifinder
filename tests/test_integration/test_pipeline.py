@@ -193,8 +193,8 @@ class TestPipeline(Pipeline):
 
         return result
 
-    def _calc_amplicon_coverage(self, tnjc2, genome, iso_output):
-        result = super()._calc_amplicon_coverage(tnjc2, genome, iso_output)
+    def _calc_amplicon_coverage(self, linked_tnjc2s, iso_output):
+        result = super()._calc_amplicon_coverage(linked_tnjc2s, iso_output)
         return result
 
     def _align_reads(
@@ -202,6 +202,7 @@ class TestPipeline(Pipeline):
         syn_tnjc2s,
         iso_output,
         anc_output,
+        read_lengths,
     ):
         # Identify target candidate and force re-alignment by removing existing BAM
         matching_candidate = _select_target_candidate(syn_tnjc2s)
@@ -214,7 +215,7 @@ class TestPipeline(Pipeline):
             remove_file_or_dir(python_bam.with_suffix(".linearindex"))
 
         # Run parent method and capture bowtie command
-        super()._align_reads(syn_tnjc2s, iso_output, anc_output)
+        super()._align_reads(syn_tnjc2s, iso_output, anc_output, read_lengths)
 
         # Compare BAM files with MATLAB for each candidate
         matlab_candidate_dir = self.matlab_output_dir / MATLAB_CANDIDATE_DIRNAME
@@ -238,9 +239,11 @@ class TestPipeline(Pipeline):
         # Enable DEBUG to ensure Python FASTA files are written for comparison
         from amplifinder.env import DEBUG
         with DEBUG.temp_set(True):
-            analyzed = super()._analyze_alignments(
+            result = super()._analyze_alignments(
                 synjct_tnjc2s, iso_output, anc_output, read_lengths
             )
+
+        analyzed, iso_alignment_cache, anc_alignment_cache = result
 
         matlab_alignment_dir = self.matlab_output_dir / MATLAB_CANDIDATE_DIRNAME / "alignment"
 
@@ -262,7 +265,7 @@ class TestPipeline(Pipeline):
         matlab_span = _load_counts("bamreads__nmbr_green_reads.csv")
 
         if matlab_left is None or matlab_right is None or matlab_span is None:
-            return analyzed
+            return result
 
         target = _select_target_candidate(analyzed)
         covs = target.jc_covs
@@ -316,11 +319,10 @@ class TestPipeline(Pipeline):
             ]
             print_color("\nCompared read counts matlab (top row) vs python (bottom row):\n" + "\n\n".join(msg))
 
-        print_color("✓ Junction read counts (left/spanning/right) match MATLAB")
-        return analyzed
+        return result
 
-    def _export(self, classified, linked, genome, iso_output):
-        super()._export(classified, linked, genome, iso_output)
+    def _export(self, classified, linked, ref_tns, iso_output, read_lengths):
+        super()._export(classified, linked, ref_tns, iso_output, read_lengths)
 
         # Note: Final comparison done in test methods
         # Skipping intermediate export comparison here
