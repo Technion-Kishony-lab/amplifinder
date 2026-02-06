@@ -235,7 +235,7 @@ def test_compare_junction_coverage_matlab_python(isolate_srr25242877, tmp_path):
     min_overlap_len = 12
 
     python_output_dir = ensure_dir(
-        Path(__file__).parent / "test_outputs" / "integration" /
+        Path(__file__).parent.parent / "test_outputs" / "integration" /
         "matlab_compare" / isolate_srr25242877["iso_name"]
     )
     python_bam = _ensure_python_bam(
