@@ -42,12 +42,40 @@ def load_matlab_read_buckets(matlab_alignment_dir: Path) -> dict[str, tuple[int,
 
 
 def load_python_read_buckets(python_alignment_dir: Path) -> dict[str, tuple[int, str]]:
-    """Load Python FASTA files and map read_id/index to (jct_num, side).
+    """Load Python .bam_indices files and map read_id to (jct_num, side).
 
-    Returns dict mapping "read_name/index" -> (jct_num, side)
+    Reads files written by write_junction_read_bam_indices (DEBUG mode).
+    Format per line: read_id\\tstart\\tend\\tis_reverse\\tbam_index
+
+    Returns dict mapping "read_name/bam_index" -> (jct_num, side)
     where side is "left", "right", or "span"
     """
-    return load_read_buckets_from_fasta(python_alignment_dir, file_ext="fasta")
+    # Map ReadType value names to the bucket side names used by comparison
+    _SIDE_MAP = {
+        "left": "left",
+        "left_marginal": "left",
+        "right": "right",
+        "right_marginal": "right",
+        "spanning": "span",
+        "paired": "span",
+    }
+    buckets: dict[str, tuple[int, str]] = {}
+    for j in range(1, 8):
+        for read_type_value, side in _SIDE_MAP.items():
+            indices_path = python_alignment_dir / f"reads_jct_{j}_{read_type_value}.bam_indices"
+            if not indices_path.exists():
+                continue
+            with open(indices_path, "r") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    parts = line.split("\t")
+                    read_id = parts[0]
+                    bam_index = parts[4]
+                    key = f"{read_id}/{bam_index}"
+                    buckets[key] = (j, side)
+    return buckets
 
 
 def create_jct_comparison_table(
