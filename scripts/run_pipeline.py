@@ -7,7 +7,10 @@ from amplifinder.config import Config, load_config
 from amplifinder.pipeline import Pipeline
 
 # Edit this to point to your config file
-CONFIG_FILE = Path("/zdata/user-data/rkishony/amplifinder/examples/run_all/run_config.yaml")
+CONFIG_FILE = Path(
+    "/zdata/user-data/rkishony/amplifinder/examples/run_all/output/"
+    "U00096/SRR5182940/SRR5182911/run_config.yaml"
+)
 
 # Load config
 config_dict = load_config(CONFIG_FILE)

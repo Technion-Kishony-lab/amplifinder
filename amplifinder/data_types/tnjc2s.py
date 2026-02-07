@@ -11,9 +11,10 @@ from amplifinder.data_types.basic_enums import Side, Orientation
 from amplifinder.data_types.events import BaseEvent, Architecture, EventDescriptor
 from amplifinder.data_types.jc_types import JcCall, JunctionType
 from amplifinder.data_types.read_types import JunctionReadCounts
-from amplifinder.data_types.ref_tn import TnId, OffsetRefTnSide, TnJunction
+from amplifinder.data_types.ref_tn import TnId, OffsetRefTnSide, TnJunction, RefTn
 from amplifinder.data_types.scaffold import SeqScaffold, SeqSegmentScaffold
 from amplifinder.data_types.junctions import JcArm
+from amplifinder.data_types.rudimentary_junctions import RudimentaryJunctionValues
 
 
 class RawTnJc2(Record):
@@ -98,14 +99,19 @@ class RawTnJc2(Record):
         return self.tnjc_right.pos2
 
     @property
-    def tn_ids(self) -> List[int]:
-        """Matching TN element IDs."""
-        return [tn_side_S.tn_id for tn_side_S, tn_side_E in self._find_matching_tn_sides()]
-
-    @property
     def tn_offsets(self) -> List[tuple[int, int]]:
         """TN offsets, one per tn_id."""
         return [(tn_side_S.offset, tn_side_E.offset) for tn_side_S, tn_side_E in self._find_matching_tn_sides()]
+
+    @property
+    def tn_ids(self) -> List[int]:
+        """Matching TN element IDs (for CSV export)."""
+        return [ref_tn.tn_id for ref_tn in self.ref_tns]
+
+    @property
+    def ref_tns(self) -> List[RefTn]:
+        """Get list of matching RefTn objects."""
+        return [tn_side_S.ref_tn for tn_side_S, tn_side_E in self._find_matching_tn_sides()]
 
     @property
     def amplicon_length(self) -> int:
@@ -211,56 +217,63 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
             return Architecture.UNFLANKED
 
     @property
-    def chosen_tn_id(self) -> Optional[TnId]:
-        """Selected TN for analysis."""
+    def chosen_tn(self) -> Optional[RefTn]:
+        """Selected TN for analysis (returns RefTn object)."""
 
         # TODO: Is the logic below correct?
 
-        # For each junction, get the reference TN side ID if it it is a reference
+        # For each junction, get the reference TN side if it is a reference
         # TN junction (None for breseq junctions)
-        ref_tn_id_left = self.tnjc_left.ref_tn_side.tn_id if self.tnjc_left.is_ref_tn_junction() else None
-        ref_tn_id_right = self.tnjc_right.ref_tn_side.tn_id if self.tnjc_right.is_ref_tn_junction() else None
+        ref_tn_left = self.tnjc_left.ref_tn_side.ref_tn if self.tnjc_left.is_ref_tn_junction() else None
+        ref_tn_right = self.tnjc_right.ref_tn_side.ref_tn if self.tnjc_right.is_ref_tn_junction() else None
 
-        if ref_tn_id_left is None and ref_tn_id_right is not None:
+        if ref_tn_left is None and ref_tn_right is not None:
             # The right junction is a reference TN junction. Left is de novo.
             # We assume that the chosen TN is the one on the right side (i.e. the reference TN)
-            return ref_tn_id_right
+            return ref_tn_right
 
-        if ref_tn_id_left is not None and ref_tn_id_right is None:
+        if ref_tn_left is not None and ref_tn_right is None:
             # The left junction is a reference TN junction. Right is de novo.
             # We assume that the chosen TN is the one on the left side (i.e. the reference TN)
-            return ref_tn_id_left
+            return ref_tn_left
 
-        if ref_tn_id_left is not None and ref_tn_id_right is not None:
+        if ref_tn_left is not None and ref_tn_right is not None:
             # Both junctions are sides of a reference TN
             # We are looking at an amplification between two reference TNs
             # We assume they are very similar, and arbitrarily choose one of them (left)
-            return ref_tn_id_left
+            return ref_tn_left
 
         # Intersect with matching left/right single-locus tnjc2 if exists
-        tn_id_set = set(self.tn_ids)  # Start with TN IDs from this tnjc2
+        ref_tn_set = set(self.ref_tns)  # Start with RefTn objects from this tnjc2
+
         if self.single_locus_tnjc2_and_side_matching_left is not None:
             # Intersect with matching left single-locus tnjc2
-            tn_id_set &= set(self.single_locus_tnjc2_and_side_matching_left.tnjc2.tn_ids)
+            ref_tn_set &= set(self.single_locus_tnjc2_and_side_matching_left.tnjc2.ref_tns)
         if self.single_locus_tnjc2_and_side_matching_right is not None:
             # Intersect with matching right single-locus tnjc2
-            tn_id_set &= set(self.single_locus_tnjc2_and_side_matching_right.tnjc2.tn_ids)
+            ref_tn_set &= set(self.single_locus_tnjc2_and_side_matching_right.tnjc2.ref_tns)
 
         # If we have matches, return one of them arbitrarily
-        if tn_id_set:
-            return tn_id_set.pop()  # Arbitrarily choose one of the matches
+        if ref_tn_set:
+            return ref_tn_set.pop()  # Arbitrarily choose one of the matches
 
         # Otherwise return None (no matches)
         return None
 
+    @property
+    def chosen_tn_id(self) -> Optional[TnId]:
+        """Selected TN ID (for CSV export)."""
+        chosen = self.chosen_tn
+        return chosen.tn_id if chosen else None
+
     def get_sides_of_chosen_tn(self) -> tuple[Optional[OffsetRefTnSide], Optional[OffsetRefTnSide]]:
         """Get sides of chosen TN (left and right amplicon sides)."""
-        chosen_id = self.chosen_tn_id
-        if chosen_id is None:
+        chosen = self.chosen_tn
+        if chosen is None:
             raise ValueError("This tnjc2 does not have a chosen tn")
         matching_tns = self._find_matching_tn_sides()
         for tn_side_left_amplicon, tn_side_right_amplicon in matching_tns:
-            if tn_side_left_amplicon.tn_id == chosen_id:
+            if tn_side_left_amplicon.ref_tn == chosen:
                 return tn_side_left_amplicon, tn_side_right_amplicon
         assert False
 
@@ -324,13 +337,29 @@ class CoveredTnJc2(SingleLocusLinkedTnJc2):
 
 
 class SynJctsTnJc2(CoveredTnJc2):
-    """Candidate with synthetic junction folder names."""
+    """Candidate with synthetic junction folder names and TN position information."""
     NAME: ClassVar[str] = "Junction Pairs with Synthetic Junctions"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
         'analysis_dir', 'analysis_dir_anc'
     ]
-    analysis_dir: str
-    analysis_dir_anc: Optional[str] = None
+
+    # Junction parameters containing all information needed for synthetic junctions and plotting
+    rudimentary_junction_values: Optional[RudimentaryJunctionValues] = None
+    anc_rudimentary_junction_values: Optional[RudimentaryJunctionValues] = None
+
+    @property
+    def analysis_dir(self) -> str:
+        """Analysis directory name derived from rudimentary junction values."""
+        if self.rudimentary_junction_values is None:
+            raise ValueError("rudimentary_junction_values not set")
+        return self.rudimentary_junction_values.get_name()
+
+    @property
+    def analysis_dir_anc(self) -> Optional[str]:
+        """Ancestor analysis directory name derived from rudimentary junction values."""
+        if self.anc_rudimentary_junction_values is None:
+            return None
+        return self.anc_rudimentary_junction_values.get_name()
 
     def analysis_dir_name(self, *, is_ancestor: bool = False) -> str:
         """Return the analysis directory name (ancestor-aware)."""

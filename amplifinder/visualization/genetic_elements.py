@@ -61,7 +61,7 @@ GENETIC_ELEMENT_TO_ARROW_PARAMS = {
 
 def draw_horizontal_arrow(ax, y, x1, x2, h_pixels, color,
                           head: ArrowHead | str = ArrowHead.BLUNT, tail: ArrowHead | str = ArrowHead.BLUNT,
-                          head_width_ratio: float = 0.5, tail_width_ratio: float = 0.5):
+                          head_width_ratio: float = 0.5, tail_width_ratio: float = 0.5, zorder: int = 2):
     """Draw a horizontal arrow.
 
     Args:
@@ -74,6 +74,7 @@ def draw_horizontal_arrow(ax, y, x1, x2, h_pixels, color,
         head: arrow head style at x2 end
         tail: arrow head style at x1 end (default BLUNT)
         arrow_width_ratio: arrow width as fraction of element height (default 0.5)
+        zorder: z-order for layering (default 2, higher than connector lines)
     """
     head = ArrowHead(head) if isinstance(head, str) else head
     tail = ArrowHead(tail) if isinstance(tail, str) else tail
@@ -96,7 +97,7 @@ def draw_horizontal_arrow(ax, y, x1, x2, h_pixels, color,
     coords2 = coords2 * np.array([[+h_in_x_data * head_width_ratio * dir, h_in_y_data]]) + np.array([[x2, y]])
 
     vertices = np.vstack([coords1, coords2])
-    polygon = Polygon(vertices, facecolor=color, edgecolor='black', linewidth=0.5)
+    polygon = Polygon(vertices, facecolor=color, edgecolor='black', linewidth=0.5, zorder=zorder)
     ax.add_patch(polygon)
 
 
@@ -112,6 +113,7 @@ def draw_genetic_element(ax, y, x1, x2, element_type: Element, h_pixels=10,
         element_type: type of genetic element
         wave_tail: if True, add a wave to the tail
         wave_head: if True, add a wave to the head
+        **kwargs: additional arguments passed to draw_horizontal_arrow (e.g., zorder)
     """
     params = GENETIC_ELEMENT_TO_ARROW_PARAMS[element_type].copy()
     if wave_tail:

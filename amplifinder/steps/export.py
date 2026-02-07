@@ -6,7 +6,7 @@ from dataclasses import asdict
 import yaml
 import json
 
-from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, CoveredTnJc2, RefTn, BaseEvent
+from amplifinder.data_types import RecordTypedDf, ClassifiedTnJc2, CoveredTnJc2, BaseEvent
 from amplifinder.steps.base import OutputStep
 from amplifinder.steps.read_length import ReadLengths
 from amplifinder.utils.json_utils import compact_short_lists
@@ -24,7 +24,6 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
         ref_name: str,
         iso_name: str,
         read_lengths: ReadLengths,
-        ref_tns: RecordTypedDf[RefTn],
         anc_name: Optional[str] = None,
         force: Optional[bool] = None,
     ):
@@ -34,7 +33,6 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
         self.iso_name = iso_name
         self.anc_name = anc_name
         self.read_lengths = read_lengths
-        self.ref_tns = ref_tns
 
         self.yaml_file = output_dir / "summary.yaml"
         self.json_file = output_dir / "summary.json"
@@ -42,9 +40,9 @@ class ExportTnJc2Step(OutputStep[Dict[str, Any]]):
         super().__init__(output_files=[self.yaml_file, self.json_file], force=force)
 
     def _tn_ids_to_names(self, tnjc2: CoveredTnJc2 | ClassifiedTnJc2) -> tuple[list[str], Optional[str]]:
-        """Map TN IDs to names."""
-        tn_names = [self.ref_tns.df.loc[tn_id, 'tn_name'] for tn_id in tnjc2.tn_ids]
-        chosen_tn_name = self.ref_tns.df.loc[tnjc2.chosen_tn_id, 'tn_name'] if tnjc2.chosen_tn_id else None
+        """Map TN IDs to names using RefTn objects."""
+        tn_names = [ref_tn.tn_name for ref_tn in tnjc2.ref_tns]
+        chosen_tn_name = tnjc2.chosen_tn.tn_name if tnjc2.chosen_tn else None
         return tn_names, chosen_tn_name
 
     def _calculate_output(self) -> Dict[str, Any]:

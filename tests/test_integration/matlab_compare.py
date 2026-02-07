@@ -73,8 +73,8 @@ def convert_python_records_to_standard(
     """
     data = []
     for rec in records:
-        # Map tn_ids to tn_names (IS element names)
-        is_names = [ref_tns[tid].tn_name for tid in rec.tn_ids if tid in ref_tns]
+        # Get IS element names from RefTn objects
+        is_names = [ref_tn.tn_name for ref_tn in rec.ref_tns]
 
         data.append({
             'scaf': rec.scaf,

@@ -10,8 +10,7 @@ from amplifinder.steps.base import Step
 from amplifinder.steps.read_length import ReadLengths
 from amplifinder.steps.jct_coverage.alignment_data import AlignmentData
 from amplifinder.tools.breseq import load_breseq_coverage
-from amplifinder.visualization.plot_jc_alignments import plot_jc_alignments
-from amplifinder.visualization.plot_amp_coverage import plot_amplicon_coverage
+# Avoid circular import - import visualization functions lazily in methods
 
 
 class PlotTnJc2CoverageStep(Step):
@@ -77,6 +76,10 @@ class PlotTnJc2CoverageStep(Step):
         return iso_scafs_to_covs, anc_scafs_to_covs
 
     def _generate_artifacts(self) -> None:
+        # Import here to avoid circular import
+        from amplifinder.visualization.plot_jc_alignments import plot_jc_alignments
+        from amplifinder.visualization.plot_amp_coverage import plot_amplicon_coverage
+
         iso_scafs_to_covs, anc_scafs_to_covs = self._load_coverage_for_plotting()
         logger.print_progress(f'Creating coverage plots (n={len(self.classified_tnjc2s)}) ', end='')
 
@@ -124,6 +127,8 @@ class PlotTnJc2CoverageStep(Step):
             if not amp_cov_path.exists():
                 plot_amplicon_coverage(
                     tnjc2=tnjc2,
+                    jc_calls=jc_calls,
+                    jc_calls_anc=jc_calls_anc,
                     iso_scafs_to_covs=iso_scafs_to_covs,
                     anc_scafs_to_covs=anc_scafs_to_covs,
                     output_path=amp_cov_path,

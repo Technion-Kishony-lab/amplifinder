@@ -39,7 +39,6 @@ def test_export_creates_files(sample_analyzed, filtered_tnjc2_record, tmp_path, 
         ref_name="U00096",
         iso_name="sample1",
         read_lengths=ReadLengths(read_len_iso=150, read_len_anc=None, jc_arm_len_iso=300, jc_arm_len_anc=None),
-        ref_tns=ref_tns_indexed,
     )
 
     result = step.run()

@@ -27,12 +27,14 @@ def setup_output_dir():
 
 def make_ref_tn_side(tn_id: int = 1, side: Terminal = Terminal.START) -> RefTnSide:
     """Create sample RefTnSide."""
-    return RefTnSide(tn_id=tn_id, side=side)
+    ref_tn = make_ref_tn(tn_id)
+    return RefTnSide(ref_tn=ref_tn, side=side)
 
 
 def make_offset_ref_tn_side(tn_id: int = 1, side: Terminal = Terminal.START, offset: int = 0) -> OffsetRefTnSide:
     """Create sample OffsetRefTnSide."""
-    return OffsetRefTnSide(tn_id=tn_id, side=side, offset=offset)
+    ref_tn = make_ref_tn(tn_id)
+    return OffsetRefTnSide(ref_tn=ref_tn, side=side, offset=offset)
 
 
 def make_ref_tn(tn_id: int = 1) -> RefTn:
@@ -84,6 +86,7 @@ def make_junction(num: int = 1) -> Junction:
 
 def make_ref_tn_junction() -> RefTnJunction:
     """Create sample RefTnJunction."""
+    ref_tn = make_ref_tn(1)
     return RefTnJunction(
         num=-2,  # tn_id=1, LEFT -> -1*2 = -2
         scaf1="chr1",
@@ -94,12 +97,13 @@ def make_ref_tn_junction() -> RefTnJunction:
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.START),
+        ref_tn_side=RefTnSide(ref_tn=ref_tn, side=Terminal.START),
     )
 
 
 def make_tn_junction() -> TnJunction:
     """Create sample TnJunction."""
+    ref_tn = make_ref_tn(1)
     return TnJunction(
         num=1,
         scaf1="chr1",
@@ -110,7 +114,7 @@ def make_tn_junction() -> TnJunction:
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.START, offset=0)],
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn, side=Terminal.START, offset=0)],
         swapped=False,
     )
 
@@ -118,6 +122,7 @@ def make_tn_junction() -> TnJunction:
 def make_raw_tnjc2() -> RawTnJc2:
     """Create sample RawTnJc2."""
 
+    ref_tn = make_ref_tn(1)
     tn_jc_S = TnJunction(
         num=1,
         scaf1="chr1",
@@ -128,7 +133,7 @@ def make_raw_tnjc2() -> RawTnJc2:
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.START, offset=0)],
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn, side=Terminal.START, offset=0)],
         swapped=False,
     )
     tn_jc_E = TnJunction(
@@ -141,7 +146,7 @@ def make_raw_tnjc2() -> RawTnJc2:
         dir2=Orientation.REVERSE,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.END, offset=0)],
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn, side=Terminal.END, offset=0)],
         swapped=False,
     )
     scaffold = SeqScaffold(scaf="chr1", seq="A"*1000, is_circular=False)
@@ -175,11 +180,31 @@ def make_classified_tnjc2() -> SingleLocusLinkedTnJc2:
 
 def make_syn_jcts_tnjc2() -> SynJctsTnJc2:
     """Create sample SynJctsTnJc2."""
+    from amplifinder.data_types.rudimentary_junctions import RudimentaryJunctionValues
+    from amplifinder.data_types.ref_tn import Terminal
+
+    rudimentary = RudimentaryJunctionValues(
+        amp_left_pos=100, amp_right_pos=200, amp_scaf="scaffold_1",
+        tn_start_pos=1, tn_end_pos=1000, tn_scaf="tn_scaf",
+        tn_side_left_amp_side=Terminal.START,
+        chr_left_pos_offset=0, chr_right_pos_offset=0,
+        chr_left_pos_for_tn_offset=0, chr_right_pos_for_tn_offset=0,
+        flank=150
+    )
+    anc_rudimentary = RudimentaryJunctionValues(
+        amp_left_pos=100, amp_right_pos=200, amp_scaf="scaffold_1",
+        tn_start_pos=1, tn_end_pos=1000, tn_scaf="tn_scaf_anc",
+        tn_side_left_amp_side=Terminal.START,
+        chr_left_pos_offset=0, chr_right_pos_offset=0,
+        chr_left_pos_for_tn_offset=0, chr_right_pos_for_tn_offset=0,
+        flank=150
+    )
+
     classified = make_classified_tnjc2()
     return SynJctsTnJc2.from_other(
         classified,
-        analysis_dir="tn_jc2_001",
-        analysis_dir_anc="tn_jc2_001_anc",
+        rudimentary_junction_values=rudimentary,
+        anc_rudimentary_junction_values=anc_rudimentary,
     )
 
 

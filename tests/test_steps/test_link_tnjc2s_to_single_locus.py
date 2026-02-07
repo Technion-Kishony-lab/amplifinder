@@ -8,7 +8,7 @@ from amplifinder.data_types import (
 
 
 @pytest.fixture
-def sample_covered_tnjc2(tiny_genome):
+def sample_covered_tnjc2(tiny_genome, ref_tn_record):
     """Create sample CoveredTnJc2 records - one of each major type."""
     from amplifinder.data_types import (
         RawTnJc2,
@@ -22,15 +22,18 @@ def sample_covered_tnjc2(tiny_genome):
 
     scaffold = tiny_genome.get_scaffold("tiny")
 
+    # Create a second RefTn for tn_id=2
+    ref_tn_2 = RefTn.from_other(ref_tn_record, tn_id=2, tn_name="IS2")
+
     # Helper to create TnJunction with less boilerplate
-    def make_jc(num, pos1, pos2, side, tn_id=1):
+    def make_jc(num, pos1, pos2, side, ref_tn=ref_tn_record):
         is_left = (side == Terminal.START)
         return TnJunction(
             num=num, scaf1="tiny", pos1=pos1, scaf2="tiny", pos2=pos2,
             dir1=Orientation.FORWARD if is_left else Orientation.REVERSE,
             dir2=Orientation.FORWARD if is_left else Orientation.REVERSE,
             flanking1=50, flanking2=50,
-            ref_tn_sides=[OffsetRefTnSide(tn_id=tn_id, side=side, offset=0)],
+            ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn, side=side, offset=0)],
             swapped=False,
         )
 
@@ -108,8 +111,8 @@ def sample_covered_tnjc2(tiny_genome):
 
     # UNFLANKED: unique junctions
     unflanked_raw = RawTnJc2(
-        tnjc_left=make_jc(20, 150, 700, Terminal.START, tn_id=2),
-        tnjc_right=make_jc(21, 160, 900, Terminal.END, tn_id=2),
+        tnjc_left=make_jc(20, 150, 700, Terminal.START, ref_tn=ref_tn_2),
+        tnjc_right=make_jc(21, 160, 900, Terminal.END, ref_tn=ref_tn_2),
         scaffold=scaffold,
         base_event=BaseEvent.LOCUS_JOINING,
     )

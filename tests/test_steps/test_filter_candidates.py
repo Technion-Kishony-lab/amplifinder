@@ -8,7 +8,7 @@ from amplifinder.data_types import RecordTypedDf
 
 
 @pytest.fixture
-def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
+def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome, ref_tn_record):
     """Create sample CoveredTnJc2 records with different amplicon lengths."""
     from amplifinder.data_types import (
         TnJunction,
@@ -26,16 +26,16 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
         num=1, scaf1="tiny", pos1=10, dir1=Orientation.FORWARD,
         scaf2="tiny", pos2=100, dir2=Orientation.FORWARD,
         flanking1=50, flanking2=50,
-        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.START),
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.START, offset=0)],
+        ref_tn_side=RefTnSide(ref_tn=ref_tn_record, side=Terminal.START),
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn_record, side=Terminal.START, offset=0)],
         swapped=False,
     )
     tn_jc_E_short = TnJunction(
         num=2, scaf1="tiny", pos1=20, dir1=Orientation.REVERSE,
         scaf2="tiny", pos2=119, dir2=Orientation.REVERSE,  # 119-100+1 = 20bp
         flanking1=50, flanking2=50,
-        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.END),
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.END, offset=0)],
+        ref_tn_side=RefTnSide(ref_tn=ref_tn_record, side=Terminal.END),
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn_record, side=Terminal.END, offset=0)],
         swapped=False,
     )
     scaffold = tiny_genome.get_scaffold("tiny")
@@ -61,16 +61,16 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
         num=5, scaf1="tiny", pos1=10, dir1=Orientation.FORWARD,
         scaf2="tiny", pos2=200, dir2=Orientation.FORWARD,
         flanking1=50, flanking2=50,
-        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.START),
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.START, offset=0)],
+        ref_tn_side=RefTnSide(ref_tn=ref_tn_record, side=Terminal.START),
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn_record, side=Terminal.START, offset=0)],
         swapped=False,
     )
     tn_jc_E_medium = TnJunction(
         num=6, scaf1="tiny", pos1=20, dir1=Orientation.REVERSE,
         scaf2="tiny", pos2=300, dir2=Orientation.REVERSE,  # 300-200+1 = 101bp
         flanking1=50, flanking2=50,
-        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.END),
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.END, offset=0)],
+        ref_tn_side=RefTnSide(ref_tn=ref_tn_record, side=Terminal.END),
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn_record, side=Terminal.END, offset=0)],
         swapped=False,
     )
     medium_raw = RawTnJc2(
@@ -95,16 +95,16 @@ def sample_classified_tnjc2(classified_tnjc2_record, tiny_genome):
         num=3, scaf1="tiny", pos1=10, dir1=Orientation.FORWARD,
         scaf2="tiny", pos2=500, dir2=Orientation.FORWARD,
         flanking1=50, flanking2=50,
-        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.START),
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.START, offset=0)],
+        ref_tn_side=RefTnSide(ref_tn=ref_tn_record, side=Terminal.START),
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn_record, side=Terminal.START, offset=0)],
         swapped=False,
     )
     tn_jc_E_long = TnJunction(
         num=4, scaf1="tiny", pos1=20, dir1=Orientation.REVERSE,
         scaf2="tiny", pos2=999, dir2=Orientation.REVERSE,  # 999-500+1 = 500bp
         flanking1=50, flanking2=50,
-        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.END),
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.END, offset=0)],
+        ref_tn_side=RefTnSide(ref_tn=ref_tn_record, side=Terminal.END),
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn_record, side=Terminal.END, offset=0)],
         swapped=False,
     )
     long_raw = RawTnJc2(

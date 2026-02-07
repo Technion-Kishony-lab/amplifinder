@@ -14,8 +14,13 @@ TnId = int
 class RefTnSide(Record):
     """A reference TN element side."""
     NAME: ClassVar[str] = "Reference TN sides"
-    tn_id: TnId
+    ref_tn: RefTn
     side: Terminal
+
+    @property
+    def tn_id(self) -> TnId:
+        """Get TN ID from the reference TN."""
+        return self.ref_tn.tn_id
 
     def is_same_side(self, other: RefTnSide) -> bool:
         """Check if two RefTnSide objects are the same side."""
@@ -42,11 +47,21 @@ class RefTn(SegmentScaffold):
     tn_name: str
     join: bool
 
+    def __hash__(self) -> int:
+        """Make RefTn hashable based on tn_id for use in sets."""
+        return hash(self.tn_id)
+
+    def __eq__(self, other) -> bool:
+        """Compare RefTn objects by tn_id."""
+        if not isinstance(other, RefTn):
+            return False
+        return self.tn_id == other.tn_id
+
     def get_ref_tn_sides(self) -> tuple[RefTnSide, RefTnSide]:
         """Get start and end sides of the TN."""
         return (
-            RefTnSide(tn_id=self.tn_id, side=Terminal.START),
-            RefTnSide(tn_id=self.tn_id, side=Terminal.END),
+            RefTnSide(ref_tn=self, side=Terminal.START),
+            RefTnSide(ref_tn=self, side=Terminal.END),
         )
 
     def get_junctions(self, out_flanks: int | tuple[int, int],
@@ -122,3 +137,8 @@ class TnJunction(NumJunction):
     def is_ref_tn_junction(self) -> bool:
         """Return True if this is a reference TN junction."""
         return self.ref_tn_side is not None
+
+    @property
+    def ref_tn(self) -> Optional[RefTn]:
+        """Get the reference TN element."""
+        return self.ref_tn_side.ref_tn if self.ref_tn_side is not None else None

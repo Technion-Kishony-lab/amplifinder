@@ -49,7 +49,7 @@ class FilterTnJc2CandidatesStep(RecordTypedDfStep[CoveredTnJc2]):
 
         for tnjc2 in self.linked_tnjc2s:
             # Filter out candidates without a chosen TN
-            if tnjc2.chosen_tn_id is None:
+            if tnjc2.chosen_tn is None:
                 continue
 
             # Filter by copy number: keep amplifications and deletions
