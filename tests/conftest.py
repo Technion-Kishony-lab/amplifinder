@@ -409,10 +409,21 @@ def covered_classified_tnjc2_record(classified_tnjc2_record):
 def filtered_tnjc2_record(covered_classified_tnjc2_record):
     """SynJctsTnJc2 with analysis directory."""
     from amplifinder.data_types import SynJctsTnJc2
+    from amplifinder.data_types.rudimentary_junctions import RudimentaryJunctionValues
+    from amplifinder.data_types.ref_tn import Terminal
+
+    rudimentary = RudimentaryJunctionValues(
+        amp_left_pos=200, amp_right_pos=300, amp_scaf="test_scaf",
+        tn_start_pos=1, tn_end_pos=1000, tn_scaf="test_tn",
+        tn_side_left_amp_side=Terminal.START,
+        chr_left_pos_offset=0, chr_right_pos_offset=0,
+        chr_left_pos_for_tn_offset=0, chr_right_pos_for_tn_offset=0,
+        flank=150
+    )
 
     return SynJctsTnJc2.from_other(
         covered_classified_tnjc2_record,
-        analysis_dir="jc_200_300_001_L150",
+        rudimentary_junction_values=rudimentary,
     )
 
 
@@ -424,9 +435,21 @@ def analyzed_tnjc2_record(filtered_tnjc2_record):
     # Create jc_covs dict with all junction types having zero counts
     jc_covs = {jt: JunctionReadCounts() for jt in JunctionType}
 
+    from amplifinder.data_types.rudimentary_junctions import RudimentaryJunctionValues
+    from amplifinder.data_types.ref_tn import Terminal
+
+    anc_rudimentary = RudimentaryJunctionValues(
+        amp_left_pos=200, amp_right_pos=300, amp_scaf="test_scaf",
+        tn_start_pos=1, tn_end_pos=1000, tn_scaf="test_tn",
+        tn_side_left_amp_side=Terminal.START,
+        chr_left_pos_offset=0, chr_right_pos_offset=0,
+        chr_left_pos_for_tn_offset=0, chr_right_pos_for_tn_offset=0,
+        flank=150
+    )
+
     return AnalyzedTnJc2.from_other(
         filtered_tnjc2_record,
-        analysis_dir_anc="jc_200_300_001_L150_anc",
+        anc_rudimentary_junction_values=anc_rudimentary,
         jc_covs=jc_covs,
         jc_covs_anc=None,
         jc_calls=None,

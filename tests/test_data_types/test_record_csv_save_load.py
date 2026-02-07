@@ -175,11 +175,31 @@ def make_classified_tnjc2() -> SingleLocusLinkedTnJc2:
 
 def make_syn_jcts_tnjc2() -> SynJctsTnJc2:
     """Create sample SynJctsTnJc2."""
+    from amplifinder.data_types.rudimentary_junctions import RudimentaryJunctionValues
+    from amplifinder.data_types.ref_tn import Terminal
+
+    rudimentary = RudimentaryJunctionValues(
+        amp_left_pos=100, amp_right_pos=200, amp_scaf="scaffold_1",
+        tn_start_pos=1, tn_end_pos=1000, tn_scaf="tn_scaf",
+        tn_side_left_amp_side=Terminal.START,
+        chr_left_pos_offset=0, chr_right_pos_offset=0,
+        chr_left_pos_for_tn_offset=0, chr_right_pos_for_tn_offset=0,
+        flank=150
+    )
+    anc_rudimentary = RudimentaryJunctionValues(
+        amp_left_pos=100, amp_right_pos=200, amp_scaf="scaffold_1",
+        tn_start_pos=1, tn_end_pos=1000, tn_scaf="tn_scaf_anc",
+        tn_side_left_amp_side=Terminal.START,
+        chr_left_pos_offset=0, chr_right_pos_offset=0,
+        chr_left_pos_for_tn_offset=0, chr_right_pos_for_tn_offset=0,
+        flank=150
+    )
+
     classified = make_classified_tnjc2()
     return SynJctsTnJc2.from_other(
         classified,
-        analysis_dir="tn_jc2_001",
-        analysis_dir_anc="tn_jc2_001_anc",
+        rudimentary_junction_values=rudimentary,
+        anc_rudimentary_junction_values=anc_rudimentary,
     )
 
 

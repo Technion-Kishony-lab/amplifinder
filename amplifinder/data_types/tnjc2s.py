@@ -11,9 +11,10 @@ from amplifinder.data_types.basic_enums import Side, Orientation
 from amplifinder.data_types.events import BaseEvent, Architecture, EventDescriptor
 from amplifinder.data_types.jc_types import JcCall, JunctionType
 from amplifinder.data_types.read_types import JunctionReadCounts
-from amplifinder.data_types.ref_tn import TnId, OffsetRefTnSide, TnJunction
+from amplifinder.data_types.ref_tn import TnId, OffsetRefTnSide, TnJunction, Terminal
 from amplifinder.data_types.scaffold import SeqScaffold, SeqSegmentScaffold
 from amplifinder.data_types.junctions import JcArm
+from amplifinder.data_types.rudimentary_junctions import RudimentaryJunctionValues
 
 
 class RawTnJc2(Record):
@@ -324,13 +325,29 @@ class CoveredTnJc2(SingleLocusLinkedTnJc2):
 
 
 class SynJctsTnJc2(CoveredTnJc2):
-    """Candidate with synthetic junction folder names."""
+    """Candidate with synthetic junction folder names and TN position information."""
     NAME: ClassVar[str] = "Junction Pairs with Synthetic Junctions"
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
         'analysis_dir', 'analysis_dir_anc'
     ]
-    analysis_dir: str
-    analysis_dir_anc: Optional[str] = None
+    
+    # Junction parameters containing all information needed for synthetic junctions and plotting
+    rudimentary_junction_values: Optional[RudimentaryJunctionValues] = None
+    anc_rudimentary_junction_values: Optional[RudimentaryJunctionValues] = None
+    
+    @property
+    def analysis_dir(self) -> str:
+        """Analysis directory name derived from rudimentary junction values."""
+        if self.rudimentary_junction_values is None:
+            raise ValueError("rudimentary_junction_values not set")
+        return self.rudimentary_junction_values.get_name()
+    
+    @property
+    def analysis_dir_anc(self) -> Optional[str]:
+        """Ancestor analysis directory name derived from rudimentary junction values."""
+        if self.anc_rudimentary_junction_values is None:
+            return None
+        return self.anc_rudimentary_junction_values.get_name()
 
     def analysis_dir_name(self, *, is_ancestor: bool = False) -> str:
         """Return the analysis directory name (ancestor-aware)."""
