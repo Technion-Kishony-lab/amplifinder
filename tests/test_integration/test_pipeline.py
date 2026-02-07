@@ -109,11 +109,11 @@ class TestPipeline(Pipeline):
         self.ref_tns = result  # Store for IS name mapping
         return result
 
-    def _create_synthetic_junctions(self, filtered_tnjc2s, genome, ref_tns,
+    def _create_synthetic_junctions(self, filtered_tnjc2s, genome,
                                     iso_output, anc_output, read_lengths):
         with force_step():
             syn_tnjc2s = super()._create_synthetic_junctions(
-                filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths,
+                filtered_tnjc2s, genome, iso_output, anc_output, read_lengths,
             )
 
         matlab_fasta = self.matlab_output_dir / MATLAB_CANDIDATE_DIRNAME / "jc.fasta"
@@ -321,8 +321,8 @@ class TestPipeline(Pipeline):
 
         return result
 
-    def _export(self, classified, linked, ref_tns, iso_output, read_lengths):
-        super()._export(classified, linked, ref_tns, iso_output, read_lengths)
+    def _export(self, classified, linked, iso_output, read_lengths):
+        super()._export(classified, linked, iso_output, read_lengths)
 
         # Note: Final comparison done in test methods
         # Skipping intermediate export comparison here

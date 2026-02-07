@@ -47,6 +47,16 @@ class RefTn(SegmentScaffold):
     tn_name: str
     join: bool
 
+    def __hash__(self) -> int:
+        """Make RefTn hashable based on tn_id for use in sets."""
+        return hash(self.tn_id)
+
+    def __eq__(self, other) -> bool:
+        """Compare RefTn objects by tn_id."""
+        if not isinstance(other, RefTn):
+            return False
+        return self.tn_id == other.tn_id
+
     def get_ref_tn_sides(self) -> tuple[RefTnSide, RefTnSide]:
         """Get start and end sides of the TN."""
         return (

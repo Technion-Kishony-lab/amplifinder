@@ -23,7 +23,7 @@ from typing import Optional
 
 from amplifinder.data_types import (
     BaseEvent, RecordTypedDf, CoveredTnJc2, Side, SynJctsTnJc2, Genome,
-    JunctionType, RefTn, Junction, Terminal, JcArm
+    JunctionType, Junction, Terminal, JcArm
 )
 from amplifinder.data_types.rudimentary_junctions import RudimentaryJunctionValues, build_7_junctions_from_8_arms
 
@@ -54,16 +54,15 @@ def _handle_flanked_side(
 
 
 def create_synthetic_junctions_and_name(
-    tnjc2: CoveredTnJc2, jc_arm_len: int, ref_tns: RecordTypedDf[RefTn]
+    tnjc2: CoveredTnJc2, jc_arm_len: int
 ) -> RudimentaryJunctionValues:
 
     # Get TN sides that S and E junctions connect to (with offsets)
     tn_side_left_amp, tn_side_right_amp = tnjc2.get_sides_of_chosen_tn()
 
-    # Get the chosen RefTn from chosen_tn_id (O(1) lookup using indexed ref_tns)
-    chosen_tn_id = tnjc2.chosen_tn_id
-    ref_tn = ref_tns[chosen_tn_id]
-    assert ref_tn.tn_id == chosen_tn_id
+    # Get the chosen RefTn directly
+    ref_tn = tnjc2.chosen_tn
+    assert ref_tn is not None
 
     # Get inward arms for Amplicon
     amp_left_arm, amp_right_arm = tnjc2.get_inward_arms(flank=jc_arm_len)
@@ -117,20 +116,18 @@ class CreateSyntheticJunctionsStep(RecordTypedDfStep[SynJctsTnJc2]):
         self,
         filtered_tnjc2s: RecordTypedDf[CoveredTnJc2],
         genome: Genome,
-        ref_tns: RecordTypedDf[RefTn],
         output_dir: Path,
         jc_arm_len: int = 150,
         force: Optional[bool] = None,
         csv_output_dir: Optional[Path] = None,
     ):
         self.genome = genome
-        self.ref_tns = ref_tns
         self.jc_arm_len = jc_arm_len
         self._artifact_dir = Path(output_dir)
         self._tnjc2s_and_junctions: list[tuple[SynJctsTnJc2, dict[JunctionType, Junction]]] = []
         for tnjc2 in filtered_tnjc2s:
             rudimentary = create_synthetic_junctions_and_name(
-                tnjc2=tnjc2, jc_arm_len=self.jc_arm_len, ref_tns=self.ref_tns
+                tnjc2=tnjc2, jc_arm_len=self.jc_arm_len
             )
             junctions = rudimentary.create_syn_junctions()
             tnjc2 = SynJctsTnJc2.from_other(

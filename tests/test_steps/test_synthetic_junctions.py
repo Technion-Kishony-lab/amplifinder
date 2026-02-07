@@ -11,7 +11,6 @@ def test_creates_junctions_fasta(tiny_genome, filtered_tnjc2_record, ref_tns_ind
     step = CreateSyntheticJunctionsStep(
         filtered_tnjc2s=filtered_tnjc2s,
         genome=tiny_genome,
-        ref_tns=ref_tns_indexed,
         output_dir=tmp_path,
         jc_arm_len=150,
     )

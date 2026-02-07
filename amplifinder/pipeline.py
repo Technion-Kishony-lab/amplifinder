@@ -126,14 +126,14 @@ class Pipeline:
         filtered_tnjc2s = self._filter_candidates(covered_tnjc2s, iso_output)
         read_lengths = self._calc_read_lengths()
         synjct_tnjc2s = self._create_synthetic_junctions(
-            filtered_tnjc2s, genome, ref_tns, iso_output, anc_output, read_lengths)
+            filtered_tnjc2s, genome, iso_output, anc_output, read_lengths)
         self._align_reads(synjct_tnjc2s, iso_output, anc_output, read_lengths)
         analyzed_tnjc2s, iso_alignment_cache, anc_alignment_cache = self._analyze_alignments(
             synjct_tnjc2s, iso_output, anc_output, read_lengths)
         classified_tnjc2s = self._classify_candidates(analyzed_tnjc2s, iso_output)
         self._plot_coverage(classified_tnjc2s, iso_output, anc_output, read_lengths,
                             iso_alignment_cache, anc_alignment_cache)
-        self._export(classified_tnjc2s, linked_tnjc2s, ref_tns, iso_output, read_lengths)
+        self._export(classified_tnjc2s, linked_tnjc2s, iso_output, read_lengths)
 
         return classified_tnjc2s
 
@@ -367,7 +367,6 @@ class Pipeline:
         self,
         filtered_tnjc2s: RecordTypedDf[CoveredTnJc2],
         genome: Genome,
-        ref_tns: RecordTypedDf[RefTn],
         iso_output: Path,
         anc_output: Optional[Path],
         read_lengths: ReadLengths,
@@ -378,7 +377,6 @@ class Pipeline:
         syn_tnjc2s = CreateSyntheticJunctionsStep(
             filtered_tnjc2s=filtered_tnjc2s,
             genome=genome,
-            ref_tns=ref_tns,
             output_dir=iso_output,
             jc_arm_len=read_lengths.jc_arm_len_iso,
         ).run()
@@ -390,7 +388,6 @@ class Pipeline:
             syn_tnjc2s = AncCreateSyntheticJunctionsStep(
                 filtered_tnjc2s=syn_tnjc2s,
                 genome=genome,
-                ref_tns=ref_tns,
                 output_dir=anc_output,
                 jc_arm_len=read_lengths.jc_arm_len_anc,
                 csv_output_dir=iso_output,
@@ -515,7 +512,6 @@ class Pipeline:
         self,
         classified_tnjc2s: RecordTypedDf[ClassifiedTnJc2],
         linked_tnjc2s: RecordTypedDf[CoveredTnJc2],
-        ref_tns: RecordTypedDf[RefTn],
         iso_output: Path,
         read_lengths: ReadLengths,
     ) -> None:
@@ -527,7 +523,6 @@ class Pipeline:
             ref_name=self.config.ref_name,
             iso_name=self.config.iso_name,
             read_lengths=read_lengths,
-            ref_tns=ref_tns,
             anc_name=self.config.anc_name,
         ).run()
 
