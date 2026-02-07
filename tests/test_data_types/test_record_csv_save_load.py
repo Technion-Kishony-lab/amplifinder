@@ -27,12 +27,14 @@ def setup_output_dir():
 
 def make_ref_tn_side(tn_id: int = 1, side: Terminal = Terminal.START) -> RefTnSide:
     """Create sample RefTnSide."""
-    return RefTnSide(tn_id=tn_id, side=side)
+    ref_tn = make_ref_tn(tn_id)
+    return RefTnSide(ref_tn=ref_tn, side=side)
 
 
 def make_offset_ref_tn_side(tn_id: int = 1, side: Terminal = Terminal.START, offset: int = 0) -> OffsetRefTnSide:
     """Create sample OffsetRefTnSide."""
-    return OffsetRefTnSide(tn_id=tn_id, side=side, offset=offset)
+    ref_tn = make_ref_tn(tn_id)
+    return OffsetRefTnSide(ref_tn=ref_tn, side=side, offset=offset)
 
 
 def make_ref_tn(tn_id: int = 1) -> RefTn:
@@ -84,6 +86,7 @@ def make_junction(num: int = 1) -> Junction:
 
 def make_ref_tn_junction() -> RefTnJunction:
     """Create sample RefTnJunction."""
+    ref_tn = make_ref_tn(1)
     return RefTnJunction(
         num=-2,  # tn_id=1, LEFT -> -1*2 = -2
         scaf1="chr1",
@@ -94,12 +97,13 @@ def make_ref_tn_junction() -> RefTnJunction:
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.START),
+        ref_tn_side=RefTnSide(ref_tn=ref_tn, side=Terminal.START),
     )
 
 
 def make_tn_junction() -> TnJunction:
     """Create sample TnJunction."""
+    ref_tn = make_ref_tn(1)
     return TnJunction(
         num=1,
         scaf1="chr1",
@@ -110,7 +114,7 @@ def make_tn_junction() -> TnJunction:
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.START, offset=0)],
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn, side=Terminal.START, offset=0)],
         swapped=False,
     )
 
@@ -118,6 +122,7 @@ def make_tn_junction() -> TnJunction:
 def make_raw_tnjc2() -> RawTnJc2:
     """Create sample RawTnJc2."""
 
+    ref_tn = make_ref_tn(1)
     tn_jc_S = TnJunction(
         num=1,
         scaf1="chr1",
@@ -128,7 +133,7 @@ def make_raw_tnjc2() -> RawTnJc2:
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.START, offset=0)],
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn, side=Terminal.START, offset=0)],
         swapped=False,
     )
     tn_jc_E = TnJunction(
@@ -141,7 +146,7 @@ def make_raw_tnjc2() -> RawTnJc2:
         dir2=Orientation.REVERSE,
         flanking1=50,
         flanking2=50,
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.END, offset=0)],
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn, side=Terminal.END, offset=0)],
         swapped=False,
     )
     scaffold = SeqScaffold(scaf="chr1", seq="A"*1000, is_circular=False)

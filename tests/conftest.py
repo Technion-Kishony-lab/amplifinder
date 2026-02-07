@@ -320,7 +320,7 @@ def locate_tns_step(locate_tns_step_factory):
 # =============================================================================
 
 @pytest.fixture
-def raw_tnjc2_record(tiny_genome):
+def raw_tnjc2_record(tiny_genome, ref_tn_record):
     """Base RawTnJc2 for step fixtures."""
     from amplifinder.data_types import (
         RawTnJc2,
@@ -342,8 +342,8 @@ def raw_tnjc2_record(tiny_genome):
         dir2=Orientation.FORWARD,
         flanking1=50,
         flanking2=50,
-        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.START),
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.START, offset=0)],
+        ref_tn_side=RefTnSide(ref_tn=ref_tn_record, side=Terminal.START),
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn_record, side=Terminal.START, offset=0)],
         swapped=False,
     )
     tn_jc_E = TnJunction(
@@ -356,8 +356,8 @@ def raw_tnjc2_record(tiny_genome):
         dir2=Orientation.REVERSE,
         flanking1=50,
         flanking2=50,
-        ref_tn_side=RefTnSide(tn_id=1, side=Terminal.END),
-        ref_tn_sides=[OffsetRefTnSide(tn_id=1, side=Terminal.END, offset=0)],
+        ref_tn_side=RefTnSide(ref_tn=ref_tn_record, side=Terminal.END),
+        ref_tn_sides=[OffsetRefTnSide(ref_tn=ref_tn_record, side=Terminal.END, offset=0)],
         swapped=False,
     )
     scaffold = tiny_genome.get_scaffold("tiny")

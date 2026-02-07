@@ -14,8 +14,13 @@ TnId = int
 class RefTnSide(Record):
     """A reference TN element side."""
     NAME: ClassVar[str] = "Reference TN sides"
-    tn_id: TnId
+    ref_tn: RefTn
     side: Terminal
+
+    @property
+    def tn_id(self) -> TnId:
+        """Get TN ID from the reference TN."""
+        return self.ref_tn.tn_id
 
     def is_same_side(self, other: RefTnSide) -> bool:
         """Check if two RefTnSide objects are the same side."""
@@ -45,8 +50,8 @@ class RefTn(SegmentScaffold):
     def get_ref_tn_sides(self) -> tuple[RefTnSide, RefTnSide]:
         """Get start and end sides of the TN."""
         return (
-            RefTnSide(tn_id=self.tn_id, side=Terminal.START),
-            RefTnSide(tn_id=self.tn_id, side=Terminal.END),
+            RefTnSide(ref_tn=self, side=Terminal.START),
+            RefTnSide(ref_tn=self, side=Terminal.END),
         )
 
     def get_junctions(self, out_flanks: int | tuple[int, int],
