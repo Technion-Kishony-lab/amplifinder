@@ -21,7 +21,7 @@ def sample_covered_tnjc2(tiny_genome, ref_tn_record):
     )
 
     scaffold = tiny_genome.get_scaffold("tiny")
-    
+
     # Create a second RefTn for tn_id=2
     ref_tn_2 = RefTn.from_other(ref_tn_record, tn_id=2, tn_name="IS2")
 

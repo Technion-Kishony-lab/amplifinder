@@ -68,6 +68,23 @@ class RudimentaryJunctionValues(NamedTuple):
                 f"{chr_left_pos_str}_{chr_right_pos_str}"
                 f"{side_str}_{self.flank}bp")
 
+    def get_junction_chr_positions(self) -> dict[JunctionType, int]:
+        jcs = self.create_syn_junctions()
+        jct_to_chr_pos = {
+            JunctionType.CHR_AMP: 0,
+            JunctionType.CHR_TN: 0,
+            JunctionType.AMP_TN: 0,
+            JunctionType.AMP_AMP: None,
+            JunctionType.TN_AMP: 1,
+            JunctionType.TN_CHR: 1,
+            JunctionType.AMP_CHR: 1,
+        }
+        return {
+            jc_type: None if jct_to_chr_pos[jc_type] is None else
+            (jc.pos1, jc.pos2)[jct_to_chr_pos[jc_type]]
+            for jc_type, jc in jcs.items()
+        }
+
 
 def build_7_junctions_from_8_arms(
     chr_left_for_tn: JcArm, chr_right_for_tn: JcArm,

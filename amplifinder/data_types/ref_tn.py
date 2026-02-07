@@ -137,3 +137,8 @@ class TnJunction(NumJunction):
     def is_ref_tn_junction(self) -> bool:
         """Return True if this is a reference TN junction."""
         return self.ref_tn_side is not None
+
+    @property
+    def ref_tn(self) -> Optional[RefTn]:
+        """Get the reference TN element."""
+        return self.ref_tn_side.ref_tn if self.ref_tn_side is not None else None

@@ -139,8 +139,10 @@ def test_skips_if_exists(tnjc2_step_factory):
 def test_pairs_opposing_junctions(tiny_genome, tmp_output, ref_tn_record):
     """Should pair junctions on same scaffold with opposite directions."""
     raw_tnjc2s = run_tnjc2([
-        make_tnjc(num=1, pos2=500, dir2=Orientation.FORWARD, tn_side=Terminal.START, ref_tn=ref_tn_record),   # points right
-        make_tnjc(num=2, pos2=1000, dir2=Orientation.REVERSE, tn_side=Terminal.END, ref_tn=ref_tn_record),  # points left
+        make_tnjc(num=1, pos2=500, dir2=Orientation.FORWARD,
+                  tn_side=Terminal.START, ref_tn=ref_tn_record),
+        make_tnjc(num=2, pos2=1000, dir2=Orientation.REVERSE,
+                  tn_side=Terminal.END, ref_tn=ref_tn_record),
     ], tiny_genome, tmp_output)
 
     assert len(raw_tnjc2s) == 1
@@ -154,8 +156,10 @@ def test_pairs_opposing_junctions(tiny_genome, tmp_output, ref_tn_record):
 def test_no_pair_same_direction(tiny_genome, tmp_output, ref_tn_record):
     """Should not pair junctions with same chromosome direction."""
     raw_tnjc2s = run_tnjc2([
-        make_tnjc(num=1, pos2=500, dir2=Orientation.FORWARD, tn_side=Terminal.START, ref_tn=ref_tn_record),   # points right
-        make_tnjc(num=2, pos2=1000, dir2=Orientation.FORWARD, tn_side=Terminal.END, ref_tn=ref_tn_record),  # also right - no pair!
+        make_tnjc(num=1, pos2=500, dir2=Orientation.FORWARD,
+                  tn_side=Terminal.START, ref_tn=ref_tn_record),
+        make_tnjc(num=2, pos2=1000, dir2=Orientation.FORWARD,
+                  tn_side=Terminal.END, ref_tn=ref_tn_record),
     ], tiny_genome, tmp_output)
 
     assert len(raw_tnjc2s) == 0
@@ -164,8 +168,10 @@ def test_no_pair_same_direction(tiny_genome, tmp_output, ref_tn_record):
 def test_no_pair_different_scaffold(tiny_genome, tmp_output, ref_tn_record):
     """Should not pair junctions on different scaffolds."""
     raw_tnjc2s = run_tnjc2([
-        make_tnjc(num=1, pos2=500, dir2=Orientation.FORWARD, tn_side=Terminal.START, ref_tn=ref_tn_record, scaf="tiny"),
-        make_tnjc(num=2, pos2=1000, dir2=Orientation.REVERSE, tn_side=Terminal.END, ref_tn=ref_tn_record, scaf="other"),
+        make_tnjc(num=1, pos2=500, dir2=Orientation.FORWARD,
+                  tn_side=Terminal.START, ref_tn=ref_tn_record, scaf="tiny"),
+        make_tnjc(num=2, pos2=1000, dir2=Orientation.REVERSE,
+                  tn_side=Terminal.END, ref_tn=ref_tn_record, scaf="other"),
     ], tiny_genome, tmp_output)
 
     assert len(raw_tnjc2s) == 0
@@ -174,8 +180,10 @@ def test_no_pair_different_scaffold(tiny_genome, tmp_output, ref_tn_record):
 def test_no_pair_same_tn_side(tiny_genome, tmp_output, ref_tn_record):
     """Should not pair junctions matching same TN side."""
     raw_tnjc2s = run_tnjc2([
-        make_tnjc(num=1, pos2=500, dir2=Orientation.FORWARD, tn_side=Terminal.START, ref_tn=ref_tn_record),
-        make_tnjc(num=2, pos2=1000, dir2=Orientation.REVERSE, tn_side=Terminal.START, ref_tn=ref_tn_record),  # also left - no pair!
+        make_tnjc(num=1, pos2=500, dir2=Orientation.FORWARD,
+                  tn_side=Terminal.START, ref_tn=ref_tn_record),
+        make_tnjc(num=2, pos2=1000, dir2=Orientation.REVERSE,
+                  tn_side=Terminal.START, ref_tn=ref_tn_record),
     ], tiny_genome, tmp_output)
 
     assert len(raw_tnjc2s) == 0
@@ -196,8 +204,10 @@ def test_calculates_amplicon_length(tiny_genome, tmp_output, ref_tn_record):
 def test_handles_span_origin(tiny_genome, tmp_output, ref_tn_record):
     """Should detect span_origin when left junction points left."""
     raw_tnjc2s = run_tnjc2([
-        make_tnjc(num=1, pos2=500, dir2=Orientation.REVERSE, tn_side=Terminal.START, ref_tn=ref_tn_record),   # points left -> span_origin
-        make_tnjc(num=2, pos2=1000, dir2=Orientation.FORWARD, tn_side=Terminal.END, ref_tn=ref_tn_record),  # points right
+        make_tnjc(num=1, pos2=500, dir2=Orientation.REVERSE,
+                  tn_side=Terminal.START, ref_tn=ref_tn_record),
+        make_tnjc(num=2, pos2=1000, dir2=Orientation.FORWARD,
+                  tn_side=Terminal.END, ref_tn=ref_tn_record),
     ], tiny_genome, tmp_output)
 
     pair = list(raw_tnjc2s)[0]

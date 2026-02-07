@@ -11,7 +11,7 @@ from amplifinder.data_types.basic_enums import Side, Orientation
 from amplifinder.data_types.events import BaseEvent, Architecture, EventDescriptor
 from amplifinder.data_types.jc_types import JcCall, JunctionType
 from amplifinder.data_types.read_types import JunctionReadCounts
-from amplifinder.data_types.ref_tn import TnId, OffsetRefTnSide, TnJunction, Terminal, RefTn
+from amplifinder.data_types.ref_tn import TnId, OffsetRefTnSide, TnJunction, RefTn
 from amplifinder.data_types.scaffold import SeqScaffold, SeqSegmentScaffold
 from amplifinder.data_types.junctions import JcArm
 from amplifinder.data_types.rudimentary_junctions import RudimentaryJunctionValues
@@ -245,7 +245,7 @@ class SingleLocusLinkedTnJc2(RawTnJc2):
 
         # Intersect with matching left/right single-locus tnjc2 if exists
         ref_tn_set = set(self.ref_tns)  # Start with RefTn objects from this tnjc2
-        
+
         if self.single_locus_tnjc2_and_side_matching_left is not None:
             # Intersect with matching left single-locus tnjc2
             ref_tn_set &= set(self.single_locus_tnjc2_and_side_matching_left.tnjc2.ref_tns)
@@ -342,18 +342,18 @@ class SynJctsTnJc2(CoveredTnJc2):
     CSV_EXPORT_FIELDS: ClassVar[List[str]] = CoveredTnJc2.CSV_EXPORT_FIELDS + [
         'analysis_dir', 'analysis_dir_anc'
     ]
-    
+
     # Junction parameters containing all information needed for synthetic junctions and plotting
     rudimentary_junction_values: Optional[RudimentaryJunctionValues] = None
     anc_rudimentary_junction_values: Optional[RudimentaryJunctionValues] = None
-    
+
     @property
     def analysis_dir(self) -> str:
         """Analysis directory name derived from rudimentary junction values."""
         if self.rudimentary_junction_values is None:
             raise ValueError("rudimentary_junction_values not set")
         return self.rudimentary_junction_values.get_name()
-    
+
     @property
     def analysis_dir_anc(self) -> Optional[str]:
         """Ancestor analysis directory name derived from rudimentary junction values."""
