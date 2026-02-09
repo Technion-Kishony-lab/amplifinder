@@ -8,6 +8,7 @@ Detect Insertion Sequence (IS)-mediated gene amplifications and deletions from w
 - **breseq** (read alignment and junction detection)
 - **bowtie2** (synthetic junction alignment)
 - **BLAST+** (optional, for ISfinder-based IS detection)
+- **ISEScan** (optional, for ISEScan-based IS detection; run via separate conda env)
 
 ## Installation
 
@@ -61,6 +62,7 @@ The batch run status is written to `run_status.csv`.
 | `--anc-breseq-path` | Existing breseq output for ancestor | None | `anc_breseq_path` |
 | `--ncbi/--no-ncbi` | Fetch reference from NCBI | True | `ncbi` |
 | `--use-isfinder/--no-use-isfinder` | Use ISfinder database for IS detection | False | `use_isfinder` |
+| `--use-isescan/--no-use-isescan` | Use ISEScan for IS detection | False | `use_isescan` |
 | `--config` | YAML/JSON config file for run parameters | None | |
 | `--create-config` | Save merged config to file and exit | None | |
 | `--create-plots/--no-create-plots` | Generate coverage plots | True | `create_plots` |

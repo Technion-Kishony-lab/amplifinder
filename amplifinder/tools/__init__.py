@@ -10,6 +10,7 @@ from amplifinder.tools.breseq import (
     get_breseq_summary,
     BRESEQ_DOCKER_IMAGE,
 )
+from amplifinder.tools.isescan import run_isescan, parse_isescan_results, get_isescan_results_file
 
 __all__ = [
     "run_blastn",
@@ -22,4 +23,7 @@ __all__ = [
     "load_breseq_coverage",
     "get_breseq_summary",
     "BRESEQ_DOCKER_IMAGE",
+    "run_isescan",
+    "parse_isescan_results",
+    "get_isescan_results_file",
 ]

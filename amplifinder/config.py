@@ -135,6 +135,19 @@ class Config:
     isfinder_evalue: float = 1e-4
     isfinder_critical_coverage: float = 0.9
 
+    # --- ISEScan ---
+    use_isescan: bool = field(default=False, metadata={
+        "section": "ISEScan",
+        "comment": "use ISEScan for IS detection (default: False)"})
+    isescan_env_name: Optional[str] = field(default=None, metadata={
+        "comment": "conda env name with ISEScan installed"})
+    isescan_exec: str = field(default="isescan.py", metadata={
+        "comment": "ISEScan entrypoint (default: isescan.py)"})
+    isescan_threads: int = field(default=2, metadata={
+        "comment": "threads passed to ISEScan (--nthread)"})
+    isescan_output_dirname: str = field(default="ISEScan", metadata={
+        "comment": "output folder name under ref_path for ISEScan results"})
+
     # --- Detection parameters ---
     reference_IS_in_span: Optional[int] = field(default=None, metadata={
         "section": "Detect IS-junctions",
@@ -359,12 +372,24 @@ class Config:
         self.bowtie_params = init_params(BowtieParams, self.bowtie_params)
         self.jc_call_params = init_params(JcCallParams, self.jc_call_params)
 
-        # Validate: ISfinder required for non-NCBI genomes
-        if not self.ncbi and not self.use_isfinder:
+        # ISEScan env default from global config
+        if not self.isescan_env_name:
+            from amplifinder.env import ISESCAN_ENV_NAME
+            self.isescan_env_name = ISESCAN_ENV_NAME or "isescan"
+
+        # Validate: ISfinder or ISEScan required for non-NCBI genomes
+        if not self.ncbi and not (self.use_isfinder or self.use_isescan):
             raise ValueError(
-                "ISfinder is required for local (non-NCBI) genomes. "
-                "Use --use-isfinder flag."
+                "ISfinder or ISEScan is required for local (non-NCBI) genomes. "
+                "Use --use-isfinder or --use-isescan flag."
             )
+
+        # Validate: mutually exclusive IS detection modes
+        if self.use_isfinder and self.use_isescan:
+            raise ValueError("Choose only one IS detection mode: --use-isfinder or --use-isescan")
+
+        if self.use_isescan and not self.isescan_env_name:
+            raise ValueError("ISEScan requires a conda env name (isescan_env_name)")
 
         # Validate: genomesDB is reserved for NCBI references
         if self.ref_path.name == "genomesDB" and not self.ncbi:

@@ -10,6 +10,7 @@ from Bio.SeqFeature import SeqFeature
 from amplifinder.data_types import TnId
 from amplifinder.logger import logger
 from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
+from amplifinder.tools.isescan import run_isescan, parse_isescan_results
 from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import ensure_dir
@@ -266,5 +267,102 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
             is_complement = row["sstart"] > row["send"]
             orientation = Orientation.REVERSE if is_complement else Orientation.FORWARD
             items.append((row["query"], row["qstart"], row["qend"], orientation, row["subject"]))
+
+        return self._build_ref_tns_dict(items)
+
+
+# Locate TNs using ISEScan
+
+class LocateTNsUsingISEScanStep(LocateTNsStep):
+    """Run ISEScan and parse results to locate TN elements."""
+    NAME = "locate TNs (isescan)"
+
+    def __init__(
+        self,
+        genome: Genome,
+        output_dir: Path,
+        isescan_output_dir: Path,
+        env_name: str,
+        exec_name: str,
+        threads: int,
+        force: Optional[bool] = None,
+    ):
+        self.isescan_output_dir = Path(isescan_output_dir)
+        self.env_name = env_name
+        self.exec_name = exec_name
+        self.threads = threads
+        self.results_file = self.isescan_output_dir / f"{genome.fasta_path.name}.tsv"
+
+        super().__init__(
+            genome=genome,
+            output_dir=output_dir,
+            source="isescan",
+            input_files=[genome.fasta_path],
+            artifact_files=[self.results_file],
+            force=force,
+        )
+
+    def _generate_artifacts(self) -> None:
+        """Run ISEScan to produce output files."""
+        run_isescan(
+            seqfile=self.genome.fasta_path,
+            output_dir=self.isescan_output_dir,
+            env_name=self.env_name,
+            exec_name=self.exec_name,
+            threads=self.threads,
+        )
+
+    def report_output_message(self, output: RecordTypedDf[RefTn]) -> Optional[str]:
+        return f"ISEScan: found {len(output)} TN elements"
+
+    @staticmethod
+    def _pick_col(df, *names: str) -> Optional[str]:
+        for name in names:
+            if name in df.columns:
+                return name
+        lowered = {c.lower(): c for c in df.columns}
+        for name in names:
+            if name.lower() in lowered:
+                return lowered[name.lower()]
+        return None
+
+    def _calculate_output(self) -> RecordTypedDf[RefTn]:
+        df = parse_isescan_results(self.genome.fasta_path, self.isescan_output_dir)
+        if df.empty:
+            return self._build_ref_tns_dict([])
+
+        seq_col = self._pick_col(df, "seqID", "seqid", "seq")
+        start_col = self._pick_col(df, "isBegin", "is_start", "start")
+        end_col = self._pick_col(df, "isEnd", "is_end", "end")
+        strand_col = self._pick_col(df, "strand")
+        family_col = self._pick_col(df, "family")
+        cluster_col = self._pick_col(df, "cluster")
+
+        missing = [name for name, col in {
+            "seqID": seq_col, "isBegin": start_col, "isEnd": end_col
+        }.items() if col is None]
+        if missing:
+            raise ValueError(f"ISEScan results missing columns: {', '.join(missing)}")
+
+        items = []
+        for _, row in df.iterrows():
+            scaf = str(row[seq_col])
+            start = int(row[start_col])
+            end = int(row[end_col])
+            left, right = (start, end) if start <= end else (end, start)
+
+            strand = str(row[strand_col]).strip() if strand_col else "+"
+            if strand in {"-", "-1", "reverse", "rev"}:
+                orientation = Orientation.REVERSE
+            else:
+                orientation = Orientation.FORWARD
+
+            family = str(row[family_col]).strip() if family_col else ""
+            cluster = str(row[cluster_col]).strip() if cluster_col else ""
+            tn_name = family or cluster or "unknown"
+            if family and cluster and cluster not in {"nan", "NA"}:
+                tn_name = f"{family}:{cluster}"
+
+            items.append((scaf, left, right, orientation, tn_name))
 
         return self._build_ref_tns_dict(items)

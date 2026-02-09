@@ -20,6 +20,7 @@ from amplifinder.steps import (
     GetRefGenomeStep,
     LocateTNsUsingISfinderStep,
     LocateTNsUsingGenbankStep,
+    LocateTNsUsingISEScanStep,
     BreseqStep, AncBreseqStep,
     CreateRefTnJcStep,
     CreateTnJcStep,
@@ -150,6 +151,8 @@ class Pipeline:
     @property
     def ref_tn_source(self) -> str:
         """Get the source of the reference TN data."""
+        if self.config.use_isescan:
+            return "isescan"
         return self.config.use_isfinder and "isfinder" or "genbank"
 
     def _write_status_file(self, iso_output: Path, status: str, reason: str = "") -> None:
@@ -208,7 +211,7 @@ class Pipeline:
         ).run()
 
     def _locate_tns_in_reference(self, genome: Genome) -> RecordTypedDf[RefTn]:
-        """Step 2: Locate TN elements using GenBank and/or ISfinder."""
+        """Step 2: Locate TN elements using GenBank, ISfinder, or ISEScan."""
         cfg = self.config
 
         tn_loc_dir = cfg.ref_path / "tn_loc" / genome.name
@@ -219,23 +222,48 @@ class Pipeline:
             output_dir=tn_loc_dir,
         ).run()
 
-        # 2b: ISfinder database
-        ref_tns_isfinder = LocateTNsUsingISfinderStep(
-            genome=genome,
-            output_dir=tn_loc_dir,
-            isdb_path=ISDB_PATH or get_builtin_isfinder_db_path(),
-            evalue=cfg.isfinder_evalue,
-            critical_coverage=cfg.isfinder_critical_coverage,
-        ).run()
+        ref_tns_isfinder = None
+        if not cfg.use_isescan:
+            # 2b: ISfinder database
+            ref_tns_isfinder = LocateTNsUsingISfinderStep(
+                genome=genome,
+                output_dir=tn_loc_dir,
+                isdb_path=ISDB_PATH or get_builtin_isfinder_db_path(),
+                evalue=cfg.isfinder_evalue,
+                critical_coverage=cfg.isfinder_critical_coverage,
+            ).run()
+
+        # 2c: ISEScan
+        ref_tns_isescan = None
+        if cfg.use_isescan:
+            isescan_output_dir = cfg.ref_path / cfg.isescan_output_dirname / genome.name
+            ref_tns_isescan = LocateTNsUsingISEScanStep(
+                genome=genome,
+                output_dir=tn_loc_dir,
+                isescan_output_dir=isescan_output_dir,
+                env_name=cfg.isescan_env_name,
+                exec_name=cfg.isescan_exec,
+                threads=cfg.isescan_threads,
+            ).run()
 
         # Compare sources
-        if ref_tns_genbank is not None:
-            compare_tn_locations(ref_tns_genbank, ref_tns_isfinder, output_file=tn_loc_dir / "tn_location_diffs.txt")
+        if ref_tns_genbank is not None and ref_tns_isfinder is not None:
+            compare_tn_locations(
+                ref_tns_genbank,
+                ref_tns_isfinder,
+                output_file=tn_loc_dir / "tn_location_diffs.txt",
+            )
 
         # Select source
-        if ref_tns_genbank is None and not cfg.use_isfinder:
-            raise ValueError("No TN locations - provide GenBank or set --use-isfinder")
-        tn_loc = ref_tns_isfinder if cfg.use_isfinder else ref_tns_genbank
+        if ref_tns_genbank is None and not (cfg.use_isfinder or cfg.use_isescan):
+            raise ValueError("No TN locations - provide GenBank or set --use-isfinder/--use-isescan")
+
+        if cfg.use_isescan:
+            tn_loc = ref_tns_isescan
+        elif cfg.use_isfinder:
+            tn_loc = ref_tns_isfinder
+        else:
+            tn_loc = ref_tns_genbank
         assert tn_loc is not None
         return tn_loc
 

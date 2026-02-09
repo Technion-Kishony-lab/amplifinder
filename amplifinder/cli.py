@@ -35,6 +35,8 @@ def _lock_dirs_from_config(config: Config) -> List[Path]:
     if config.use_isfinder:
         from amplifinder.data import get_builtin_isfinder_db_path
         dirs.append(get_builtin_isfinder_db_path().parent)
+    if config.use_isescan:
+        dirs.append(config.ref_path / config.isescan_output_dirname)
     return [d for d in dirs if d is not None]
 
 
@@ -195,6 +197,12 @@ async def _run_one_batch(
     help="Use ISfinder database for IS detection (default: False).",
 )
 @click.option(
+    "--use-isescan/--no-use-isescan",
+    "use_isescan",
+    default=None,
+    help="Use ISEScan for IS detection (default: False).",
+)
+@click.option(
     "--config",
     "config_file",
     type=click.Path(path_type=Path),
@@ -248,6 +256,7 @@ def main(
     anc_breseq_path: Optional[Path],
     ncbi: Optional[bool],
     use_isfinder: Optional[bool],
+    use_isescan: Optional[bool],
     config_file: Optional[Path],
     create_config_path: Optional[Path],
     breseq_only: Optional[bool],
@@ -286,6 +295,7 @@ def main(
             "anc_breseq_path": anc_breseq_path,
             "ncbi": ncbi,
             "use_isfinder": use_isfinder,
+            "use_isescan": use_isescan,
             "create_plots": create_plots,
         }
 
