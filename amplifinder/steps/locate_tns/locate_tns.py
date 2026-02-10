@@ -291,7 +291,11 @@ class LocateTNsUsingISEScanStep(LocateTNsStep):
         self.env_name = env_name
         self.exec_name = exec_name
         self.threads = threads
-        self.results_file = self.isescan_output_dir / f"{genome.fasta_path.name}.tsv"
+        self.results_file = (
+            self.isescan_output_dir
+            / genome.fasta_path.parent.name
+            / f"{genome.fasta_path.name}.tsv"
+        )
 
         super().__init__(
             genome=genome,

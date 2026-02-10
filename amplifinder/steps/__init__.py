@@ -2,7 +2,11 @@
 
 from amplifinder.steps.base import Step, OutputStep, RecordTypedDfStep
 from amplifinder.steps.get_reference import GetRefGenomeStep
-from amplifinder.steps.locate_tns import LocateTNsUsingGenbankStep, LocateTNsUsingISfinderStep
+from amplifinder.steps.locate_tns import (
+    LocateTNsUsingGenbankStep,
+    LocateTNsUsingISfinderStep,
+    LocateTNsUsingISEScanStep,
+)
 from amplifinder.steps.run_breseq import BreseqStep, AncBreseqStep
 from amplifinder.steps.create_reference_junctions import CreateRefTnJcStep
 from amplifinder.steps.create_tnjc import CreateTnJcStep
@@ -25,6 +29,7 @@ __all__ = [
     "GetRefGenomeStep",
     "LocateTNsUsingGenbankStep",
     "LocateTNsUsingISfinderStep",
+    "LocateTNsUsingISEScanStep",
     "BreseqStep",
     "AncBreseqStep",
     "CreateRefTnJcStep",

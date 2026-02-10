@@ -53,12 +53,19 @@ def get_isescan_results_file(seqfile: Path, output_dir: Path) -> Optional[Path]:
     """Find ISEScan results file (.tsv preferred, else .csv)."""
     seqfile = Path(seqfile)
     output_dir = Path(output_dir)
-    tsv_path = output_dir / f"{seqfile.name}.tsv"
+    # ISEScan nests outputs under a directory named after the input folder
+    nested_dir = output_dir / seqfile.parent.name
+    tsv_path = nested_dir / f"{seqfile.name}.tsv"
     if tsv_path.exists():
         return tsv_path
-    csv_path = output_dir / f"{seqfile.name}.csv"
+    csv_path = nested_dir / f"{seqfile.name}.csv"
     if csv_path.exists():
         return csv_path
+    # Fallback: search recursively for matching result file
+    for suffix in (".tsv", ".csv"):
+        matches = list(output_dir.rglob(f"{seqfile.name}{suffix}"))
+        if matches:
+            return matches[0]
     return None
 
 
