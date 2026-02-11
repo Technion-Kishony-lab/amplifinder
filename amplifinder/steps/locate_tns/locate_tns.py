@@ -310,7 +310,7 @@ class LocateTNsUsingISEScanStep(LocateTNsStep):
         """Run ISEScan to produce output files."""
         run_isescan(
             seqfile=self.genome.fasta_path,
-            output_dir=self.isescan_output_dir,
+            output_dir=self.output_dir,
             env_name=self.env_name,
             exec_name=self.exec_name,
             threads=self.threads,
@@ -319,54 +319,58 @@ class LocateTNsUsingISEScanStep(LocateTNsStep):
     def report_output_message(self, output: RecordTypedDf[RefTn]) -> Optional[str]:
         return f"ISEScan: found {len(output)} TN elements"
 
-    @staticmethod
-    def _pick_col(df, *names: str) -> Optional[str]:
-        for name in names:
-            if name in df.columns:
-                return name
-        lowered = {c.lower(): c for c in df.columns}
-        for name in names:
-            if name.lower() in lowered:
-                return lowered[name.lower()]
-        return None
-
     def _calculate_output(self) -> RecordTypedDf[RefTn]:
-        df = parse_isescan_results(self.genome.fasta_path, self.isescan_output_dir)
+        df = parse_isescan_results(self.genome.fasta_path, self.output_dir)
         if df.empty:
             return self._build_ref_tns_dict([])
 
-        seq_col = self._pick_col(df, "seqID", "seqid", "seq")
-        start_col = self._pick_col(df, "isBegin", "is_start", "start")
-        end_col = self._pick_col(df, "isEnd", "is_end", "end")
-        strand_col = self._pick_col(df, "strand")
-        family_col = self._pick_col(df, "family")
-        cluster_col = self._pick_col(df, "cluster")
+        # ISEScan standard column names
+        seq_col = "seqID"
+        start_col = "isBegin"
+        end_col = "isEnd"
+        strand_col = "strand"
+        family_col = "family"
+        cluster_col = "cluster"
 
-        missing = [name for name, col in {
-            "seqID": seq_col, "isBegin": start_col, "isEnd": end_col
-        }.items() if col is None]
+        required_cols = [seq_col, start_col, end_col, strand_col, family_col, cluster_col]
+        missing = [col for col in required_cols if col not in df.columns]
         if missing:
-            raise ValueError(f"ISEScan results missing columns: {', '.join(missing)}")
+            raise ValueError(f"ISEScan results missing required columns: {', '.join(missing)}")
 
         items = []
         for _, row in df.iterrows():
             scaf = str(row[seq_col])
             start = int(row[start_col])
             end = int(row[end_col])
-            left, right = (start, end) if start <= end else (end, start)
-
-            strand = str(row[strand_col]).strip() if strand_col else "+"
-            if strand in {"-", "-1", "reverse", "rev"}:
+            
+            # ISEScan should output isBegin <= isEnd regardless of strand
+            assert start <= end, f"ISEScan: isBegin > isEnd ({start} > {end}) for {scaf}"
+            
+            strand = str(row[strand_col]).strip()
+            # ISEScan outputs "+" for forward, "-" for reverse
+            if strand == "-":
                 orientation = Orientation.REVERSE
-            else:
+            elif strand == "+":
                 orientation = Orientation.FORWARD
+            else:
+                raise ValueError(f"ISEScan: unexpected strand value '{strand}' for {scaf}")
 
-            family = str(row[family_col]).strip() if family_col else ""
-            cluster = str(row[cluster_col]).strip() if cluster_col else ""
-            tn_name = family or cluster or "unknown"
-            if family and cluster and cluster not in {"nan", "NA"}:
+            # Handle family/cluster (may be empty, "nan" from pandas NaN, or "NA")
+            family = str(row[family_col]).strip()
+            cluster = str(row[cluster_col]).strip()
+            
+            # Treat pandas NaN ("nan"), empty string, and "NA" as missing
+            nan_values = {"", "nan", "NA"}
+            if family in nan_values:
+                family = ""
+            if cluster in nan_values:
+                cluster = ""
+            
+            if family and cluster:
                 tn_name = f"{family}:{cluster}"
+            else:
+                tn_name = family or cluster or "unknown"
 
-            items.append((scaf, left, right, orientation, tn_name))
+            items.append((scaf, start, end, orientation, tn_name))
 
         return self._build_ref_tns_dict(items)
