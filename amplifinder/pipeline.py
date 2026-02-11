@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Tuple, Optional
 
-from amplifinder.config import Config
+from amplifinder.config import Config, ISDetectionMethod
 from amplifinder.env import BRESEQ_DOCKER, ISDB_PATH
 from amplifinder.exceptions import PrematureTerminationError
 from amplifinder.data_types import (
@@ -148,13 +148,6 @@ class Pipeline:
         self._run_breseq(genome)
         logger.info("breseq-only mode completed")
 
-    @property
-    def ref_tn_source(self) -> str:
-        """Get the source of the reference TN data."""
-        if self.config.use_isescan:
-            return "isescan"
-        return self.config.use_isfinder and "isfinder" or "genbank"
-
     def _write_status_file(self, iso_output: Path, status: str, reason: str = "") -> None:
         """Write status marker file to isolate run directory.
 
@@ -216,16 +209,23 @@ class Pipeline:
 
         tn_loc_dir = cfg.ref_path / "tn_loc" / genome.name
 
-        # 2a: GenBank annotations
-        ref_tns_genbank = LocateTNsUsingGenbankStep(
-            genome=genome,
-            output_dir=tn_loc_dir,
-        ).run()
+        # Determine which method to USE
+        used_method = cfg.is_detection_method
+        
+        # Determine which methods to RUN (used method + comparison methods)
+        methods_to_run = set([used_method, *cfg.run_comparison_methods])
 
-        ref_tns_isfinder = None
-        if not cfg.use_isescan:
-            # 2b: ISfinder database
-            ref_tns_isfinder = LocateTNsUsingISfinderStep(
+        # Run all requested methods
+        ref_tns: dict[ISDetectionMethod, Optional[RecordTypedDf[RefTn]]] = {}
+
+        if ISDetectionMethod.GENBANK in methods_to_run:
+            ref_tns[ISDetectionMethod.GENBANK] = LocateTNsUsingGenbankStep(
+                genome=genome,
+                output_dir=tn_loc_dir,
+            ).run()
+
+        if ISDetectionMethod.ISFINDER in methods_to_run:
+            ref_tns[ISDetectionMethod.ISFINDER] = LocateTNsUsingISfinderStep(
                 genome=genome,
                 output_dir=tn_loc_dir,
                 isdb_path=ISDB_PATH or get_builtin_isfinder_db_path(),
@@ -233,39 +233,41 @@ class Pipeline:
                 critical_coverage=cfg.isfinder_critical_coverage,
             ).run()
 
-        # 2c: ISEScan
-        ref_tns_isescan = None
-        if cfg.use_isescan:
-            isescan_output_dir = cfg.ref_path / cfg.isescan_output_dirname / genome.name
-            ref_tns_isescan = LocateTNsUsingISEScanStep(
+        if ISDetectionMethod.ISESCAN in methods_to_run:
+            from amplifinder.env import ISESCAN_ENV_NAME, ISESCAN_EXEC
+            # ISESCAN_ENV_NAME can be None to use current environment
+            ref_tns[ISDetectionMethod.ISESCAN] = LocateTNsUsingISEScanStep(
                 genome=genome,
                 output_dir=tn_loc_dir,
-                isescan_output_dir=isescan_output_dir,
-                env_name=cfg.isescan_env_name,
-                exec_name=cfg.isescan_exec,
-                threads=cfg.isescan_threads,
+                env_name=ISESCAN_ENV_NAME,
+                exec_name=ISESCAN_EXEC,
+                threads=cfg.threads,
             ).run()
 
-        # Compare sources
-        if ref_tns_genbank is not None and ref_tns_isfinder is not None:
-            compare_tn_locations(
-                ref_tns_genbank,
-                ref_tns_isfinder,
-                output_file=tn_loc_dir / "tn_location_diffs.txt",
+        # Get used method result
+        used_result = ref_tns.get(used_method)
+
+        # Compare with each comparison method
+        for comp_method in cfg.run_comparison_methods:
+            comp_result = ref_tns[comp_method]
+            # Result can be None if step returned None (e.g., GenBank with no file)
+            if used_result is not None and comp_result is not None:
+                compare_tn_locations(
+                    used_result,
+                    comp_result,
+                    name1=used_method.value.title(),
+                    name2=comp_method.value.title(),
+                    output_file=tn_loc_dir / f"tn_location_diffs_{used_method.value}_vs_{comp_method.value}.txt",
+                )
+
+        # Validate: used method must have results
+        if used_result is None:
+            raise ValueError(
+                f"No TN locations from {used_method.value}. "
+                f"Ensure GenBank file exists or set is_detection_method to 'isfinder' or 'isescan'"
             )
 
-        # Select source
-        if ref_tns_genbank is None and not (cfg.use_isfinder or cfg.use_isescan):
-            raise ValueError("No TN locations - provide GenBank or set --use-isfinder/--use-isescan")
-
-        if cfg.use_isescan:
-            tn_loc = ref_tns_isescan
-        elif cfg.use_isfinder:
-            tn_loc = ref_tns_isfinder
-        else:
-            tn_loc = ref_tns_genbank
-        assert tn_loc is not None
-        return tn_loc
+        return used_result
 
     def _create_ref_tn_junctions(
         self, ref_tn_locs: RecordTypedDf[RefTn], genome: Genome, iso_output: Path
@@ -277,7 +279,7 @@ class Pipeline:
             ref_tn_locs=ref_tn_locs,
             genome=genome,
             output_dir=iso_output,
-            source=self.ref_tn_source,
+            source=self.config.is_detection_method.value,
             reference_IS_out_span=cfg.reference_IS_out_span,
             reference_IS_in_span=cfg.reference_IS_in_span,
         ).run()

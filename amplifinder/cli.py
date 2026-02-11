@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import click
 
 from amplifinder import __version__
-from amplifinder.config import Config, load_config, merge_config
+from amplifinder.config import Config, ISDetectionMethod, load_config, merge_config
 from amplifinder.pipeline import Pipeline
 from amplifinder.utils.dataclass_utils import convert_csv_row_types
 from amplifinder.utils.file_lock import cleanup_lock_files
@@ -32,11 +32,10 @@ def _lock_dirs_from_config(config: Config) -> List[Path]:
         config.iso_breseq_path,
         config.anc_breseq_path,
     ]
-    if config.use_isfinder:
+    if config.is_detection_method == ISDetectionMethod.ISFINDER:
         from amplifinder.data import get_builtin_isfinder_db_path
         dirs.append(get_builtin_isfinder_db_path().parent)
-    if config.use_isescan:
-        dirs.append(config.ref_path / config.isescan_output_dirname)
+    # Note: ISEScan doesn't need a separate lock dir - it writes to tn_loc_dir (under ref_path)
     return [d for d in dirs if d is not None]
 
 
@@ -191,16 +190,11 @@ async def _run_one_batch(
     help="Fetch reference from NCBI (default: True).",
 )
 @click.option(
-    "--use-isfinder/--no-use-isfinder",
-    "use_isfinder",
+    "--is-detection-method",
+    "is_detection_method",
+    type=click.Choice(["genbank", "isfinder", "isescan"], case_sensitive=False),
     default=None,
-    help="Use ISfinder database for IS detection (default: False).",
-)
-@click.option(
-    "--use-isescan/--no-use-isescan",
-    "use_isescan",
-    default=None,
-    help="Use ISEScan for IS detection (default: False).",
+    help="IS detection method to USE: genbank (default), isfinder, or isescan.",
 )
 @click.option(
     "--config",
@@ -255,8 +249,7 @@ def main(
     iso_breseq_path: Optional[Path],
     anc_breseq_path: Optional[Path],
     ncbi: Optional[bool],
-    use_isfinder: Optional[bool],
-    use_isescan: Optional[bool],
+    is_detection_method: Optional[str],
     config_file: Optional[Path],
     create_config_path: Optional[Path],
     breseq_only: Optional[bool],
@@ -294,8 +287,7 @@ def main(
             "iso_breseq_path": iso_breseq_path,
             "anc_breseq_path": anc_breseq_path,
             "ncbi": ncbi,
-            "use_isfinder": use_isfinder,
-            "use_isescan": use_isescan,
+            "is_detection_method": is_detection_method,
             "create_plots": create_plots,
         }
 

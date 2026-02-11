@@ -281,18 +281,18 @@ class LocateTNsUsingISEScanStep(LocateTNsStep):
         self,
         genome: Genome,
         output_dir: Path,
-        isescan_output_dir: Path,
-        env_name: str,
+        env_name: Optional[str],
         exec_name: str,
         threads: int,
         force: Optional[bool] = None,
     ):
-        self.isescan_output_dir = Path(isescan_output_dir)
+        self.output_dir = Path(output_dir)
         self.env_name = env_name
         self.exec_name = exec_name
         self.threads = threads
+        # ISEScan nests outputs under a directory named after the input folder
         self.results_file = (
-            self.isescan_output_dir
+            self.output_dir
             / genome.fasta_path.parent.name
             / f"{genome.fasta_path.name}.tsv"
         )

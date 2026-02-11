@@ -352,7 +352,7 @@ class TestPipelineStepByStep:
             "ref_path": test_output_root / "genomesDB",
             "iso_breseq_path": isolate["breseq_path"],
             "ncbi": True,
-            "use_isfinder": False,
+            "is_detection_method": "genbank",
         }
 
         if anc_isolate is not None:
