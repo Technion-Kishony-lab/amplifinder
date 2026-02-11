@@ -16,16 +16,16 @@ def run_isescan(
     seqfile: Path,
     output_dir: Path,
     *,
-    env_name: str,
+    env_name: Optional[str],
     exec_name: str = "isescan.py",
     threads: int = 2,
 ) -> Path:
-    """Run ISEScan in a dedicated conda environment.
+    """Run ISEScan in a conda environment or current environment.
 
     Args:
         seqfile: Reference FASTA file path.
         output_dir: Directory where ISEScan writes outputs.
-        env_name: Conda environment name containing ISEScan.
+        env_name: Conda environment name containing ISEScan, or None to use current environment.
         exec_name: ISEScan entrypoint (default: isescan.py).
         threads: Threads for ISEScan (--nthread).
 
@@ -37,14 +37,18 @@ def run_isescan(
     ensure_dir(output_dir)
 
     cmd = [
-        "conda", "run", "-n", env_name,
         exec_name,
         "--seqfile", str(seqfile),
         "--output", str(output_dir),
         "--nthread", str(threads),
     ]
+    
+    if env_name:
+        cmd = ["conda", "run", "-n", env_name] + cmd
+        logger.info(f"Running ISEScan in conda env '{env_name}': {exec_name} ...")
+    else:
+        logger.info(f"Running ISEScan: {exec_name} ...")
 
-    logger.info(f"Running ISEScan: {' '.join(cmd[:6])} ...")
     run_command(cmd, check=True, capture_output=True, text=True, error_msg="ISEScan failed")
     return output_dir
 

@@ -14,4 +14,4 @@ isdb_path: null
 isfinder_cache: null
 
 # ISEScan settings
-isescan_env_name: isescan
+isescan_env_name: isescan  # Conda env name, or null to use current environment

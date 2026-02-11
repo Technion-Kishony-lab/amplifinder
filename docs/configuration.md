@@ -23,7 +23,7 @@ To customize, copy the bundled [`amplifinder.yaml`](../amplifinder.yaml) to `~/.
 | `breseq_docker` | Run breseq via Docker | `true` |
 | `isdb_path` | ISfinder database path | bundled |
 | `isfinder_cache` | Cache for bundled ISfinder DB | `~/.amplifinder/ISfinderDB` |
-| `isescan_env_name` | Conda env name for ISEScan | `isescan` |
+| `isescan_env_name` | Conda env name for ISEScan (null = use current environment) | `isescan` |
 
 **Builtin Configuration:** see [`amplifinder.yaml`](../amplifinder.yaml) in the project root.
 
