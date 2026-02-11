@@ -431,7 +431,7 @@ class Config:
         if self.ref_path.name == "genomesDB" and not self.ncbi:
             raise ValueError(
                 "genomesDB directory is reserved for NCBI references. "
-                "Choose a different --ref-path for local genomes."
+                "Choose a different --ref-path for local genomes"
             )
 
         # Validate: average_method (convert string to enum if needed)
