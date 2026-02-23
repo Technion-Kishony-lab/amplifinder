@@ -49,7 +49,7 @@ def run_isescan(
     else:
         logger.info(f"Running ISEScan: {exec_name} ...")
 
-    run_command(cmd, check=True, capture_output=True, text=True, error_msg="ISEScan failed")
+    run_command(cmd, check=True, capture_output=True, text=True, error_msg="ISEScan failed", cwd=output_dir)
     return output_dir
 
 

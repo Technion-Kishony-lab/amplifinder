@@ -90,6 +90,7 @@ def run_command(
     text: bool = False,
     error_msg: Optional[str] = None,
     verbose: bool = False,
+    cwd: Optional[Path] = None,
 ) -> subprocess.CompletedProcess:
     """Run subprocess command with consistent error handling.
 
@@ -115,6 +116,7 @@ def run_command(
         result = subprocess.run(
             cmd_str,
             check=False,
+            cwd=cwd,
         )
     else:
         result = subprocess.run(
@@ -122,6 +124,7 @@ def run_command(
             check=False,
             capture_output=capture_output,
             text=text,
+            cwd=cwd,
         )
 
     if check and result.returncode != 0:

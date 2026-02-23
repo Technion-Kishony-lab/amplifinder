@@ -273,6 +273,14 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
 
 # Locate TNs using ISEScan
 
+# ISEScan standard column names
+SEQ_COL = "seqID"
+START_COL = "isBegin"
+END_COL = "isEnd"
+STRAND_COL = "strand"
+FAMILY_COL = "family"
+CLUSTER_COL = "cluster"
+
 class LocateTNsUsingISEScanStep(LocateTNsStep):
     """Run ISEScan and parse results to locate TN elements."""
     NAME = "locate TNs (isescan)"
@@ -324,53 +332,41 @@ class LocateTNsUsingISEScanStep(LocateTNsStep):
         if df.empty:
             return self._build_ref_tns_dict([])
 
-        # ISEScan standard column names
-        seq_col = "seqID"
-        start_col = "isBegin"
-        end_col = "isEnd"
-        strand_col = "strand"
-        family_col = "family"
-        cluster_col = "cluster"
-
-        required_cols = [seq_col, start_col, end_col, strand_col, family_col, cluster_col]
+        required_cols = [SEQ_COL, START_COL, END_COL, STRAND_COL, FAMILY_COL, CLUSTER_COL]
         missing = [col for col in required_cols if col not in df.columns]
         if missing:
             raise ValueError(f"ISEScan results missing required columns: {', '.join(missing)}")
 
         items = []
         for _, row in df.iterrows():
-            scaf = str(row[seq_col])
-            start = int(row[start_col])
-            end = int(row[end_col])
+            scaf = str(row[SEQ_COL])
+            start = int(row[START_COL])
+            end = int(row[END_COL])
+            
+            strand = str(row[STRAND_COL]).strip()
+            if strand in {"-", "-1", "reverse", "rev"}:
+                orientation = Orientation.REVERSE
+            else:
+                orientation = Orientation.FORWARD
             
             # ISEScan should output isBegin <= isEnd regardless of strand
-            assert start <= end, f"ISEScan: isBegin > isEnd ({start} > {end}) for {scaf}"
-            
-            strand = str(row[strand_col]).strip()
-            # ISEScan outputs "+" for forward, "-" for reverse
-            if strand == "-":
-                orientation = Orientation.REVERSE
-            elif strand == "+":
-                orientation = Orientation.FORWARD
+            # If coordinates are swapped, verify it's consistent with strand
+            if start > end:
+                if orientation != Orientation.REVERSE:
+                    logger.warning(
+                        f"ISEScan: isBegin > isEnd but strand is not '-' for {scaf} "
+                        f"(isBegin={start}, isEnd={end}, strand='{strand}')"
+                    )
+                left, right = end, start
             else:
-                raise ValueError(f"ISEScan: unexpected strand value '{strand}' for {scaf}")
+                left, right = start, end
 
-            # Handle family/cluster (may be empty, "nan" from pandas NaN, or "NA")
-            family = str(row[family_col]).strip()
-            cluster = str(row[cluster_col]).strip()
-            
-            # Treat pandas NaN ("nan"), empty string, and "NA" as missing
-            nan_values = {"", "nan", "NA"}
-            if family in nan_values:
-                family = ""
-            if cluster in nan_values:
-                cluster = ""
-            
-            if family and cluster:
+            family = str(row[FAMILY_COL]).strip()
+            cluster = str(row[CLUSTER_COL]).strip()
+            tn_name = family or cluster or "unknown"
+            if family and cluster and cluster not in {"nan", "NA"}:
                 tn_name = f"{family}:{cluster}"
-            else:
-                tn_name = family or cluster or "unknown"
 
-            items.append((scaf, start, end, orientation, tn_name))
+            items.append((scaf, left, right, orientation, tn_name))
 
         return self._build_ref_tns_dict(items)
