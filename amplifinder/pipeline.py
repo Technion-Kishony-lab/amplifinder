@@ -213,7 +213,7 @@ class Pipeline:
         used_method = cfg.is_detection_method
         
         # Determine which methods to RUN (used method + comparison methods)
-        methods_to_run = set([used_method, *cfg.run_comparison_methods])
+        methods_to_run = {used_method, *cfg.run_comparison_methods}
 
         # Run all requested methods
         ref_tns: dict[ISDetectionMethod, Optional[RecordTypedDf[RefTn]]] = {}
@@ -255,8 +255,8 @@ class Pipeline:
                 compare_tn_locations(
                     used_result,
                     comp_result,
-                    name1=used_method.value.title(),
-                    name2=comp_method.value.title(),
+                    name1=used_method.name,
+                    name2=comp_method.name,
                     output_file=tn_loc_dir / f"tn_location_diffs_{used_method.value}_vs_{comp_method.value}.txt",
                 )
 

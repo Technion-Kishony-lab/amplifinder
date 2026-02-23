@@ -1,4 +1,4 @@
-"""Step: Find TN elements by BLAST against ISfinder database."""
+"""Steps for locating TN elements (GenBank, ISfinder, ISEScan)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -273,6 +273,15 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
 
 # Locate TNs using ISEScan
 
+_NAN_STRINGS = {"nan", "NA", "N/A", "None", ""}
+
+
+def _clean_field(value) -> str:
+    """Convert a DataFrame cell to a clean string, treating NaN-like values as empty."""
+    s = str(value).strip()
+    return "" if s in _NAN_STRINGS else s
+
+
 # ISEScan standard column names
 SEQ_COL = "seqID"
 START_COL = "isBegin"
@@ -361,10 +370,10 @@ class LocateTNsUsingISEScanStep(LocateTNsStep):
             else:
                 left, right = start, end
 
-            family = str(row[FAMILY_COL]).strip()
-            cluster = str(row[CLUSTER_COL]).strip()
+            family = _clean_field(row[FAMILY_COL])
+            cluster = _clean_field(row[CLUSTER_COL])
             tn_name = family or cluster or "unknown"
-            if family and cluster and cluster not in {"nan", "NA"}:
+            if family and cluster:
                 tn_name = f"{family}:{cluster}"
 
             items.append((scaf, left, right, orientation, tn_name))

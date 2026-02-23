@@ -1,7 +1,9 @@
 """Tests for ISEScan tools."""
 
 import os
+import math
 import pytest
+import pandas as pd
 
 # Add conda to PATH before imports
 conda_path = "/opt/anaconda3/bin"
@@ -9,8 +11,10 @@ if conda_path not in os.environ.get("PATH", ""):
     os.environ["PATH"] = f"{os.environ.get('PATH', '')}:{conda_path}"
 
 from amplifinder.tools.isescan import run_isescan, parse_isescan_results, get_isescan_results_file
+from amplifinder.steps.locate_tns.locate_tns import (
+    LocateTNsUsingISEScanStep, SEQ_COL, START_COL, END_COL, STRAND_COL, FAMILY_COL, CLUSTER_COL,
+)
 from tests.env import RUN_ISESCAN_TESTS
-from amplifinder.steps.locate_tns.locate_tns import SEQ_COL, START_COL, END_COL, STRAND_COL, FAMILY_COL, CLUSTER_COL
 
 skip_no_isescan = pytest.mark.skipif(not RUN_ISESCAN_TESTS, reason="ISEScan tests disabled")
 
@@ -44,34 +48,44 @@ def test_conda_available():
 
 @skip_no_isescan
 def test_run_isescan(isescan_output, tiny_ref_fasta):
-    """Should run ISEScan and create output directory."""
+    """Should run ISEScan and create output directory with results."""
     assert isescan_output.exists()
-    # ISEScan may not produce output files if no IS elements found (expected for synthetic data)
-    # Just verify it ran without errors (fixture would have failed if ISEScan crashed)
+    results_file = get_isescan_results_file(tiny_ref_fasta, isescan_output)
+    assert results_file is not None, "ISEScan should produce a results file for a genome with real IS sequences"
+    assert results_file.exists()
 
 
 @skip_no_isescan
 def test_parse_isescan_results(tiny_ref_fasta, isescan_output):
-    """Should parse ISEScan results into DataFrame if results exist."""
-    results_file = get_isescan_results_file(tiny_ref_fasta, isescan_output)
-    assert results_file is not None
+    """Should detect both IS elements embedded in the tiny reference genome.
 
+    tiny_ref layout (1-based):
+        500 bp flank | IS1 (902 bp) @ 501-1402 | 400 bp flank | IS5-RC (1195 bp) @ 1803-2997 | 500 bp flank
+    """
     df = parse_isescan_results(tiny_ref_fasta, isescan_output)
-    
-    # Should return a DataFrame
-    assert df is not None
-    assert hasattr(df, 'columns')
-    
-    # Check basic structure if data exists
-    if len(df) > 0:
-        # ISEScan output typically has these columns
-        expected_cols = [SEQ_COL, FAMILY_COL, CLUSTER_COL, START_COL, END_COL, STRAND_COL]
-        for col in expected_cols:
-            assert col in df.columns
 
-    # Check the strand column is + or -
-    for _, row in df.iterrows():
-        assert row[STRAND_COL] in {"+", "-"}
+    expected_cols = [SEQ_COL, FAMILY_COL, CLUSTER_COL, START_COL, END_COL, STRAND_COL]
+    for col in expected_cols:
+        assert col in df.columns
+
+    assert len(df) == 2
+
+    df = df.sort_values(START_COL).reset_index(drop=True)
+    TOL = 100  # ISEScan HMM boundaries may differ slightly from embedded coords
+
+    is1 = df.iloc[0]
+    assert is1[SEQ_COL] == "tiny"
+    assert is1[FAMILY_COL] == "IS1"
+    assert abs(is1[START_COL] - 501) <= TOL
+    assert abs(is1[END_COL] - 1402) <= TOL
+    assert is1[STRAND_COL] == "-"
+
+    is5 = df.iloc[1]
+    assert is5[SEQ_COL] == "tiny"
+    assert is5[FAMILY_COL] == "IS5"
+    assert abs(is5[START_COL] - 1803) <= TOL
+    assert abs(is5[END_COL] - 2997) <= TOL
+    assert is5[STRAND_COL] == "+"
 
 
 @skip_no_isescan
@@ -161,3 +175,90 @@ def test_isescan_on_real_genome(ecoli_isescan_output, ecoli_with_is_fasta):
             print(f"  Length: {row.get('isLen', 'N/A')}")
     else:
         pytest.fail("ISEScan found no IS elements in E. coli K-12, but it should have several")
+
+
+# --- Unit tests for _calculate_output (no ISEScan execution needed) ---
+
+_TSV_COLS = [SEQ_COL, START_COL, END_COL, STRAND_COL, FAMILY_COL, CLUSTER_COL]
+
+
+def _write_fake_isescan_tsv(output_dir, seqfile, rows: list[dict]) -> None:
+    """Write a fake ISEScan .tsv results file in the expected nested location."""
+    nested_dir = output_dir / seqfile.parent.name
+    nested_dir.mkdir(parents=True, exist_ok=True)
+    df = pd.DataFrame(rows, columns=_TSV_COLS)
+    df.to_csv(nested_dir / f"{seqfile.name}.tsv", sep="\t", index=False)
+
+
+def _make_step(tiny_genome, tmp_path, output_dir=None):
+    output_dir = output_dir or (tmp_path / "isescan_step_output")
+    return LocateTNsUsingISEScanStep(
+        genome=tiny_genome,
+        output_dir=output_dir,
+        env_name=None,
+        exec_name="isescan.py",
+        threads=1,
+        force=True,
+    )
+
+
+def test_calculate_output_nan_family(tiny_genome, tmp_path):
+    """NaN family should produce tn_name from cluster, not 'nan'."""
+    output_dir = tmp_path / "nan_test"
+    _write_fake_isescan_tsv(output_dir, tiny_genome.fasta_path, [
+        {SEQ_COL: "tiny", START_COL: 100, END_COL: 800, STRAND_COL: "+",
+         FAMILY_COL: float("nan"), CLUSTER_COL: "IS1"},
+    ])
+    step = _make_step(tiny_genome, tmp_path, output_dir)
+    result = step._calculate_output()
+    tn = list(result.values())[0]
+    assert tn.tn_name == "IS1", f"Expected 'IS1', got '{tn.tn_name}'"
+
+
+def test_calculate_output_nan_both(tiny_genome, tmp_path):
+    """NaN family and cluster should produce 'unknown'."""
+    output_dir = tmp_path / "nan_both_test"
+    _write_fake_isescan_tsv(output_dir, tiny_genome.fasta_path, [
+        {SEQ_COL: "tiny", START_COL: 100, END_COL: 800, STRAND_COL: "+",
+         FAMILY_COL: float("nan"), CLUSTER_COL: float("nan")},
+    ])
+    step = _make_step(tiny_genome, tmp_path, output_dir)
+    result = step._calculate_output()
+    tn = list(result.values())[0]
+    assert tn.tn_name == "unknown", f"Expected 'unknown', got '{tn.tn_name}'"
+
+
+def test_calculate_output_normal(tiny_genome, tmp_path):
+    """Normal family+cluster should produce 'family:cluster'."""
+    output_dir = tmp_path / "normal_test"
+    _write_fake_isescan_tsv(output_dir, tiny_genome.fasta_path, [
+        {SEQ_COL: "tiny", START_COL: 100, END_COL: 800, STRAND_COL: "+",
+         FAMILY_COL: "IS1", CLUSTER_COL: "IS1A"},
+    ])
+    step = _make_step(tiny_genome, tmp_path, output_dir)
+    result = step._calculate_output()
+    tn = list(result.values())[0]
+    assert tn.tn_name == "IS1:IS1A"
+
+
+def test_calculate_output_reverse_strand(tiny_genome, tmp_path):
+    """Minus strand should produce REVERSE orientation."""
+    from amplifinder.data_types import Orientation
+    output_dir = tmp_path / "strand_test"
+    _write_fake_isescan_tsv(output_dir, tiny_genome.fasta_path, [
+        {SEQ_COL: "tiny", START_COL: 100, END_COL: 800, STRAND_COL: "-",
+         FAMILY_COL: "IS5", CLUSTER_COL: "IS5B"},
+    ])
+    step = _make_step(tiny_genome, tmp_path, output_dir)
+    result = step._calculate_output()
+    tn = list(result.values())[0]
+    assert tn.orientation == Orientation.REVERSE
+
+
+def test_calculate_output_empty(tiny_genome, tmp_path):
+    """Empty results should return empty RecordTypedDf."""
+    output_dir = tmp_path / "empty_test"
+    _write_fake_isescan_tsv(output_dir, tiny_genome.fasta_path, [])
+    step = _make_step(tiny_genome, tmp_path, output_dir)
+    result = step._calculate_output()
+    assert len(result) == 0

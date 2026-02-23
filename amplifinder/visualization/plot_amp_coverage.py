@@ -350,7 +350,6 @@ def plot_amplicon_coverage(
             ax_cov_ratio, positions, ratio, ylim,
             left_pos, right_pos, tnjc2.scaf_norm_copy_number_ratio)
 
-    plt.tight_layout()
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)
     plt.savefig(output_path, dpi=150, bbox_inches='tight')
     plt.close()

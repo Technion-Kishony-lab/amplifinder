@@ -55,11 +55,13 @@ def test_extracts_tn_elements(locate_tns_step):
     # Check specific fields
     assert list(tn_loc.df["tn_name"]) == ["IS_test1", "IS_test2"]
     assert list(tn_loc.df["scaf"]) == ["tiny", "tiny"]
-    # Check coordinates are in the right range (parsers may differ slightly in exact positions)
+    # Coordinates from conftest: IS1=902bp, IS5=1195bp
+    # IS_test1 (forward): start=501, end=1402
+    # IS_test2 (reverse): start=2997 (higher), end=1803 (lower)
     assert tn_loc.df["start"].iloc[0] in [500, 501]  # IS_test1 start (forward)
-    assert tn_loc.df["start"].iloc[1] in [2199, 2200]  # IS_test2 start (reverse - higher coord)
-    assert tn_loc.df["end"].iloc[0] in [1199, 1200]  # IS_test1 end (forward)
-    assert tn_loc.df["end"].iloc[1] in [1600, 1601]  # IS_test2 end (reverse - lower coord)
+    assert tn_loc.df["start"].iloc[1] in [2997, 2998]  # IS_test2 start (reverse - higher coord)
+    assert tn_loc.df["end"].iloc[0] in [1402, 1403]  # IS_test1 end (forward)
+    assert tn_loc.df["end"].iloc[1] in [1803, 1804]  # IS_test2 end (reverse - lower coord)
     assert list(tn_loc.df["orientation"]) == [Orientation.FORWARD, Orientation.REVERSE]
     assert list(tn_loc.df["join"]) == [False, False]
 
