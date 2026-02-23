@@ -128,11 +128,9 @@ See [docs/configuration.md](docs/configuration.md) for details.
 
 The pipeline runs 16 steps from FASTQ to classified amplification candidates. See [docs/pipeline.md](docs/pipeline.md) for the full flow diagram and step descriptions.
 
-## Citation
+## Credit
 
-If you use AmpliFinder in your research, please cite:
-
-> [Citation to be added]
+*AmpliFinder* was developed by Idan Yelin and Roy Kishony.
 
 ## License
 
