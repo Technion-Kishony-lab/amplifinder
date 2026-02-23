@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 from amplifinder.logger import logger
+from amplifinder.exceptions import ToolNotFoundError
 
 
 def find_tool(
@@ -73,9 +74,9 @@ def get_tool_path(
     if tool_path is None:
         if required:
             config_hint = f" (config path: {config_path})" if config_path else ""
-            raise FileNotFoundError(
+            raise ToolNotFoundError(
                 f"{tool_name} not found. "
-                f"Set path in amplifinder.yaml or ensure {tool_name} is in PATH.{config_hint}"
+                f"Ensure {tool_name} is in PATH or set its path in amplifinder.yaml.{config_hint}"
             )
         return Path(tool_name)  # Fallback to name only
 
@@ -89,6 +90,7 @@ def run_command(
     text: bool = False,
     error_msg: Optional[str] = None,
     verbose: bool = False,
+    cwd: Optional[Path] = None,
 ) -> subprocess.CompletedProcess:
     """Run subprocess command with consistent error handling.
 
@@ -114,6 +116,7 @@ def run_command(
         result = subprocess.run(
             cmd_str,
             check=False,
+            cwd=cwd,
         )
     else:
         result = subprocess.run(
@@ -121,6 +124,7 @@ def run_command(
             check=False,
             capture_output=capture_output,
             text=text,
+            cwd=cwd,
         )
 
     if check and result.returncode != 0:

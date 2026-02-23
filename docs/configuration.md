@@ -23,6 +23,7 @@ To customize, copy the bundled [`amplifinder.yaml`](../amplifinder.yaml) to `~/.
 | `breseq_docker` | Run breseq via Docker | `true` |
 | `isdb_path` | ISfinder database path | bundled |
 | `isfinder_cache` | Cache for bundled ISfinder DB | `~/.amplifinder/ISfinderDB` |
+| `isescan_env_name` | Conda env name for ISEScan (null = use current environment) | `isescan` |
 
 **Builtin Configuration:** see [`amplifinder.yaml`](../amplifinder.yaml) in the project root.
 
@@ -58,7 +59,8 @@ Every run saves its full configuration to `run_config.yaml` in the output direct
 | `anc_fastq_path` | Ancestor FASTQ path | None |
 | `output_dir` | Output directory | `output` |
 | `threads` | Alignment threads | 4 |
-| `use_isfinder` | Use ISfinder for IS detection | False |
+| `is_detection_method` | IS detection method to USE: `genbank` (default), `isfinder`, or `isescan` | `genbank` |
+| `run_comparison_methods` | Additional methods to RUN for comparison (e.g., `[isfinder]`) | `[]` |
 | `average_method` | Coverage statistic (mean/median/mode) | median |
 | `min_amplicon_length` | Minimum amplicon length (bp) | 100 |
 | `max_amplicon_length` | Maximum amplicon length (bp) | 1,000,000 |

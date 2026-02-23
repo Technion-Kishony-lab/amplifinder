@@ -52,6 +52,8 @@ BOWTIE2_PATH: Optional[Path] = _get_path("bowtie2_path")
 BRESEQ_DOCKER: bool = _CONFIG.get("breseq_docker", True)
 ISDB_PATH: Optional[Path] = _get_path("isdb_path")
 ISFINDER_CACHE: Optional[Path] = _get_path("isfinder_cache")
+ISESCAN_ENV_NAME: Optional[str] = _CONFIG.get("isescan_env_name")
+ISESCAN_EXEC: str = "isescan.py"  # Fixed ISEScan entrypoint
 
 # Global parameters for read type classification
 IGNORE_DUPLICATES: bool = True  # If False, keep all duplicate read_ids as a list

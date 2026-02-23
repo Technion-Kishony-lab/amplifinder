@@ -23,7 +23,7 @@ def batch_csv_path(isolate_srr25242877, cleared_output_dir, tmp_path):
             "output_dir": str(cleared_output_dir / "sample1"),
             "iso_breseq_path": str(isolate_srr25242877["breseq_path"]),
             "ncbi": "true",
-            "use_isfinder": "false",
+            "is_detection_method": "genbank",
             "create_plots": "false",
         },
         {
@@ -34,7 +34,7 @@ def batch_csv_path(isolate_srr25242877, cleared_output_dir, tmp_path):
             "output_dir": str(cleared_output_dir / "sample2"),
             "iso_breseq_path": str(isolate_srr25242877["breseq_path"]),
             "ncbi": "true",
-            "use_isfinder": "false",
+            "is_detection_method": "genbank",
             "create_plots": "false",
         },
     ]

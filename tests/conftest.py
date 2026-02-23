@@ -144,10 +144,19 @@ def make_random_seq(length: int, seed: int = 42) -> Seq:
 
 
 def make_tn_sequences() -> dict:
-    """Define TN element sequences for testing."""
+    """Define TN element sequences for testing.
+
+    Uses real IS sequences from NCBI stored in fixtures directory.
+    """
+    is1_file = FIXTURES_DIR / "IS1.fasta"
+    is5_file = FIXTURES_DIR / "IS5.fasta"
+
+    is1_record = SeqIO.read(is1_file, "fasta")
+    is5_record = SeqIO.read(is5_file, "fasta")
+
     return {
-        "IS_test1": make_random_seq(700, seed=100),
-        "IS_test2": make_random_seq(600, seed=101),
+        "IS_test1": is1_record.seq,
+        "IS_test2": is5_record.seq,
     }
 
 

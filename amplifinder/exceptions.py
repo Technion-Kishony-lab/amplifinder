@@ -1,6 +1,13 @@
 """Exception types for AmpliFinder."""
 
 
+CONFIG_HELP_MSG = (
+    "\n\nTo configure paths and settings, copy the bundled amplifinder.yaml to "
+    "~/.amplifinder/amplifinder.yaml and edit it.\n"
+    "See docs/configuration.md for details."
+)
+
+
 class PrematureTerminationError(Exception):
     """Raised when pipeline should terminate early due to data quality issues.
 
@@ -51,3 +58,12 @@ class PrematureTerminationError(Exception):
             for key, val in self.details.items():
                 msg += f"\n{key}: {val}"
         return msg
+
+
+class ToolNotFoundError(FileNotFoundError):
+    """Tool executable not found with helpful message about amplifinder.yaml."""
+
+    def __init__(self, message: str, include_help: bool = True):
+        if include_help:
+            message = f"{message}{CONFIG_HELP_MSG}"
+        super().__init__(message)

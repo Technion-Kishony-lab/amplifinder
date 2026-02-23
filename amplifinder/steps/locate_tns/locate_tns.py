@@ -1,4 +1,4 @@
-"""Step: Find TN elements by BLAST against ISfinder database."""
+"""Steps for locating TN elements (GenBank, ISfinder, ISEScan)."""
 from __future__ import annotations
 
 from pathlib import Path
@@ -10,6 +10,7 @@ from Bio.SeqFeature import SeqFeature
 from amplifinder.data_types import TnId
 from amplifinder.logger import logger
 from amplifinder.tools.blast import run_blastn, parse_blast_csv, make_blast_db
+from amplifinder.tools.isescan import run_isescan, parse_isescan_results
 from amplifinder.utils.fasta import read_fasta_lengths
 from amplifinder.utils.file_lock import locked_resource
 from amplifinder.utils.file_utils import ensure_dir
@@ -266,5 +267,116 @@ class LocateTNsUsingISfinderStep(LocateTNsStep):
             is_complement = row["sstart"] > row["send"]
             orientation = Orientation.REVERSE if is_complement else Orientation.FORWARD
             items.append((row["query"], row["qstart"], row["qend"], orientation, row["subject"]))
+
+        return self._build_ref_tns_dict(items)
+
+
+# Locate TNs using ISEScan
+
+_NAN_STRINGS = {"nan", "NA", "N/A", "None", ""}
+
+
+def _clean_field(value) -> str:
+    """Convert a DataFrame cell to a clean string, treating NaN-like values as empty."""
+    s = str(value).strip()
+    return "" if s in _NAN_STRINGS else s
+
+
+# ISEScan standard column names
+SEQ_COL = "seqID"
+START_COL = "isBegin"
+END_COL = "isEnd"
+STRAND_COL = "strand"
+FAMILY_COL = "family"
+CLUSTER_COL = "cluster"
+
+
+class LocateTNsUsingISEScanStep(LocateTNsStep):
+    """Run ISEScan and parse results to locate TN elements."""
+    NAME = "locate TNs (isescan)"
+
+    def __init__(
+        self,
+        genome: Genome,
+        output_dir: Path,
+        env_name: Optional[str],
+        exec_name: str,
+        threads: int,
+        force: Optional[bool] = None,
+    ):
+        self.output_dir = Path(output_dir)
+        self.env_name = env_name
+        self.exec_name = exec_name
+        self.threads = threads
+        # ISEScan nests outputs under a directory named after the input folder
+        self.results_file = (
+            self.output_dir
+            / genome.fasta_path.parent.name
+            / f"{genome.fasta_path.name}.tsv"
+        )
+
+        super().__init__(
+            genome=genome,
+            output_dir=output_dir,
+            source="isescan",
+            input_files=[genome.fasta_path],
+            artifact_files=[self.results_file],
+            force=force,
+        )
+
+    def _generate_artifacts(self) -> None:
+        """Run ISEScan to produce output files."""
+        run_isescan(
+            seqfile=self.genome.fasta_path,
+            output_dir=self.output_dir,
+            env_name=self.env_name,
+            exec_name=self.exec_name,
+            threads=self.threads,
+        )
+
+    def report_output_message(self, output: RecordTypedDf[RefTn]) -> Optional[str]:
+        return f"ISEScan: found {len(output)} TN elements"
+
+    def _calculate_output(self) -> RecordTypedDf[RefTn]:
+        df = parse_isescan_results(self.genome.fasta_path, self.output_dir)
+        if df.empty:
+            return self._build_ref_tns_dict([])
+
+        required_cols = [SEQ_COL, START_COL, END_COL, STRAND_COL, FAMILY_COL, CLUSTER_COL]
+        missing = [col for col in required_cols if col not in df.columns]
+        if missing:
+            raise ValueError(f"ISEScan results missing required columns: {', '.join(missing)}")
+
+        items = []
+        for _, row in df.iterrows():
+            scaf = str(row[SEQ_COL])
+            start = int(row[START_COL])
+            end = int(row[END_COL])
+
+            strand = str(row[STRAND_COL]).strip()
+            if strand in {"-", "-1", "reverse", "rev"}:
+                orientation = Orientation.REVERSE
+            else:
+                orientation = Orientation.FORWARD
+
+            # ISEScan should output isBegin <= isEnd regardless of strand
+            # If coordinates are swapped, verify it's consistent with strand
+            if start > end:
+                if orientation != Orientation.REVERSE:
+                    logger.warning(
+                        f"ISEScan: isBegin > isEnd but strand is not '-' for {scaf} "
+                        f"(isBegin={start}, isEnd={end}, strand='{strand}')"
+                    )
+                left, right = end, start
+            else:
+                left, right = start, end
+
+            family = _clean_field(row[FAMILY_COL])
+            cluster = _clean_field(row[CLUSTER_COL])
+            tn_name = family or cluster or "unknown"
+            if family and cluster:
+                tn_name = f"{family}:{cluster}"
+
+            items.append((scaf, left, right, orientation, tn_name))
 
         return self._build_ref_tns_dict(items)

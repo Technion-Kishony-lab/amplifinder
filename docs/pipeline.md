@@ -26,6 +26,7 @@ xxx[]  array
    │           │          ┌────────────────────────────┐      │              │
    │           │          │ 2a. LocateTNsUsingGenbank  │      │              │
    │           │          │ 2b. LocateTNsUsingISfinder │      │              │
+   │           │          │ 2c. LocateTNsUsingISEScan  │      │              │
    │           │          └─────────────┬──────────────┘      │              │
    │           │                        ▼                     │              │
    │           │                     RefTn[]                  │              │
@@ -136,6 +137,7 @@ xxx[]  array
 | 1 | GetRefGenome | Download reference FASTA and GenBank from NCBI |
 | 2a | LocateTNsUsingGenbank | Find IS elements from GenBank annotations |
 | 2b | LocateTNsUsingISfinder | Find IS elements via BLAST against ISfinder DB |
+| 2c | LocateTNsUsingISEScan | Find IS elements via ISEScan |
 | 3 | CreateRefTnJc | Build reference junctions at IS element boundaries |
 | 4 | Breseq | Align reads and detect novel junctions |
 | 5 | CreateTnJc | Match breseq junctions to IS elements |

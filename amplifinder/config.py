@@ -3,11 +3,51 @@
 from dataclasses import dataclass, field, fields, is_dataclass, MISSING
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional, Tuple, ClassVar, Union
+from typing import Any, Optional, Tuple, ClassVar, Union, List
 
 from amplifinder.data_types import AverageMethod
 from amplifinder.utils.file_utils import ensure_dir
 from amplifinder.utils.yaml_utils import load_config, save_annotated_yaml
+
+
+class ISDetectionMethod(str, Enum):
+    """IS detection method."""
+    GENBANK = "genbank"
+    ISFINDER = "isfinder"
+    ISESCAN = "isescan"
+
+    @classmethod
+    def valid_options_str(cls) -> str:
+        """Return comma-separated string of valid option values."""
+        return ", ".join(f"'{m.value}'" for m in cls)
+
+    @classmethod
+    def from_value(cls, value: Any, field_name: str = "value") -> Optional["ISDetectionMethod"]:
+        """Convert string or enum to ISDetectionMethod enum.
+
+        Args:
+            value: String value or ISDetectionMethod enum
+            field_name: Field name for error messages
+
+        Returns:
+            ISDetectionMethod enum or None if value is None
+        """
+        if isinstance(value, cls):
+            return value
+        if value is None:
+            return None
+        if isinstance(value, str):
+            try:
+                return cls(value.lower())
+            except ValueError:
+                raise ValueError(
+                    f"{field_name} must be one of {cls.valid_options_str()}, "
+                    f"got: {value}"
+                )
+        raise ValueError(
+            f"{field_name} must be one of {cls.valid_options_str()}, "
+            f"got: {value}"
+        )
 
 
 @dataclass(frozen=True)
@@ -128,14 +168,18 @@ class Config:
     output_dir: Path = field(default_factory=lambda: Path("output"), metadata={
         "comment": "output directory (default: output)"})
 
-    # --- IS-finder ---
-    use_isfinder: bool = field(default=False, metadata={
-        "section": "IS-finder",
-        "comment": "use ISfinder database for IS detection (default: False)"})
-    isfinder_evalue: float = 1e-4
-    isfinder_critical_coverage: float = 0.9
+    # --- IS detection ---
+    is_detection_method: ISDetectionMethod = field(default=ISDetectionMethod.GENBANK, metadata={
+        "section": "IS detection",
+        "comment": "'genbank' (default), 'isfinder', or 'isescan'"})
+    run_comparison_methods: List[ISDetectionMethod] = field(default_factory=list, metadata={
+        "comment": "List of additional methods to run for comparison (e.g., [isfinder] to compare against isfinder)"})
+    isfinder_evalue: float = field(default=1e-4, metadata={
+        "comment": "ISfinder BLAST e-value threshold"})
+    isfinder_critical_coverage: float = field(default=0.9, metadata={
+        "comment": "ISfinder critical coverage threshold"})
 
-    # --- Detection parameters ---
+    # --- Detect IS-junctions ---
     reference_IS_in_span: Optional[int] = field(default=None, metadata={
         "section": "Detect IS-junctions",
         "comment": "null = use entire IS element"})
@@ -359,18 +403,35 @@ class Config:
         self.bowtie_params = init_params(BowtieParams, self.bowtie_params)
         self.jc_call_params = init_params(JcCallParams, self.jc_call_params)
 
-        # Validate: ISfinder required for non-NCBI genomes
-        if not self.ncbi and not self.use_isfinder:
+        # Convert strings to enums if needed
+        self.is_detection_method = ISDetectionMethod.from_value(
+            self.is_detection_method, "is_detection_method"
+        ) or ISDetectionMethod.GENBANK  # Handle None from YAML
+
+        if self.run_comparison_methods:
+            self.run_comparison_methods = [
+                ISDetectionMethod.from_value(method, "run_comparison_methods")
+                for method in self.run_comparison_methods
+            ]
+
+        # Validate: used method shouldn't be in comparison list
+        if self.is_detection_method and self.is_detection_method in self.run_comparison_methods:
             raise ValueError(
-                "ISfinder is required for local (non-NCBI) genomes. "
-                "Use --use-isfinder flag."
+                f"is_detection_method ({self.is_detection_method.value}) should not be in run_comparison_methods"
+            )
+
+        # Validate: ISfinder or ISEScan required for non-NCBI genomes
+        if not self.ncbi and self.is_detection_method == ISDetectionMethod.GENBANK:
+            raise ValueError(
+                "ISfinder or ISEScan is required for local (non-NCBI) genomes. "
+                "Set is_detection_method to 'isfinder' or 'isescan'"
             )
 
         # Validate: genomesDB is reserved for NCBI references
         if self.ref_path.name == "genomesDB" and not self.ncbi:
             raise ValueError(
                 "genomesDB directory is reserved for NCBI references. "
-                "Choose a different --ref-path for local genomes."
+                "Choose a different --ref-path for local genomes"
             )
 
         # Validate: average_method (convert string to enum if needed)

@@ -12,3 +12,6 @@ breseq_docker: true
 # ISfinder database (null = use bundled)
 isdb_path: null
 isfinder_cache: null
+
+# ISEScan settings
+isescan_env_name: isescan  # Conda env name, or null to use current environment

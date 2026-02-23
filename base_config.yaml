@@ -21,10 +21,11 @@ anc_read_length: null # read length (if not provided, auto-detected from FASTQ)
 anc_breseq_path: null # path to create/load breseq (default: <anc_run_folder>/breseq)
 output_dir: /zdata/user-data/rkishony/amplifinder/output # output directory (default: output)
 
-# --- IS-finder ---
-use_isfinder: false # use ISfinder database for IS detection (default: False)
-isfinder_evalue: 0.0001
-isfinder_critical_coverage: 0.9
+# --- IS detection ---
+is_detection_method: null # 'genbank' (default), 'isfinder', or 'isescan'
+run_comparison_methods: [] # List of additional methods to run for comparison (e.g., [isfinder] to compare against isfinder)
+isfinder_evalue: 0.0001 # ISfinder BLAST e-value threshold
+isfinder_critical_coverage: 0.9 # ISfinder critical coverage threshold
 
 # --- Detect IS-junctions ---
 reference_IS_in_span: null # null = use entire IS element
