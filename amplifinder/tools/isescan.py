@@ -42,7 +42,7 @@ def run_isescan(
         "--output", str(output_dir),
         "--nthread", str(threads),
     ]
-    
+
     if env_name:
         cmd = ["conda", "run", "-n", env_name] + cmd
         logger.info(f"Running ISEScan in conda env '{env_name}': {exec_name} ...")

@@ -1,7 +1,6 @@
 """Tests for ISEScan tools."""
 
 import os
-import math
 import pytest
 import pandas as pd
 
@@ -10,11 +9,11 @@ conda_path = "/opt/anaconda3/bin"
 if conda_path not in os.environ.get("PATH", ""):
     os.environ["PATH"] = f"{os.environ.get('PATH', '')}:{conda_path}"
 
-from amplifinder.tools.isescan import run_isescan, parse_isescan_results, get_isescan_results_file
-from amplifinder.steps.locate_tns.locate_tns import (
+from amplifinder.tools.isescan import run_isescan, parse_isescan_results, get_isescan_results_file  # noqa: E402
+from amplifinder.steps.locate_tns.locate_tns import (  # noqa: E402
     LocateTNsUsingISEScanStep, SEQ_COL, START_COL, END_COL, STRAND_COL, FAMILY_COL, CLUSTER_COL,
 )
-from tests.env import RUN_ISESCAN_TESTS
+from tests.env import RUN_ISESCAN_TESTS  # noqa: E402
 
 skip_no_isescan = pytest.mark.skipif(not RUN_ISESCAN_TESTS, reason="ISEScan tests disabled")
 
@@ -23,7 +22,7 @@ skip_no_isescan = pytest.mark.skipif(not RUN_ISESCAN_TESTS, reason="ISEScan test
 def isescan_output(tiny_ref_fasta, tmp_path):
     """Run ISEScan and return output directory."""
     from amplifinder.env import ISESCAN_ENV_NAME
-    
+
     output_dir = tmp_path / "isescan_output"
     run_isescan(
         seqfile=tiny_ref_fasta,
@@ -93,7 +92,7 @@ def test_parse_isescan_no_results_raises(tmp_path, tiny_ref_fasta):
     """Should raise FileNotFoundError when no results exist."""
     empty_dir = tmp_path / "empty"
     empty_dir.mkdir()
-    
+
     with pytest.raises(FileNotFoundError):
         parse_isescan_results(tiny_ref_fasta, empty_dir)
 
@@ -105,9 +104,9 @@ def ecoli_with_is_fasta(tmp_path):
     from amplifinder.steps import GetRefGenomeStep
     from tests.conftest import TEST_GENOMES_CACHE
     from amplifinder.utils.file_utils import ensure_dir
-    
+
     cache_dir = ensure_dir(TEST_GENOMES_CACHE)
-    
+
     step = GetRefGenomeStep(
         ref_name="U00096",
         ref_path=cache_dir,
@@ -121,7 +120,7 @@ def ecoli_with_is_fasta(tmp_path):
 def ecoli_isescan_output(ecoli_with_is_fasta, tmp_path):
     """Run ISEScan on real E. coli genome."""
     from amplifinder.env import ISESCAN_ENV_NAME
-    
+
     output_dir = tmp_path / "ecoli_isescan_output"
     print(f"Running ISEScan on {ecoli_with_is_fasta} ...", flush=True)
     run_isescan(
@@ -140,33 +139,33 @@ def ecoli_isescan_output(ecoli_with_is_fasta, tmp_path):
 def test_isescan_on_real_genome(ecoli_isescan_output, ecoli_with_is_fasta):
     """Run ISEScan on real E. coli genome and parse actual output."""
     assert ecoli_isescan_output.exists()
-    
+
     # Should find results file
     results_file = get_isescan_results_file(ecoli_with_is_fasta, ecoli_isescan_output)
     assert results_file is not None, "ISEScan should produce results for E. coli K-12"
     assert results_file.exists()
-    
+
     # Parse the actual ISEScan output
     df = parse_isescan_results(ecoli_with_is_fasta, ecoli_isescan_output)
-    
+
     # E. coli K-12 MG1655 has known IS elements
-    print(f"\n=== ISEScan Results for E. coli K-12 ===")
+    print("\n=== ISEScan Results for E. coli K-12 ===")
     print(f"Total IS elements found: {len(df)}")
     print(f"Columns: {list(df.columns)}")
-    
+
     if len(df) > 0:
-        print(f"\nFirst few results:")
+        print("\nFirst few results:")
         print(df.head())
-        
+
         # Verify expected columns
         assert 'seqID' in df.columns
         assert 'family' in df.columns
         assert 'isBegin' in df.columns
         assert 'isEnd' in df.columns
-        
+
         # E. coli K-12 should have IS elements (known to have IS1, IS5, etc.)
         assert len(df) > 0, "E. coli K-12 should have detectable IS elements"
-        
+
         # Check that we got reasonable data
         for idx, row in df.head(3).iterrows():
             print(f"\nIS element {idx}:")

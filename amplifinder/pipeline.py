@@ -211,7 +211,7 @@ class Pipeline:
 
         # Determine which method to USE
         used_method = cfg.is_detection_method
-        
+
         # Determine which methods to RUN (used method + comparison methods)
         methods_to_run = {used_method, *cfg.run_comparison_methods}
 

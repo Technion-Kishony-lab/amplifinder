@@ -24,11 +24,11 @@ class ISDetectionMethod(str, Enum):
     @classmethod
     def from_value(cls, value: Any, field_name: str = "value") -> Optional["ISDetectionMethod"]:
         """Convert string or enum to ISDetectionMethod enum.
-        
+
         Args:
             value: String value or ISDetectionMethod enum
             field_name: Field name for error messages
-            
+
         Returns:
             ISDetectionMethod enum or None if value is None
         """
@@ -407,7 +407,7 @@ class Config:
         self.is_detection_method = ISDetectionMethod.from_value(
             self.is_detection_method, "is_detection_method"
         ) or ISDetectionMethod.GENBANK  # Handle None from YAML
-        
+
         if self.run_comparison_methods:
             self.run_comparison_methods = [
                 ISDetectionMethod.from_value(method, "run_comparison_methods")

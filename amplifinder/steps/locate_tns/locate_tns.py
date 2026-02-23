@@ -290,6 +290,7 @@ STRAND_COL = "strand"
 FAMILY_COL = "family"
 CLUSTER_COL = "cluster"
 
+
 class LocateTNsUsingISEScanStep(LocateTNsStep):
     """Run ISEScan and parse results to locate TN elements."""
     NAME = "locate TNs (isescan)"
@@ -351,13 +352,13 @@ class LocateTNsUsingISEScanStep(LocateTNsStep):
             scaf = str(row[SEQ_COL])
             start = int(row[START_COL])
             end = int(row[END_COL])
-            
+
             strand = str(row[STRAND_COL]).strip()
             if strand in {"-", "-1", "reverse", "rev"}:
                 orientation = Orientation.REVERSE
             else:
                 orientation = Orientation.FORWARD
-            
+
             # ISEScan should output isBegin <= isEnd regardless of strand
             # If coordinates are swapped, verify it's consistent with strand
             if start > end:

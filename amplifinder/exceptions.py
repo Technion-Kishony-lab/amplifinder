@@ -62,7 +62,7 @@ class PrematureTerminationError(Exception):
 
 class ToolNotFoundError(FileNotFoundError):
     """Tool executable not found with helpful message about amplifinder.yaml."""
-    
+
     def __init__(self, message: str, include_help: bool = True):
         if include_help:
             message = f"{message}{CONFIG_HELP_MSG}"
