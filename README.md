@@ -5,7 +5,7 @@ Detect Insertion Sequence (IS)-mediated gene amplifications and deletions from w
 ## Requirements
 
 - **Python 3.11+**
-- **breseq** (read alignment and junction detection)
+- **Docker** — by default, breseq is run via `docker` using the pinned image `ummidock/breseq:0.32.1` (read alignment and junction detection). To use a host-installed **breseq** instead, set `breseq_docker: false` in [`amplifinder.yaml`](amplifinder.yaml) (see [docs/configuration.md](docs/configuration.md)); the `breseq` binary must then be on `PATH`.
 - **bowtie2** (synthetic junction alignment)
 - **BLAST+** (optional, for ISfinder-based IS detection)
 - **ISEScan** (optional, for ISEScan-based IS detection; run via separate conda env)
@@ -119,7 +119,7 @@ output/
 
 AmpliFinder uses two independent configuration systems:
 
-- **`amplifinder.yaml`** — server-specific tool paths (blast, samtools, bowtie2, breseq docker). Loaded automatically at import time.
+- **`amplifinder.yaml`** — server-specific tool paths (blast, samtools, bowtie2) and whether breseq runs in Docker (`breseq_docker`, default `true`). Loaded automatically at import time.
 - **`--config`** — per-run parameters (input files, thresholds, detection settings). CLI args take priority over the config file.
 
 See [docs/configuration.md](docs/configuration.md) for details.
