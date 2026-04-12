@@ -1,6 +1,6 @@
 # Pipeline
 
-AmpliFinder processes paired-end FASTQ reads through 16 steps to detect IS-mediated gene amplifications and deletions.
+AmpliFinder processes whole-genome FASTQ reads (typically paired-end Illumina) through 16 steps to detect IS-mediated gene amplifications and deletions. **Inputs are directories:** each of `iso_fastq_path` and optional `anc_fastq_path` points to a folder whose `*.fastq*` files are all used for that sample (multiple lanes or both PE mates together). Synthetic junction alignment uses Bowtie2 in unpaired (`-U`) mode; junction tables may include a “paired” category when mate pairs map with opposite orientations on the synthetic sequence—single-end data will usually show zero there without indicating an error.
 
 ## Flow Diagram
 

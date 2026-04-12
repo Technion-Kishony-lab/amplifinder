@@ -22,17 +22,19 @@ Python dependencies (numpy, pandas, biopython, pysam, click, pyyaml, matplotlib,
 
 ## Quick Start
 
+Input reads must be passed as a **directory** path: place one or more `*.fastq*` files for that sample in the folder and point `-i` (and optionally `-a`) at it. For **paired-end** data, put both mates (and any additional lanes) in the **same** directory. For **single-end**, use a directory containing a single FASTQ.
+
 ### Isolate only (raw coverage)
 
 ```bash
-amplifinder -i isolate.fastq -r U00096 --iso-name my_isolate
+amplifinder -i path/to/isolate_fastq/ -r U00096 --iso-name my_isolate
 ```
 
 ### Isolate vs ancestor (normalized coverage and IS-junction comparison)
 
 ```bash
-amplifinder -i isolate.fastq -r U00096 --iso-name my_isolate \
-            -a ancestor.fastq --anc-name my_ancestor
+amplifinder -i path/to/isolate_fastq/ -r U00096 --iso-name my_isolate \
+            -a path/to/ancestor_fastq/ --anc-name my_ancestor
 ```
 
 Ancestor results are cached and reused across isolates sharing the same ancestor.
@@ -51,9 +53,9 @@ The batch run status is written to `run_status.csv`.
 
 | Option | Description | Default | Config field |
 |--------|-------------|---------|--------------|
-| `-i, --iso-path` | Isolate FASTQ file(s) or directory | Required | `iso_fastq_path` |
+| `-i, --iso-path` | Directory of isolate FASTQ files (`*.fastq*`) | Required | `iso_fastq_path` |
 | `-r, --ref-name` | Reference genome NCBI accession (e.g. U00096) | Required | `ref_name` |
-| `-a, --anc-path` | Ancestor FASTQ file(s) or directory | None | `anc_fastq_path` |
+| `-a, --anc-path` | Directory of ancestor FASTQ files (`*.fastq*`) | None | `anc_fastq_path` |
 | `--iso-name` | Isolate name | derived from path | `iso_name` |
 | `--anc-name` | Ancestor name | derived from path | `anc_name` |
 | `--ref-path` | Reference genome cache directory | `genomesDB` | `ref_path` |

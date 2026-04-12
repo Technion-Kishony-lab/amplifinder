@@ -39,10 +39,10 @@ A complete template with all fields and their built-in defaults is provided in [
 
 ```bash
 # Run with a config file (CLI args override file values)
-amplifinder -i isolate.fastq -r U00096 --config params.yaml
+amplifinder -i path/to/isolate_fastq/ -r U00096 --config params.yaml
 
 # Generate a complete config template with all defaults
-amplifinder -i isolate.fastq -r U00096 --create-config my_run.yaml
+amplifinder -i path/to/isolate_fastq/ -r U00096 --create-config my_run.yaml
 
 # Rerun from a saved run config
 amplifinder --config output/U00096/ancestor/isolate/run_config.yaml
@@ -50,13 +50,15 @@ amplifinder --config output/U00096/ancestor/isolate/run_config.yaml
 
 Every run saves its full configuration to `run_config.yaml` in the output directory. This file can be passed back to `--config` to reproduce the run.
 
+**FASTQ inputs:** `iso_fastq_path` and `anc_fastq_path` must be **directories** containing the sample’s `*.fastq*` files (paired-end mates and/or extra lanes in the same folder; single-end can be one file in that folder). All matching files are passed to breseq and used for read-length estimation and downstream alignment.
+
 ### Key run parameters
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `iso_fastq_path` | Isolate FASTQ path | Required |
+| `iso_fastq_path` | Directory of isolate FASTQ files | Required |
 | `ref_name` | NCBI accession | Required |
-| `anc_fastq_path` | Ancestor FASTQ path | None |
+| `anc_fastq_path` | Directory of ancestor FASTQ files | None |
 | `output_dir` | Output directory | `output` |
 | `threads` | Alignment threads | 4 |
 | `is_detection_method` | IS detection method to USE: `genbank` (default), `isfinder`, or `isescan` | `genbank` |

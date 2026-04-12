@@ -4,9 +4,9 @@
 # Step 1: Create a complete config file from CLI args
 # This generates a YAML with ALL parameters (including defaults)
 amplifinder \
-    -i data/isolate.fastq \
+    -i data/isolate_fastq/ \
     -r U00096 \
-    -a data/ancestor.fastq \
+    -a data/ancestor_fastq/ \
     --create-config my_experiment.yaml
 
 echo "Config created: my_experiment.yaml"

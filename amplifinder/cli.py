@@ -133,7 +133,7 @@ async def _run_one_batch(
     type=click.Path(path_type=Path),
     required=False,
     default=None,
-    help="Path to isolate FASTQ file(s) or directory.",
+    help="Directory containing isolate FASTQ files (*.fastq*). All matching files are used.",
 )
 @click.option(
     "-r", "--ref-name",
@@ -146,7 +146,7 @@ async def _run_one_batch(
     "-a", "--anc-path", "--anc-fastq-path", "anc_fastq_path",
     type=click.Path(path_type=Path),
     default=None,
-    help="Path to ancestor FASTQ file(s) or directory.",
+    help="Directory containing ancestor FASTQ files (*.fastq*). All matching files are used.",
 )
 @click.option(
     "--iso-name",
