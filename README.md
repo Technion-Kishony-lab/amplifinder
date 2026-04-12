@@ -39,13 +39,20 @@ amplifinder -i path/to/isolate_fastq/ -r U00096 --iso-name my_isolate \
 
 Ancestor results are cached and reused across isolates sharing the same ancestor.
 
+### Reference genome
+
+There is **no** CLI flag that points directly at a reference FASTA file. You always pass **`-r` / `--ref-name`** (a genome identifier) and optionally **`--ref-path`** (a **directory** where references are stored, default `genomesDB`).
+
+- **Default (`--ncbi`, on by default):** AmpliFinder downloads the GenBank record for `ref_name` from NCBI (when missing from the cache), writes it under `--ref-path`, and derives a FASTA there. `ref_name` is typically an NCBI accession (e.g. `U00096`).
+- **Offline / local files (`--no-ncbi`):** Nothing is downloaded. You must **pre-populate** `--ref-path` with the expected layout and use a **non-default** reference directory name if you use `--no-ncbi` (the name `genomesDB` is reserved for NCBI-backed caches). You must set **`--is-detection-method`** to **`isfinder`** or **`isescan`** — **`genbank`** is disallowed with `--no-ncbi` (enforced in config). See [Reference genome](docs/configuration.md#reference-genome) for the exact on-disk layout and rules.
+
 ### Batch mode
 
 ```bash
 amplifinder --batch-input runs.csv --config base_params.yaml --max-parallel 4
 ```
 
-`runs.csv` should be a CSV files with columns matching any subset of a run configuration fields, see: [`examples/base_config.yaml`](examples/base_config.yaml). Row values override the base config. 
+`runs.csv` should be a CSV files with columns matching any subset of a run configuration fields, see: [`base_config.yaml`](base_config.yaml). Row values override the base config. 
 
 The batch run status is written to `run_status.csv`.
 
@@ -54,15 +61,15 @@ The batch run status is written to `run_status.csv`.
 | Option | Description | Default | Config field |
 |--------|-------------|---------|--------------|
 | `-i, --iso-path` | Directory of isolate FASTQ files (`*.fastq*`) | Required | `iso_fastq_path` |
-| `-r, --ref-name` | Reference genome NCBI accession (e.g. U00096) | Required | `ref_name` |
+| `-r, --ref-name` | Reference identifier (typically NCBI accession, e.g. U00096); not a path to a FASTA file | Required | `ref_name` |
 | `-a, --anc-path` | Directory of ancestor FASTQ files (`*.fastq*`) | None | `anc_fastq_path` |
 | `--iso-name` | Isolate name | derived from path | `iso_name` |
 | `--anc-name` | Ancestor name | derived from path | `anc_name` |
-| `--ref-path` | Reference genome cache directory | `genomesDB` | `ref_path` |
+| `--ref-path` | Directory for cached/downloaded reference files (see [docs](docs/configuration.md#reference-genome)) | `genomesDB` | `ref_path` |
 | `-o, --output-dir` | Output directory | `output` | `output_dir` |
 | `--iso-breseq-path` | Existing breseq output for isolate | None | `iso_breseq_path` |
 | `--anc-breseq-path` | Existing breseq output for ancestor | None | `anc_breseq_path` |
-| `--ncbi/--no-ncbi` | Fetch reference from NCBI | True | `ncbi` |
+| `--ncbi/--no-ncbi` | Fetch reference from NCBI if missing from cache; `--no-ncbi` requires local files under `--ref-path` (see [docs](docs/configuration.md#reference-genome)) | True | `ncbi` |
 | `--is-detection-method` | IS detection method: `genbank` (default), `isfinder`, or `isescan` | `genbank` | `is_detection_method` |
 | `--config` | YAML/JSON config file for run parameters | None | |
 | `--create-config` | Save merged config to file and exit | None | |

@@ -33,7 +33,7 @@ Per-run parameters: input files, thresholds, and detection settings.
 
 **Priority:** CLI arguments > `--config` file > built-in defaults.
 
-A complete template with all fields and their built-in defaults is provided in [`examples/base_config.yaml`](../examples/base_config.yaml).
+A complete template with all fields and their built-in defaults is provided in [`base_config.yaml`](../base_config.yaml) at the repository root (use `amplifinder --create-config` to regenerate one with your environment).
 
 ### Using config files
 
@@ -52,12 +52,38 @@ Every run saves its full configuration to `run_config.yaml` in the output direct
 
 **FASTQ inputs:** `iso_fastq_path` and `anc_fastq_path` must be **directories** containing the sample’s `*.fastq*` files (paired-end mates and/or extra lanes in the same folder; single-end can be one file in that folder). All matching files are passed to breseq and used for read-length estimation and downstream alignment.
 
+### Reference genome
+
+AmpliFinder does **not** take a path to a reference FASTA on the command line. The run always uses **`ref_name`** (identifier, usually an NCBI accession) plus **`ref_path`** (a directory) and **`ncbi`** (whether to download from NCBI when the genome is not already cached).
+
+**Default (`ncbi: true`):** If the genome is not yet under `ref_path`, it is fetched from NCBI: GenBank is saved and a FASTA is derived. Cached layout:
+
+```text
+ref_path/
+├── {ref_name}.json          # optional: maps accession → GenBank locus name
+├── genbank/
+│   └── {locus}.gb
+└── fasta/
+    └── {locus}.fasta
+```
+
+**`--no-ncbi` / `ncbi: false` (local / offline only):** No download is attempted. The genome **must** already exist under `ref_path` with **at least one** of `genbank/{locus}.gb` or `fasta/{locus}.fasta`. If your files use a different stem than `ref_name`, add `ref_path/{ref_name}.json` with `{"accession": "<ref_name>", "name": "<locus>"}` so the pipeline resolves the correct `locus` name.
+
+Additional requirements when **`ncbi` is false**:
+
+1. **`ref_path` directory name:** The default folder name `genomesDB` is reserved for NCBI-backed references. For purely local references, set `ref_path` to a **different** directory name (or path whose final component is not `genomesDB`).
+2. **IS detection:** You **must** set `is_detection_method` to **`isfinder`** or **`isescan`**. The configuration rejects **`genbank`** when `ncbi` is false (even if you provide a local `.gb` file). The default **`genbank`** mode is intended for NCBI-fetched references whose GenBank features are parsed for insertion-sequence features.
+
+Breseq still receives GenBank when present (preferred), otherwise FASTA.
+
 ### Key run parameters
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `iso_fastq_path` | Directory of isolate FASTQ files | Required |
-| `ref_name` | NCBI accession | Required |
+| `ref_name` | Reference identifier (usually NCBI accession); not a path to a FASTA | Required |
+| `ref_path` | Directory where reference GenBank/FASTA files are stored or downloaded | `genomesDB` |
+| `ncbi` | Fetch `ref_name` from NCBI if missing from `ref_path` | `true` |
 | `anc_fastq_path` | Directory of ancestor FASTQ files | None |
 | `output_dir` | Output directory | `output` |
 | `threads` | Alignment threads | 4 |

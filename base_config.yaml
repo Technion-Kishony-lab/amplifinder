@@ -4,6 +4,8 @@
 # Override only the fields you need; the rest will use these defaults.
 
 # --- Reference ---
+# No CLI path to a FASTA: use ref_name (e.g. NCBI accession) and ref_path (cache directory).
+# ncbi: false requires files under ref_path (see docs/configuration.md#reference-genome), ref_path basename != genomesDB, and is_detection_method isfinder or isescan.
 ref_name: null  # NCBI accession for reference genome
 ref_path: /zdata/user-data/rkishony/amplifinder/genomesDB # path to reference genome folder (default: genomesDB)
 ncbi: true # fetch reference from NCBI if not found in ref_path
