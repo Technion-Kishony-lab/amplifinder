@@ -33,6 +33,7 @@ dependencies = [
     "ruamel.yaml>=0.18",
     "matplotlib>=3.7",
     "rich>=13.0",
+    "filelock>=3.12",
     "line_profiler>=4.0",
 ]
 
