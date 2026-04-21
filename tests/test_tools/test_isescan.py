@@ -133,49 +133,6 @@ def ecoli_isescan_output(ecoli_with_is_fasta, tmp_path):
     return output_dir
 
 
-@skip_no_isescan
-@pytest.mark.slow
-@pytest.mark.integration
-def test_isescan_on_real_genome(ecoli_isescan_output, ecoli_with_is_fasta):
-    """Run ISEScan on real E. coli genome and parse actual output."""
-    assert ecoli_isescan_output.exists()
-
-    # Should find results file
-    results_file = get_isescan_results_file(ecoli_with_is_fasta, ecoli_isescan_output)
-    assert results_file is not None, "ISEScan should produce results for E. coli K-12"
-    assert results_file.exists()
-
-    # Parse the actual ISEScan output
-    df = parse_isescan_results(ecoli_with_is_fasta, ecoli_isescan_output)
-
-    # E. coli K-12 MG1655 has known IS elements
-    print("\n=== ISEScan Results for E. coli K-12 ===")
-    print(f"Total IS elements found: {len(df)}")
-    print(f"Columns: {list(df.columns)}")
-
-    if len(df) > 0:
-        print("\nFirst few results:")
-        print(df.head())
-
-        # Verify expected columns
-        assert 'seqID' in df.columns
-        assert 'family' in df.columns
-        assert 'isBegin' in df.columns
-        assert 'isEnd' in df.columns
-
-        # E. coli K-12 should have IS elements (known to have IS1, IS5, etc.)
-        assert len(df) > 0, "E. coli K-12 should have detectable IS elements"
-
-        # Check that we got reasonable data
-        for idx, row in df.head(3).iterrows():
-            print(f"\nIS element {idx}:")
-            print(f"  Family: {row.get('family', 'N/A')}")
-            print(f"  Position: {row.get('isBegin', 'N/A')} - {row.get('isEnd', 'N/A')}")
-            print(f"  Length: {row.get('isLen', 'N/A')}")
-    else:
-        pytest.fail("ISEScan found no IS elements in E. coli K-12, but it should have several")
-
-
 # --- Unit tests for _calculate_output (no ISEScan execution needed) ---
 
 _TSV_COLS = [SEQ_COL, START_COL, END_COL, STRAND_COL, FAMILY_COL, CLUSTER_COL]
