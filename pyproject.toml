@@ -34,11 +34,10 @@ dependencies = [
     "matplotlib>=3.7",
     "rich>=13.0",
     "filelock>=3.12",
-    "line_profiler>=4.0",
 ]
 
 [project.optional-dependencies]
-dev = ["pytest", "pytest-cov", "black", "ruff", "mypy"]
+dev = ["pytest", "pytest-cov", "black", "ruff", "mypy", "line_profiler>=4.0"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
