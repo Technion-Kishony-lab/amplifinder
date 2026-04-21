@@ -1,10 +1,12 @@
 """Pipeline step base class with caching logic."""
+from __future__ import annotations
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Generic, List, Optional, Sequence, TypeVar, get_args, get_origin, Type
+from typing import Callable, Generic, List, Optional, Sequence, TypeVar, get_args, get_origin, Type, TYPE_CHECKING
 
-from line_profiler import LineProfiler
+if TYPE_CHECKING:
+    from line_profiler import LineProfiler
 
 from amplifinder.logger import logger
 from amplifinder.utils.file_lock import locked_resource

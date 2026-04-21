@@ -145,7 +145,7 @@ class Config:
     # --- Isolate ---
     iso_fastq_path: Optional[Path] = field(default=None, metadata={
         "section": "Isolate",
-        "comment": "path to isolate FASTQ file(s)"})
+        "comment": "directory containing isolate FASTQ files (*.fastq*)"})
     iso_name: Optional[str] = field(default=None, metadata={
         "comment": "isolate name (default: derived from iso_fastq_path)"})
     iso_read_length: Optional[int] = field(default=None, metadata={
@@ -156,7 +156,7 @@ class Config:
     # --- Ancestor (optional) ---
     anc_fastq_path: Optional[Path] = field(default=None, metadata={
         "section": "Ancestor (optional)",
-        "comment": "path to ancestor FASTQ file(s)"})
+        "comment": "directory containing ancestor FASTQ files (*.fastq*)"})
     anc_name: Optional[str] = field(default=None, metadata={
         "comment": "ancestor name (default: derived from anc_fastq_path)"})
     anc_read_length: Optional[int] = field(default=None, metadata={

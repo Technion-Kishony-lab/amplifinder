@@ -9,9 +9,13 @@ from amplifinder.utils.file_utils import ensure_dir
 @pytest.fixture
 def sample_config(tmp_path):
     """Create a sample config for testing."""
+    iso_dir = tmp_path / "isolate_fastq"
+    anc_dir = tmp_path / "ancestor_fastq"
+    iso_dir.mkdir()
+    anc_dir.mkdir()
     return Config(
-        iso_fastq_path=tmp_path / "isolate.fastq",
-        anc_fastq_path=tmp_path / "ancestor.fastq",
+        iso_fastq_path=iso_dir,
+        anc_fastq_path=anc_dir,
         ref_name="U00096",
         iso_name="sample1",
         anc_name="ancestor1",

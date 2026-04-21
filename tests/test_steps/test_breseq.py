@@ -13,14 +13,15 @@ from tests.conftest import FIXTURES_DIR
 @pytest.fixture
 def breseq_step(tmp_path, tiny_ref_fasta):
     """Create BreseqStep with mock inputs."""
-    fastq = tmp_path / "reads.fastq"
-    fastq.write_text("@read1\nACGT\n+\nIIII\n")
+    fastq_dir = tmp_path / "fastq_in"
+    fastq_dir.mkdir()
+    (fastq_dir / "reads.fastq").write_text("@read1\nACGT\n+\nIIII\n")
 
     output = ensure_dir(tmp_path / "breseq_out")
 
     return BreseqStep(
         breseq_path=output,
-        fastq_path=fastq,
+        fastq_path=fastq_dir,
         ref_file=tiny_ref_fasta,
         docker=False,
         threads=1,

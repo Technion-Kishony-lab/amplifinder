@@ -53,6 +53,10 @@ def run_breseq(
     """
     output_path = Path(output_path)
     fastq_path = Path(fastq_path)
+    if not fastq_path.is_dir():
+        raise ValueError(
+            f"FASTQ input must be a directory containing *.fastq* files, not a file: {fastq_path}"
+        )
 
     # Check if already completed
     output_gd = output_path / "output" / "output.gd"
@@ -60,8 +64,8 @@ def run_breseq(
         logger.info(f"breseq output already exists: {output_gd}")
         return output_path
 
-    # Find FASTQ files
-    fastq_files = list(fastq_path.glob("*.fastq*"))
+    # Find FASTQ files (directory input; stable order for multi-file / PE)
+    fastq_files = sorted(fastq_path.glob("*.fastq*"))
     if not fastq_files:
         raise FileNotFoundError(f"No FASTQ files found in {fastq_path}")
 

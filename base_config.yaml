@@ -4,18 +4,20 @@
 # Override only the fields you need; the rest will use these defaults.
 
 # --- Reference ---
+# No CLI path to a FASTA: use ref_name (e.g. NCBI accession) and ref_path (cache directory).
+# ncbi: false requires files under ref_path (see docs/configuration.md#reference-genome), ref_path basename != genomesDB, and is_detection_method isfinder or isescan.
 ref_name: null  # NCBI accession for reference genome
 ref_path: /zdata/user-data/rkishony/amplifinder/genomesDB # path to reference genome folder (default: genomesDB)
 ncbi: true # fetch reference from NCBI if not found in ref_path
 
 # --- Isolate ---
-iso_fastq_path: null # path to isolate FASTQ file(s)
+iso_fastq_path: null # directory containing isolate FASTQ files (*.fastq*)
 iso_name: null # isolate name (default: derived from iso_fastq_path)
 iso_read_length: null # read length (if not provided, auto-detected from FASTQ)
 iso_breseq_path: null # path to create/load breseq (default: <iso_run_folder>/breseq)
 
 # --- Ancestor (optional) ---
-anc_fastq_path: null # path to ancestor FASTQ file(s)
+anc_fastq_path: null # directory containing ancestor FASTQ files (*.fastq*)
 anc_name: null # ancestor name (default: derived from anc_fastq_path)
 anc_read_length: null # read length (if not provided, auto-detected from FASTQ)
 anc_breseq_path: null # path to create/load breseq (default: <anc_run_folder>/breseq)

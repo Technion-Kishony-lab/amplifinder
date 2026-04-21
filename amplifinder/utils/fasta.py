@@ -85,6 +85,10 @@ def get_read_length_stats(
         ReadLengthStats with min_length, max_length, mean_length
     """
     fastq_dir = Path(fastq_dir)
+    if not fastq_dir.is_dir():
+        raise ValueError(
+            f"FASTQ input must be a directory containing FASTQ files, not a file: {fastq_dir}"
+        )
 
     # Find FASTQ files
     fastq_files = list(fastq_dir.glob("*.fastq.gz")) + list(fastq_dir.glob("*.fastq"))
@@ -157,6 +161,11 @@ def count_total_bases(fastq_dir: Path, read_length: int) -> int:
     Returns:
         Total number of bases
     """
-    fastq_files = list(Path(fastq_dir).glob("*.fastq.gz")) + list(Path(fastq_dir).glob("*.fastq"))
+    fastq_dir = Path(fastq_dir)
+    if not fastq_dir.is_dir():
+        raise ValueError(
+            f"FASTQ input must be a directory containing FASTQ files, not a file: {fastq_dir}"
+        )
+    fastq_files = list(fastq_dir.glob("*.fastq.gz")) + list(fastq_dir.glob("*.fastq"))
     total_reads = sum(count_fastq_reads(fq_file) for fq_file in fastq_files)
     return total_reads * read_length
