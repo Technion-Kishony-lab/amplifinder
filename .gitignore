@@ -17,5 +17,6 @@ __pycache__/
 *.lock
 # IDE files
 .idea/
+.vscode/
 # Example run outputs
 examples/run_all/
