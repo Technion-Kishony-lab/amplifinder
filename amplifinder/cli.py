@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import csv
+import shutil
+import subprocess
 from concurrent.futures import Executor, ProcessPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
@@ -14,10 +16,13 @@ import click
 
 from amplifinder import __version__
 from amplifinder.config import Config, ISDetectionMethod, load_config, merge_config
+from amplifinder.env import BLAST_PATH, BOWTIE2_PATH, SAMTOOLS_PATH, BRESEQ_DOCKER
+from amplifinder.exceptions import ToolNotFoundError
 from amplifinder.pipeline import Pipeline
 from amplifinder.utils.dataclass_utils import convert_csv_row_types
 from amplifinder.utils.file_lock import cleanup_lock_files
 from amplifinder.utils.file_utils import fmt_separator
+from amplifinder.utils.run_utils import get_tool_path
 
 
 MAX_PARALLEL_DEFAULT = 2
@@ -55,6 +60,62 @@ class RunResult:
     def duration_seconds(self) -> int:
         """Calculate duration in seconds."""
         return int((self.end_time - self.start_time).total_seconds())
+
+
+def _preflight_dependencies(config: Config) -> None:
+    """Fail fast if required external executables are missing.
+
+    Raises:
+        ToolNotFoundError / RuntimeError: if a required tool is missing or misconfigured.
+    """
+    missing: list[str] = []
+
+    def require(tool: str, *, config_path: Optional[Path] = None) -> None:
+        try:
+            get_tool_path(tool, config_path=config_path, required=True)
+        except ToolNotFoundError as e:
+            missing.append(str(e))
+
+    # Always required for the pipeline execution (synthetic junction alignment + BAM processing)
+    require("bowtie2", config_path=BOWTIE2_PATH)
+    require("bowtie2-build", config_path=BOWTIE2_PATH)
+    require("samtools", config_path=SAMTOOLS_PATH)
+
+    # breseq requirement depends on docker mode
+    if BRESEQ_DOCKER:
+        # Ensure docker is installed before checking daemon
+        if shutil.which("docker") is None:
+            missing.append(
+                "docker not found. Docker is required because breseq_docker is true in amplifinder.yaml.\n"
+                "Install/start Docker, or set breseq_docker: false in ~/.amplifinder/amplifinder.yaml."
+            )
+        else:
+            # Check that the docker daemon is reachable
+            try:
+                subprocess.run(
+                    ["docker", "info"],
+                    check=True,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+            except Exception:
+                missing.append(
+                    "Docker is installed but not running (docker info failed). Docker is required because "
+                    "breseq_docker is true in amplifinder.yaml.\n"
+                    "Start Docker (e.g., Docker Desktop) or set breseq_docker: false in ~/.amplifinder/amplifinder.yaml."
+                )
+    else:
+        require("breseq")
+
+    # BLAST+ required only when running ISfinder
+    methods = {config.is_detection_method, *config.run_comparison_methods}
+    if ISDetectionMethod.ISFINDER in methods:
+        require("makeblastdb", config_path=BLAST_PATH)
+        require("blastn", config_path=BLAST_PATH)
+
+    if missing:
+        joined = "\n\n".join(missing)
+        raise ToolNotFoundError(f"Missing external dependency/dependencies:\n\n{joined}", include_help=False)
 
 
 def _execute_pipeline(config: Config, breseq_only: bool, verbose: bool) -> Optional[str]:
@@ -358,6 +419,9 @@ def _run_single(
         joined = "\n  - ".join(path_errors)
         raise ValueError(f"Invalid paths:\n  - {joined}")
 
+    # External dependency preflight (fail fast, before pipeline work starts)
+    _preflight_dependencies(config)
+
     # Run pipeline
     error = _execute_pipeline(config, breseq_only, verbose)
     if error is not None:
@@ -413,6 +477,8 @@ def _run_batch(
             if all_config_errors:
                 all_errors.append(f"Row {idx}: {'; '.join(all_config_errors)}")
             else:
+                # External dependency preflight per config
+                _preflight_dependencies(config)
                 run_id = row.get("run_id") or config.iso_name or f"row_{idx}"
                 configs.append((idx, run_id, config))
         except Exception as exc:

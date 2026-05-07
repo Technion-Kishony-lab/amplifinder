@@ -13,7 +13,7 @@ Detect Insertion Sequence (IS)-mediated gene amplifications and deletions from w
 ## Installation
 
 ```bash
-git clone https://github.com/kishonylab/amplifinder.git
+git clone https://github.com/Technion-Kishony-lab/amplifinder.git
 cd amplifinder
 pip install -e .
 ```
@@ -147,4 +147,4 @@ MIT License. See [LICENSE](LICENSE) for details.
 
 ## Support
 
-Issues and questions: https://github.com/kishonylab/amplifinder/issues
+Issues and questions: https://github.com/Technion-Kishony-lab/amplifinder/issues

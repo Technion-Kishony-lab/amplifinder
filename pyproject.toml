@@ -56,7 +56,8 @@ filterwarnings = [
 amplifinder = "amplifinder.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/kishonylab/amplifinder"
+Homepage = "https://github.com/Technion-Kishony-lab/amplifinder"
+Issues = "https://github.com/Technion-Kishony-lab/amplifinder/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
