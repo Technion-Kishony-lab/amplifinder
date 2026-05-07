@@ -23,6 +23,7 @@ Python dependencies (numpy, pandas, biopython, pysam, click, pyyaml, matplotlib,
 ## Quick Start
 
 Input reads must be passed as a **directory** path: place one or more `*.fastq*` files for that sample in the folder and point `-i` (and optionally `-a`) at it. For **paired-end** data, put both mates (and any additional lanes) in the **same** directory. For **single-end**, use a directory containing a single FASTQ.
+You must provide FASTQ read data (local files or downloaded from SRA/ENA) for the isolate (and optionally the ancestor) to run the pipeline.
 
 ### Isolate only (raw coverage)
 
